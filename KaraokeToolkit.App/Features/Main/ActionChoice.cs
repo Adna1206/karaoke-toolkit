@@ -28,6 +28,7 @@ public partial class ActionChoice(OperationDefinition definition, RecipeDefiniti
     private void ToggleFavourite() => IsFavourite = !IsFavourite;
     public bool IsRip => Definition.IsRip;
     public bool IsRestore => Definition.IsRestore;
+    public bool IsTagging => Definition.IsTagging;
     public AlphabeticalOrganizeScope? OrganizeMode => Definition.OrganizeMode;
     public bool IsOrganizer => OrganizeMode.HasValue;
     public FolderFlattenScope? FlattenScope => Definition.FlattenScope;

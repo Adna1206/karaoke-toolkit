@@ -2,7 +2,7 @@
  xmlns:vm="using:KaraokeToolkit.App.Features.DiscRipping" x:Class="KaraokeToolkit.App.Features.DiscRipping.DiscRipWindow" x:DataType="vm:DiscRipViewModel"
  Title="{x:Static shared:WindowTitles.DiscRipping}" Width="680" Height="660" MinWidth="600" MinHeight="600" WindowStartupLocation="CenterOwner">
  <Grid Margin="24" RowDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto" RowSpacing="12">
-  <TextBlock Text="Experimental CD+G ripping" FontSize="24" FontWeight="SemiBold"/>
+  <TextBlock Text="CD+G ripping (experimental)" FontSize="24" FontWeight="SemiBold"/>
   <TextBlock Grid.Row="1" Text="Uses cdrdao (bundled on Windows; install separately on Linux/macOS). Physical drive reading has not been hardware-tested. This requires a drive that supports CD+G subchannels. Interrupted reads must be restarted; completed tracks are retained." TextWrapping="Wrap"/>
   <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="8" IsEnabled="{Binding CanEdit}">
    <ComboBox ItemsSource="{Binding Drives}" SelectedItem="{Binding SelectedDrive}" HorizontalAlignment="Stretch"/>

@@ -62,7 +62,8 @@ public partial class MainViewModel : ViewModelBase
     {
         if (IsBusy)
             return;
-        var normalized = SelectedOperation?.Recipe is { } recipe
+        var normalized = SelectedOperation?.IsTagging == true ? KaraokeToolkit.Core.Tagging.KaraokeTaggingService.NormalizeInputs(paths)
+            : SelectedOperation?.Recipe is { } recipe
             ? KaraokeToolkit.Core.Recipes.RecipeOperations.NormalizeInputs(recipe, paths)
             : SelectedOperation is { IsOrganizer: true } or { IsFlatten: true }
             ? paths.Select(p => Path.TrimEndingDirectorySeparator(Path.GetFullPath(p))).Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal).ToArray()
@@ -84,7 +85,7 @@ public partial class MainViewModel : ViewModelBase
         finally { settingInputs = false; }
         InputSummary = normalized.Length == 1 ? "Selected: " + normalized[0] : normalized.Length + " selected inputs: " + string.Join("; ", normalized.Select(Path.GetFileName));
         var extensions = normalized.Where(File.Exists).Select(p => Path.GetExtension(p).ToLowerInvariant()).Distinct().ToArray();
-        if (suggestOperation && SelectedOperation is not { IsOrganizer: true } and not { IsFlatten: true } and not { IsRecipe: true } && normalized.All(File.Exists))
+        if (suggestOperation && SelectedOperation is not { IsOrganizer: true } and not { IsFlatten: true } and not { IsRecipe: true } and not { IsTagging: true } && normalized.All(File.Exists))
         {
             if (extensions.All(e => e == ".zip") && SelectedOperation?.Action != Action.Repack_Zip)
                 SelectedOperation = Operations.First(x => x.Action == Action.Zip_To_AudioG);
@@ -391,6 +392,11 @@ public partial class MainViewModel : ViewModelBase
                 StatusOutcome = RunStatus.Failure;
                 Status = "The restore picker is not available.";
             }
+            return;
+        }
+        if (SelectedOperation?.IsTagging == true)
+        {
+            await RunTaggingAsync();
             return;
         }
         if (SelectedOperation?.IsValidation == true)

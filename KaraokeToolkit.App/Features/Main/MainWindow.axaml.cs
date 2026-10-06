@@ -5,6 +5,8 @@ using KaraokeToolkit.App.Features.Reports;
 using KaraokeToolkit.App.Features.DiscRipping;
 using KaraokeToolkit.App.Features.About;
 using KaraokeToolkit.App.Features.Recipes;
+using KaraokeToolkit.App.Features.Tagging;
+using KaraokeToolkit.Core.Tagging;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Recipes;
 using KaraokeToolkit.Core.FileOperations;
@@ -48,6 +50,7 @@ public partial class MainWindow : Window
                     return rip.Result;
                 };
                 model.RestoreQuarantinedFilesAsync = RestoreQuarantinedFilesAsync;
+                model.ConfigureTaggingAsync = async viewModel => await ModalDialog.ShowAsync<TaggingRequest?>(new TaggingWindow { DataContext = viewModel }, this);
                 model.ResolveConflictAsync = ResolveConflictAsync;
                 model.ConfirmRecoveryAsync = ConfirmRecoveryAsync;
                 await model.CheckForRecoveryAsync();
@@ -168,6 +171,8 @@ public partial class MainWindow : Window
                 AllowMultiple = true,
                 FileTypeFilter = model.SelectedOperation?.IsRecipe == true
                     ? new[] { new FilePickerFileType("Recipe inputs") { Patterns = recipeExtensions?.Select(ext => "*" + ext).ToArray() ?? ["*"] } }
+                    : model.SelectedOperation?.IsTagging == true
+                    ? new[] { new FilePickerFileType("Taggable karaoke media") { Patterns = KaraokeTaggingService.InputExtensions.Select(ext => "*" + ext).ToArray() } }
                     : model.SelectedOperation?.IsOrganizer == true
                     ? new[] { new FilePickerFileType("All files") { Patterns = ["*"] } }
                     : new[] { new FilePickerFileType("Karaoke files and archives") { Patterns = InputSelection.Extensions.Concat(ArchiveZipConverter.Extensions).Select(ext => "*" + ext).ToArray() } }

@@ -1,5 +1,9 @@
 # Planned features
 
+- [ ] **Recipe tagging steps** — define saved pattern and tagging options for noninteractive
+  recipe execution. Tag Karaoke Files currently uses an editable preview dialog and is
+  deliberately excluded from the recipe operation registry.
+
 - [ ] **Recipe script steps** — add optional PowerShell/CMD steps with defined
   input/output paths, platform requirements, captured output, cancellation and
   explicit trust for imported scripts. Run without requesting elevation; lack
@@ -20,3 +24,5 @@
   Explicitly deferred while input selection, completion reports, Explorer integration
   and validation are implemented. The current results window is an after-run report,
   not a preview or dry run.
+  Tag Karaoke Files has its own editable metadata preview; this item concerns the
+  broader conversion and file-management workflow.

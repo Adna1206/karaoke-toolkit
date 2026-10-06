@@ -13,6 +13,7 @@ The original MP3+G Toolz binaries and comparison bridges are no longer required.
 - Lossless Audio+G to MP3+G: matching WAV, FLAC, APE, AIFF, ALAC/M4A or WavPack audio is checked by codec before MP3 encoding; the CDG stays unchanged.
 - Convert BIN, karaoke ZIP, or matching Audio+G to MP4, MKV, or AVI video with synchronized CDG graphics and seek-friendly keyframes.
 - Local filename cleanup with paired-name and collision protection.
+- [Tag Karaoke Files](docs/tagging.md): preview and edit metadata from custom filename templates, with remembered patterns, ZIP-contained audio tagging and media-payload verification.
 - Organize files recursively or immediate child folders into A-Z and # folders, with an optional leading-"The" rule for files.
 - Flatten one or all directory layers beneath selected folders, moving contents into each selected root while leaving name collisions in place.
 - Standalone CUE sheets for BIN tracks and TXT track listings.

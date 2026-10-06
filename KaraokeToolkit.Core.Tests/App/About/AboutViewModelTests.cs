@@ -12,6 +12,7 @@ public class AboutViewModelTests
         foreach (string directory in new[] { "licenses", "ffmpeg", "cdrdao" })
             Directory.CreateDirectory(Path.Combine(folder, directory));
         File.WriteAllText(Path.Combine(folder, "licenses", "Avalonia.txt"), "Complete MIT notice");
+        File.WriteAllText(Path.Combine(folder, "licenses", "TagLibSharp.txt"), "Full LGPL v2.1 text");
         File.WriteAllText(Path.Combine(folder, "ffmpeg", "LICENSE.txt"), "Native build notice");
         File.WriteAllText(Path.Combine(folder, "ffmpeg", "COPYING.GPLv3"), "Full GPL v3 text");
         File.WriteAllText(Path.Combine(folder, "ffmpeg", "runtime-manifest.json"), "Source and version information");
@@ -20,8 +21,10 @@ public class AboutViewModelTests
         var model = new AboutViewModel(folder);
         Assert.Equal(ApplicationInfo.Name, model.AppName);
         Assert.Equal("Version " + ApplicationInfo.Version, model.Version);
-        Assert.Equal(5, model.Notices.Count);
+        Assert.Equal(6, model.Notices.Count);
         Assert.Equal("Complete MIT notice", model.NoticeText);
+        model.SelectedNotice = model.Notices.Single(notice => notice.Name == "TagLibSharp · LGPL v2.1");
+        Assert.Equal("Full LGPL v2.1 text", model.NoticeText);
         model.SelectedNotice = model.Notices.Single(notice => notice.Name == "FFmpeg · Licence and notices");
         Assert.Equal("Native build notice", model.NoticeText);
         model.SelectedNotice = model.Notices.Single(notice => notice.Name == "FFmpeg · GPL v3");

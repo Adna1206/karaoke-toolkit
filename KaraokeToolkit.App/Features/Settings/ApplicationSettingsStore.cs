@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Xml.Linq;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Settings;
+using KaraokeToolkit.Core.Tagging;
 
 namespace KaraokeToolkit.App.Features.Settings;
 
@@ -27,7 +28,7 @@ public sealed class ApplicationSettingsStore(string path, bool persistRenameBins
         bool? validateBeforeConversion = null, bool? ignoreLeadingTheForFileOrganization = null,
         AudioBitratePreferences? audioBitrates = null, IReadOnlyDictionary<string, bool>? operationSections = null,
         IReadOnlyList<string>? favouriteOperations = null, SettingsWindowSize? settingsWindowSize = null,
-        ApplicationBackdrop? backdrop = null)
+        ApplicationBackdrop? backdrop = null, IReadOnlyList<string>? taggingPatterns = null, string? lastTaggingPattern = null)
     {
         if (settingsWindowSize is { IsValid: false }) throw new ArgumentOutOfRangeException(nameof(settingsWindowSize));
         if (theme.HasValue && !Enum.IsDefined(theme.Value)) throw new ArgumentOutOfRangeException(nameof(theme));
@@ -37,6 +38,12 @@ public sealed class ApplicationSettingsStore(string path, bool persistRenameBins
             {
                 if (theme.HasValue) modern.SetElementValue("Theme", theme.Value);
                 if (backdrop.HasValue) modern.SetElementValue("Backdrop", backdrop.Value);
+                if (taggingPatterns != null)
+                {
+                    modern.Element("TaggingPatterns")?.Remove();
+                    modern.Add(new XElement("TaggingPatterns", taggingPatterns.Distinct(StringComparer.Ordinal).Select(p => new XElement("Pattern", p))));
+                }
+                if (lastTaggingPattern != null) modern.SetElementValue("LastTaggingPattern", lastTaggingPattern);
                 if (operationSections != null)
                 {
                     var sections = modern.Element("OperationSections");
@@ -55,6 +62,21 @@ public sealed class ApplicationSettingsStore(string path, bool persistRenameBins
                     modern.SetElementValue("SettingsWindowHeight", settingsWindowSize.Height.ToString("R", CultureInfo.InvariantCulture));
                 }
             });
+    }
+
+    public IReadOnlyList<string> LoadTaggingPatterns()
+    {
+        var patterns = new List<string> { FilenameTagPattern.Default };
+        if (File.Exists(filename))
+            foreach (string value in XDocument.Load(filename).Root?.Element("KaraokeToolkit")?.Element("TaggingPatterns")?.Elements("Pattern").Select(p => p.Value) ?? [])
+                try { _ = new FilenameTagPattern(value); if (!patterns.Contains(value, StringComparer.Ordinal)) patterns.Add(value); }
+                catch (ArgumentException) { /* An invalid cosmetic history entry must not block settings. */ }
+        return patterns;
+    }
+    public string LoadLastTaggingPattern()
+    {
+        string? value = File.Exists(filename) ? XDocument.Load(filename).Root?.Element("KaraokeToolkit")?.Element("LastTaggingPattern")?.Value : null;
+        return value != null && LoadTaggingPatterns().Contains(value) ? value : FilenameTagPattern.Default;
     }
 
     public ApplicationBackdrop LoadBackdrop()

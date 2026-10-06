@@ -7,9 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="..\licenses\TagLibSharp.txt" Link="licenses\TagLibSharp.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="..\licenses\SharpCompress.txt" Link="licenses\SharpCompress.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="..\licenses\FFMpegCore.txt" Link="licenses\FFMpegCore.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <PackageReference Include="FFMpegCore" Version="5.5.0" />
     <PackageReference Include="SharpCompress" Version="0.50.4" />
+    <PackageReference Include="TagLibSharp" Version="2.3.0" />
   </ItemGroup>
 </Project>

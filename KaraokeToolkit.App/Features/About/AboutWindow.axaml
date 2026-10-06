@@ -17,7 +17,7 @@
         <ScrollViewer HorizontalScrollBarVisibility="Disabled">
           <StackPanel Margin="0,20,0,0" Spacing="18">
             <TextBlock Text="A modern toolkit for your karaoke collection." FontSize="19" FontWeight="SemiBold" TextWrapping="Wrap"/>
-            <TextBlock Text="Convert, validate and organise karaoke files, create karaoke videos, and preserve CD+G discs. Inspired by MP3+G Toolz." TextWrapping="Wrap"/>
+            <TextBlock Text="Convert, tag, validate and organise karaoke files, create karaoke videos, and preserve CD+G discs. Inspired by MP3+G Toolz." TextWrapping="Wrap"/>
             <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,1,0,0" Padding="0,18,0,0">
               <StackPanel Spacing="5">
                 <TextBlock Text="Created by" Opacity="0.65" FontSize="12"/>
@@ -26,8 +26,9 @@
             </Border>
             <StackPanel Spacing="8">
               <TextBlock Text="Built with" FontWeight="SemiBold"/>
-              <TextBlock Text="Avalonia · Community Toolkit · Inter&#10;FFMpegCore · SharpCompress · SkiaSharp · HarfBuzzSharp" TextWrapping="Wrap" Opacity="0.8"/>
+              <TextBlock Text="Avalonia · Community Toolkit · Inter&#10;FFMpegCore · SharpCompress · TagLibSharp · SkiaSharp · HarfBuzzSharp" TextWrapping="Wrap" Opacity="0.8"/>
               <TextBlock Text="FFmpeg provides audio and video processing (LGPL/GPL, depending on the bundled build). cdrdao provides disc reading (GPL v2 or later)." TextWrapping="Wrap" FontSize="12" Opacity="0.8"/>
+              <TextBlock Text="TagLibSharp provides media tagging (LGPL v2.1)." TextWrapping="Wrap" FontSize="12" Opacity="0.8"/>
               <TextBlock Text="Full licence texts, additional components and source information are available under Third-party notices." TextWrapping="Wrap" FontSize="12" Opacity="0.65"/>
             </StackPanel>
           </StackPanel>

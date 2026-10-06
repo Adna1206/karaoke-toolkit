@@ -75,6 +75,11 @@ public static class OperationDefinitions
             "Normalize local karaoke filenames, preserving matching audio/CDG pairs. Collisions leave files unchanged.",
             OperationSection.FilesAndFolders, OperationInputKind.FilesAndFolders, true),
         new(
+            "TagKaraoke", null, "Tag Karaoke Files",
+            "Write audio and video tags from a filename pattern, including audio inside karaoke ZIPs.",
+            "Preview and edit Album, Track, Artist and Title from a filename pattern. Disc identifiers use Album. Tag media in place without re-encoding; CDG graphics are unchanged. BIN has no standard metadata fields. ZIPs must contain one audio/CDG pair and are rebuilt using your ZIP settings. Delete Originals does not apply.",
+            OperationSection.FilesAndFolders, OperationInputKind.FilesAndFolders, true) { IsTagging = true },
+        new(
             "OrganizeFiles", null, "Organize Files Alphabetically",
             "Move files in selected folders and their subfolders into local A–Z and # folders.",
             "Move files in selected folders and their subfolders into local A–Z and # folders. Selected files are moved without processing their neighbours. Options can ignore a leading 'The' when choosing a folder. Existing letter folders and conflicting names are left in place.",

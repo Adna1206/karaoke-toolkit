@@ -8,6 +8,7 @@ BASS/DynaZip libraries, x86 bridge, or .NET Framework compiler/runtime is needed
 - Archives: compression, extraction, batch ZIP contracts and compatibility repacking.
 - Audio: FFmpeg encoding/decoding, sample fidelity, timing and lossless transcoding.
 - Video: karaoke video encoding and synchronization.
+- Tagging: custom patterns, numeric tracks, media/tag readback, decoded-audio fidelity, ZIP member names and graphics, stale previews, cleanup controls and interrupted publication.
 - FileOperations: organization, flattening, cleanup, CUE/TXT, quarantine and restoration.
 - Validation: structural checks, pairing, CRCs and excluded folders.
 - Recovery: interrupted runs, process termination and file transactions.

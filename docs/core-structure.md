@@ -9,6 +9,7 @@ match folders; the app and test tools import those namespaces explicitly.
 | Archives | Archive readers, ZIP writers, repacking, compression algorithms and levels |
 | Audio | Audio encoding/decoding, lossless transcoding and shared FFmpeg runtime discovery |
 | Video | Karaoke video rendering and video format settings |
+| Tagging | Filename templates, tag previews, staged metadata writes and packet-payload verification |
 | FileOperations | Filename cleanup, CUE/TXT creation, quarantine and restoration |
 | Validation | Read-only integrity checks and findings |
 | Recovery | Run journals, interrupted-run recovery and transactional file publication |
@@ -21,7 +22,7 @@ types stay with their feature. OutputConflict and ConflictDecision belong to
 Conversion rather than sharing a settings namespace.
 
 Desktop preferences belong to `KaraokeToolkit.App/Features/Settings`: appearance, favourite
-operations, expanded sections and settings-window dimensions. The App settings
+operations, expanded sections, tagging-pattern history and settings-window dimensions. The App settings
 store composes them with Core's processing settings in the existing XML file,
 using a single atomic transaction. Core preserves unknown entries and remains
 usable without App or Avalonia. Saved XML names remain unchanged.

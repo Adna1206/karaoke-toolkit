@@ -13,6 +13,7 @@ source or notice obligations.
 | CommunityToolkit.Mvvm | 8.4.2 | `CommunityToolkit.Mvvm.txt` (MIT), `CommunityToolkit.Mvvm.ThirdPartyNotices.txt` | Common |
 | FFMpegCore | 5.5.0 | `FFMpegCore.txt` (MIT) | Common |
 | SharpCompress | 0.50.4 | `SharpCompress.txt` (MIT) | Common |
+| TagLibSharp | 2.3.0 | `TagLibSharp.txt` (LGPL-2.1-only) | Common, separate managed DLL |
 | SkiaSharp and native assets | 3.119.4 | `SkiaSharp.txt` (MIT) | Common |
 | HarfBuzzSharp and native assets | 8.3.1.3 | `HarfBuzzSharp.txt` (MIT) | Common |
 | ANGLE Windows native assets | 2.1.27548.20260419 | `ANGLE.txt` (BSD-style) | Windows |
@@ -34,6 +35,14 @@ from the BtbN archive, and CDRDAO's GPL text from its pinned source archive.
 The additional runtime notices come from the exact upstream revisions recorded
 in their restored NuGet packages:
 
+TagLibSharp is an unmodified NuGet reference, loaded as a separate DLL. Its package
+declares LGPL-2.1-only; the full LGPL v2.1 text is included in `TagLibSharp.txt`.
+Copyright © 2006–2007 Brian Nickel; © 2009–2020 other contributors.
+[TagLibSharp source and releases](https://github.com/mono/taglib-sharp) and
+[the pinned 2.3.0 package](https://www.nuget.org/packages/TagLibSharp/2.3.0)
+identify the library used. Retain the licence, allow users to replace/relink the
+library, and provide corresponding library source as required when distributing.
+
 - [Instances licence](https://github.com/rosenbjerg/Instances/blob/9322a21ebe4d9d438190cd543850315edc1a5fe1/LICENSE)
 - [MicroCom licence](https://github.com/kekekeks/MicroCom/blob/76785efcafd91b5902fd19dd11145f6dd655b7b4/LICENSE)
 - [RecyclableMemoryStream licence](https://github.com/microsoft/Microsoft.IO.RecyclableMemoryStream/blob/e29a28387da9018fa9605a1dcb3f7a0435aa9974/LICENSE)
@@ -45,7 +54,7 @@ The app includes these files in build and publish output. **About → Third-part
 notices** displays the full texts shipped in `licenses/`, together with licence
 files in the native tools' directories and FFmpeg's version/source manifest.
 
-NuGet package metadata lists the remaining runtime packages in the current
+Except for TagLibSharp, NuGet package metadata lists the remaining runtime packages in the current
 `KaraokeToolkit.App/obj/project.assets.json` as MIT except ANGLE and the
 developer-only AvaloniaUI.DiagnosticsSupport package, which has no license
 expression in its package metadata. Test-only packages are not in app releases.

@@ -65,7 +65,8 @@ public class BatchZipContractTests
             Assert.Equal(cancel, result.Cancelled); Assert.Equal(0, result.Succeeded);
             Assert.Equal(before, TestMediaFixture.Snapshot(folder)); return;
         }
-        Assert.False(result.Cancelled); Assert.Equal(1, result.Failed);
+        Assert.False(result.Cancelled);
+        Assert.True(result.Failed == 1, string.Join("; ", result.Files.Where(f => f.Status == ConversionStatus.Failed).Select(f => f.Source + ": " + f.Message)));
         Assert.Equal(recurse ? 7 : 6, result.Succeeded);
         Assert.Contains("exactly one", result.Files.Single(f => f.Status == ConversionStatus.Failed).Message);
         foreach (string format in Formats)
