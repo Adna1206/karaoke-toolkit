@@ -32,6 +32,7 @@ internal sealed class FileTransaction : IDisposable
                     throw new IOException("Recovery required before writing to this folder. Retained files: " + previous);
             Directory.CreateDirectory(Workspace);
             RunSession.Current.Value?.Attach(Workspace);
+            WorkflowSession.Current.Value?.Attach(Workspace);
         }
         catch { folderLease.Dispose(); throw; }
     }
@@ -132,6 +133,7 @@ internal sealed class FileTransaction : IDisposable
             committed = true;
             // A durable receipt precedes deletion of the journal and backups in Dispose.
             RunSession.Current.Value?.Committed(targets);
+            WorkflowSession.Current.Value?.Published(targets, removeSources);
             return targets;
         }
         catch (Exception original)

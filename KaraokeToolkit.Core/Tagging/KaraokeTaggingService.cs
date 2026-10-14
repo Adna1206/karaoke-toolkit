@@ -13,8 +13,9 @@ using SharpCompress.Writers.Zip;
 namespace KaraokeToolkit.Core.Tagging;
 
 /// <summary>Previews filename tags, then updates staged copies without re-encoding audio or graphics.</summary>
-public sealed class KaraokeTaggingService
+public sealed class KaraokeTaggingService(RecoveryStore? recovery = null)
 {
+    private readonly RecoveryStore recovery = recovery ?? new();
     public static readonly string[] MediaExtensions = [".mp3", ".ogg", ".opus", ".wav", ".flac", ".ape", ".wma", ".aif", ".aiff", ".m4a", ".wv", ".mp4", ".mkv", ".avi", ".webm"];
     public static readonly string[] InputExtensions = [.. MediaExtensions, ".zip", ".cdg", ".bin"];
 
@@ -115,17 +116,70 @@ public sealed class KaraokeTaggingService
         ConversionOptions processing, IProgress<ConversionProgress>? progress = null, CancellationToken token = default)
         => Task.Run(async () =>
         {
+            if (preview.Count == 0) return new ConversionResult([], token.IsCancellationRequested);
+            var roots = WorkflowSession.RootsFor(preview.Select(p => p.Path));
+            foreach (string root in roots)
+                if (recovery.Find(root).Count > 0) throw new IOException("Recover interrupted work before tagging: " + root);
+            using var session = new WorkflowSession(recovery, new WorkflowData
+            {
+                Kind = RecoveryKind.Tagging, Roots = roots, Inputs = preview.Select(p => p.Path).ToArray(),
+                TagFiles = preview.ToArray(), TagOptions = options, Processing = processing,
+                Expected = WorkflowSession.Capture(preview.Where(p => p.CanApply).Select(p => p.Path))
+            });
+            return await ApplyCoreAsync(session, progress, token);
+        });
+
+    public Task<ConversionResult> ResumeAsync(RecoveryJob job, IProgress<ConversionProgress>? progress = null, CancellationToken token = default)
+        => Task.Run(async () =>
+        {
+            using var session = new WorkflowSession(recovery, job);
+            if (session.Data.Kind != RecoveryKind.Tagging) throw new IOException("This recovery job is not tagging.");
+            session.Enter(); session.RecoverTransaction(); session.VerifyExpected();
+            return await ApplyCoreAsync(session, progress, token);
+        });
+
+    /// <summary>Uses the recipe's checkpoint so tagging never creates a competing recovery prompt.
+    /// The generated preview is frozen before the first write and reused on recovery.</summary>
+    internal async Task<ConversionResult> ApplyRecipeStepAsync(IReadOnlyList<string> inputs, string pattern, TaggingOptions options,
+        ConversionOptions processing, IProgress<ConversionProgress>? progress, CancellationToken token)
+    {
+        var session = WorkflowSession.Current.Value;
+        if (session == null)
+            return await ApplyAsync(await PreviewAsync(inputs, pattern, processing.RecurseFolders, token), options, processing, progress, token);
+        if (!session.Data.TagStepStarted)
+        {
+            session.Data.TagFiles = (await PreviewAsync(inputs, pattern, processing.RecurseFolders, token)).ToArray();
+            session.Data.TagOptions = options; session.Data.Processing = processing;
+            session.Data.TagStepStarted = true; session.Save();
+        }
+        return await ApplyCoreAsync(session, progress, token, finish: false);
+    }
+
+    private async Task<ConversionResult> ApplyCoreAsync(WorkflowSession session, IProgress<ConversionProgress>? progress, CancellationToken token, bool finish = true)
+    {
+            session.Enter();
+            var preview = session.Data.TagFiles;
+            var options = session.Data.TagOptions;
+            var processing = session.Data.Processing;
             var clock = Stopwatch.StartNew();
-            var results = new List<ConversionFileResult>();
+            var results = session.Data.TagResults.Values.ToList();
             foreach (var item in preview)
             {
+                if (session.Data.TagResults.ContainsKey(item.Path)) continue;
                 if (token.IsCancellationRequested) break;
+                session.Data.TagCurrent = item.Path; session.Data.Workspace = null; session.Save();
                 if (!item.CanApply)
-                { results.Add(new(item.Path, ConversionStatus.Skipped, [], item.Error ?? "Not selected for tagging.")); continue; }
+                {
+                    // An unattended recipe must report a pattern/media error as a failure.
+                    // BIN and orphan graphics have no tag fields and remain explicitly skipped.
+                    bool recipeError = session.Data.TagStepStarted && Path.GetExtension(item.Path).ToLowerInvariant() is not (".bin" or ".cdg");
+                    var skipped = new ConversionFileResult(item.Path, recipeError ? ConversionStatus.Failed : ConversionStatus.Skipped, [], item.Error ?? "Not selected for tagging.");
+                    results.Add(skipped); session.Data.TagResults[item.Path] = skipped; session.Save(); continue;
+                }
                 try
                 {
                     string folder = Path.GetDirectoryName(item.Path)!;
-                    if (new RecoveryStore().Find(folder, false).Count > 0) throw new IOException("Recover the interrupted run before tagging this folder.");
+                    if (recovery.Find(folder, false).Count > 0) throw new IOException("Recover the interrupted run before tagging this folder.");
                     using var transaction = new FileTransaction(folder);
                     DurableJson.Write(Path.Combine(transaction.Workspace, "tagging.json"), new { Version = 1 });
                     if (FileTransaction.Hash(item.Path) != item.SourceHash) throw new IOException("Source changed after preview. Refresh the preview before tagging.");
@@ -139,12 +193,18 @@ public sealed class KaraokeTaggingService
                     results.Add(new(item.Path, ConversionStatus.Succeeded, outputs, "Tags updated in place; media was not re-encoded."));
                 }
                 catch (OperationCanceledException) { break; }
-                catch (Exception error) { results.Add(new(item.Path, ConversionStatus.Failed, [], error.Message)); }
-                progress?.Report(new(100, results.Count * 100 / Math.Max(1, preview.Count), preview.Count, results.Count,
+                catch (Exception error)
+                {
+                    if (session.HasPendingPublication) throw new IOException("Tagging publication needs recovery; journal and originals retained.", error);
+                    results.Add(new(item.Path, ConversionStatus.Failed, [], error.Message));
+                }
+                session.Data.TagResults[item.Path] = results[^1]; session.Save();
+                progress?.Report(new(100, results.Count * 100 / Math.Max(1, preview.Length), preview.Length, results.Count,
                     "Tagging " + Path.GetFileName(item.Path), clock.Elapsed.ToString(@"hh\:mm\:ss")));
             }
-            return new ConversionResult(results, token.IsCancellationRequested) { Found = preview.Count, Elapsed = clock.Elapsed };
-        });
+            if (finish) session.Finish();
+            return new ConversionResult(results, token.IsCancellationRequested) { Found = preview.Length, Elapsed = clock.Elapsed };
+    }
 
     internal static KaraokeTags ReadTags(string path)
     {

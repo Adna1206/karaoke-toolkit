@@ -3,6 +3,7 @@ using KaraokeToolkit.Core.FileOperations;
 using KaraokeToolkit.Core.Recovery;
 using KaraokeToolkit.Core.Reporting;
 using KaraokeToolkit.Core.Validation;
+using KaraokeToolkit.Core.Tagging;
 using System.Diagnostics;
 
 namespace KaraokeToolkit.Core.Recipes;
@@ -32,9 +33,13 @@ public sealed class RecipeStepExecutor(RecoveryStore? recovery = null,
         IProgress<ConversionProgress>? progress, CancellationToken token)
     {
         var operation = RecipeOperations.Get(step.OperationId);
+        if (WorkflowSession.Current.Value is { Data.Moves: not null } workflow)
+            return await Task.Run(() => WorkflowMoves.Run(workflow, null, progress, token), token);
         if (operation.Action is { } action)
             return await new SelectionConversionService(recovery).RunAsync(new(action, inputs.ToArray(), step.Options, step.OverwritePolicy)
                 { ValidateBeforeConversion = step.ValidateBeforeConversion }, progress, token, resolveConflict);
+        if (operation.Id == "TagKaraoke")
+            return await new KaraokeTaggingService(recovery).ApplyRecipeStepAsync(inputs, step.TaggingPattern, step.Tagging, step.Options, progress, token);
         if (operation.Id == "ValidateKaraoke")
         {
             var result = await new ValidationService().ScanAsync(inputs, step.Options.RecurseFolders, progress, token);
@@ -53,21 +58,54 @@ public sealed class RecipeStepExecutor(RecoveryStore? recovery = null,
 
 /// <summary>Feeds each step only the previous step's primary outputs. Stops on failure or cancellation.</summary>
 /// <remarks>Folder maintenance retains the selected root scope. Each conversion keeps its existing
-/// transaction/recovery safeguards; this runner does not automatically resume whole recipes.</remarks>
-public sealed class RecipeRunner(IRecipeStepExecutor? executor = null)
+/// transaction/recovery safeguards; the parent checkpoint continues the saved pipeline after a crash.</remarks>
+public sealed class RecipeRunner(IRecipeStepExecutor? executor = null, RecoveryStore? recovery = null)
 {
-    private readonly IRecipeStepExecutor executor = executor ?? new RecipeStepExecutor();
+    private readonly IRecipeStepExecutor executor = executor ?? new RecipeStepExecutor(recovery);
+    private readonly RecoveryStore recovery = recovery ?? new();
+    public static RecipeDefinition ReadRecoveryRecipe(RecoveryJob job)
+    {
+        var data = WorkflowSession.Read(job.JournalPath);
+        if (data.Kind != RecoveryKind.Recipe) throw new IOException("This recovery job is not a recipe.");
+        return data.Recipe!;
+    }
 
-    public async Task<RecipeRunResult> RunAsync(RecipeDefinition recipe, IEnumerable<string> inputs,
+    public Task<RecipeRunResult> RunAsync(RecipeDefinition recipe, IEnumerable<string> inputs,
         IProgress<ConversionProgress>? progress = null, CancellationToken token = default, Func<string, string>? operationLabel = null)
+        => Task.Run(async () =>
     {
         RecipeOperations.Validate(recipe); // Reject the complete known-invalid pipeline before touching inputs.
         string[] current = RecipeOperations.NormalizeInputs(recipe, inputs);
+        foreach (string root in WorkflowSession.RootsFor(current))
+            if (this.recovery.Find(root).Count > 0) throw new IOException("Recover interrupted work before starting this recipe: " + root);
+        using var session = new WorkflowSession(this.recovery, new WorkflowData
+        { Kind = RecoveryKind.Recipe, Roots = WorkflowSession.RootsFor(current), Inputs = current, CurrentInputs = current, Recipe = recipe });
+        return await RunCoreAsync(session, progress, token, operationLabel);
+    });
+
+    public Task<RecipeRunResult> ResumeAsync(RecoveryJob job, IProgress<ConversionProgress>? progress = null,
+        CancellationToken token = default, Func<string, string>? operationLabel = null)
+        => Task.Run(async () =>
+        {
+            using var session = new WorkflowSession(recovery, job);
+            if (session.Data.Kind != RecoveryKind.Recipe) throw new IOException("This recovery job is not a recipe.");
+            session.Enter();
+            session.RecoverTransaction();
+            session.VerifyExpected();
+            return await RunCoreAsync(session, progress, token, operationLabel);
+        });
+
+    private async Task<RecipeRunResult> RunCoreAsync(WorkflowSession session, IProgress<ConversionProgress>? progress,
+        CancellationToken token, Func<string, string>? operationLabel)
+    {
+        session.Enter();
+        var recipe = session.Data.Recipe!;
+        string[] current = session.Data.CurrentInputs;
         var watch = Stopwatch.StartNew();
-        var results = new List<RecipeStepResult>();
+        var results = session.Data.Steps.ToList();
         bool cancelled = false;
         string reason = "";
-        for (int index = 0; index < recipe.Steps.Count; index++)
+        for (int index = results.Count; index < recipe.Steps.Count; index++)
         {
             var step = recipe.Steps[index];
             var operation = RecipeOperations.Get(step.OperationId);
@@ -77,6 +115,7 @@ public sealed class RecipeRunner(IRecipeStepExecutor? executor = null)
                 if (current.Length == 0) { reason = $"Step {index + 1} has no outputs to process."; break; }
                 if (operation.Inputs == RecipeInputKind.Folders && current.Any(path => !Directory.Exists(path)))
                     throw new ArgumentException("This step requires folder inputs.");
+                if (!session.Data.StepStarted) session.StartStep();
                 // File-moving operations must not move an interrupted conversion's journal or sources.
                 bool movesFiles = operation.Id is "OrganizeFiles" or "OrganizeFolders" or "FlattenOneLayer" or "FlattenAllLayers" or "Cleanup_Filenames";
                 foreach (string folder in current.Select(path => Directory.Exists(path) ? path : Path.GetDirectoryName(path)!).Distinct(InputSelection.Paths))
@@ -102,6 +141,9 @@ public sealed class RecipeRunner(IRecipeStepExecutor? executor = null)
                         : result.Files.FirstOrDefault(file => InputSelection.Paths.Equals(file.Source, path)) is { Status: ConversionStatus.Succeeded } moved
                             ? moved.Outputs : new[] { path })
                         .Where(path => File.Exists(path) || Directory.Exists(path)).Distinct(InputSelection.Paths).ToArray();
+                session.CompleteStep(results[^1], current); // Save outputs and next-step scope before reporting completion.
+                progress?.Report(new(100, (index + 1) * 100 / recipe.Steps.Count, result.Found, result.Found,
+                    $"Completed step {index + 1}/{recipe.Steps.Count}.", watch.Elapsed.ToString(@"hh\:mm\:ss")));
                 if (result.Cancelled) { cancelled = true; reason = $"Cancelled during step {index + 1}."; break; }
                 if (result.Failed > 0) { reason = $"Stopped at step {index + 1}: {result.Failed} item(s) failed."; break; }
                 if (result.Files.Count == 0) { reason = $"Step {index + 1} found no matching items."; break; }
@@ -114,6 +156,7 @@ public sealed class RecipeRunner(IRecipeStepExecutor? executor = null)
                 break;
             }
         }
+        session.Finish(); // An explicit stop/cancel is not a crash; unresolved publications keep their checkpoints.
         return new(results, current, cancelled, reason, watch.Elapsed);
     }
 

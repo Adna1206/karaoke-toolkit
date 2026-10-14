@@ -396,6 +396,8 @@ public partial class MainViewModel : ViewModelBase
         }
         if (SelectedOperation?.IsTagging == true)
         {
+            foreach (string input in CurrentInputs)
+                if (await CheckForRecoveryAsync(Directory.Exists(input) ? input : Path.GetDirectoryName(Path.GetFullPath(input))!)) return;
             await RunTaggingAsync();
             return;
         }
@@ -444,7 +446,13 @@ public partial class MainViewModel : ViewModelBase
         catch (Exception error) { Status = "Could not inspect recovery files: " + error.Message; return true; }
         finally { IsBusy = false; }
         if (resume != null)
-            await ExecuteAsync(resume);
+        try
+        {
+            if (resume.Kind == RecoveryKind.Recipe) await ResumeRecipeAsync(resume);
+            else if (resume.Kind == RecoveryKind.Tagging) await RunTaggingAsync(resume);
+            else await ExecuteAsync(resume);
+        }
+        catch (Exception error) { StatusOutcome = RunStatus.Failure; Status = "Recovery stopped: " + error.Message; }
         return true; // Later never starts a fresh run over an interrupted one.
     }
 

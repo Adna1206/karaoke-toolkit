@@ -1,6 +1,7 @@
 using KaraokeToolkit.App.Features.Settings;
 using KaraokeToolkit.Core.Audio;
 using KaraokeToolkit.Core.Recipes;
+using KaraokeToolkit.Core.Tagging;
 using Action = KaraokeToolkit.Core.Conversion.OperationCatalog.defAction;
 
 namespace KaraokeToolkit.App.Features.Recipes;
@@ -19,12 +20,18 @@ public sealed class RecipeStepOptionsViewModel : OptionsViewModel
     public bool HasRecursionSettings { get; }
     public bool CanValidateInputs { get; }
     public bool CanAutoCreateMetadata { get; }
+    public bool HasTaggingSettings { get; }
+    public string TaggingPattern { get; set; } = FilenameTagPattern.Default;
+    public bool FillEmptyTagsOnly { get; set; }
+    public bool ClearTagComments { get; set; } = true;
+    public bool ClearOtherTags { get; set; } = true;
 
     public RecipeStepOptionsViewModel(RecipeStep step) : base(step.OperationId == "LosslessG_To_Mp3G"
         ? step.Options with { AudioEncoder = AudioEncoder.MP3 } : step.Options)
     {
         var action = RecipeOperations.Get(step.OperationId).Action;
-        HasZipSettings = action is Action.AudioG_To_Zip or Action.Bin_To_Zip or Action.Archive_To_Zip or Action.Repack_Zip;
+        HasTaggingSettings = step.OperationId == "TagKaraoke";
+        HasZipSettings = HasTaggingSettings || action is Action.AudioG_To_Zip or Action.Bin_To_Zip or Action.Archive_To_Zip or Action.Repack_Zip;
         HasAudioSettings = action is Action.Bin_To_AudioG or Action.Bin_To_Zip or Action.LosslessG_To_Mp3G;
         HasVideoSettings = action == Action.Karaoke_To_Video;
         CanChooseEncoder = action != Action.LosslessG_To_Mp3G;
@@ -32,11 +39,23 @@ public sealed class RecipeStepOptionsViewModel : OptionsViewModel
         HasMetadataSettings = action != null && action is not (Action.Cleanup_Filenames or Action.Archive_To_Zip or Action.Repack_Zip or Action.Karaoke_To_Video);
         HasOverwriteSettings = action != null && action != Action.Cleanup_Filenames;
         HasOrganizationSettings = step.OperationId == "OrganizeFiles";
-        HasRecursionSettings = action != null || step.OperationId == "ValidateKaraoke";
+        HasRecursionSettings = action != null || step.OperationId == "ValidateKaraoke" || HasTaggingSettings;
         CanValidateInputs = action != null && action is not (Action.Cleanup_Filenames or Action.Create_Cue_And_Text_Files or Action.Archive_To_Zip or Action.Repack_Zip);
         CanAutoCreateMetadata = HasMetadataSettings && action != Action.Create_Cue_And_Text_Files;
         Overwrite = (int)step.OverwritePolicy;
         ValidateBeforeConversion = step.ValidateBeforeConversion;
         IgnoreLeadingTheForFileOrganization = step.IgnoreLeadingThe;
+        TaggingPattern = step.TaggingPattern;
+        FillEmptyTagsOnly = step.Tagging.FillEmptyOnly;
+        ClearTagComments = step.Tagging.ClearComments;
+        ClearOtherTags = step.Tagging.ClearOtherDescriptiveTags;
     }
+
+    public RecipeStep ToStep(RecipeStep step) => step with
+    {
+        Options = ToOptions(), OverwritePolicy = (KaraokeToolkit.Core.Conversion.OverwritePolicy)Overwrite,
+        ValidateBeforeConversion = ValidateBeforeConversion, IgnoreLeadingThe = IgnoreLeadingTheForFileOrganization,
+        TaggingPattern = TaggingPattern,
+        Tagging = new() { FillEmptyOnly = FillEmptyTagsOnly, ClearComments = ClearTagComments, ClearOtherDescriptiveTags = ClearOtherTags }
+    };
 }

@@ -60,11 +60,16 @@ checked against the staged audio and original graphics. Verification failure,
 read-only inputs and cancellation before publication keep originals unchanged.
 Completed files remain after batch cancellation.
 
-An interrupted tagging publication retains the standard transaction journal and
-backups plus a tagging marker. Starting tagging on that folder again verifies and
-finishes/rolls back that publication before generating a fresh preview, and shows
-a recovery notice. Changed files block recovery rather than overwrite newer work.
-Tagging does not yet appear in recipe steps or the startup conversion-resume list.
+Tagging batches checkpoint the accepted, manually edited preview, tagging options,
+ZIP processing settings and completed files. Startup, revisiting a selected folder
+and **Recover** offer **Recover and resume** or **Later**. Recovery verifies the
+interrupted publication, keeps completed files, and applies the saved tags to
+remaining files without reopening the pattern dialog. Changed files block recovery
+rather than overwrite newer work. Normal cancellation ends the batch and retains
+completed work. Old unindexed tagging transaction markers can still be recovered
+when revisiting their folder, followed by a fresh preview. Recipe tagging uses saved
+pattern/options without a dialog; its generated preview and completed files are
+checkpointed inside the parent recipe rather than a separate tagging recovery job.
 
 Results use the standard session report header with **Tagging Report** as type.
 The About page lists TagLibSharp and displays its shipped LGPL v2.1 text; see

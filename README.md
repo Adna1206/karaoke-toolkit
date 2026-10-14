@@ -22,7 +22,7 @@ The original MP3+G Toolz binaries and comparison bridges are no longer required.
 - Video audio bitrate matching from compressed-source metadata, with a configurable fallback for lossless or unknown sources.
 - Existing-output policy: Ask each time, Skip, Replace, or Fail without overwriting.
 - Persisted System Default, Light and Dark themes.
-- Crash recovery at startup or when revisiting an interrupted source folder.
+- Crash recovery at startup or when revisiting an interrupted source folder, including complete recipe continuation and saved tagging batches.
 - Drag-and-drop and multi-file/folder selection without converting neighbouring files.
 - Completion reports, failed-item retry, output-folder opening and TXT/JSON report export.
 - Optional per-user Windows Explorer context-menu integration under Options → Explorer.

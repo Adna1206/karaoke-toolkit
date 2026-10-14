@@ -1,4 +1,5 @@
 using KaraokeToolkit.Core.Conversion;
+using KaraokeToolkit.Core.Tagging;
 using System.Text.Json;
 
 namespace KaraokeToolkit.Core.Recipes;
@@ -20,6 +21,8 @@ public sealed record RecipeStep
     public OverwritePolicy OverwritePolicy { get; init; } = OverwritePolicy.Ask;
     public bool ValidateBeforeConversion { get; init; }
     public bool IgnoreLeadingThe { get; init; }
+    public string TaggingPattern { get; init; } = FilenameTagPattern.Default;
+    public TaggingOptions Tagging { get; init; } = new();
 }
 
 public static class RecipeJson

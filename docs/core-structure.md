@@ -12,7 +12,7 @@ match folders; the app and test tools import those namespaces explicitly.
 | Tagging | Filename templates, tag previews, staged metadata writes and packet-payload verification |
 | FileOperations | Filename cleanup, CUE/TXT creation, quarantine and restoration |
 | Validation | Read-only integrity checks and findings |
-| Recovery | Run journals, interrupted-run recovery and transactional file publication |
+| Recovery | Conversion and recipe/tagging checkpoints, saved move plans and transactional file publication |
 | Reporting | Run reports and shared report headers |
 | Settings | Processing preferences and atomic XML settings persistence |
 | DiscRipping | cdrdao discovery, disc capture, track extraction and ripping workflow |

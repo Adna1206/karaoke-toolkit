@@ -49,6 +49,20 @@ public sealed class FlattenFolderLayer
         foreach (string root in roots)
             foreach (string child in Directory.GetDirectories(root).Order(Paths))
                 Plan(root, child);
+        if (WorkflowSession.Current.Value is { } workflow)
+        {
+            var plan = new List<WorkflowMoveGroup>();
+            foreach (var item in work)
+                if (item.Protected)
+                    plan.Add(new() { Items = item.Entries.Append(item.Child).Select(p => new WorkflowMove(p, null, "protected")).ToArray(), SkipReason = "Protected or linked child folder left in place." });
+                else
+                {
+                    foreach (string entry in item.Entries)
+                        plan.Add(new() { Items = [WorkflowMoves.Move(entry, Path.Combine(item.Root, Path.GetFileName(entry)))] });
+                    plan.Add(new() { Items = [new(item.Child, null, "empty", true)] });
+                }
+            return WorkflowMoves.Run(workflow, plan, progress, token);
+        }
         int total = work.Sum(item => item.Entries.Length + 1), completed = 0;
         var results = new List<ConversionFileResult>();
         foreach (var rootGroup in work.GroupBy(item => item.Root, Paths))

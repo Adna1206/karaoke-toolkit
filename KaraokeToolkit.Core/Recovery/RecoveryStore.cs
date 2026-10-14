@@ -3,7 +3,10 @@ using System.Text.Json;
 
 namespace KaraokeToolkit.Core.Recovery;
 
-public sealed record RecoveryJob(string JournalPath, string Folder, string Action, int Completed, int Total, string? Problem = null);
+public sealed record RecoveryJob(string JournalPath, string Folder, string Action, int Completed, int Total, string? Problem = null)
+{
+    public RecoveryKind Kind { get; init; }
+}
 
 /// <summary>Finds interrupted runs without scanning a drive. The folder journal remains authoritative.</summary>
 public sealed class RecoveryStore
@@ -32,12 +35,46 @@ public sealed class RecoveryStore
             foreach (string directory in ConversionService.EnumerateFolders(Path.GetFullPath(folder), recurse))
                 foreach (string run in Directory.GetDirectories(directory, ".karaoke-job-run-*"))
                     paths.Add(Path.Combine(run, "run.json"));
+        // Workflow indexes also cover selections spanning several source folders.
+        if (Directory.Exists(IndexDirectory))
+            foreach (string index in Directory.GetFiles(IndexDirectory, "*.json"))
+                try
+                {
+                    string? path = JsonSerializer.Deserialize<string>(File.ReadAllText(index));
+                    if (path != null && Path.GetFileName(path) == "workflow.json") paths.Add(path);
+                }
+                catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException) { }
+        if (folder != null && Directory.Exists(folder))
+            foreach (string directory in ConversionService.EnumerateFolders(Path.GetFullPath(folder), recurse))
+            foreach (string workflow in Directory.GetDirectories(directory, ".karaoke-job-workflow-*")) paths.Add(Path.Combine(workflow, "workflow.json"));
         var jobs = new List<RecoveryJob>();
         foreach (string path in paths)
         {
             if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
                 continue;
             string directory = Path.GetDirectoryName(Path.GetFullPath(path))!;
+            if (Path.GetFileName(path) == "workflow.json")
+            {
+                if (!Path.GetFileName(directory).StartsWith(".karaoke-job-workflow-", StringComparison.Ordinal)) continue;
+                FileStream workflowLease;
+                try { RunSession.CheckPlainPath(directory); workflowLease = RunSession.Lease(directory); }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException) { continue; }
+                using (workflowLease)
+                {
+                    try
+                    {
+                        var workflow = WorkflowSession.Read(path);
+                        if (folder != null && !workflow.Roots.Any(root => WorkflowSession.IsWithin(root, Path.GetFullPath(folder)) || WorkflowSession.IsWithin(Path.GetFullPath(folder), root))) continue;
+                        if (!workflow.Finished)
+                            jobs.Add(new(path, workflow.Roots[0], workflow.Kind == RecoveryKind.Recipe ? "Recipe — " + workflow.Recipe!.Name : "Tag Karaoke Files",
+                                workflow.Kind == RecoveryKind.Recipe ? workflow.Steps.Count : workflow.TagResults.Count,
+                                workflow.Kind == RecoveryKind.Recipe ? workflow.Recipe!.Steps.Count : workflow.TagFiles.Length) { Kind = workflow.Kind });
+                    }
+                    catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or ArgumentException or NotSupportedException or NullReferenceException)
+                    { jobs.Add(new(path, Path.GetDirectoryName(directory)!, "Workflow recovery needs attention", 0, 0, "The workflow journal could not be read safely. Keep the recovery files for inspection. " + e.Message) { Kind = RecoveryKind.Recipe }); }
+                }
+                continue;
+            }
             if (Path.GetFileName(path) != "run.json" || !Path.GetFileName(directory).StartsWith(".karaoke-job-run-", StringComparison.Ordinal))
                 continue;
             FileStream lease;
@@ -52,17 +89,34 @@ public sealed class RecoveryStore
                 try
                 {
                     var data = RunSession.Read(path);
+                    // A recipe owns continuation of its child runs; offer one prompt for the workflow.
+                    if (data.OwnerWorkflow != null && File.Exists(data.OwnerWorkflow))
+                    {
+                        var owner = WorkflowSession.Read(data.OwnerWorkflow);
+                        if (!owner.Finished && owner.Conversions?.Any(c => InputSelection.Paths.Equals(c.Journal, path)) == true)
+                        {
+                            // Revisit discovery still finds the parent through its child when
+                            // the startup index was lost and the selected root is a later folder.
+                            try
+                            {
+                                using var ownerLease = RunSession.Lease(Path.GetDirectoryName(data.OwnerWorkflow)!);
+                                jobs.Add(new(data.OwnerWorkflow, owner.Roots[0], "Recipe — " + owner.Recipe!.Name, owner.Steps.Count, owner.Recipe.Steps.Count) { Kind = RecoveryKind.Recipe });
+                            }
+                            catch (IOException) { /* The parent is active; do not offer it or its child. */ }
+                            continue;
+                        }
+                    }
                     if (!data.Finished)
                         jobs.Add(new(path, data.Request.Folder, data.Request.Action.ToString(), data.Results.Count, data.Sources.Length));
                 }
-                catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or ArgumentException)
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or ArgumentException or NotSupportedException or NullReferenceException)
                 {
                     jobs.Add(new(path, Path.GetDirectoryName(directory)!, "Recovery needs attention", 0, 0,
                         "The journal could not be read safely. Keep the recovery files for inspection. " + e.Message));
                 }
             }
         }
-        return jobs;
+        return jobs.DistinctBy(j => j.JournalPath, InputSelection.Paths).ToArray();
     }
 
     internal string IndexPath(string journal) => Path.Combine(IndexDirectory, Path.GetFileName(Path.GetDirectoryName(journal)) + ".json");
@@ -83,12 +137,22 @@ internal static class DurableJson
             JsonSerializer.Serialize(stream, value);
             stream.Flush(flushToDisk: true);
         }
-        File.Move(temporary, path, overwrite: true);
+        // Windows readers/scanners can briefly deny replacement. Keep the old journal
+        // intact and retry only the atomic rename; never fall back to an in-place write.
+        for (int attempt = 0; ; attempt++)
+        {
+            try { File.Move(temporary, path, overwrite: true); return; }
+            catch (Exception error) when (attempt < 4 && OperatingSystem.IsWindows() &&
+                (error is UnauthorizedAccessException && (error.HResult & 0xffff) == 5 ||
+                 error is IOException && (error.HResult & 0xffff) is 32 or 33))
+            { Thread.Sleep(25 * (attempt + 1)); }
+        }
     }
 }
 
 internal sealed class RunData
 {
+    public string? OwnerWorkflow { get; set; }
     public int Version { get; set; } = 1;
     public required OperationRequest Request
     {
@@ -162,6 +226,7 @@ internal sealed class RunSession : IDisposable
         catch { rootLease.Dispose(); throw; }
         Data = new()
         {
+            OwnerWorkflow = WorkflowSession.Current.Value?.Journal,
             Request = request with
             {
                 Folder = Path.TrimEndingDirectorySeparator(Path.GetFullPath(request.Folder))
@@ -239,7 +304,11 @@ internal sealed class RunSession : IDisposable
                 throw new IOException("Recovery cannot follow linked files or folders: " + current);
     }
 
-    internal void Save() => DurableJson.Write(Journal, Data);
+    internal void Save()
+    {
+        DurableJson.Write(Journal, Data);
+        WorkflowSession.Current.Value?.RecordChild(Journal, Data);
+    }
     internal void ThrowIfUnresolved()
     {
         if (Data.Workspace != null && File.Exists(Path.Combine(Data.Workspace, "recovery.json")))

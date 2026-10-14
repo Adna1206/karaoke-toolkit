@@ -40,6 +40,17 @@ unsaved edits; karaoke files and separately exported copies are untouched.
 
 ## Execution
 
+**Tag Karaoke Files** is available as a recipe step. Its Tagging tab saves the filename
+pattern (default `%DISC%-%TRACK% - %ARTIST% - %TITLE%`), fill-empty-only preference,
+and comment/other descriptive tag cleanup preferences. Processing controls recursion;
+ZIP controls the compression used when updating audio inside archives. Tags update
+files in place without re-encoding; DISC becomes Album and Track accepts zero.
+There is no interactive preview dialog during a recipe. Pattern/media failures stop
+later steps; BIN and orphan CDG files are reported as skipped. Tagging passes the
+same input paths onward, retaining graphics companions for subsequent conversions.
+Recovery freezes the generated tagging preview before writing and skips completed
+files using the parent recipe checkpoint.
+
 Conversions pass only their successful primary outputs to the next step, excluding
 CUE/TXT side files and retained originals. Lossless-to-MP3 also passes its retained
 CDG companion. Validation passes the same inputs onward after all findings are
@@ -62,10 +73,15 @@ output verification and per-conversion recovery are reused. Runs appear in the
 main progress screen with a numbered step log and a **Recipe Report** available
 through **View Last Run Report**.
 
-An interrupted conversion must be recovered before a recipe starts in its folder.
-Recovery can recover that individual conversion step; automatic continuation of
-the remaining recipe is not implemented. Recipes do not provide whole-workflow
-rollback. Keeping lossless originals beside an MP3 with the same basename can
+Interrupted work must be recovered before a fresh recipe starts in its folder.
+Startup, folder selection and **Recover** offer the saved recipe as one workflow.
+Recovery uses its own recipe/settings snapshot even if the library entry was edited
+or deleted. Completed steps are not repeated; interrupted child conversions resume
+their existing source plans before later steps run. Organisation and flattening
+use frozen move plans, so a partial move is completed without flattening another layer.
+Saved inputs/outputs and pending moves are hash-checked; changed files stop recovery
+and retain the journal. **Later** does nothing, and explicit cancellation ends the run.
+Recipes do not provide whole-workflow rollback. Keeping lossless originals beside an MP3 with the same basename can
 make a later Audio+G operation ambiguous; the engine reports this normally.
 
 ## Code
@@ -78,5 +94,11 @@ make a later Audio+G operation ambiguous; the engine reports this normally.
 - Tests `Recipes` and `App/Recipes`: orchestration, import/export, settings snapshots,
   known incompatibilities, cancellation, failure and real engine workflows.
 
-Custom PowerShell/CMD steps and whole-recipe crash continuation are recorded in
-the feature backlog. This first recipe format supports built-in operations only.
+Core's recipe operation registry declares allowed operations and their input/output
+constraints. UI `CanUseInRecipes` reads that registry; imports and execution enforce
+the same rule. Eligibility is a developer capability, not a user preference. Each
+`RecipeStep` holds its own processing and operation-specific settings, passed to the
+engine by `RecipeStepExecutor`. Older recipes default the added tagging fields.
+
+Custom PowerShell/CMD steps remain in the feature backlog. This recipe format supports
+built-in operations only.

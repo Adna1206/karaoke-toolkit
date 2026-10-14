@@ -294,8 +294,11 @@ public partial class MainWindow : Window
             Children =
             {
                 new TextBlock { Text = ApplicationInfo.Name + " did not finish this run.", FontWeight = Avalonia.Media.FontWeight.SemiBold },
-                new TextBlock { Text = $"{job.Folder}\n\n{job.Action}\n{job.Completed} of {job.Total} source groups recorded.", TextWrapping = Avalonia.Media.TextWrapping.Wrap },
-                new TextBlock { Text = job.Problem ?? "Recovery checks any interrupted file publication, then resumes unfinished work with the saved action and settings. Completed groups are kept. If files have changed, recovery stops and retains the recovery files. Later leaves everything as it is.", TextWrapping = Avalonia.Media.TextWrapping.Wrap },
+                new TextBlock { Text = $"{job.Folder}\n\n{job.Action}\n{job.Completed} of {job.Total} {(job.Kind == RecoveryKind.Recipe ? "recipe steps" : job.Kind == RecoveryKind.Tagging ? "files" : "source groups")} recorded.", TextWrapping = Avalonia.Media.TextWrapping.Wrap },
+                new TextBlock { Text = job.Problem ?? (job.Kind == RecoveryKind.Recipe
+                    ? "Recovery uses the saved recipe snapshot, checks the interrupted step, and continues the remaining steps. Completed steps are kept, even if the recipe library has since changed."
+                    : job.Kind == RecoveryKind.Tagging ? "Recovery checks the interrupted tag publication, then tags remaining files using the saved preview and options. Completed files are kept."
+                    : "Recovery checks any interrupted file publication, then resumes unfinished work with the saved action and settings. Completed groups are kept.") + " If files have changed, recovery stops and retains the recovery files. Later leaves everything as it is.", TextWrapping = Avalonia.Media.TextWrapping.Wrap },
                 new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 10, Children = { later, recover } }
             }
         };

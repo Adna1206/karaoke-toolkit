@@ -14,6 +14,8 @@ public sealed record OperationDefinition(string Id, Action? Action, string Label
     public bool IsRip { get; init; }
     public bool IsRestore { get; init; }
     public bool IsTagging { get; init; }
+    // The Core allowlist is authoritative for both the builder and imported recipes.
+    public bool CanUseInRecipes => KaraokeToolkit.Core.Recipes.RecipeOperations.Supports(Id);
     public AlphabeticalOrganizeScope? OrganizeMode { get; init; }
     public FolderFlattenScope? FlattenScope { get; init; }
     public bool IsValidation => Section != OperationSection.Recipes && Action == null && !IsRip && !IsRestore && !IsTagging && OrganizeMode == null && FlattenScope == null;

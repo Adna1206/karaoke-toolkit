@@ -23,11 +23,10 @@ public partial class RecipeStepSettingsWindow : Window
     private void Cancel_Click(object? sender, RoutedEventArgs e) => Close();
     private void Save_Click(object? sender, RoutedEventArgs e)
     {
-        var model = (OptionsViewModel)DataContext!;
+        var model = (RecipeStepOptionsViewModel)DataContext!;
         try
         {
-            var candidate = step with { Options = model.ToOptions(), OverwritePolicy = (OverwritePolicy)model.Overwrite,
-                ValidateBeforeConversion = model.ValidateBeforeConversion, IgnoreLeadingThe = model.IgnoreLeadingTheForFileOrganization };
+            var candidate = model.ToStep(step);
             RecipeOperations.Validate(new() { Steps = [candidate] });
             Result = candidate;
             Close();

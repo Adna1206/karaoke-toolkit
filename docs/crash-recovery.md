@@ -12,6 +12,14 @@ Completed, failed and skipped source groups are not attempted again. The interru
 group and remaining groups continue; automatic CUE/TXT generation also has checkpoints.
 New files added after the original scan are left for a subsequent run.
 
+Recipes and tagging use the same startup/Recover prompt. A recipe checkpoint stores
+its complete definition/settings snapshot, completed-step reports, next input scope
+and current child conversion or move plans. Recovery offers one parent recipe,
+resumes its interrupted work, then continues later steps; it does not depend on the
+recipe still existing in the library. A tagging checkpoint stores the accepted
+preview (including manual corrections) and run options, skips completed files and
+continues the batch without asking for a new pattern.
+
 **Later** leaves files and journals untouched and does not start a fresh operation over
 the interrupted run. A normal Cancel still discards unpublished work and ends the run;
 this feature recovers unexpected termination and retained publication failures, rather
@@ -42,8 +50,19 @@ These directories are excluded from recursive media scanning. A small index unde
 Folder discovery also works if that index is missing. Keep the source folder at its
 original path until recovery is complete; unavailable drives must be reconnected.
 
+Recipe/tagging checkpoints live in `.karaoke-job-workflow-<id>/workflow.json` in
+the first source root. Their index also covers other selected roots in a multi-folder
+launch. Child conversion journals remain underneath their own source folders but
+are owned by the recipe, so startup presents the whole recipe once. The source roots
+and pending outputs are validated before resuming. Folder-moving recipe steps retain
+their original item groups, target paths and hashes; completed moves are recorded
+before progress is reported. A crash between a rename and its receipt is reconciled
+from the verified source/target state, without rebuilding a plan from the altered tree.
+
 Journals use flushed temporary files and replacement; staged outputs are flushed before
-originals are moved. A completed-group checkpoint is saved before backups are deleted.
+originals are moved. Windows checkpoint replacement briefly retries access/sharing
+conflicts while preserving the old journal. Persistent failures still stop the write.
+A completed-group checkpoint is saved before backups are deleted.
 Process leases prevent recovery of a still-running run and concurrent commits in a
 folder. Recovery rejects linked paths and paths outside the recorded root.
 
@@ -52,6 +71,14 @@ hardware failure or sudden power loss. Filesystem/storage durability and unrelat
 applications changing files concurrently remain outside the application's control.
 
 ## Automated verification
+
+`WorkflowRecoveryTests` kills actual recipe/tagging child processes between steps,
+inside conversion, during flattening and after the first tagged file. It also checks
+startup dispatch, Later, saved manual tags, deleted recipe-library entries, altered
+outputs, multi-root discovery without the parent index, explicit cancellation, a
+rename that happened before its durable receipt, and retention/resumption of a
+half-moved pair blocked by a collision. Checkpoint tests exercise temporary and
+persistent Windows reader locks.
 
 `RecoveryTests` covers every backup/output move boundary, repeated recovery, interrupted
 rollback, changed files, unsafe paths, checkpoint/cleanup interruption, staging,

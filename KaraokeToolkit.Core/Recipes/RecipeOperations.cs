@@ -2,6 +2,7 @@ using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Archives;
 using KaraokeToolkit.Core.Audio;
 using KaraokeToolkit.Core.Recovery;
+using KaraokeToolkit.Core.Tagging;
 using Action = KaraokeToolkit.Core.Conversion.OperationCatalog.defAction;
 
 namespace KaraokeToolkit.Core.Recipes;
@@ -33,7 +34,10 @@ public static class RecipeOperations
         new("FlattenOneLayer", RecipeInputKind.Folders, RecipeInputKind.None),
         new("FlattenAllLayers", RecipeInputKind.Folders, RecipeInputKind.None),
         new("ValidateKaraoke", RecipeInputKind.Folders | Karaoke, RecipeInputKind.None),
+        new("TagKaraoke", RecipeInputKind.Folders | RecipeInputKind.AudioGraphics | RecipeInputKind.Zip | RecipeInputKind.Video, RecipeInputKind.None),
     ]);
+
+    public static bool Supports(string id) => All.Any(operation => operation.Id == id);
 
     public static RecipeOperation Get(string id) => All.FirstOrDefault(operation => operation.Id == id)
         ?? throw new NotSupportedException("This operation cannot run in a recipe: " + id);
@@ -43,6 +47,7 @@ public static class RecipeOperations
     {
         var operation = Get(operationId);
         if (operationId == "OrganizeFiles") return null;
+        if (operationId == "TagKaraoke") return KaraokeTaggingService.MediaExtensions.Concat([".zip", ".cdg"]).ToArray();
         if (operationId == "LosslessG_To_Mp3G") return LosslessAudioTranscoder.Extensions.Append(".cdg").ToArray();
         var extensions = new List<string>();
         if (operation.Inputs.HasFlag(RecipeInputKind.Zip)) extensions.Add(".zip");
@@ -93,6 +98,11 @@ public static class RecipeOperations
             if (previous != RecipeInputKind.None && (previous & operation.Inputs) == 0)
                 throw new ArgumentException($"Step {index + 1} ({operation.Id}) cannot accept the previous step's output.");
             if (!Enum.IsDefined(step.OverwritePolicy)) throw new ArgumentException("Invalid overwrite policy.");
+            if (operation.Id == "TagKaraoke")
+            {
+                _ = new FilenameTagPattern(step.TaggingPattern);
+                if (step.Tagging == null) throw new ArgumentException("Tagging settings are missing.");
+            }
             new OperationRequest(operation.Action ?? Action.AudioG_To_Zip, ".", step.Options).Validate();
             // None means pass-through: validation, listings and folder maintenance retain their input scope.
             if (operation.Outputs != RecipeInputKind.None) previous = operation.Outputs;

@@ -26,6 +26,7 @@ public sealed partial class RecipeStepItem(RecipeStep step) : ObservableObject
         "ValidateKaraoke" or "Cleanup_Filenames" or "Create_Cue_And_Text_Files"
             => Step.Options.RecurseFolders ? "Includes subfolders" : "Selected inputs only",
         "Karaoke_To_Video" => $"{Step.Options.VideoContainer} · {Step.Options.VideoResolution} · {Step.Options.VideoFrameRate} fps",
+        "TagKaraoke" => $"{Step.TaggingPattern} · {(Step.Tagging.FillEmptyOnly ? "fill empty fields" : "replace tags")}",
         "LosslessG_To_Mp3G" => $"MP3 · {Step.Options.AudioBitrate} kbps · originals {(Step.Options.DeleteOldFiles ? "deleted" : "kept")}",
         "Bin_To_AudioG" => $"{Step.Options.AudioEncoder} · {Step.Options.AudioBitrate} kbps · originals {(Step.Options.DeleteOldFiles ? "deleted" : "kept")}",
         "Zip_To_AudioG" or "Zip_To_Bin" or "AudioG_To_Bin" => $"Originals {(Step.Options.DeleteOldFiles ? "deleted" : "kept")} · existing outputs: {Step.OverwritePolicy}",
@@ -42,7 +43,7 @@ public partial class RecipeBuilderViewModel : ViewModelBase
     public ObservableCollection<RecipeDefinition> SavedRecipes { get; } = [];
     public ObservableCollection<RecipeStepItem> Steps { get; } = [];
     public IReadOnlyList<OperationDefinition> Operations { get; } = OperationDefinitions.All
-        .Where(definition => RecipeOperations.All.Any(operation => operation.Id == definition.Id)).ToArray();
+        .Where(definition => definition.CanUseInRecipes).ToArray();
     [ObservableProperty] public partial string Name { get; set; } = "New recipe";
     [ObservableProperty] public partial string Error { get; set; } = "";
     [ObservableProperty, NotifyPropertyChangedFor(nameof(CanDeleteRecipe))]

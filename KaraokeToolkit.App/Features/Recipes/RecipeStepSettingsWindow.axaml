@@ -16,6 +16,15 @@
     <TextBlock Text="{Binding Definitions.NamingFormat.Label}" FontWeight="SemiBold" IsVisible="{Binding HasMetadataSettings}"/>
     <TextBox Text="{Binding NamingFormat}" IsVisible="{Binding HasMetadataSettings}" ToolTip.Tip="{Binding Definitions.NamingFormat.Description}"/>
    </StackPanel></ScrollViewer></TabItem>
+   <TabItem Header="Tagging" IsVisible="{Binding HasTaggingSettings}"><ScrollViewer><StackPanel Margin="0,14" Spacing="10">
+    <TextBlock Text="Filename pattern" FontWeight="SemiBold"/>
+    <TextBox Text="{Binding TaggingPattern}" ToolTip.Tip="Use %DISC%, %TRACK%, %ARTIST% and %TITLE% with your own separators. DISC is stored as Album; TRACK allows zero."/>
+    <TextBlock Text="Tags are derived from filenames. No preview dialog opens during the recipe. ZIPs update their audio; BIN and unpaired CDG files cannot be tagged." TextWrapping="Wrap" FontSize="12"/>
+    <CheckBox Content="Fill empty tags only" IsChecked="{Binding FillEmptyTagsOnly}" ToolTip.Tip="Keep existing Album, Track, Artist and Title values when present."/>
+    <CheckBox Content="Clear comments" IsChecked="{Binding ClearTagComments}"/>
+    <CheckBox Content="Clear other descriptive tags" IsChecked="{Binding ClearOtherTags}" ToolTip.Tip="Remove descriptive fields outside Album, Track, Artist and Title while preserving media and technical metadata."/>
+    <TextBlock Text="Files are updated in place without re-encoding. ZIP compression uses this step's ZIP settings." TextWrapping="Wrap" FontSize="12"/>
+   </StackPanel></ScrollViewer></TabItem>
    <TabItem Header="ZIP" IsVisible="{Binding HasZipSettings}"><ScrollViewer><StackPanel Margin="0,14" Spacing="10">
     <TextBlock Text="{Binding Definitions.Algorithm.Label}" FontWeight="SemiBold"/>
     <ComboBox ItemsSource="{Binding ZipAlgorithms}" SelectedIndex="{Binding Algorithm}" HorizontalAlignment="Stretch" ToolTip.Tip="{Binding Definitions.Algorithm.Description}"/>

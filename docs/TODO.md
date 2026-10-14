@@ -1,18 +1,17 @@
 # Planned features
 
-- [ ] **Recipe tagging steps** — define saved pattern and tagging options for noninteractive
-  recipe execution. Tag Karaoke Files currently uses an editable preview dialog and is
-  deliberately excluded from the recipe operation registry.
+- [x] **Recipe tagging steps** — saved filename pattern, tag options and ZIP settings;
+  noninteractive execution with a frozen preview and parent-recipe crash recovery.
 
 - [ ] **Recipe script steps** — add optional PowerShell/CMD steps with defined
   input/output paths, platform requirements, captured output, cancellation and
   explicit trust for imported scripts. Run without requesting elevation; lack
   of admin rights does not restrict access to the user's own files.
 
-- [ ] **Whole-recipe crash continuation** — persist completed steps and their
-  output paths so recovery of an interrupted conversion can continue its recipe.
-  The initial builder reuses per-conversion recovery but does not resume the
-  remaining recipe automatically or roll back completed steps.
+- [x] **Whole-recipe crash continuation** — checkpoint the saved recipe/settings,
+  completed steps and output scope; resume child conversions and frozen move plans
+  before continuing later steps. Startup recovery also includes tagging batches.
+  Completed changes are retained; this is not whole-workflow rollback.
 
 - [ ] **Modern karaoke graphics re-rendering** — investigate extracting or recognising
   CD+G lyrics and highlight timing to draw modern fonts, backgrounds and animations.

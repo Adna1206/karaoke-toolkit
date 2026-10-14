@@ -1,6 +1,8 @@
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Recovery;
 using KaraokeToolkit.Core;
+using KaraokeToolkit.Core.Recipes;
+using KaraokeToolkit.Core.Tagging;
 
 namespace KaraokeToolkit.Core.Tests.Support;
 
@@ -10,6 +12,32 @@ internal static class RecoveryCrashWorker
     // terminates it without Dispose/finally so file handles and journals behave like a crash.
     public static async Task<int> Main(string[] args)
     {
+        if (args.Length == 4 && args[0] == "--workflow-crash-worker")
+        {
+            string mode = args[1], root = args[2];
+            var store = new RecoveryStore(args[3]);
+            var pause = new PauseWorkflow(root, mode);
+            if (mode == "tagging")
+            {
+                var service = new KaraokeTaggingService(store);
+                var preview = await service.PreviewAsync([root], FilenameTagPattern.Default, false);
+                preview = preview.Where(p => p.CanApply).Select(p => p with { Tags = p.Tags! with { Title = "Saved preview title" } }).ToArray();
+                await service.ApplyAsync(preview, new(ClearComments: false), new(), pause);
+            }
+            else
+            {
+                var recipe = new RecipeDefinition { Name = "Crash continuation", Steps = mode == "moving"
+                    ? [new() { OperationId = "FlattenOneLayer" }, new() { OperationId = "ValidateKaraoke" }]
+                    : mode == "recipe-tagging"
+                    ? [new() { OperationId = "TagKaraoke", Tagging = new(ClearComments: false), Options = new() { RecurseFolders = false } },
+                       new() { OperationId = "AudioG_To_Zip", Options = new() { DeleteOldFiles = false, AutoCreateCueText = false } }]
+                    : [new() { OperationId = "Zip_To_AudioG", Options = new() { DeleteOldFiles = true, AutoCreateCueText = false } },
+                       new() { OperationId = "AudioG_To_Zip", Options = new() { DeleteOldFiles = true, AutoCreateCueText = false } }] };
+                await new RecipeRunner(new RecipeStepExecutor(store), store).RunAsync(recipe,
+                    mode is "moving" or "recipe-tagging" ? [root] : [Path.Combine(root, "song.zip")], pause);
+            }
+            return 0;
+        }
         if (args.Length >= 2 && args[0] == "--cdrdao-process-probe")
         {
             if (args[1] == "flood")
@@ -52,6 +80,24 @@ internal static class RecoveryCrashWorker
             File.WriteAllText(Path.Combine(folder, "crash-ready"), "ready");
             using var wait = new ManualResetEventSlim();
             wait.Wait();
+        }
+    }
+
+    private sealed class PauseWorkflow(string folder, string mode) : IProgress<ConversionProgress>
+    {
+        public void Report(ConversionProgress value)
+        {
+            bool ready = mode switch
+            {
+                "tagging" => value.Completed == 1 && value.Message.StartsWith("Tagging ", StringComparison.Ordinal),
+                "recipe-tagging" => value.Completed == 1 && value.Message.Contains("Tagging ", StringComparison.Ordinal),
+                "between" => value.Message == "Completed step 1/2.",
+                "moving" => value.Message.Contains("planned items.", StringComparison.Ordinal),
+                _ => value.Message.Contains("Verified outputs:", StringComparison.Ordinal)
+            };
+            if (!ready) return;
+            File.WriteAllText(Path.Combine(folder, "workflow-crash-ready"), "ready");
+            using var wait = new ManualResetEventSlim(); wait.Wait();
         }
     }
 }

@@ -11,7 +11,7 @@ BASS/DynaZip libraries, x86 bridge, or .NET Framework compiler/runtime is needed
 - Tagging: custom patterns, numeric tracks, media/tag readback, decoded-audio fidelity, ZIP member names and graphics, stale previews, cleanup controls and interrupted publication.
 - FileOperations: organization, flattening, cleanup, CUE/TXT, quarantine and restoration.
 - Validation: structural checks, pairing, CRCs and excluded folders.
-- Recovery: interrupted runs, process termination and file transactions.
+- Recovery: interrupted conversions/recipes/tagging, process termination, frozen move plans and file transactions.
 - Reporting: report contents and consistent headers.
 - Settings: persistence, defaults, validation and atomic saves.
 - DiscRipping: synthetic images, fake drives, subchannels and native-tool process handling.

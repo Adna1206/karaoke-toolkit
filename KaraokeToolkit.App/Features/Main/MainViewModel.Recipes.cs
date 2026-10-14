@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Recipes;
 using KaraokeToolkit.App.Metadata;
+using KaraokeToolkit.Core.Recovery;
 
 namespace KaraokeToolkit.App.Features.Main;
 
@@ -52,10 +53,19 @@ public partial class MainViewModel
     }
 
     public async Task RunRecipeAsync(RecipeDefinition recipe, IEnumerable<string> inputs)
+        => await RunRecipeCoreAsync(recipe, inputs, null);
+
+    private async Task ResumeRecipeAsync(RecoveryJob job)
+        => await RunRecipeCoreAsync(RecipeRunner.ReadRecoveryRecipe(job), [job.Folder], job);
+
+    private async Task RunRecipeCoreAsync(RecipeDefinition recipe, IEnumerable<string> inputs, RecoveryJob? job)
     {
         if (IsBusy) return;
         RecipeOperations.Validate(recipe);
         var launchInputs = inputs.ToArray();
+        if (job == null)
+            foreach (string input in launchInputs)
+                if (await CheckForRecoveryAsync(System.IO.Directory.Exists(input) ? input : System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(input))!)) return;
         settingInputs = true;
         try { FolderPath = launchInputs.FirstOrDefault() ?? ""; selectedInputs = launchInputs; }
         finally { settingInputs = false; }
@@ -63,7 +73,9 @@ public partial class MainViewModel
         using var source = new CancellationTokenSource();
         cancellation = source;
         IsBusy = true; CancelRequested = false; ShowProgress = true;
-        RunTitle = "Recipe — " + recipe.Name;
+        IsRecoveryMode = job != null;
+        RecoveryMessage = job == null ? "" : "Recovery mode — resuming the saved recipe and its remaining steps.";
+        RunTitle = (job == null ? "Recipe — " : "Recovery — ") + recipe.Name;
         Activity.Clear(); LastReport = null; retryRequests = []; ValidationFindings = [];
         Progress = TotalProgress = FoundFiles = 0; Elapsed = "00:00:00"; lastMessage = "";
         Status = "Starting recipe…";
@@ -73,7 +85,9 @@ public partial class MainViewModel
         {
             var progress = new Progress<ConversionProgress>(p => { lock (gate) { if (accepting) Report(p); } });
             string Label(string operationId) => OperationDefinitions.All.Single(operation => operation.Id == operationId).Label;
-            var result = await new RecipeRunner(new RecipeStepExecutor(recovery, ResolveConflictAsync)).RunAsync(recipe, launchInputs, progress, source.Token, Label);
+            var runner = new RecipeRunner(new RecipeStepExecutor(recovery, ResolveConflictAsync), recovery);
+            var result = job == null ? await runner.RunAsync(recipe, launchInputs, progress, source.Token, Label)
+                : await runner.ResumeAsync(job, progress, source.Token, Label);
             lock (gate) { accepting = false; }
             LastReport = result.ToReport(recipe.Name, Label);
             FoundFiles = result.Steps.Sum(step => step.Result.Found);
@@ -96,11 +110,11 @@ public partial class MainViewModel
         finally
         {
             lock (gate) { accepting = false; }
-            cancellation = null; IsBusy = false;
+            cancellation = null; IsBusy = false; IsRecoveryMode = false;
             try
             {
                 RecoveryAvailable = recovery.Find().Count > 0;
-                RecoveryMessage = RecoveryAvailable ? "An interrupted step remains. Use Recover to review it." : "";
+                RecoveryMessage = RecoveryAvailable ? "An interrupted workflow remains. Use Recover to review it." : "";
             }
             catch { /* Keep the recipe outcome visible. */ }
         }

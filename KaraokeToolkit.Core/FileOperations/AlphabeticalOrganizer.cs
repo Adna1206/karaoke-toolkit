@@ -64,6 +64,15 @@ public sealed class AlphabeticalOrganizer
                     Add(parent, mate);
         }
 
+        if (WorkflowSession.Current.Value is { } workflow)
+        {
+            var plan = new List<WorkflowMoveGroup>();
+            foreach (var (root, entries) in work.OrderBy(x => x.Key, Paths))
+            foreach (var group in entries.Order(Paths).GroupBy(source => IsKaraokePairMember(source) ? Path.GetFileNameWithoutExtension(source) : source, Paths))
+                plan.Add(new() { Items = group.Select(source => WorkflowMoves.Move(source, Path.Combine(root,
+                    Bucket(Path.GetFileName(source), scope == AlphabeticalOrganizeScope.Files && ignoreLeadingThe), Path.GetFileName(source)))).ToArray() });
+            return WorkflowMoves.Run(workflow, plan, progress, token);
+        }
         var results = new List<ConversionFileResult>();
         int total = work.Values.Sum(x => x.Count), completed = 0;
         foreach (var (root, entries) in work.OrderBy(x => x.Key, Paths))
