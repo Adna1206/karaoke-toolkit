@@ -1,7 +1,8 @@
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.Recovery;
 namespace KaraokeToolkit.Core.Conversion;
 
-public sealed record ConversionRetry(OperationCatalog.defAction Action, string[] Inputs, ConversionOptions Options, OverwritePolicy Policy)
+public sealed record ConversionRetry(OperationId Action, string[] Inputs, ConversionOptions Options, OverwritePolicy Policy)
 {
     public bool ValidateBeforeConversion
     {
@@ -48,7 +49,7 @@ public sealed class SelectionConversionService(RecoveryStore? recovery = null)
                         prepared.Add(new(savedPlan.Journal, plan.Folder, request.Action.ToString(), child.Results.Count, child.Sources.Length));
                         continue;
                     }
-                    var operation = new OperationRequest(request.Action, plan.Folder, request.Options with
+                    var operation = new ConversionRequest(request.Action, plan.Folder, request.Options with
                     {
                         RecurseFolders = false
                     });

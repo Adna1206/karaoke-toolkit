@@ -1,10 +1,11 @@
+using KaraokeToolkit.Core.Execution;
 using System.IO.Compression;
 using System.Text.Json;
 using KaraokeToolkit.Core.Archives;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Recipes;
 using KaraokeToolkit.Core.Recovery;
-using Action = KaraokeToolkit.Core.Conversion.OperationCatalog.defAction;
+using Action = KaraokeToolkit.Core.Execution.OperationId;
 
 namespace KaraokeToolkit.Tests.Recipes;
 
@@ -25,7 +26,7 @@ public class RecipeTests
     [Fact]
     public void PortableRecipeRoundTripsAllStepPreferencesAndLibraryUpdatesById()
     {
-        var recipe = Recipe(Step("Zip_To_AudioG", 0), Step("AudioG_To_Zip", 9) with
+        var recipe = Recipe(Step("ZipToAudioG", 0), Step("AudioGToZip", 9) with
         {
             Options = new() { ZipCompression = ZipCompression.SmallestSize, AudioBitrate = 256, DeleteOldFiles = false },
             ValidateBeforeConversion = true, IgnoreLeadingThe = true, OverwritePolicy = OverwritePolicy.Replace
@@ -41,17 +42,17 @@ public class RecipeTests
     }
 
     [Theory]
-    [InlineData("Karaoke_To_Video", "Zip_To_Bin")]
-    [InlineData("AudioG_To_Zip", "AudioG_To_Bin")]
-    [InlineData("Zip_To_AudioG", "Cleanup_Filenames")]
-    [InlineData("Bin_To_Zip", "FlattenAllLayers")]
+    [InlineData("KaraokeToVideo", "ZipToBin")]
+    [InlineData("AudioGToZip", "AudioGToBin")]
+    [InlineData("ZipToAudioG", "CleanUpFilenames")]
+    [InlineData("BinToZip", "FlattenAllLayers")]
     public void KnownIncompatibleStepsAreRejected(string first, string second)
         => Assert.Throws<ArgumentException>(() => RecipeOperations.Validate(Recipe(Step(first), Step(second))));
 
     [Fact]
     public void ValidationPreservesFormatConstraintsAndUnsupportedImportsAreRejected()
     {
-        Assert.Throws<ArgumentException>(() => RecipeOperations.Validate(Recipe(Step("AudioG_To_Zip"), Step("ValidateKaraoke"), Step("AudioG_To_Bin"))));
+        Assert.Throws<ArgumentException>(() => RecipeOperations.Validate(Recipe(Step("AudioGToZip"), Step("ValidateKaraoke"), Step("AudioGToBin"))));
         Assert.Throws<NotSupportedException>(() => RecipeOperations.Validate(Recipe(Step("DiscRip"))));
         Assert.Throws<NotSupportedException>(() => RecipeOperations.Validate(Recipe(Step("ValidateKaraoke")) with { FormatVersion = 2 }));
         Assert.Throws<JsonException>(() => RecipeJson.Deserialize("{\"Name\":\"Test\",\"Script\":\"unexpected\"}"));
@@ -65,7 +66,7 @@ public class RecipeTests
         foreach (string file in new[] { audio, graphics, listing }) File.WriteAllText(file, "fixture");
         var executor = new FakeExecutor((_, _, call) => new([new(source, ConversionStatus.Succeeded,
             call == 1 ? [audio, graphics, listing] : [source], "done")], false));
-        var result = await new RecipeRunner(executor).RunAsync(Recipe(Step("Zip_To_AudioG", 0), Step("AudioG_To_Zip", 9)), [source]);
+        var result = await new RecipeRunner(executor).RunAsync(Recipe(Step("ZipToAudioG", 0), Step("AudioGToZip", 9)), [source]);
         Assert.Equal(new[] { audio, graphics }, executor.Calls[1].Inputs);
         Assert.Equal(0, (int)executor.Calls[0].Step.Options.ZipCompression);
         Assert.Equal(9, (int)executor.Calls[1].Step.Options.ZipCompression);
@@ -81,7 +82,7 @@ public class RecipeTests
     {
         string source = FileInput();
         var executor = new FakeExecutor((_, _, _) => new([new(source, cancelled ? ConversionStatus.Cancelled : ConversionStatus.Failed, [], "stopped")], cancelled));
-        var result = await new RecipeRunner(executor).RunAsync(Recipe(Step("Zip_To_AudioG"), Step("AudioG_To_Zip")), [source]);
+        var result = await new RecipeRunner(executor).RunAsync(Recipe(Step("ZipToAudioG"), Step("AudioGToZip")), [source]);
         Assert.Single(executor.Calls);
         Assert.Single(result.Steps);
         Assert.Equal(cancelled, result.Cancelled);
@@ -102,7 +103,7 @@ public class RecipeTests
     {
         string source = FileInput();
         var executor = new FakeExecutor((_, _, _) => new([new(source, ConversionStatus.Skipped, [], "exists")], false));
-        var result = await new RecipeRunner(executor).RunAsync(Recipe(Step("Zip_To_AudioG"), Step("AudioG_To_Zip")), [source]);
+        var result = await new RecipeRunner(executor).RunAsync(Recipe(Step("ZipToAudioG"), Step("AudioGToZip")), [source]);
         Assert.Single(executor.Calls); Assert.Empty(result.Outputs); Assert.NotEmpty(result.StopReason);
     }
 
@@ -121,7 +122,7 @@ public class RecipeTests
         string graphics = FileInput(".cdg"), folder = Path.GetDirectoryName(graphics)!;
         string audio = Path.ChangeExtension(graphics, ".mp3"); File.WriteAllText(audio, "fixture");
         var lossless = new FakeExecutor((_, _, call) => new([new(graphics, ConversionStatus.Succeeded, call == 1 ? [audio] : [], "done")], false));
-        await new RecipeRunner(lossless).RunAsync(Recipe(Step("LosslessG_To_Mp3G"), Step("ValidateKaraoke")), [graphics]);
+        await new RecipeRunner(lossless).RunAsync(Recipe(Step("LosslessGToMp3G"), Step("ValidateKaraoke")), [graphics]);
         Assert.Contains(graphics, lossless.Calls[1].Inputs); Assert.Contains(audio, lossless.Calls[1].Inputs);
 
         string otherFolder = TestMediaFixture.NewFolder(), moved = Path.Combine(folder, "moved.cdg");
@@ -138,7 +139,7 @@ public class RecipeTests
     public async Task InvalidPipelineIsRejectedBeforeExecutorRuns()
     {
         var executor = new FakeExecutor((_, _, _) => throw new InvalidOperationException("Must not execute"));
-        await Assert.ThrowsAsync<ArgumentException>(() => new RecipeRunner(executor).RunAsync(Recipe(Step("Karaoke_To_Video"), Step("Zip_To_Bin")), [FileInput()]));
+        await Assert.ThrowsAsync<ArgumentException>(() => new RecipeRunner(executor).RunAsync(Recipe(Step("KaraokeToVideo"), Step("ZipToBin")), [FileInput()]));
         Assert.Empty(executor.Calls);
     }
 
@@ -146,11 +147,11 @@ public class RecipeTests
     public async Task RealExtractionPackagingAndValidationUseOnlySelectedTrack()
     {
         string folder = TestMediaFixture.NewFolder();
-        TestMediaFixture.Seed(folder, Action.Zip_To_Bin, "normal");
+        TestMediaFixture.Seed(folder, Action.ZipToBin, "normal");
         string source = Path.Combine(folder, "song.zip"), neighbour = Path.Combine(folder, "other.zip");
         File.Copy(source, neighbour);
         byte[] before = File.ReadAllBytes(neighbour);
-        var recipe = Recipe(Step("Zip_To_AudioG"), Step("AudioG_To_Zip", 0) with { Options = new() { ZipCompression = ZipCompression.NoCompression, DeleteOldFiles = false, AutoCreateCueText = true } }, Step("ValidateKaraoke"));
+        var recipe = Recipe(Step("ZipToAudioG"), Step("AudioGToZip", 0) with { Options = new() { ZipCompression = ZipCompression.NoCompression, DeleteOldFiles = false, AutoCreateCueText = true } }, Step("ValidateKaraoke"));
         var result = await new RecipeRunner(new RecipeStepExecutor(new RecoveryStore(TestMediaFixture.NewFolder()))).RunAsync(recipe, [source]);
         Assert.True(result.StopReason.Length == 0, string.Join("; ", result.Steps.SelectMany(step => step.Result.Files.Select(file => file.Message))));
         Assert.Equal(3, result.Steps.Count);

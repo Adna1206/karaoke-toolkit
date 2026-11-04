@@ -1,9 +1,10 @@
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.App.Features.Main;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Recovery;
 using KaraokeToolkit.Core.Settings;
 using KaraokeToolkit.Core;
-using Action = KaraokeToolkit.Core.Conversion.OperationCatalog.defAction;
+using Action = KaraokeToolkit.Core.Execution.OperationId;
 
 namespace KaraokeToolkit.Tests.App.Main;
 
@@ -35,7 +36,7 @@ public class OperationFlowTests
     public async Task SuccessfulRunDisablesStartUntilBackAndCannotRunTwice()
     {
         string folder = TestMediaFixture.NewFolder();
-        TestMediaFixture.Seed(folder, Action.Zip_To_Bin, "keep");
+        TestMediaFixture.Seed(folder, Action.ZipToBin, "keep");
         var model = new MainViewModel(Settings());
         model.SetInputs([Path.Combine(folder, "song.zip")]);
         model.SaveOptions(model.Options with

@@ -1,10 +1,11 @@
+using KaraokeToolkit.Core.Execution;
 using System.Diagnostics;
 using System.IO.Compression;
 using KaraokeToolkit.Core.Audio;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Recovery;
 using KaraokeToolkit.Core.Tagging;
-using Action = KaraokeToolkit.Core.Conversion.OperationCatalog.defAction;
+using Action = KaraokeToolkit.Core.Execution.OperationId;
 
 namespace KaraokeToolkit.Tests.Tagging;
 
@@ -36,7 +37,7 @@ public class KaraokeTaggingTests
     internal static async Task<string> CreateMedia(string extension = ".mp3")
     {
         string folder = TestMediaFixture.NewFolder();
-        TestMediaFixture.Seed(folder, Action.AudioG_To_Bin, "keep");
+        TestMediaFixture.Seed(folder, Action.AudioGToBin, "keep");
         string path = Path.Combine(folder, "SF123-04 - Artist - Title" + extension);
         if (extension == ".wav") File.Move(Path.Combine(folder, "song.wav"), path);
         else

@@ -1,3 +1,4 @@
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.Audio;
 using KaraokeToolkit.Core.Archives;
 using KaraokeToolkit.Core.Conversion;
@@ -22,7 +23,7 @@ public sealed class DiscRipService(IDiscReader reader)
         if (request.Tracks.Length == 0 || request.Tracks.Distinct().Count() != request.Tracks.Length) throw new ArgumentException("Select at least one track, without duplicates.");
         var tracks = request.Tracks.Select(n => request.Disc.Tracks.SingleOrDefault(t => t.Number == n) ?? throw new ArgumentException("Selected track is not on this disc.")).OrderBy(t => t.Number).ToArray();
         if (tracks.Any(t => t.AudioBytes <= 0 || t.AudioBytes % 2352 != 0)) throw new InvalidDataException("Invalid audio track length.");
-        new OperationRequest(OperationCatalog.defAction.Bin_To_Zip, request.Destination, request.Options).Validate();
+        new ConversionRequest(OperationId.BinToZip, request.Destination, request.Options).Validate();
         if (request.Format != RipFormat.Bin)
             AudioEncoderService.Validate(request.Options.AudioEncoder, request.Options.AudioBitrate);
         string destination = Path.GetFullPath(request.Destination);

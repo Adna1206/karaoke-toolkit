@@ -9,6 +9,8 @@ the current checkout. [Planned work](todo.md) is a backlog, not implemented beha
 | Guide | Covers |
 | --- | --- |
 | [File workflows](file-workflow-features.md) | Selection, archives, compression, folder tools, reports, validation and Explorer integration |
+| [CLI](cli.md) | Headless commands, per-run settings, JSON, exit codes and recovery |
+| [CLI examples](cli-examples.md) | Practical conversion, tagging, video, folder and scripting workflows |
 | [Tagging](tagging.md) | Filename patterns, editable previews, supported formats and tag verification |
 | [Recipes](recipes.md) | Saved multi-step operations, step settings, chaining and execution |
 | [Crash recovery](crash-recovery.md) | Saved runs, workflow continuation, transaction guarantees and limits |
@@ -20,6 +22,7 @@ the current checkout. [Planned work](todo.md) is a backlog, not implemented beha
 | --- | --- |
 | [App structure](app-structure.md) | Avalonia features, views/viewmodels and shared services |
 | [Core structure](core-structure.md) | Processing responsibilities and namespace organization |
+| [Operation contracts](operations.md) | Shared identities, capabilities, interface registrations and compatibility |
 | [UI definitions](ui-definitions.md) | Operation/setting metadata and presentation preferences |
 | [Test structure](test-structure.md) | Shared suite, fixtures, coverage and commands |
 | [Audio runtime](audio-runtime.md) | FFmpeg preparation, format checks and opt-in benchmarks |

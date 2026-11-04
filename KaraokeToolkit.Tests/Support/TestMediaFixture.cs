@@ -1,7 +1,8 @@
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.Conversion;
 using System.IO.Compression;
 using System.Security.Cryptography;
-using Action = KaraokeToolkit.Core.Conversion.OperationCatalog.defAction;
+using Action = KaraokeToolkit.Core.Execution.OperationId;
 namespace KaraokeToolkit.Tests.Support;
 
 /// <summary>Deterministic media bytes and snapshots; no reference engine or helper process is needed.</summary>
@@ -24,11 +25,11 @@ internal static class TestMediaFixture
             writer.Write("RIFF"u8.ToArray()); writer.Write(pcm.Length+36); writer.Write("WAVEfmt "u8.ToArray()); writer.Write(16); writer.Write((short)1); writer.Write((short)2);
             writer.Write(44100); writer.Write(176400); writer.Write((short)4); writer.Write((short)16); writer.Write("data"u8.ToArray()); writer.Write(pcm.Length); writer.Write(pcm);
         }
-        if(action == Action.AudioG_To_Bin) {
+        if(action == Action.AudioGToBin) {
             if(mode != "missing-audio") File.WriteAllBytes(Path.Combine(folder,"song.wav"), mode == "invalid-audio" ? new byte[]{1,2,3} : wave.ToArray());
             if(mode != "missing-graphics") File.WriteAllBytes(Path.Combine(folder,"song.cdg"), mode == "short-graphics" ? cdg[..100] : cdg);
             if(mode == "overwrite") File.WriteAllBytes(Path.Combine(folder,"song.bin"), new byte[(sectors+5)*2448]);
-        } else if(action == Action.Zip_To_Bin) {
+        } else if(action == Action.ZipToBin) {
             using var zip=ZipFile.Open(Path.Combine(folder,"song.zip"),ZipArchiveMode.Create);
             using(var entry=zip.CreateEntry("song.wav").Open()) entry.Write(wave.ToArray());
             using(var entry=zip.CreateEntry("song.cdg").Open()) entry.Write(cdg);

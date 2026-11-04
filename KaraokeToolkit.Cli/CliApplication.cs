@@ -1,0 +1,149 @@
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using KaraokeToolkit.Core;
+using KaraokeToolkit.Core.Conversion;
+using KaraokeToolkit.Core.Execution;
+
+namespace KaraokeToolkit.Cli;
+
+/// <summary>Console adapter only. All file-processing rules remain in Core.</summary>
+public sealed class CliApplication(IOperationExecutor? executor = null)
+{
+    private readonly IOperationExecutor executor = executor ?? new OperationExecutionService();
+    public static JsonSerializerOptions JsonOptions { get; } = new() { WriteIndented = true, Converters = { new JsonStringEnumConverter() } };
+
+    public async Task<int> RunAsync(string[] args, TextWriter output, TextWriter error, CancellationToken token = default)
+    {
+        bool json = args.TakeWhile(a => a != "--").Contains("--json");
+        try
+        {
+            var parsed = CliArguments.Parse(args); json = parsed.Json;
+            if (parsed.Command == "help") { await output.WriteLineAsync(Help); return 0; }
+            if (parsed.Command == "version") { await output.WriteLineAsync(ApplicationInfo.Version); return 0; }
+            if (parsed.Command == "operations")
+            {
+                var descriptions = CliOperationCatalog.Exposed.Select(o => new { Command = o.Name, Id = o.OperationId, OperationCatalog.Get(o.OperationId).Description, OperationCatalog.Get(o.OperationId).RequiresFolders }).ToArray();
+                if (json) await output.WriteLineAsync(JsonSerializer.Serialize(descriptions, JsonOptions));
+                else
+                {
+                    await output.WriteLineAsync($"{"Command",-29} {"Core ID",-23} Description");
+                    foreach (var operation in descriptions)
+                        await output.WriteLineAsync($"{operation.Command,-29} {operation.Id,-23} {operation.Description}" + (operation.RequiresFolders ? " (folders only)" : ""));
+                }
+                return 0;
+            }
+            var recoveryService = executor as OperationExecutionService ?? new();
+            if (parsed.Command == "recovery-list")
+            {
+                var jobs = recoveryService.FindRecovery(parsed.Inputs);
+                if (json) await output.WriteLineAsync(JsonSerializer.Serialize(jobs, JsonOptions));
+                else foreach (var job in jobs) await output.WriteLineAsync($"{job.Action}: {job.Completed}/{job.Total} — {job.JournalPath}" + (job.Problem == null ? "" : " — " + job.Problem));
+                return 0;
+            }
+            var progress = parsed.Quiet ? null : new ConsoleProgress(error);
+            var result = parsed.Command == "recover"
+                ? await recoveryService.ResumeAsync(parsed.Journal!, progress, token)
+                : await executor.ExecuteAsync(parsed.Request!, progress, token);
+            if (parsed.ReportPath != null)
+            {
+                string text = Path.GetExtension(parsed.ReportPath).Equals(".json", StringComparison.OrdinalIgnoreCase) ? result.Report.ToJson() : result.Report.ToText();
+                // CreateNew protects existing files even if one appeared after argument parsing.
+                await using var stream = new FileStream(parsed.ReportPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+                await using var writer = new StreamWriter(stream, new UTF8Encoding(false));
+                await writer.WriteAsync(text);
+            }
+            int exitCode = result.Report.Cancelled ? 130 : result.HasIssues ? 1 : result.Found == 0 ? 3 : 0;
+            if (json) await output.WriteLineAsync(JsonSerializer.Serialize(new { ExitCode = exitCode, result.Found, result.HasIssues, result.Report, result.TagPreview }, JsonOptions));
+            else
+            {
+                await output.WriteLineAsync(result.Report.ToText());
+                if (result.TagPreview != null)
+                    foreach (var row in result.TagPreview.Where(p => p.CanApply))
+                        await output.WriteLineAsync($"{row.Path}: Album={row.Tags!.Album}; Track={row.Tags.Track}; Artist={row.Tags.Artist}; Title={row.Tags.Title}");
+                if (exitCode == 3) await error.WriteLineAsync("No matching items found.");
+            }
+            return exitCode;
+        }
+        catch (OperationCanceledException) { await Failure(output, error, json, "Cancelled. Completed changes remain committed.", 130); return 130; }
+        catch (Exception failure) when (failure is CliUsageException or ArgumentException)
+        { await Failure(output, error, json, failure.Message, 2); return 2; }
+        catch (Exception failure)
+        { await Failure(output, error, json, failure.Message, 1); return 1; }
+    }
+
+    private static Task Failure(TextWriter output, TextWriter error, bool json, string message, int code) =>
+        json ? output.WriteLineAsync(JsonSerializer.Serialize(new { ExitCode = code, Error = message }, JsonOptions)) : error.WriteLineAsync(message);
+
+    private sealed class ConsoleProgress(TextWriter writer) : IProgress<ConversionProgress>
+    {
+        public void Report(ConversionProgress value) { lock (writer) writer.WriteLine($"[{value.TotalPercent}%] {value.Message}"); }
+    }
+
+    public const string Help = """
+        Karaoke Toolkit CLI
+
+        Usage:
+          karaoke-toolkit --help
+          karaoke-toolkit operations [--json]
+          karaoke-toolkit run OPERATION PATH... [options]
+          karaoke-toolkit validate PATH... [options]
+          karaoke-toolkit tag-preview PATH... [options]
+          karaoke-toolkit tag PATH... [options]
+          karaoke-toolkit recovery-list [FOLDER...] [--json]
+          karaoke-toolkit recover JOURNAL [--json] [--quiet] [--report PATH]
+          karaoke-toolkit --version
+
+        PATH may also be specified with repeated --input PATH. Use -- before paths
+        beginning with a dash. See operations for names; stable Core IDs also work.
+        No GUI, prompts, recipes, physical disc capture or automatic quarantine.
+
+        Output: --json (one JSON document on stdout), --quiet (no progress on stderr),
+                --report NEW.json|NEW.txt (never overwrites an existing file)
+        Processing:
+          --options FILE.json          Typed ConversionOptions; flags override the file
+          --overwrite fail|skip|replace (default fail; Ask is unsupported)
+          --delete-originals | --keep-originals (default keep)
+          --recurse | --no-recurse      (default recurse)
+          --cue-text | --no-cue-text    (default generate where applicable)
+          --validate-inputs            Additional source validation
+          --encoder MP3|OGG|WMA|WAV|FLAC|AAC   --bitrate KBPS (default MP3, 128)
+          --zip-algorithm Deflate|BZip2|LZMA   --zip-level 0..9 (default 5)
+          --ignore-leading-the         Organize Files bucket rule
+          Deflate is the default; legacy karaoke software generally prefers it.
+          Shared processing settings apply where supported by the chosen operation.
+          Organize Files always recurses; Organize Folders groups immediate children.
+          Flatten depth is chosen by the operation, independently of --no-recurse.
+        Tagging:
+          --pattern "%DISC%-%TRACK% - %ARTIST% - %TITLE%"
+          --fill-empty-only --preserve-comments --preserve-other-tags
+          Tags update in place; delete/overwrite options do not affect tagging.
+          Use tag-preview first to review inferred tags without changing files.
+        Video:
+          --video-container MP4|MKV|AVI --video-resolution SD|HD|FullHD|QHD|UHD
+          --video-smoothing None|Bilinear|Bicubic|Lanczos
+          --video-frame-rate 25|30|60 --video-bitrate 1000|2000|4000|6000
+          --video-audio-bitrate 128|192|256|320 --video-audio-fallback-only
+          Defaults: MP4, HD (720p), no smoothing, 30 fps, 2000 kbps video.
+          Audio matches source bitrate where detectable, with 192 kbps fallback.
+          --video-audio-bitrate changes the fallback; --video-audio-fallback-only
+          always uses that rate. Video flags require run karaoke-to-video.
+
+        Examples:
+          karaoke-toolkit validate "D:\Karaoke" --json --quiet
+          karaoke-toolkit run zip-to-audiog "D:\Incoming" --no-cue-text
+          karaoke-toolkit run repack-zip "D:\Incoming" --overwrite skip
+          karaoke-toolkit tag-preview "D:\Karaoke" --pattern "%ARTIST% - %TITLE%"
+          karaoke-toolkit run karaoke-to-video "D:\Karaoke" --video-container MP4
+
+        Option names are case-sensitive; command and enum choices ignore case.
+        JSON enum settings use names, except ZipCompression which also accepts 0-9.
+        Flags override --options FILE.json; desktop preferences are not loaded.
+        See docs/cli.md in the source repository for workflows and settings examples.
+
+        Ctrl+C cancels remaining work; completed groups remain committed.
+        Recovery uses saved settings. Recipe recovery is not available here.
+        Exit codes: 0 success, 1 processing/validation failure, 2 invalid usage,
+                    3 no matching items, 130 cancelled.
+        """;
+}

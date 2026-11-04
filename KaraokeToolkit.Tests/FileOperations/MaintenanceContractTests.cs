@@ -1,7 +1,8 @@
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.Audio;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Recovery;
-using Action = KaraokeToolkit.Core.Conversion.OperationCatalog.defAction;
+using Action = KaraokeToolkit.Core.Execution.OperationId;
 
 namespace KaraokeToolkit.Tests.FileOperations;
 
@@ -10,8 +11,7 @@ public class MaintenanceContractTests
     private static ConversionService Service() => new(new RecoveryStore(TestMediaFixture.NewFolder()));
 
     [Theory]
-    [InlineData(Action.Cleanup_Filename)]
-    [InlineData(Action.Cleanup_Filenames)]
+    [InlineData(Action.CleanUpFilenames)]
     public async Task CleanupUsesSelectedFolderAndPreservesPairedPayloads(Action action)
     {
         string folder = TestMediaFixture.NewFolder();
@@ -28,9 +28,9 @@ public class MaintenanceContractTests
     public async Task StandaloneCueActionCreatesCueAndTrackListingWithoutChangingBin()
     {
         string folder = TestMediaFixture.NewFolder();
-        TestMediaFixture.Seed(folder, Action.Bin_To_AudioG, "keep");
+        TestMediaFixture.Seed(folder, Action.BinToAudioG, "keep");
         byte[] bin = File.ReadAllBytes(Path.Combine(folder, "song.bin"));
-        var result = await Service().RunAsync(new(Action.Create_Cue_And_Text_Files, folder, new()));
+        var result = await Service().RunAsync(new(Action.CreateCueAndTextFiles, folder, new()));
         Assert.Equal(1, result.Succeeded); Assert.Equal(0, result.Failed);
         Assert.Equal(bin, File.ReadAllBytes(Path.Combine(folder, "song.bin")));
         string cue = File.ReadAllText(Assert.Single(Directory.GetFiles(folder, "*.cue")));
@@ -42,9 +42,9 @@ public class MaintenanceContractTests
     [Fact]
     public async Task WmaOutputIsReadableAndPreservesBinAndGraphics()
     {
-        string folder = TestMediaFixture.NewFolder(); TestMediaFixture.Seed(folder, Action.Bin_To_AudioG, "keep");
+        string folder = TestMediaFixture.NewFolder(); TestMediaFixture.Seed(folder, Action.BinToAudioG, "keep");
         byte[] bin = File.ReadAllBytes(Path.Combine(folder, "song.bin"));
-        var result = await Service().RunAsync(new(Action.Bin_To_AudioG, folder,
+        var result = await Service().RunAsync(new(Action.BinToAudioG, folder,
             new() { AudioEncoder = AudioEncoder.WMA, RenameBins = false, DeleteOldFiles = false, AutoCreateCueText = false }));
         Assert.True(result.Succeeded == 1, string.Join("; ", result.Files.Select(f => f.Message)));
         string pcm = Path.Combine(folder, "decoded.pcm");

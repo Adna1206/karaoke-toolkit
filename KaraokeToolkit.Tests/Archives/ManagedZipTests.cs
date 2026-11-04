@@ -1,3 +1,4 @@
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.Recovery;
 using KaraokeToolkit.Core.Archives;
 using KaraokeToolkit.App.Features.Settings;
@@ -157,8 +158,8 @@ public class ManagedZipTests
         store.Save(options);
         Assert.Equal(options, store.Load());
         Assert.Equal(options, JsonSerializer.Deserialize<ConversionOptions>(JsonSerializer.Serialize(options)));
-        TestMediaFixture.Seed(folder, OperationCatalog.defAction.AudioG_To_Bin, "keep");
-        var result = await new ConversionService(new KaraokeToolkit.Core.Recovery.RecoveryStore(TestMediaFixture.NewFolder())).RunAsync(new(OperationCatalog.defAction.AudioG_To_Zip, folder, options));
+        TestMediaFixture.Seed(folder, OperationId.AudioGToBin, "keep");
+        var result = await new ConversionService(new KaraokeToolkit.Core.Recovery.RecoveryStore(TestMediaFixture.NewFolder())).RunAsync(new(OperationId.AudioGToZip, folder, options));
         string zip = Path.Combine(folder, "song.zip");
         Assert.True(File.Exists(zip), JsonSerializer.Serialize(result));
         Assert.Equal(method, BitConverter.ToUInt16(File.ReadAllBytes(zip), 8));
@@ -170,7 +171,7 @@ public class ManagedZipTests
     {
         Assert.Equal(ZipAlgorithm.Deflate, JsonSerializer.Deserialize<ConversionOptions>("{}")!.ZipAlgorithm);
         var options = new ConversionOptions { ZipAlgorithm = (ZipAlgorithm)99 };
-        Assert.Throws<ArgumentOutOfRangeException>(() => new OperationRequest(OperationCatalog.defAction.AudioG_To_Zip, ".", options).Validate());
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ConversionRequest(OperationId.AudioGToZip, ".", options).Validate());
         Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<ConversionOptions>("{\"ZipAlgorithm\":99}"));
     }
 }

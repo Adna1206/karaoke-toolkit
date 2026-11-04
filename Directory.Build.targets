@@ -5,7 +5,7 @@
     <FFmpegPowerShell Condition="$([MSBuild]::IsOSPlatform('Windows'))">powershell.exe</FFmpegPowerShell>
     <FFmpegPowerShell Condition="'$(FFmpegPowerShell)' == ''">pwsh</FFmpegPowerShell>
   </PropertyGroup>
-  <Target Name="PrepareFFmpeg" AfterTargets="Build" Condition="'$(DesignTimeBuild)' != 'true' And ('$(MSBuildProjectName)' == 'KaraokeToolkit.App' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Tests') And '$(SkipFFmpegPrepare)' != 'true'">
+  <Target Name="PrepareFFmpeg" AfterTargets="Build" Condition="'$(DesignTimeBuild)' != 'true' And ('$(MSBuildProjectName)' == 'KaraokeToolkit.App' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Cli' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Tests') And '$(SkipFFmpegPrepare)' != 'true'">
     <Exec Command="&quot;$(FFmpegPowerShell)&quot; -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)scripts/ffmpeg/Prepare.ps1&quot; -RuntimeIdentifier &quot;$(FFmpegRid)&quot; -OutputDirectory &quot;$(TargetDir)ffmpeg&quot;" />
   </Target>
   <Target Name="PrepareCdrdao" AfterTargets="Build" Condition="'$(DesignTimeBuild)' != 'true' And ('$(MSBuildProjectName)' == 'KaraokeToolkit.App' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Tests') And '$(SkipCdrdaoPrepare)' != 'true'">
@@ -20,7 +20,7 @@
       </ResolvedFileToPublish>
     </ItemGroup>
   </Target>
-  <Target Name="PublishFFmpeg" BeforeTargets="ComputeFilesToPublish" DependsOnTargets="PrepareFFmpeg" Condition="'$(MSBuildProjectName)' == 'KaraokeToolkit.App'">
+  <Target Name="PublishFFmpeg" BeforeTargets="ComputeFilesToPublish" DependsOnTargets="PrepareFFmpeg" Condition="'$(MSBuildProjectName)' == 'KaraokeToolkit.App' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Cli'">
     <ItemGroup>
       <_FFmpegPublish Include="$(TargetDir)ffmpeg/**/*" />
       <ResolvedFileToPublish Include="@(_FFmpegPublish)">

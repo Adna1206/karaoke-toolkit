@@ -1,3 +1,4 @@
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.App.Metadata;
 using KaraokeToolkit.Core.Archives;
 using KaraokeToolkit.App.Features.Main;
@@ -5,7 +6,7 @@ using System.IO.Compression;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Recovery;
 using SharpCompress.Writers.Zip;
-using Action = KaraokeToolkit.Core.Conversion.OperationCatalog.defAction;
+using Action = KaraokeToolkit.Core.Execution.OperationId;
 
 namespace KaraokeToolkit.Tests.Archives;
 
@@ -26,7 +27,7 @@ public class ZipRepackTests
     private static string Target(string source) => Path.Combine(Path.GetDirectoryName(source)!, "song (repacked).zip");
     private static Task<ConversionResult> Run(string source, ConversionOptions? options = null, OverwritePolicy policy = OverwritePolicy.Fail)
         => new SelectionConversionService(new RecoveryStore(TestMediaFixture.NewFolder())).RunAsync(
-            new(Action.Repack_Zip, [source], options ?? new() { DeleteOldFiles = false }, policy) { ValidateBeforeConversion = true });
+            new(Action.RepackZip, [source], options ?? new() { DeleteOldFiles = false }, policy) { ValidateBeforeConversion = true });
 
     [Theory]
     [InlineData(OverwritePolicy.Fail)]
@@ -150,7 +151,7 @@ public class ZipRepackTests
         var store = new RecoveryStore(TestMediaFixture.NewFolder());
         using var cancellation = new CancellationTokenSource();
         var progress = new SelectionConversionService.InlineProgress(p => { if (p.Message.StartsWith("Repacking ZIP:")) cancellation.Cancel(); });
-        var result = await new SelectionConversionService(store).RunAsync(new(Action.Repack_Zip, [source], new(), OverwritePolicy.Fail), progress, cancellation.Token);
+        var result = await new SelectionConversionService(store).RunAsync(new(Action.RepackZip, [source], new(), OverwritePolicy.Fail), progress, cancellation.Token);
         Assert.True(result.Cancelled);
         Assert.False(File.Exists(Target(source)));
         Assert.True(File.Exists(source));
@@ -163,7 +164,7 @@ public class ZipRepackTests
     {
         string source = Seed(TestMediaFixture.NewFolder());
         var store = new RecoveryStore(TestMediaFixture.NewFolder());
-        using (var session = new RunSession(store, new(Action.Repack_Zip, Path.GetDirectoryName(source)!, new() { ZipAlgorithm = ZipAlgorithm.Lzma, DeleteOldFiles = deleteOriginals }), OverwritePolicy.Fail, [source])) { }
+        using (var session = new RunSession(store, new(Action.RepackZip, Path.GetDirectoryName(source)!, new() { ZipAlgorithm = ZipAlgorithm.Lzma, DeleteOldFiles = deleteOriginals }), OverwritePolicy.Fail, [source])) { }
         Assert.Equal(1, (await new ConversionService(store).ResumeAsync(Assert.Single(store.Find()))).Succeeded);
         Assert.Empty(store.Find());
         Assert.True(File.Exists(source));
@@ -178,12 +179,12 @@ public class ZipRepackTests
         string folder = TestMediaFixture.NewFolder(), source = Seed(folder);
         string child = Directory.CreateDirectory(Path.Combine(folder, "child")).FullName;
         Seed(child);
-        Assert.Single(InputSelection.Plan(Action.Repack_Zip, [folder], false).SelectMany(b => b.Sources));
-        Assert.Equal(2, InputSelection.Plan(Action.Repack_Zip, [folder], true).SelectMany(b => b.Sources).Count());
+        Assert.Single(InputSelection.Plan(Action.RepackZip, [folder], false).SelectMany(b => b.Sources));
+        Assert.Equal(2, InputSelection.Plan(Action.RepackZip, [folder], true).SelectMany(b => b.Sources).Count());
         var model = new KaraokeToolkit.App.Features.Main.MainViewModel(Path.Combine(TestMediaFixture.NewFolder(), "settings.xml"));
-        model.SelectedOperation = model.OperationSections.Single(section => section.Section == OperationSection.Archives).Operations.Single(o => o.Action == Action.Repack_Zip);
+        model.SelectedOperation = model.OperationSections.Single(section => section.Section == OperationSection.Archives).Operations.Single(o => o.Action == Action.RepackZip);
         model.SetInputs([source]);
-        Assert.Equal(Action.Repack_Zip, model.SelectedOperation.Action);
+        Assert.Equal(Action.RepackZip, model.SelectedOperation.Action);
         Assert.Contains("Deflate", model.SelectedOperation.Description);
     }
 }

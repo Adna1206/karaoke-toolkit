@@ -1,3 +1,4 @@
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.App.Metadata;
 using KaraokeToolkit.Core.Video;
 using KaraokeToolkit.Core.Audio;
@@ -79,6 +80,6 @@ public class DefinitionTests
         foreach (int rate in definitions.VideoBitrateKbps.Choices) VideoOptions.Validate(defaults with { VideoBitrateKbps = rate });
         foreach (int rate in definitions.VideoAudioBitrateKbps.Choices) VideoOptions.Validate(defaults with { VideoAudioBitrateKbps = rate });
         foreach (int level in Enumerable.Range(0, definitions.CompressionLevel.Choices.Count))
-            new OperationRequest(OperationCatalog.defAction.AudioG_To_Zip, ".", defaults with { ZipCompression = (ZipCompression)level }).Validate();
+            new ConversionRequest(OperationId.AudioGToZip, ".", defaults with { ZipCompression = (ZipCompression)level }).Validate();
     }
 }

@@ -15,13 +15,10 @@
   credentials, and review runner/LFS costs. Keep in-app update checks disabled until
   the feed and update UI are ready.
 
-- [ ] **Command-line interface** — add a `KaraokeToolkit.Cli` console project for
-  operations and saved recipes without the GUI or an AI client. Support explicit
-  per-run settings, progress, cancellation, meaningful exit codes and optional JSON
-  output. Define noninteractive overwrite/deletion policies so unattended runs never
-  wait for GUI prompts. Share C# execution services and request/result contracts with
-  MCP; MCP calls these directly rather than launching CLI commands. CLI can precede
-  MCP, but is not a prerequisite.
+- [ ] **CLI recipe support (deferred)** — individual CLI operations are implemented;
+  recipes are explicitly outside the current scope. When requested, extend the CLI
+  with saved-recipe selection, per-step settings and whole-workflow recovery using
+  shared Core services. See [the CLI guide](cli.md) for current capabilities.
 
 - [ ] **Local MCP integration** — investigate a separate `KaraokeToolkit.Mcp`
   console project referencing Core and using the official C# MCP SDK over stdio.

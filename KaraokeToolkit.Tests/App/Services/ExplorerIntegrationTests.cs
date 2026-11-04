@@ -1,3 +1,4 @@
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.App.Features.Main;
 using static KaraokeToolkit.Tests.Support.FileWorkflowFixture;
 using KaraokeToolkit.Core.Conversion;
@@ -9,7 +10,7 @@ using System.IO.Compression;
 using System.Text.Json;
 using KaraokeToolkit.App.Services;
 using KaraokeToolkit.Core;
-using Action = KaraokeToolkit.Core.Conversion.OperationCatalog.defAction;
+using Action = KaraokeToolkit.Core.Execution.OperationId;
 
 namespace KaraokeToolkit.Tests.App.Services;
 
@@ -32,7 +33,7 @@ public class ExplorerIntegrationTests
         Assert.Equal(new[] { path }, ExplorerIntegration.ParseInputs(["--open", path]));
         var model = new MainViewModel(Path.Combine(TestMediaFixture.NewFolder(), "options.xmls"));
         model.SetInputs([path]);
-        Assert.Equal(Action.Zip_To_AudioG, model.SelectedOperation!.Action);
+        Assert.Equal(Action.ZipToAudioG, model.SelectedOperation!.Action);
         Assert.Equal(new[] { path }, model.SelectedInputs);
         model.FolderPath = folder;
         Assert.Empty(model.SelectedInputs);

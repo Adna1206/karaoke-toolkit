@@ -17,16 +17,27 @@ IDs and test counts as dated evidence; verify them before relying on them.
   reports, recipes, file safety and recovery. No Avalonia or updater dependency.
 - `KaraokeToolkit.App`: Avalonia desktop UI, viewmodels, presentation metadata,
   desktop preferences, Explorer integration and Velopack lifecycle/update service.
-- `KaraokeToolkit.Tests`: shared xUnit suite for Core and App, grouped by feature.
+- `KaraokeToolkit.Tests`: shared xUnit suite for Core, App and CLI, grouped by feature.
   This project was renamed from Core.Tests; use the current name in commands.
+- `KaraokeToolkit.Cli`: console adapter over Core's unattended execution services.
+  No GUI dependency; recipes and physical disc capture are not exposed. See [CLI](docs/cli.md).
 - Keep namespaces aligned with folders. App uses feature folders; Core uses
   responsibility folders. Read [App structure](docs/app-structure.md),
   [Core structure](docs/core-structure.md) and [test structure](docs/test-structure.md).
 - Operation presentation metadata lives in App; Core's recipe registry determines
   recipe eligibility. Step settings are saved independently of general preferences.
   See [UI definitions](docs/ui-definitions.md) and [recipes](docs/recipes.md).
-- Preserve persisted operation IDs, setting keys and recovery compatibility when
-  reorganizing code. Update references and `InternalsVisibleTo` when renaming projects.
+- All built-in identities live in Core's `Execution/OperationId`. Persist names,
+  never enum numbers; numeric values and ordering are internal details.
+  Update Core's catalogue and CLI's explicit
+  include/exclude registry together. Their exhaustive switches must keep CS8509
+  as an error; do not add catch-all fallbacks or automatic CLI exposure. General
+  requests belong in Execution; conversion requests belong in Conversion. See
+  [operation contracts](docs/operations.md).
+- Preserve persisted operation names and setting keys when reorganizing code.
+  The current pre-production identity cleanup deliberately breaks old journals;
+  do not add numeric aliases or migration for them. Update references and
+  `InternalsVisibleTo` when renaming projects.
 - Use [Conventional Commits](docs/commit-conventions.md). The shared release version
   lives in `Directory.Build.props`, with YEAR.MONTH.BUILD and BUILD starting at 1
   for a new month. Bump versions when requested; see [versioning](docs/versioning.md).
@@ -50,7 +61,7 @@ dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj -c Release -p:UsedA
 - Tests include deterministic media, native FFmpeg integration and disposable
   process-crash workers. Prefer automated coverage over repeatedly driving the GUI;
   use targeted UI verification when the change needs it. Do not duplicate Core
-  conversion tests in future CLI/MCP adapters.
+  conversion tests in CLI/MCP adapters.
 - Native FFmpeg archives are pinned under `vendor/`; build targets verify and select
   them by RID. Tests use self-contained fixtures and explicit expected outcomes.
 - Custom outputs belong under ignored `artifacts/`; normal bin/obj are unchanged.
@@ -72,8 +83,8 @@ dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj -c Release -p:UsedA
   See [updates](docs/updates.md).
 - No karaoke player/preview playback yet; it is deferred for discussion. A planned
   processing preview means outputs/conflicts/deletions, not media playback.
-- CLI and MCP are planned, not implemented. They should call shared C# execution
-  services/Core directly; MCP should not shell out to CLI commands. Initial MCP is
+- CLI calls shared C# execution services/Core directly. MCP remains planned and
+  should reuse those services, not shell out to CLI commands. Initial MCP is
   local stdio, client-launched, independent of the GUI and a hosted web server.
 - The proposed MCP setup page supplies instructions/path/copyable configuration,
   without a GUI enable/disable switch. See TODO for the full agreed scope.

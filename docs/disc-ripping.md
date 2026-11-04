@@ -43,8 +43,19 @@ also described by [cdgtools](https://github.com/NotTheRealJoe/cdgtools/blob/mast
 cdrdao's format and raw/cooked modes are documented in its
 [manual](https://github.com/cdrdao/cdrdao/blob/master/dao/cdrdao.man).
 
-The existing staged BIN/Audio+G/ZIP pipeline verifies and publishes each selected
-track. Ripping shares the automatic CUE/TXT preference, configured only in General.
+The reader stages each selected track as a BIN. BIN output publishes that track
+directly. Audio+G output uses the shared `BinConverter` to split audio/graphics and
+`AudioEncoderService` to encode when needed; ZIP output then uses the shared ZIP
+writer and verifier. These are the same processing components used by ordinary
+file conversions, called within the ripping transaction rather than a second batch
+conversion job. Temporary track BINs are discarded unless BIN is the chosen output.
+
+The hardware-unverified status refers to physical disc capture and end-to-end drive
+testing, not to the supported Audio+G/BIN/ZIP file converters. `DiscRip` is the active
+operation with a `RipFormat` choice. Each output format reuses the shared processing
+components; it does not need a separate CDG operation identity.
+
+Ripping shares the automatic CUE/TXT preference, configured only in General.
 After successful tracks are published, BIN output generates a
 CUE sheet and TXT listing; Audio+G and ZIP generate a TXT listing. Reports describe
 the matching files in the destination folder and use the usual existing-file policy,

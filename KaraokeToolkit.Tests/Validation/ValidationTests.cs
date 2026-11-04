@@ -1,3 +1,4 @@
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.App.Features.Settings;
 using static KaraokeToolkit.Tests.Support.FileWorkflowFixture;
 using KaraokeToolkit.Core.Conversion;
@@ -9,7 +10,7 @@ using System.IO.Compression;
 using System.Text.Json;
 using KaraokeToolkit.App.Services;
 using KaraokeToolkit.Core;
-using Action = KaraokeToolkit.Core.Conversion.OperationCatalog.defAction;
+using Action = KaraokeToolkit.Core.Execution.OperationId;
 
 namespace KaraokeToolkit.Tests.Validation;
 
@@ -20,7 +21,7 @@ public class ValidationTests
     public async Task ValidationIsReadOnlyAndDeduplicatesPairs()
     {
         string folder = TestMediaFixture.NewFolder();
-        TestMediaFixture.Seed(folder, Action.AudioG_To_Bin, "keep");
+        TestMediaFixture.Seed(folder, Action.AudioGToBin, "keep");
         var before = TestMediaFixture.Snapshot(folder);
         var result = await new ValidationService().ScanAsync([folder], true);
         Assert.Equal(ValidationStatus.Valid, Assert.Single(result.Findings).Status);
@@ -33,7 +34,7 @@ public class ValidationTests
     public async Task PairProblemsHaveDifferentStatuses(string mode, ValidationStatus expected)
     {
         string folder = TestMediaFixture.NewFolder();
-        TestMediaFixture.Seed(folder, Action.AudioG_To_Bin, mode);
+        TestMediaFixture.Seed(folder, Action.AudioGToBin, mode);
         var finding = Assert.Single((await new ValidationService().ScanAsync([folder], true)).Findings);
         Assert.Equal(expected, finding.Status);
         Assert.True(finding.CanMove);
@@ -42,7 +43,7 @@ public class ValidationTests
     public async Task MultipleAudioMatchesAreAmbiguous()
     {
         string folder = TestMediaFixture.NewFolder();
-        TestMediaFixture.Seed(folder, Action.AudioG_To_Bin, "keep");
+        TestMediaFixture.Seed(folder, Action.AudioGToBin, "keep");
         File.WriteAllText(Path.Combine(folder, "song.mp3"), "another candidate");
         var result = await new ValidationService().ScanAsync([Path.Combine(folder, "song.cdg")], false);
         Assert.Equal(ValidationStatus.Ambiguous, Assert.Single(result.Findings).Status);
@@ -54,7 +55,7 @@ public class ValidationTests
     public async Task BinStructureIsChecked(bool truncated, ValidationStatus expected)
     {
         string folder = TestMediaFixture.NewFolder();
-        TestMediaFixture.Seed(folder, Action.Bin_To_AudioG, truncated ? "truncated-bin" : "keep");
+        TestMediaFixture.Seed(folder, Action.BinToAudioG, truncated ? "truncated-bin" : "keep");
         Assert.Equal(expected, Assert.Single((await new ValidationService().ScanAsync([folder], false)).Findings).Status);
     }
     [Fact]
@@ -93,7 +94,7 @@ public class ValidationTests
             File.WriteAllText(Path.Combine(child, "bad.zip"), "broken");
         }
         Assert.Empty((await new ValidationService().ScanAsync([root], true)).Findings);
-        Assert.Empty(InputSelection.Plan(Action.Zip_To_AudioG, [root], true));
+        Assert.Empty(InputSelection.Plan(Action.ZipToAudioG, [root], true));
         Assert.Throws<IOException>(() => InputSelection.Normalize([Path.Combine(root, "Damaged")]));
     }
 }

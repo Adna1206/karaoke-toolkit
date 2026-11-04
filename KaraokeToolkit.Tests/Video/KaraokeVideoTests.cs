@@ -1,3 +1,4 @@
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.Video;
 using KaraokeToolkit.Core.Audio;
 using System.IO.Compression;
@@ -6,7 +7,7 @@ using System.Globalization;
 using FFMpegCore;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Recovery;
-using Action = KaraokeToolkit.Core.Conversion.OperationCatalog.defAction;
+using Action = KaraokeToolkit.Core.Execution.OperationId;
 
 namespace KaraokeToolkit.Tests.Video;
 
@@ -71,7 +72,7 @@ public class KaraokeVideoTests
             VideoContainer = container, DeleteOldFiles = true, AutoCreateCueText = true, RecurseFolders = false
         };
         var result = await new ConversionService(new RecoveryStore(TestMediaFixture.NewFolder()))
-            .RunAsync(new(Action.Karaoke_To_Video, folder, options));
+            .RunAsync(new(Action.KaraokeToVideo, folder, options));
         Assert.True(result.Succeeded == 1, string.Join("; ", result.Files.Select(file => file.Message)));
         Assert.Equal(0, result.Failed);
         string video = Path.Combine(folder, "song" + extension);
@@ -94,7 +95,7 @@ public class KaraokeVideoTests
         string wav = Path.Combine(folder, "song.wav"), cdg = Path.Combine(folder, "song.cdg");
         WriteWave(wav);
         WriteGraphics(cdg);
-        var batch = Assert.Single(InputSelection.Plan(Action.Karaoke_To_Video, [wav], false));
+        var batch = Assert.Single(InputSelection.Plan(Action.KaraokeToVideo, [wav], false));
         Assert.Equal(cdg, Assert.Single(batch.Sources));
     }
 
@@ -106,7 +107,7 @@ public class KaraokeVideoTests
         WriteWave(wav);
         File.WriteAllBytes(cdg, new byte[240]);
         var result = await new ConversionService(new RecoveryStore(TestMediaFixture.NewFolder()))
-            .RunAsync(new(Action.Karaoke_To_Video, folder, new ConversionOptions { DeleteOldFiles = true }));
+            .RunAsync(new(Action.KaraokeToVideo, folder, new ConversionOptions { DeleteOldFiles = true }));
         Assert.Equal(1, result.Failed);
         Assert.True(File.Exists(wav));
         Assert.True(File.Exists(cdg));
@@ -120,7 +121,7 @@ public class KaraokeVideoTests
         WriteWave(Path.Combine(folder, "song.wav"), seconds: 2);
         WriteGraphics(Path.Combine(folder, "song.cdg")); // One second of graphics.
         var result = await new ConversionService(new RecoveryStore(TestMediaFixture.NewFolder()))
-            .RunAsync(new(Action.Karaoke_To_Video, folder, new ConversionOptions()));
+            .RunAsync(new(Action.KaraokeToVideo, folder, new ConversionOptions()));
         Assert.True(result.Succeeded == 1, string.Join("; ", result.Files.Select(file => file.Message)));
         var info = await FFProbe.AnalyseAsync(Path.Combine(folder, "song.mp4"), FFmpegRuntime.Options(folder));
         Assert.InRange(info.Duration.TotalSeconds, 1.9, 2.2);
@@ -156,7 +157,7 @@ public class KaraokeVideoTests
         WriteWave(Path.Combine(folder, "song.wav"), seconds: 4);
         WriteGraphics(Path.Combine(folder, "song.cdg"));
         var result = await new ConversionService(new RecoveryStore(TestMediaFixture.NewFolder()))
-            .RunAsync(new(Action.Karaoke_To_Video, folder, new ConversionOptions()));
+            .RunAsync(new(Action.KaraokeToVideo, folder, new ConversionOptions()));
         Assert.True(result.Succeeded == 1, string.Join("; ", result.Files.Select(file => file.Message)));
         string probe = Path.Combine(FFmpegRuntime.Options(folder).BinaryFolder,
             OperatingSystem.IsWindows() ? "ffprobe.exe" : "ffprobe");

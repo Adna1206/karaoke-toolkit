@@ -1,10 +1,11 @@
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.Archives;
 using System.Formats.Tar;
 using System.IO.Compression;
 using System.Text;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Recovery;
-using Action = KaraokeToolkit.Core.Conversion.OperationCatalog.defAction;
+using Action = KaraokeToolkit.Core.Execution.OperationId;
 namespace KaraokeToolkit.Tests.Archives;
 
 public class ArchiveConversionTests
@@ -24,7 +25,7 @@ public class ArchiveConversionTests
         return path;
     }
     static Task<ConversionResult> Run(string source, ZipAlgorithm algorithm = ZipAlgorithm.Deflate, OverwritePolicy policy = OverwritePolicy.Fail, bool delete = false, CancellationToken token = default)
-        => new SelectionConversionService(new RecoveryStore(TestMediaFixture.NewFolder())).RunAsync(new(Action.Archive_To_Zip, [source], new() { ZipAlgorithm = algorithm, DeleteOldFiles = delete }, policy) { ValidateBeforeConversion = true }, token: token);
+        => new SelectionConversionService(new RecoveryStore(TestMediaFixture.NewFolder())).RunAsync(new(Action.ArchiveToZip, [source], new() { ZipAlgorithm = algorithm, DeleteOldFiles = delete }, policy) { ValidateBeforeConversion = true }, token: token);
 
     [Theory]
     [InlineData(".tar", ZipAlgorithm.Deflate)]
@@ -79,20 +80,20 @@ public class ArchiveConversionTests
         File.WriteAllText(source, "broken");
         var result = await Run(source, delete: true);
         Assert.Equal(1, result.Failed);
-        Assert.Equal(Action.Archive_To_Zip, Assert.Single(result.RetryRequests).Action);
+        Assert.Equal(Action.ArchiveToZip, Assert.Single(result.RetryRequests).Action);
         Assert.True(File.Exists(source));
         Seed(folder);
         var retry = await new SelectionConversionService(new RecoveryStore(TestMediaFixture.NewFolder())).RunAsync(result.RetryRequests.Single());
         Assert.Equal(1, retry.Succeeded);
-        Assert.Empty(InputSelection.Plan(Action.Archive_To_Zip, [folder], false));
-        Assert.Throws<ArgumentException>(() => InputSelection.Plan(Action.Archive_To_Zip, [Path.Combine(folder, "source.zip")], false));
+        Assert.Empty(InputSelection.Plan(Action.ArchiveToZip, [folder], false));
+        Assert.Throws<ArgumentException>(() => InputSelection.Plan(Action.ArchiveToZip, [Path.Combine(folder, "source.zip")], false));
     }
     [Fact]
     public async Task PendingArchiveRunResumesWithSavedSettings()
     {
         string folder = TestMediaFixture.NewFolder(), source = Seed(folder);
         var store = new RecoveryStore(TestMediaFixture.NewFolder());
-        using (var session = new RunSession(store, new(Action.Archive_To_Zip, folder, new() { ZipAlgorithm = ZipAlgorithm.BZip2, DeleteOldFiles = false }), OverwritePolicy.Fail, [source])) { }
+        using (var session = new RunSession(store, new(Action.ArchiveToZip, folder, new() { ZipAlgorithm = ZipAlgorithm.BZip2, DeleteOldFiles = false }), OverwritePolicy.Fail, [source])) { }
         var job = Assert.Single(store.Find());
         var result = await new ConversionService(store).ResumeAsync(job);
         Assert.True(result.Succeeded == 1, string.Join("; ", result.Files.Select(f => f.Message)));
@@ -104,7 +105,7 @@ public class ArchiveConversionTests
         string folder = TestMediaFixture.NewFolder(), source = Seed(folder);
         using var cancellation = new CancellationTokenSource();
         var progress = new SelectionConversionService.InlineProgress(p => { if (p.Message.StartsWith("Converting archive:")) cancellation.Cancel(); });
-        var result = await new SelectionConversionService(new RecoveryStore(TestMediaFixture.NewFolder())).RunAsync(new(Action.Archive_To_Zip, [source], new(), OverwritePolicy.Fail), progress, cancellation.Token);
+        var result = await new SelectionConversionService(new RecoveryStore(TestMediaFixture.NewFolder())).RunAsync(new(Action.ArchiveToZip, [source], new(), OverwritePolicy.Fail), progress, cancellation.Token);
         Assert.True(result.Cancelled);
         Assert.True(File.Exists(source));
         Assert.False(File.Exists(Path.Combine(folder, "source.zip")));
@@ -148,7 +149,7 @@ public class ArchiveConversionTests
     public async Task RelativeTarNamesAndLevelZeroAreSupported()
     {
         string folder = TestMediaFixture.NewFolder(), source = Seed(folder, name: "./notes.txt");
-        var result = await new SelectionConversionService(new RecoveryStore(TestMediaFixture.NewFolder())).RunAsync(new(Action.Archive_To_Zip, [source], new() { DeleteOldFiles = false, ZipCompression = ZipCompression.NoCompression }, OverwritePolicy.Fail));
+        var result = await new SelectionConversionService(new RecoveryStore(TestMediaFixture.NewFolder())).RunAsync(new(Action.ArchiveToZip, [source], new() { DeleteOldFiles = false, ZipCompression = ZipCompression.NoCompression }, OverwritePolicy.Fail));
         Assert.True(result.Succeeded == 1, string.Join("; ", result.Files.Select(f => f.Message)));
         using var zip = ZipFile.OpenRead(Path.Combine(folder, "source.zip"));
         Assert.NotNull(zip.GetEntry("notes.txt"));

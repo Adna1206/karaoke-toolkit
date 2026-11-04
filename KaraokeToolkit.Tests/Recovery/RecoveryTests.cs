@@ -1,9 +1,10 @@
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.App.Features.Settings;
 using KaraokeToolkit.App.Features.Main;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Recovery;
 using KaraokeToolkit.Core;
-using Action = KaraokeToolkit.Core.Conversion.OperationCatalog.defAction;
+using Action = KaraokeToolkit.Core.Execution.OperationId;
 
 namespace KaraokeToolkit.Tests.Recovery;
 
@@ -13,7 +14,7 @@ public class RecoveryTests
     public async Task KilledConversionProcessIsDiscoveredAndResumed()
     {
         string folder = TestMediaFixture.NewFolder(), index = TestMediaFixture.NewFolder();
-        TestMediaFixture.Seed(folder, Action.Zip_To_Bin, "keep");
+        TestMediaFixture.Seed(folder, Action.ZipToBin, "keep");
         File.WriteAllText(Path.Combine(folder, "bad.zip"), "invalid archive");
         var start = new System.Diagnostics.ProcessStartInfo("dotnet") { UseShellExecute = false, CreateNoWindow = true };
         start.ArgumentList.Add(typeof(RecoveryTests).Assembly.Location);
@@ -141,11 +142,11 @@ public class RecoveryTests
         string folder = TestMediaFixture.NewFolder();
         string index = TestMediaFixture.NewFolder();
         var store = new RecoveryStore(index);
-        TestMediaFixture.Seed(folder, Action.Zip_To_Bin, "keep");
+        TestMediaFixture.Seed(folder, Action.ZipToBin, "keep");
         string source = Path.Combine(folder, "song.zip");
         string done = Path.Combine(folder, "already.zip");
         string journal;
-        using (var run = new RunSession(store, new(Action.Zip_To_AudioG, folder, new()
+        using (var run = new RunSession(store, new(Action.ZipToAudioG, folder, new()
         {
             AutoCreateCueText = false,
             DeleteOldFiles = false
@@ -174,7 +175,7 @@ public class RecoveryTests
         var (folder, workspace, transaction) = Stage();
         var store = new RecoveryStore(TestMediaFixture.NewFolder());
         string source = Path.Combine(folder, "source.zip");
-        using (var run = new RunSession(store, new(Action.Zip_To_AudioG, folder, new()
+        using (var run = new RunSession(store, new(Action.ZipToAudioG, folder, new()
         {
             AutoCreateCueText = false
         }), OverwritePolicy.Fail, [source]))
@@ -195,7 +196,7 @@ public class RecoveryTests
     {
         string folder = TestMediaFixture.NewFolder(), settings = Path.Combine(TestMediaFixture.NewFolder(), "options.xmls");
         var store = new RecoveryStore(Path.Combine(Path.GetDirectoryName(settings)!, "Recovery"));
-        using (var run = new RunSession(store, new(Action.Zip_To_AudioG, folder, new()), OverwritePolicy.Fail, []))
+        using (var run = new RunSession(store, new(Action.ZipToAudioG, folder, new()), OverwritePolicy.Fail, []))
         {
         }
         var before = Snapshot(folder);
@@ -210,7 +211,7 @@ public class RecoveryTests
     {
         string folder = TestMediaFixture.NewFolder(), settings = Path.Combine(TestMediaFixture.NewFolder(), "options.xmls");
         var store = new RecoveryStore(Path.Combine(Path.GetDirectoryName(settings)!, "Recovery"));
-        using (var run = new RunSession(store, new(Action.Zip_To_AudioG, folder, new()), OverwritePolicy.Fail, []))
+        using (var run = new RunSession(store, new(Action.ZipToAudioG, folder, new()), OverwritePolicy.Fail, []))
         {
         }
         var model = new MainViewModel(settings) { ConfirmRecoveryAsync = _ => Task.FromResult(true) };
@@ -219,7 +220,7 @@ public class RecoveryTests
         Assert.True(await model.CheckForRecoveryAsync());
         Assert.True(observed);
         Assert.Contains("Recovery", model.RunTitle);
-        Assert.Equal(Action.Zip_To_AudioG, model.SelectedOperation!.Action);
+        Assert.Equal(Action.ZipToAudioG, model.SelectedOperation!.Action);
         Assert.False(model.RecoveryAvailable);
     }
 
@@ -227,12 +228,12 @@ public class RecoveryTests
     public async Task InterruptedStagingRestartsOnlyThatGroup()
     {
         string folder = TestMediaFixture.NewFolder();
-        TestMediaFixture.Seed(folder, Action.Zip_To_Bin, "keep");
+        TestMediaFixture.Seed(folder, Action.ZipToBin, "keep");
         var store = new RecoveryStore(TestMediaFixture.NewFolder());
         string workspace = Path.Combine(folder, ".karaoke-job-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(workspace);
         File.WriteAllText(Path.Combine(workspace, "partial.tmp"), "partial data");
-        using (var run = new RunSession(store, new(Action.Zip_To_AudioG, folder, new()
+        using (var run = new RunSession(store, new(Action.ZipToAudioG, folder, new()
         {
             AutoCreateCueText = false,
             DeleteOldFiles = false
@@ -253,7 +254,7 @@ public class RecoveryTests
         MoveBackups(folder, workspace, transaction, 2);
         var outputs = FileTransactionRecovery.Recover(workspace)!;
         var store = new RecoveryStore(TestMediaFixture.NewFolder());
-        using (var run = new RunSession(store, new(Action.Zip_To_AudioG, folder, new()
+        using (var run = new RunSession(store, new(Action.ZipToAudioG, folder, new()
         {
             AutoCreateCueText = false
         }), OverwritePolicy.Fail, [Path.Combine(folder, "source.zip")]))
@@ -273,10 +274,10 @@ public class RecoveryTests
     public async Task AutomaticMetadataResumesAfterCompletedMedia()
     {
         string folder = TestMediaFixture.NewFolder();
-        TestMediaFixture.Seed(folder, Action.AudioG_To_Bin, "keep");
+        TestMediaFixture.Seed(folder, Action.AudioGToBin, "keep");
         var store = new RecoveryStore(TestMediaFixture.NewFolder());
         string source = Path.Combine(folder, "song.zip");
-        using (var run = new RunSession(store, new(Action.Zip_To_AudioG, folder, new()
+        using (var run = new RunSession(store, new(Action.ZipToAudioG, folder, new()
         {
             AutoCreateCueText = true
         }), OverwritePolicy.Fail, [source]))
@@ -296,10 +297,10 @@ public class RecoveryTests
     {
         var (folder, workspace, _) = Stage();
         var store = new RecoveryStore(TestMediaFixture.NewFolder());
-        using (var run = new RunSession(store, new(Action.Zip_To_AudioG, folder, new()), OverwritePolicy.Fail, []))
+        using (var run = new RunSession(store, new(Action.ZipToAudioG, folder, new()), OverwritePolicy.Fail, []))
         {
         }
-        Assert.Throws<IOException>(() => new RunSession(store, new(Action.Zip_To_AudioG, folder, new()), OverwritePolicy.Fail, []));
+        Assert.Throws<IOException>(() => new RunSession(store, new(Action.ZipToAudioG, folder, new()), OverwritePolicy.Fail, []));
         Assert.Throws<IOException>(() => new FileTransaction(folder));
         Assert.True(Directory.Exists(workspace));
     }
@@ -309,7 +310,7 @@ public class RecoveryTests
     {
         var (folder, workspace, transaction) = Stage();
         var store = new RecoveryStore(TestMediaFixture.NewFolder());
-        using (var run = new RunSession(store, new(Action.Zip_To_AudioG, folder, new()), OverwritePolicy.Fail, [Path.Combine(folder, "source.zip")]))
+        using (var run = new RunSession(store, new(Action.ZipToAudioG, folder, new()), OverwritePolicy.Fail, [Path.Combine(folder, "source.zip")]))
         {
             run.Begin(Path.Combine(folder, "source.zip"));
             run.Attach(workspace);
@@ -327,7 +328,7 @@ public class RecoveryTests
     {
         string folder = TestMediaFixture.NewFolder();
         var store = new RecoveryStore(TestMediaFixture.NewFolder());
-        using (var run = new RunSession(store, new(Action.Zip_To_AudioG, folder, new()), OverwritePolicy.Fail, []))
+        using (var run = new RunSession(store, new(Action.ZipToAudioG, folder, new()), OverwritePolicy.Fail, []))
         {
         }
         foreach (string index in Directory.GetFiles(store.IndexDirectory))
@@ -344,12 +345,12 @@ public class RecoveryTests
         string folder = TestMediaFixture.NewFolder();
         var store = new RecoveryStore(TestMediaFixture.NewFolder());
         string journal;
-        using (var run = new RunSession(store, new(Action.Zip_To_AudioG, folder, new()), OverwritePolicy.Fail, []))
+        using (var run = new RunSession(store, new(Action.ZipToAudioG, folder, new()), OverwritePolicy.Fail, []))
             journal = run.Journal;
         File.WriteAllText(journal, "not json");
         Assert.NotNull(Assert.Single(store.Find()).Problem);
         Assert.NotNull(Assert.Single(store.Find(folder)).Problem);
-        Assert.ThrowsAny<Exception>(() => new RunSession(store, new(Action.Zip_To_AudioG, folder, new()), OverwritePolicy.Fail, []));
+        Assert.ThrowsAny<Exception>(() => new RunSession(store, new(Action.ZipToAudioG, folder, new()), OverwritePolicy.Fail, []));
         Assert.Equal("not json", File.ReadAllText(journal));
     }
 

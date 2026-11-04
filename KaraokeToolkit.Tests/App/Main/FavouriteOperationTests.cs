@@ -81,7 +81,7 @@ public class FavouriteOperationTests
     public void StableIdsIgnoreDisplayLabelsAndUnknownSavedIds()
     {
         string path = SettingsPath();
-        new ApplicationSettingsStore(path).Save(new(), favouriteOperations: ["Zip_To_Bin", "Zip_To_Bin", "unknown-operation", "Rename_Files_From_Internet"]);
+        new ApplicationSettingsStore(path).Save(new(), favouriteOperations: ["ZipToBin", "ZipToBin", "unknown-operation", "RenameFilesFromInternet"]);
         var model = new MainViewModel(path);
         var operation = Assert.Single(model.FavouriteOperations);
         Assert.Equal(operation.Id, new ActionChoice(operation.Definition with { Label = "Changed display name" }).Id);

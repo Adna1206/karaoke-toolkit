@@ -51,6 +51,7 @@ Open `KaraokeToolkit.slnx` in Visual Studio with .NET 10 tooling. Projects:
 - `KaraokeToolkit.App`: Avalonia views and viewmodels.
 - `KaraokeToolkit.Core`: local workflows, media formats and native-tool integration.
 - `KaraokeToolkit.Tests`: standalone unit and integration tests, plus opt-in benchmarks.
+- `KaraokeToolkit.Cli`: [command-line operations](docs/cli.md), without a GUI or recipes.
 
 Build selects a local, checksum-verified FFmpeg archive from `vendor/ffmpeg`.
 See [audio runtime and benchmarks](docs/audio-runtime.md) for platforms and packaging,

@@ -36,6 +36,7 @@
   <ItemGroup>
     <ProjectReference Include="..\KaraokeToolkit.Core\KaraokeToolkit.Core.csproj" />
     <ProjectReference Include="..\KaraokeToolkit.App\KaraokeToolkit.App.csproj" />
+    <ProjectReference Include="..\KaraokeToolkit.Cli\KaraokeToolkit.Cli.csproj" />
   </ItemGroup>
 </Project>
 

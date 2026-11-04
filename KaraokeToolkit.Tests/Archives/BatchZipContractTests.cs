@@ -1,8 +1,9 @@
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.Archives;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Recovery;
 using System.IO.Compression;
-using Action = KaraokeToolkit.Core.Conversion.OperationCatalog.defAction;
+using Action = KaraokeToolkit.Core.Execution.OperationId;
 
 namespace KaraokeToolkit.Tests.Archives;
 
@@ -57,7 +58,7 @@ public class BatchZipContractTests
             ZipCompression = scenario == "nonrecursive-store" ? ZipCompression.NoCompression : ZipCompression.Balanced
         };
         var result = await new ConversionService(new RecoveryStore(TestMediaFixture.NewFolder())).RunAsync(
-            new(Action.AudioG_To_Zip, folder, options), progress: progress, cancellationToken: cancellation.Token);
+            new(Action.AudioGToZip, folder, options), progress: progress, cancellationToken: cancellation.Token);
         Assert.Equal(empty ? 0 : recurse ? 8 : 7, result.Found);
         Assert.Equal(result.Found, events[0].Found);
         if (cancel || empty)
@@ -113,7 +114,7 @@ public class BatchZipContractTests
         var events = new List<ConversionProgress>();
         var progress = new SynchronousProgress<ConversionProgress>(p => { events.Add(p); if (cancel && p.Message.StartsWith("Processing:")) cancellation.Cancel(); });
         var result = await new ConversionService(new RecoveryStore(TestMediaFixture.NewFolder())).RunAsync(
-            new(Action.Zip_To_AudioG, folder, new() { RecurseFolders = recurse, DeleteOldFiles = delete, AutoCreateCueText = metadata }),
+            new(Action.ZipToAudioG, folder, new() { RecurseFolders = recurse, DeleteOldFiles = delete, AutoCreateCueText = metadata }),
             OverwritePolicy.Replace, progress, cancellation.Token);
         Assert.Equal(empty ? 0 : recurse ? 7 : 6, result.Found); Assert.Equal(result.Found, events[0].Found);
         if (cancel || empty)

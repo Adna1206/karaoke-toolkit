@@ -5,7 +5,8 @@ match folders; the app and test tools import those namespaces explicitly.
 
 | Folder / namespace suffix | Responsibility |
 | --- | --- |
-| Conversion | Conversion coordination, options, requests, results, input selection and BIN handling |
+| Conversion | Conversion coordination, ConversionRequest, options/results, input selection and BIN handling |
+| Execution | OperationId, shared catalogue/capabilities, general OperationRequest and unattended execution adapters |
 | Archives | Archive readers, ZIP writers, repacking, compression algorithms and levels |
 | Audio | Audio encoding/decoding, lossless transcoding and shared FFmpeg runtime discovery |
 | Video | Karaoke video rendering and video format settings |

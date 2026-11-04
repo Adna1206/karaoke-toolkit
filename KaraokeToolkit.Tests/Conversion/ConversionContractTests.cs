@@ -1,8 +1,9 @@
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.Audio;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Recovery;
 using System.IO.Compression;
-using Action = KaraokeToolkit.Core.Conversion.OperationCatalog.defAction;
+using Action = KaraokeToolkit.Core.Execution.OperationId;
 
 namespace KaraokeToolkit.Tests.Conversion;
 
@@ -41,10 +42,10 @@ public class ConversionContractTests
     public async Task WaveAndGraphicsProduceExpectedInterleavedBin()
     {
         string folder = TestMediaFixture.NewFolder();
-        TestMediaFixture.Seed(folder, Action.AudioG_To_Bin, "keep");
+        TestMediaFixture.Seed(folder, Action.AudioGToBin, "keep");
         byte[] wave = File.ReadAllBytes(Path.Combine(folder, "song.wav"));
         byte[] cdg = File.ReadAllBytes(Path.Combine(folder, "song.cdg"));
-        Succeeded(await Service().RunAsync(new(Action.AudioG_To_Bin, folder, Options)));
+        Succeeded(await Service().RunAsync(new(Action.AudioGToBin, folder, Options)));
         AssertBinPayload(File.ReadAllBytes(Path.Combine(folder, "song.bin")), wave[44..], cdg);
         Assert.Equal(wave, File.ReadAllBytes(Path.Combine(folder, "song.wav")));
         Assert.Equal(cdg, File.ReadAllBytes(Path.Combine(folder, "song.cdg")));
@@ -56,9 +57,9 @@ public class ConversionContractTests
     public async Task BinEncodesReadableAudioAndPreservesEveryGraphicsByte(AudioEncoder encoder, string extension)
     {
         string folder = TestMediaFixture.NewFolder();
-        TestMediaFixture.Seed(folder, Action.Bin_To_AudioG, "keep");
+        TestMediaFixture.Seed(folder, Action.BinToAudioG, "keep");
         byte[] bin = File.ReadAllBytes(Path.Combine(folder, "song.bin"));
-        Succeeded(await Service().RunAsync(new(Action.Bin_To_AudioG, folder, Options with { AudioEncoder = encoder })));
+        Succeeded(await Service().RunAsync(new(Action.BinToAudioG, folder, Options with { AudioEncoder = encoder })));
         byte[] cdg = File.ReadAllBytes(Path.Combine(folder, "song.cdg"));
         for (int sector = 0; sector < 150; sector++)
             Assert.Equal(bin.AsSpan(sector * 2448 + 2352, 96).ToArray(), cdg.AsSpan(sector * 96, 96).ToArray());
@@ -72,17 +73,17 @@ public class ConversionContractTests
     public async Task ZipToBinAndBinToZipPreservePayloadsAndMemberNames()
     {
         string folder = TestMediaFixture.NewFolder();
-        TestMediaFixture.Seed(folder, Action.AudioG_To_Bin, "keep");
+        TestMediaFixture.Seed(folder, Action.AudioGToBin, "keep");
         byte[] wave = File.ReadAllBytes(Path.Combine(folder, "song.wav")), cdg = File.ReadAllBytes(Path.Combine(folder, "song.cdg"));
         var service = Service();
-        Succeeded(await service.RunAsync(new(Action.AudioG_To_Zip, folder, Options)));
+        Succeeded(await service.RunAsync(new(Action.AudioGToZip, folder, Options)));
         string extracted = TestMediaFixture.NewFolder();
         File.Copy(Path.Combine(folder, "song.zip"), Path.Combine(extracted, "song.zip"));
-        Succeeded(await service.RunAsync(new(Action.Zip_To_Bin, extracted, Options)));
+        Succeeded(await service.RunAsync(new(Action.ZipToBin, extracted, Options)));
         AssertBinPayload(File.ReadAllBytes(Path.Combine(extracted, "song.bin")), wave[44..], cdg);
         string packaged = TestMediaFixture.NewFolder();
         File.Copy(Path.Combine(extracted, "song.bin"), Path.Combine(packaged, "song.bin"));
-        Succeeded(await service.RunAsync(new(Action.Bin_To_Zip, packaged, Options with { AudioEncoder = AudioEncoder.WAV })));
+        Succeeded(await service.RunAsync(new(Action.BinToZip, packaged, Options with { AudioEncoder = AudioEncoder.WAV })));
         using var zip = ZipFile.OpenRead(Path.Combine(packaged, "song.zip"));
         Assert.Equal(["song.cdg", "song.wav"], zip.Entries.Select(e => e.FullName).Order());
         Assert.Equal(wave, Read(zip, "song.wav"));
@@ -97,12 +98,12 @@ public class ConversionContractTests
 
     public static IEnumerable<object[]> MatrixCases()
     {
-        foreach (var action in new[] { Action.AudioG_To_Bin, Action.Zip_To_Bin, Action.Bin_To_AudioG, Action.Bin_To_Zip })
+        foreach (var action in new[] { Action.AudioGToBin, Action.ZipToBin, Action.BinToAudioG, Action.BinToZip })
             foreach (string mode in new[] { "keep", "delete", "recursive", "nonrecursive", "overwrite", "cancel" })
                 yield return [action, mode];
         foreach (string mode in new[] { "missing-audio", "missing-graphics", "invalid-audio", "short-graphics" })
-            yield return [Action.AudioG_To_Bin, mode];
-        yield return [Action.Bin_To_AudioG, "truncated-bin"];
+            yield return [Action.AudioGToBin, mode];
+        yield return [Action.BinToAudioG, "truncated-bin"];
     }
 
     [Theory, MemberData(nameof(MatrixCases))]
@@ -110,7 +111,7 @@ public class ConversionContractTests
     {
         string folder = TestMediaFixture.NewFolder();
         TestMediaFixture.Seed(folder, action, mode);
-        if (mode == "overwrite" && action == Action.Bin_To_Zip)
+        if (mode == "overwrite" && action == Action.BinToZip)
         {
             using var existing = ZipFile.Open(Path.Combine(folder, "song.zip"), ZipArchiveMode.Create);
             using var writer = new StreamWriter(existing.CreateEntry("keep.txt").Open()); writer.Write("existing output");
@@ -143,25 +144,25 @@ public class ConversionContractTests
         Succeeded(result, expected); Assert.Equal(expected, result.Found);
         foreach (string source in sources)
             Assert.Equal(mode != "delete", File.Exists(source));
-        if (mode == "nonrecursive") Assert.Empty(Directory.GetFiles(Path.Combine(folder, "child"), action == Action.Bin_To_AudioG ? "*.wav" : action == Action.Bin_To_Zip ? "*.zip" : "*.bin"));
+        if (mode == "nonrecursive") Assert.Empty(Directory.GetFiles(Path.Combine(folder, "child"), action == Action.BinToAudioG ? "*.wav" : action == Action.BinToZip ? "*.zip" : "*.bin"));
         foreach (var file in result.Files)
         {
             Assert.All(file.Outputs, path => Assert.True(new FileInfo(path).Length > 0));
-            if (action is Action.AudioG_To_Bin or Action.Zip_To_Bin)
+            if (action is Action.AudioGToBin or Action.ZipToBin)
             {
-                string expectedFolder = TestMediaFixture.NewFolder(); TestMediaFixture.Seed(expectedFolder, Action.AudioG_To_Bin, "keep");
+                string expectedFolder = TestMediaFixture.NewFolder(); TestMediaFixture.Seed(expectedFolder, Action.AudioGToBin, "keep");
                 AssertBinPayload(File.ReadAllBytes(Assert.Single(file.Outputs)), File.ReadAllBytes(Path.Combine(expectedFolder, "song.wav"))[44..], File.ReadAllBytes(Path.Combine(expectedFolder, "song.cdg")));
             }
             else
             {
                 byte[] wave, cdg;
-                if (action == Action.Bin_To_Zip)
+                if (action == Action.BinToZip)
                 {
                     using var zip = ZipFile.OpenRead(Assert.Single(file.Outputs)); wave = Read(zip, "song.wav"); cdg = Read(zip, "song.cdg");
                     Assert.Equal(2, zip.Entries.Count);
                 }
                 else { wave = File.ReadAllBytes(file.Outputs.Single(p => p.EndsWith(".wav"))); cdg = File.ReadAllBytes(file.Outputs.Single(p => p.EndsWith(".cdg"))); }
-                string expectedFolder = TestMediaFixture.NewFolder(); TestMediaFixture.Seed(expectedFolder, Action.Bin_To_AudioG, "keep");
+                string expectedFolder = TestMediaFixture.NewFolder(); TestMediaFixture.Seed(expectedFolder, Action.BinToAudioG, "keep");
                 AssertBinPayload(File.ReadAllBytes(Path.Combine(expectedFolder, "song.bin")), wave[44..], cdg);
             }
         }
@@ -169,11 +170,11 @@ public class ConversionContractTests
     }
 
     [Theory]
-    [InlineData(Action.AudioG_To_Bin)] [InlineData(Action.AudioG_To_Zip)]
-    [InlineData(Action.Bin_To_AudioG)] [InlineData(Action.Bin_To_Zip)]
-    [InlineData(Action.Zip_To_AudioG)] [InlineData(Action.Zip_To_Bin)]
-    [InlineData(Action.Cleanup_Filename)] [InlineData(Action.Cleanup_Filenames)]
-    [InlineData(Action.Create_Cue_And_Text_Files)]
+    [InlineData(Action.AudioGToBin)] [InlineData(Action.AudioGToZip)]
+    [InlineData(Action.BinToAudioG)] [InlineData(Action.BinToZip)]
+    [InlineData(Action.ZipToAudioG)] [InlineData(Action.ZipToBin)]
+    [InlineData(Action.CleanUpFilenames)]
+    [InlineData(Action.CreateCueAndTextFiles)]
     public async Task EmptyFoldersCompleteWithoutCreatingMedia(Action action)
     {
         string folder = TestMediaFixture.NewFolder();
@@ -185,9 +186,9 @@ public class ConversionContractTests
     [Fact]
     public async Task PreCancelledRequestDoesNotTouchFiles()
     {
-        string folder = TestMediaFixture.NewFolder(); TestMediaFixture.Seed(folder, Action.AudioG_To_Bin, "keep");
+        string folder = TestMediaFixture.NewFolder(); TestMediaFixture.Seed(folder, Action.AudioGToBin, "keep");
         var before = TestMediaFixture.Snapshot(folder);
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => Service().RunAsync(new(Action.AudioG_To_Bin, folder, Options), cancellationToken: new(true)));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => Service().RunAsync(new(Action.AudioGToBin, folder, Options), cancellationToken: new(true)));
         Assert.Equal(before, TestMediaFixture.Snapshot(folder));
     }
 
@@ -195,17 +196,17 @@ public class ConversionContractTests
     public async Task MissingFolderIsRejectedBeforeConversion()
     {
         string folder = Path.Combine(TestMediaFixture.NewFolder(), "absent");
-        await Assert.ThrowsAsync<DirectoryNotFoundException>(() => Service().RunAsync(new(Action.AudioG_To_Bin, folder, Options)));
+        await Assert.ThrowsAsync<DirectoryNotFoundException>(() => Service().RunAsync(new(Action.AudioGToBin, folder, Options)));
         Assert.False(Directory.Exists(folder));
     }
 
     [Fact]
     public async Task CallbackFailurePropagatesWithoutPublishingOrHanging()
     {
-        string folder = TestMediaFixture.NewFolder(); TestMediaFixture.Seed(folder, Action.AudioG_To_Bin, "keep");
+        string folder = TestMediaFixture.NewFolder(); TestMediaFixture.Seed(folder, Action.AudioGToBin, "keep");
         var before = TestMediaFixture.Snapshot(folder);
         var recovery = new RecoveryStore(TestMediaFixture.NewFolder());
-        var error = await Assert.ThrowsAsync<ApplicationException>(() => new ConversionService(recovery).RunAsync(new(Action.AudioG_To_Bin, folder, Options),
+        var error = await Assert.ThrowsAsync<ApplicationException>(() => new ConversionService(recovery).RunAsync(new(Action.AudioGToBin, folder, Options),
             progress: new SynchronousProgress<ConversionProgress>(_ => throw new ApplicationException("test callback failure"))).WaitAsync(TimeSpan.FromSeconds(20)));
         Assert.Equal("test callback failure", error.Message);
         // A callback failure leaves a recoverable journal, but must not publish or modify media.

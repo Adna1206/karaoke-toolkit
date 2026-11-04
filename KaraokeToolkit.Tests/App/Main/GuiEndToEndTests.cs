@@ -1,8 +1,9 @@
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.App.Features.Settings;
 using KaraokeToolkit.App.Features.Main;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core;
-using Action=KaraokeToolkit.Core.Conversion.OperationCatalog.defAction;
+using Action=KaraokeToolkit.Core.Execution.OperationId;
 namespace KaraokeToolkit.Tests.App.Main;
 public class GuiEndToEndTests
 {
@@ -14,12 +15,12 @@ public class GuiEndToEndTests
         return model;
     }
     [Theory]
-    [InlineData(Action.AudioG_To_Bin,Action.AudioG_To_Bin,"song.bin")]
-    [InlineData(Action.AudioG_To_Zip,Action.AudioG_To_Bin,"song.zip")]
-    [InlineData(Action.Zip_To_AudioG,Action.Zip_To_Bin,"song.wav")]
-    [InlineData(Action.Zip_To_Bin,Action.Zip_To_Bin,"song.bin")]
-    [InlineData(Action.Bin_To_AudioG,Action.Bin_To_AudioG,"song.mp3")]
-    [InlineData(Action.Bin_To_Zip,Action.Bin_To_AudioG,"song.zip")]
+    [InlineData(Action.AudioGToBin,Action.AudioGToBin,"song.bin")]
+    [InlineData(Action.AudioGToZip,Action.AudioGToBin,"song.zip")]
+    [InlineData(Action.ZipToAudioG,Action.ZipToBin,"song.wav")]
+    [InlineData(Action.ZipToBin,Action.ZipToBin,"song.bin")]
+    [InlineData(Action.BinToAudioG,Action.BinToAudioG,"song.mp3")]
+    [InlineData(Action.BinToZip,Action.BinToAudioG,"song.zip")]
     public async Task StartCommandRunsRealEngineAndCanBeReused(Action action,Action seed,string output)
     {
         string folder=TestMediaFixture.NewFolder();TestMediaFixture.Seed(folder,seed,"keep");
@@ -36,14 +37,14 @@ public class GuiEndToEndTests
     }
     [Fact] public async Task MissingFolderFailureReturnsToEditableStateAndNextRunSucceeds()
     {
-        var model=Model(Path.Combine(TestMediaFixture.NewFolder(),"absent"),Action.AudioG_To_Bin);
+        var model=Model(Path.Combine(TestMediaFixture.NewFolder(),"absent"),Action.AudioGToBin);
         await model.StartCommand.ExecuteAsync(null);Assert.False(model.IsBusy);Assert.Contains("existing source folder",model.Status);
-        model.ShowProgress=false;model.FolderPath=TestMediaFixture.NewFolder();TestMediaFixture.Seed(model.FolderPath,Action.AudioG_To_Bin,"keep");
+        model.ShowProgress=false;model.FolderPath=TestMediaFixture.NewFolder();TestMediaFixture.Seed(model.FolderPath,Action.AudioGToBin,"keep");
         await model.StartCommand.ExecuteAsync(null).WaitAsync(TimeSpan.FromSeconds(30));Assert.True(File.Exists(Path.Combine(model.FolderPath,"song.bin")));
     }
     [Fact] public async Task CancelCommandAtStartDoesNotDeleteInputsOrLeaveBusyState()
     {
-        string folder=TestMediaFixture.NewFolder();TestMediaFixture.Seed(folder,Action.AudioG_To_Bin,"keep");var before=TestMediaFixture.Snapshot(folder);var model=Model(folder,Action.AudioG_To_Bin);
+        string folder=TestMediaFixture.NewFolder();TestMediaFixture.Seed(folder,Action.AudioGToBin,"keep");var before=TestMediaFixture.Snapshot(folder);var model=Model(folder,Action.AudioGToBin);
         model.PropertyChanged+=(_,e)=>{if(e.PropertyName==nameof(model.ShowProgress)&&model.ShowProgress)model.CancelCommand.Execute(null);};
         await model.StartCommand.ExecuteAsync(null).WaitAsync(TimeSpan.FromSeconds(30));
         Assert.True(model.CancelRequested);Assert.False(model.IsBusy);Assert.False(model.CancelCommand.CanExecute(null));Assert.Equal(before,TestMediaFixture.Snapshot(folder));

@@ -1,3 +1,4 @@
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.App.Features.Main;
 using KaraokeToolkit.App.Metadata;
 using KaraokeToolkit.Core.Conversion;
@@ -32,7 +33,7 @@ public class HomeNavigationTests
     public void RemovingLastFavouriteReturnsToItsNormalCategory()
     {
         var model = Model();
-        var operation = model.Operations.Single(operation => operation.Action == OperationCatalog.defAction.Repack_Zip);
+        var operation = model.Operations.Single(operation => operation.Action == OperationId.RepackZip);
         operation.ToggleFavouriteCommand.Execute(null);
         model.SelectedSection = model.VisibleSections.Single(section => section.Section == OperationSection.Favourites);
         Assert.Same(operation, model.SelectedOperation);
@@ -60,7 +61,7 @@ public class HomeNavigationTests
     public void AddingInputsPreservesChosenOperationAndClearResetsReadiness()
     {
         var model = Model();
-        var operation = model.Operations.Single(operation => operation.Action == OperationCatalog.defAction.Karaoke_To_Video);
+        var operation = model.Operations.Single(operation => operation.Action == OperationId.KaraokeToVideo);
         model.SelectedOperation = operation;
         string folder = TestMediaFixture.NewFolder();
         string first = Path.Combine(folder, "first.zip"), second = Path.Combine(folder, "second.zip");
@@ -90,11 +91,11 @@ public class HomeNavigationTests
         var model = Model();
         model.SelectedSection = model.VisibleSections.Single(section => section.Section == OperationSection.Archives);
         // Preserve the existing external input routing behaviour independently of Add buttons.
-        model.SelectedOperation = model.Operations.Single(operation => operation.Action == OperationCatalog.defAction.Archive_To_Zip);
+        model.SelectedOperation = model.Operations.Single(operation => operation.Action == OperationId.ArchiveToZip);
         string file = Path.Combine(TestMediaFixture.NewFolder(), "song.zip");
         File.WriteAllText(file, "selection only");
         model.SetInputs([file]);
-        Assert.Equal(OperationCatalog.defAction.Zip_To_AudioG, model.SelectedOperation!.Action);
+        Assert.Equal(OperationId.ZipToAudioG, model.SelectedOperation!.Action);
         Assert.Equal(OperationSection.KaraokeConversion, model.SelectedSection!.Section);
     }
 }

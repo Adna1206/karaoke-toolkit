@@ -16,6 +16,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path $PSScriptRoot -Parent
 $project = Join-Path $repo 'KaraokeToolkit.App/KaraokeToolkit.App.csproj'
+$cliProject = Join-Path $repo 'KaraokeToolkit.Cli/KaraokeToolkit.Cli.csproj'
 
 function Invoke-DotNet([string[]]$Arguments) {
     & dotnet @Arguments
@@ -53,12 +54,19 @@ try {
         Invoke-DotNet @('publish', $project, '-c', 'Release', '-r', $rid, '--self-contained', 'true',
             '-o', $publish, '-p:PublishSingleFile=false', '-p:PublishTrimmed=false',
             '-p:ArtifactBuildName=Publish', '-p:UsedAvaloniaProducts=')
+        # The CLI shares the runtime, Core and native files with the desktop build.
+        # Distinct executable/deps/runtimeconfig names allow both entry points in
+        # the same package without a second copy of the .NET/FFmpeg distributions.
+        Invoke-DotNet @('publish', $cliProject, '-c', 'Release', '-r', $rid, '--self-contained', 'true',
+            '-o', $publish, '-p:PublishSingleFile=false', '-p:PublishTrimmed=false',
+            '-p:ArtifactBuildName=Publish', '-p:UsedAvaloniaProducts=')
 
         $isWindowsTarget = $rid.StartsWith('win-')
         $mainExe = if ($isWindowsTarget) { 'KaraokeToolkit.App.exe' } else { 'KaraokeToolkit.App' }
         $ffmpegExe = if ($isWindowsTarget) { 'ffmpeg.exe' } else { 'ffmpeg' }
         $ffprobeExe = if ($isWindowsTarget) { 'ffprobe.exe' } else { 'ffprobe' }
-        foreach ($file in @($mainExe, 'Velopack.dll', 'KaraokeToolkit.Core.dll',
+        $cliExe = if ($isWindowsTarget) { 'karaoke-toolkit.exe' } else { 'karaoke-toolkit' }
+        foreach ($file in @($mainExe, $cliExe, 'karaoke-toolkit.deps.json', 'karaoke-toolkit.runtimeconfig.json', 'Velopack.dll', 'KaraokeToolkit.Core.dll',
             "ffmpeg/bin/$ffmpegExe", "ffmpeg/bin/$ffprobeExe", 'ffmpeg/runtime-manifest.json',
             'licenses/README.md', 'licenses/Velopack.txt', 'licenses/TagLibSharp.txt')) {
             if (!(Test-Path -LiteralPath (Join-Path $publish $file) -PathType Leaf)) { throw "Published $rid build is missing $file" }

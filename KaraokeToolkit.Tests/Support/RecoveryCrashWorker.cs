@@ -1,3 +1,4 @@
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Recovery;
 using KaraokeToolkit.Core;
@@ -30,9 +31,9 @@ internal static class RecoveryCrashWorker
                     ? [new() { OperationId = "FlattenOneLayer" }, new() { OperationId = "ValidateKaraoke" }]
                     : mode == "recipe-tagging"
                     ? [new() { OperationId = "TagKaraoke", Tagging = new(ClearComments: false), Options = new() { RecurseFolders = false } },
-                       new() { OperationId = "AudioG_To_Zip", Options = new() { DeleteOldFiles = false, AutoCreateCueText = false } }]
-                    : [new() { OperationId = "Zip_To_AudioG", Options = new() { DeleteOldFiles = true, AutoCreateCueText = false } },
-                       new() { OperationId = "AudioG_To_Zip", Options = new() { DeleteOldFiles = true, AutoCreateCueText = false } }] };
+                       new() { OperationId = "AudioGToZip", Options = new() { DeleteOldFiles = false, AutoCreateCueText = false } }]
+                    : [new() { OperationId = "ZipToAudioG", Options = new() { DeleteOldFiles = true, AutoCreateCueText = false } },
+                       new() { OperationId = "AudioGToZip", Options = new() { DeleteOldFiles = true, AutoCreateCueText = false } }] };
                 await new RecipeRunner(new RecipeStepExecutor(store), store).RunAsync(recipe,
                     mode is "moving" or "recipe-tagging" ? [root] : [Path.Combine(root, "song.zip")], pause);
             }
@@ -61,7 +62,7 @@ internal static class RecoveryCrashWorker
             return 2;
         string folder = args[1];
         await new ConversionService(new RecoveryStore(args[2])).RunAsync(
-            new(OperationCatalog.defAction.Zip_To_AudioG, folder,
+            new(OperationId.ZipToAudioG, folder,
                 new()
                 {
                     AutoCreateCueText = false,

@@ -23,13 +23,13 @@ public sealed partial class RecipeStepItem(RecipeStep step) : ObservableObject
     public string Summary => Step.OperationId switch
     {
         "OrganizeFiles" or "OrganizeFolders" or "FlattenOneLayer" or "FlattenAllLayers" => Definition.ShortDescription,
-        "ValidateKaraoke" or "Cleanup_Filenames" or "Create_Cue_And_Text_Files"
+        "ValidateKaraoke" or "CleanUpFilenames" or "CreateCueAndTextFiles"
             => Step.Options.RecurseFolders ? "Includes subfolders" : "Selected inputs only",
-        "Karaoke_To_Video" => $"{Step.Options.VideoContainer} · {Step.Options.VideoResolution} · {Step.Options.VideoFrameRate} fps",
+        "KaraokeToVideo" => $"{Step.Options.VideoContainer} · {Step.Options.VideoResolution} · {Step.Options.VideoFrameRate} fps",
         "TagKaraoke" => $"{Step.TaggingPattern} · {(Step.Tagging.FillEmptyOnly ? "fill empty fields" : "replace tags")}",
-        "LosslessG_To_Mp3G" => $"MP3 · {Step.Options.AudioBitrate} kbps · originals {(Step.Options.DeleteOldFiles ? "deleted" : "kept")}",
-        "Bin_To_AudioG" => $"{Step.Options.AudioEncoder} · {Step.Options.AudioBitrate} kbps · originals {(Step.Options.DeleteOldFiles ? "deleted" : "kept")}",
-        "Zip_To_AudioG" or "Zip_To_Bin" or "AudioG_To_Bin" => $"Originals {(Step.Options.DeleteOldFiles ? "deleted" : "kept")} · existing outputs: {Step.OverwritePolicy}",
+        "LosslessGToMp3G" => $"MP3 · {Step.Options.AudioBitrate} kbps · originals {(Step.Options.DeleteOldFiles ? "deleted" : "kept")}",
+        "BinToAudioG" => $"{Step.Options.AudioEncoder} · {Step.Options.AudioBitrate} kbps · originals {(Step.Options.DeleteOldFiles ? "deleted" : "kept")}",
+        "ZipToAudioG" or "ZipToBin" or "AudioGToBin" => $"Originals {(Step.Options.DeleteOldFiles ? "deleted" : "kept")} · existing outputs: {Step.OverwritePolicy}",
         _ => $"{Step.Options.ZipAlgorithm}, level {(int)Step.Options.ZipCompression} · originals {(Step.Options.DeleteOldFiles ? "deleted" : "kept")}"
     };
 }
@@ -101,7 +101,7 @@ public partial class RecipeBuilderViewModel : ViewModelBase
     {
         if (SelectedOperation == null) return;
         var step = defaults with { OperationId = SelectedOperation.Id };
-        if (step.OperationId == "LosslessG_To_Mp3G") step = step with
+        if (step.OperationId == "LosslessGToMp3G") step = step with
             { Options = step.Options with { AudioEncoder = KaraokeToolkit.Core.Audio.AudioEncoder.MP3, AudioBitrate = mp3Bitrate } };
         try
         {

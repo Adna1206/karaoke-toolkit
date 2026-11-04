@@ -1,3 +1,4 @@
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.Audio;
 using KaraokeToolkit.Core.Archives;
 using KaraokeToolkit.App.Features.Settings;
@@ -5,7 +6,7 @@ using KaraokeToolkit.App.Features.Main;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Settings;
 using KaraokeToolkit.Core;
-using Action=KaraokeToolkit.Core.Conversion.OperationCatalog.defAction;
+using Action=KaraokeToolkit.Core.Execution.OperationId;
 namespace KaraokeToolkit.Tests.App.Main;
 public class GuiWorkflowTests
 {
@@ -41,7 +42,7 @@ public class GuiWorkflowTests
     [Fact] public void OriginalFolderActionOrderIsPreservedAndUnavailableActionsCannotStart()
     {
         var model=new MainViewModel(SettingsPath()){FolderPath="."};
-        Assert.Equal(new[]{Action.Zip_To_Bin,Action.AudioG_To_Bin,Action.Bin_To_Zip,Action.AudioG_To_Zip,Action.Zip_To_AudioG,Action.Bin_To_AudioG,Action.Repack_Zip,Action.Archive_To_Zip,Action.LosslessG_To_Mp3G,Action.Karaoke_To_Video,Action.Rename_Files_From_Internet,Action.Create_Cue_And_Text_Files,Action.Cleanup_Filenames},model.Operations.Where(x=>x.Action.HasValue).Select(x=>x.Action!.Value));
+        Assert.Equal(new[]{Action.ZipToBin,Action.AudioGToBin,Action.BinToZip,Action.AudioGToZip,Action.ZipToAudioG,Action.BinToAudioG,Action.RepackZip,Action.ArchiveToZip,Action.LosslessGToMp3G,Action.KaraokeToVideo,Action.RenameFilesFromInternet,Action.CreateCueAndTextFiles,Action.CleanUpFilenames},model.Operations.Where(x=>x.Action.HasValue).Select(x=>x.Action!.Value));
         Assert.True(model.Operations.Last().IsValidation);
         foreach(var choice in model.Operations){model.SelectedOperation=choice;Assert.Equal(choice.Available && !choice.IsRip,model.StartCommand.CanExecute(null));}
         model.IsBusy=true;Assert.False(model.StartCommand.CanExecute(null));
@@ -49,9 +50,9 @@ public class GuiWorkflowTests
     [Fact]
     public async Task WmaEncodingCanRunFromTheGui()
     {
-        string folder=TestMediaFixture.NewFolder();TestMediaFixture.Seed(folder,Action.Bin_To_AudioG,"keep");
+        string folder=TestMediaFixture.NewFolder();TestMediaFixture.Seed(folder,Action.BinToAudioG,"keep");
         var model=new MainViewModel(SettingsPath()){FolderPath=folder};
-        model.SelectedOperation=model.Operations.Single(x=>x.Action==Action.Bin_To_AudioG);
+        model.SelectedOperation=model.Operations.Single(x=>x.Action==Action.BinToAudioG);
         model.SaveOptions(model.Options with {AudioEncoder=AudioEncoder.WMA,DeleteOldFiles=false,AutoCreateCueText=false});
         await model.StartCommand.ExecuteAsync(null);
         Assert.Equal("Succeeded",Assert.Single(model.LastReport!.Entries).Status);

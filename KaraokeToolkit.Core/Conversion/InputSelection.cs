@@ -1,7 +1,8 @@
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.Audio;
 using KaraokeToolkit.Core.Archives;
 using KaraokeToolkit.Core.Recovery;
-using Action = KaraokeToolkit.Core.Conversion.OperationCatalog.defAction;
+using Action = KaraokeToolkit.Core.Execution.OperationId;
 
 namespace KaraokeToolkit.Core.Conversion;
 
@@ -33,16 +34,16 @@ public static class InputSelection
 
     internal static bool IsExcludedFolder(string name) => name.StartsWith(".karaoke-job-", StringComparison.OrdinalIgnoreCase) || name.Equals("Damaged", StringComparison.OrdinalIgnoreCase);
 
-    public static IReadOnlyList<SelectionBatch> Plan(OperationCatalog.defAction action, IEnumerable<string> paths, bool recurse)
+    public static IReadOnlyList<SelectionBatch> Plan(OperationId action, IEnumerable<string> paths, bool recurse)
     {
         string[] selected = Normalize(paths);
-        bool maintenance = action is Action.Cleanup_Filename or Action.Cleanup_Filenames or Action.Create_Cue_And_Text_Files;
+        bool maintenance = action is Action.CleanUpFilenames or Action.CreateCueAndTextFiles;
         if (maintenance && selected.Any(File.Exists))
             throw new ArgumentException("Filename cleanup and CUE/TXT creation work on whole folders. Select folders for this action.");
         string extension = action switch
         {
-            Action.AudioG_To_Bin or Action.AudioG_To_Zip or Action.LosslessG_To_Mp3G or Action.Karaoke_To_Video => ".cdg",
-            Action.Repack_Zip or Action.Zip_To_AudioG or Action.Zip_To_Bin => ".zip",
+            Action.AudioGToBin or Action.AudioGToZip or Action.LosslessGToMp3G or Action.KaraokeToVideo => ".cdg",
+            Action.RepackZip or Action.ZipToAudioG or Action.ZipToBin => ".zip",
             _ => ".bin"
         };
         var sources = new HashSet<string>(Paths);
@@ -55,8 +56,8 @@ public static class InputSelection
                         sources.Add(folder);
                     else
                     foreach (string file in Directory.GetFiles(folder).Where(p =>
-                        action == Action.Karaoke_To_Video ? ConversionService.IsVideoSource(p) :
-                        action == Action.Archive_To_Zip ? ArchiveZipConverter.IsInput(p) :
+                        action == Action.KaraokeToVideo ? ConversionService.IsVideoSource(p) :
+                        action == Action.ArchiveToZip ? ArchiveZipConverter.IsInput(p) :
                         Path.GetExtension(p).Equals(extension, StringComparison.OrdinalIgnoreCase)))
                         sources.Add(file);
             }
@@ -65,8 +66,8 @@ public static class InputSelection
                 string source = path;
                 if (extension == ".cdg" && (KaraokeArchive.AudioExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase) || LosslessAudioTranscoder.IsCandidate(path)))
                     source = Directory.GetFiles(Path.GetDirectoryName(path)!).FirstOrDefault(p => Path.GetExtension(p).Equals(".cdg", StringComparison.OrdinalIgnoreCase) && Path.GetFileNameWithoutExtension(p).Equals(Path.GetFileNameWithoutExtension(path), StringComparison.OrdinalIgnoreCase)) ?? Path.ChangeExtension(path, ".cdg");
-                else if (action == Action.Karaoke_To_Video ? !ConversionService.IsVideoSource(path) :
-                    action == Action.Archive_To_Zip ? !ArchiveZipConverter.IsInput(path) :
+                else if (action == Action.KaraokeToVideo ? !ConversionService.IsVideoSource(path) :
+                    action == Action.ArchiveToZip ? !ArchiveZipConverter.IsInput(path) :
                     !Path.GetExtension(path).Equals(extension, StringComparison.OrdinalIgnoreCase))
                     throw new ArgumentException($"This action requires {extension} inputs: {path}");
                 sources.Add(source);

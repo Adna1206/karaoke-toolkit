@@ -1,3 +1,4 @@
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.Audio;
 using KaraokeToolkit.App.Shared;
 using KaraokeToolkit.App.Features.Settings;
@@ -18,7 +19,7 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KaraokeToolkit.Core;
-using Action = KaraokeToolkit.Core.Conversion.OperationCatalog.defAction;
+using Action = KaraokeToolkit.Core.Execution.OperationId;
 namespace KaraokeToolkit.App.Features.Main;
 
 public sealed record ActivityEntry(string Time, string Message);
@@ -87,12 +88,12 @@ public partial class MainViewModel : ViewModelBase
         var extensions = normalized.Where(File.Exists).Select(p => Path.GetExtension(p).ToLowerInvariant()).Distinct().ToArray();
         if (suggestOperation && SelectedOperation is not { IsOrganizer: true } and not { IsFlatten: true } and not { IsRecipe: true } and not { IsTagging: true } && normalized.All(File.Exists))
         {
-            if (extensions.All(e => e == ".zip") && SelectedOperation?.Action != Action.Repack_Zip)
-                SelectedOperation = Operations.First(x => x.Action == Action.Zip_To_AudioG);
+            if (extensions.All(e => e == ".zip") && SelectedOperation?.Action != Action.RepackZip)
+                SelectedOperation = Operations.First(x => x.Action == Action.ZipToAudioG);
             else if (extensions.All(e => e == ".bin"))
-                SelectedOperation = Operations.First(x => x.Action == Action.Bin_To_AudioG);
+                SelectedOperation = Operations.First(x => x.Action == Action.BinToAudioG);
             else if (extensions.All(e => e is not (".zip" or ".bin")))
-                SelectedOperation = Operations.First(x => x.Action == Action.AudioG_To_Zip);
+                SelectedOperation = Operations.First(x => x.Action == Action.AudioGToZip);
         }
         ValidateCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(CanClearInputs));
@@ -272,7 +273,7 @@ public partial class MainViewModel : ViewModelBase
         OperationSections = OperationDefinitions.Sections.Select(group => new OperationSectionViewModel(this, group.Section, group.Header,
             Operations.Where(operation => operation.Available && operation.Section == group.Section).ToArray())).ToArray();
         recovery = new(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(settingsPath))!, "Recovery"));
-        SelectedOperation = Operations.Single(operation => operation.Action == Action.AudioG_To_Zip);
+        SelectedOperation = Operations.Single(operation => operation.Action == Action.AudioGToZip);
         try
         {
             Options = store.Load();
@@ -351,7 +352,7 @@ public partial class MainViewModel : ViewModelBase
         BackdropChanged?.Invoke(backdrop);
         OnPropertyChanged(nameof(Options));
         OnPropertyChanged(nameof(FavouriteOperations));
-        if (!options.ExperimentalDiscRipping && SelectedOperation?.IsRip == true) SelectedOperation = Operations.Single(operation => operation.Action == Action.AudioG_To_Zip);
+        if (!options.ExperimentalDiscRipping && SelectedOperation?.IsRip == true) SelectedOperation = Operations.Single(operation => operation.Action == Action.AudioGToZip);
         RefreshNavigation();
         StartCommand.NotifyCanExecuteChanged();
     }
@@ -469,7 +470,7 @@ public partial class MainViewModel : ViewModelBase
             return;
         // The dedicated lossless-to-MP3 action uses MP3's saved bitrate even when
         // another encoder is selected for general BIN/disc output.
-        var runOptions = action == Action.LosslessG_To_Mp3G
+        var runOptions = action == Action.LosslessGToMp3G
             ? Options with { AudioBitrate = AudioBitrates.Mp3 }
             : Options;
         using var source = new CancellationTokenSource();

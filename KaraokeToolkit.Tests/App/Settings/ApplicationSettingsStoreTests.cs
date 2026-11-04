@@ -15,7 +15,7 @@ public class ApplicationSettingsStoreTests
         File.WriteAllText(path, """
             <profile><KaraokeToolkit>
               <Theme>Dark</Theme><OperationSections><FileOrganization>false</FileOrganization></OperationSections>
-              <FavouriteOperations><Operation>Zip_To_Bin</Operation></FavouriteOperations>
+              <FavouriteOperations><Operation>ZipToBin</Operation></FavouriteOperations>
               <SettingsWindowWidth>920.5</SettingsWindowWidth><SettingsWindowHeight>730.25</SettingsWindowHeight>
               <FuturePreference>keep</FuturePreference>
             </KaraokeToolkit></profile>
@@ -25,7 +25,7 @@ public class ApplicationSettingsStoreTests
         var app = new ApplicationSettingsStore(path);
         Assert.Equal(ApplicationTheme.Dark, app.LoadTheme());
         Assert.False(app.LoadOperationSections()["FileOrganization"]);
-        Assert.Equal(["Zip_To_Bin"], app.LoadFavouriteOperations());
+        Assert.Equal(["ZipToBin"], app.LoadFavouriteOperations());
         Assert.Equal(new SettingsWindowSize(920.5, 730.25), app.LoadSettingsWindowSize());
         Assert.False(app.Load().AutoCreateCueText);
         app.Save(app.Load(), theme: ApplicationTheme.Light);

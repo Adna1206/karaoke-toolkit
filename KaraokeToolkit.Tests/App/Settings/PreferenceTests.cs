@@ -1,3 +1,4 @@
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.Video;
 using KaraokeToolkit.Core.Audio;
 using KaraokeToolkit.App.Features.Settings;
@@ -6,7 +7,7 @@ using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Recovery;
 using KaraokeToolkit.Core.Settings;
 using KaraokeToolkit.Core;
-using Action = KaraokeToolkit.Core.Conversion.OperationCatalog.defAction;
+using Action = KaraokeToolkit.Core.Execution.OperationId;
 namespace KaraokeToolkit.Tests.App.Settings;
 
 public class PreferenceTests

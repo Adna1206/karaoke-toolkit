@@ -1,3 +1,4 @@
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.Audio;
 using KaraokeToolkit.App.Features.Main;
 using FFMpegCore;
@@ -5,7 +6,7 @@ using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Recovery;
 using KaraokeToolkit.Core.Settings;
 using KaraokeToolkit.Tests.Benchmarks;
-using Action = KaraokeToolkit.Core.Conversion.OperationCatalog.defAction;
+using Action = KaraokeToolkit.Core.Execution.OperationId;
 
 namespace KaraokeToolkit.Tests.Audio;
 
@@ -28,7 +29,7 @@ public class LosslessAudioGTests
             DeleteOldFiles = false, AutoCreateCueText = false }, model.OverwritePolicy, model.Theme,
             model.ValidateBeforeConversion, model.IgnoreLeadingTheForFileOrganization,
             new AudioBitratePreferences(192, 128, 160));
-        model.SelectedOperation = model.Operations.Single(x => x.Action == Action.LosslessG_To_Mp3G);
+        model.SelectedOperation = model.Operations.Single(x => x.Action == Action.LosslessGToMp3G);
         model.SetInputs([folder]);
         await model.StartCommand.ExecuteAsync(null);
         Assert.Equal("Succeeded", Assert.Single(model.LastReport!.Entries).Status);
@@ -57,7 +58,7 @@ public class LosslessAudioGTests
             File.Delete(wav);
         }
 
-        var result = await Service().RunAsync(new(Action.LosslessG_To_Mp3G, folder, Options(delete: true)));
+        var result = await Service().RunAsync(new(Action.LosslessGToMp3G, folder, Options(delete: true)));
         Assert.True(result.Succeeded == 1, string.Join("; ", result.Files.Select(f => f.Message)));
         Assert.False(File.Exists(input));
         Assert.Equal(graphics, File.ReadAllBytes(cdg));
@@ -85,7 +86,7 @@ public class LosslessAudioGTests
         string cdg = Path.Combine(folder, "song.cdg");
         File.WriteAllBytes(cdg, graphics);
 
-        var result = await Service().RunAsync(new(Action.LosslessG_To_Mp3G, folder, Options(delete: true)));
+        var result = await Service().RunAsync(new(Action.LosslessGToMp3G, folder, Options(delete: true)));
         Assert.True(result.Succeeded == 1, string.Join("; ", result.Files.Select(f => f.Message)));
         var info = await FFProbe.AnalyseAsync(Path.Combine(folder, "song.mp3"), FFmpegRuntime.Options(folder));
         Assert.Equal(44100, info.PrimaryAudioStream?.SampleRateHz);
@@ -103,7 +104,7 @@ public class LosslessAudioGTests
             .ProcessAsynchronously(true, FFmpegRuntime.Options(folder));
         File.Delete(wav);
         File.WriteAllBytes(Path.Combine(folder, "song.cdg"), new byte[24]);
-        var result = await Service().RunAsync(new(Action.LosslessG_To_Mp3G, folder, Options(delete: true)));
+        var result = await Service().RunAsync(new(Action.LosslessGToMp3G, folder, Options(delete: true)));
         Assert.Equal(1, result.Failed);
         Assert.Contains("not a supported lossless", result.Files[0].Message);
         Assert.True(File.Exists(m4a));
@@ -118,13 +119,13 @@ public class LosslessAudioGTests
         AudioBenchmarks.WriteWave(wav, 2);
         File.WriteAllBytes(cdg, new byte[24]);
         File.WriteAllText(mp3, "existing");
-        var blocked = await Service().RunAsync(new(Action.LosslessG_To_Mp3G, folder, Options(delete: true)));
+        var blocked = await Service().RunAsync(new(Action.LosslessGToMp3G, folder, Options(delete: true)));
         Assert.Equal(1, blocked.Failed);
         Assert.Equal("existing", File.ReadAllText(mp3));
         Assert.True(File.Exists(wav));
         string flac = Path.ChangeExtension(wav, ".flac");
         File.WriteAllText(flac, "second source");
-        var ambiguous = await Service().RunAsync(new(Action.LosslessG_To_Mp3G, folder, Options()));
+        var ambiguous = await Service().RunAsync(new(Action.LosslessGToMp3G, folder, Options()));
         Assert.Equal(1, ambiguous.Failed);
         Assert.Contains("exactly one", ambiguous.Files[0].Message);
     }

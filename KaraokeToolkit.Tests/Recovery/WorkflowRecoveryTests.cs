@@ -1,10 +1,11 @@
+using KaraokeToolkit.Core.Execution;
 using System.Diagnostics;
 using KaraokeToolkit.App.Features.Main;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Recipes;
 using KaraokeToolkit.Core.Recovery;
 using KaraokeToolkit.Core.Tagging;
-using Action = KaraokeToolkit.Core.Conversion.OperationCatalog.defAction;
+using Action = KaraokeToolkit.Core.Execution.OperationId;
 
 namespace KaraokeToolkit.Tests.Recovery;
 
@@ -42,14 +43,14 @@ public class WorkflowRecoveryTests
         string first = TestMediaFixture.NewFolder(), second = TestMediaFixture.NewFolder(), index = TestMediaFixture.NewFolder();
         string source = Path.Combine(second, "song.zip"); File.WriteAllText(source, "unchanged");
         var store = new RecoveryStore(index);
-        var recipe = new RecipeDefinition { Name = "Across roots", Steps = [new() { OperationId = "Zip_To_AudioG" }] };
+        var recipe = new RecipeDefinition { Name = "Across roots", Steps = [new() { OperationId = "ZipToAudioG" }] };
         string parent;
         using (var session = new WorkflowSession(store, new WorkflowData
         { Kind = RecoveryKind.Recipe, Roots = [first, second], Inputs = [source], CurrentInputs = [source], Recipe = recipe }))
         {
             session.Enter(); session.StartStep();
             session.Data.Conversions = [new() { Folder = second, Sources = [source] }]; session.Save();
-            using var child = new RunSession(store, new OperationRequest(Action.Zip_To_AudioG, second, new()), OverwritePolicy.Skip, [source]);
+            using var child = new RunSession(store, new ConversionRequest(Action.ZipToAudioG, second, new()), OverwritePolicy.Skip, [source]);
             parent = session.Journal;
         }
         File.Delete(store.IndexPath(parent));
@@ -63,14 +64,14 @@ public class WorkflowRecoveryTests
         string folder = TestMediaFixture.NewFolder(), index = TestMediaFixture.NewFolder();
         string source = Path.Combine(folder, "song.zip"); File.WriteAllText(source, "unchanged");
         var store = new RecoveryStore(index);
-        var recipe = new RecipeDefinition { Name = "Cancelled", Steps = [new() { OperationId = "Zip_To_AudioG" }] };
+        var recipe = new RecipeDefinition { Name = "Cancelled", Steps = [new() { OperationId = "ZipToAudioG" }] };
         using (var session = new WorkflowSession(store, new WorkflowData
         { Kind = RecoveryKind.Recipe, Roots = [folder], Inputs = [source], CurrentInputs = [source], Recipe = recipe }))
         {
             session.Enter(); session.StartStep();
             using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() => new SelectionConversionService(store).RunAsync(
-                new(Action.Zip_To_AudioG, [source], new(), OverwritePolicy.Skip), token: cancellation.Token));
+                new(Action.ZipToAudioG, [source], new(), OverwritePolicy.Skip), token: cancellation.Token));
             session.Finish();
         }
         Assert.Empty(store.Find()); Assert.Empty(Directory.GetDirectories(folder, ".karaoke-job-*"));
@@ -99,7 +100,7 @@ public class WorkflowRecoveryTests
     public async Task KilledRecipeResumesSavedPipelineAndOnlyOffersParent(string mode, int completed)
     {
         string folder = TestMediaFixture.NewFolder(), index = TestMediaFixture.NewFolder();
-        TestMediaFixture.Seed(folder, Action.Zip_To_Bin, "keep");
+        TestMediaFixture.Seed(folder, Action.ZipToBin, "keep");
         await Crash(mode, folder, index);
         var store = new RecoveryStore(index);
         var job = Assert.Single(store.Find());
@@ -119,7 +120,7 @@ public class WorkflowRecoveryTests
     public async Task StartupTagRecoveryUsesSavedPreviewSkipsFinishedFileAndSupportsLater()
     {
         string folder = TestMediaFixture.NewFolder(), settings = TestMediaFixture.NewFolder(), index = Path.Combine(settings, "Recovery");
-        TestMediaFixture.Seed(folder, Action.AudioG_To_Bin, "keep");
+        TestMediaFixture.Seed(folder, Action.AudioGToBin, "keep");
         string first = Path.Combine(folder, "DISC-00 - Artist - First.wav"), second = Path.Combine(folder, "DISC-01 - Artist - Second.wav");
         File.Move(Path.Combine(folder, "song.wav"), first); File.Copy(first, second);
         await Crash("tagging", folder, index);
@@ -144,7 +145,7 @@ public class WorkflowRecoveryTests
     public async Task StartupRecipeRecoveryDoesNotRequireRecipeLibraryEntry()
     {
         string folder = TestMediaFixture.NewFolder(), settings = TestMediaFixture.NewFolder(), index = Path.Combine(settings, "Recovery");
-        TestMediaFixture.Seed(folder, Action.Zip_To_Bin, "keep"); await Crash("between", folder, index);
+        TestMediaFixture.Seed(folder, Action.ZipToBin, "keep"); await Crash("between", folder, index);
         var model = new MainViewModel(Path.Combine(settings, "settings.xml"));
         Assert.Empty(model.RecipeChoices);
         model.ConfirmRecoveryAsync = job => { Assert.Equal(RecoveryKind.Recipe, job.Kind); return Task.FromResult(true); };
@@ -157,7 +158,7 @@ public class WorkflowRecoveryTests
     public async Task RecipeTaggingCrashOffersOnlyParentSkipsFinishedTagsAndContinuesToZip()
     {
         string folder = TestMediaFixture.NewFolder(), index = TestMediaFixture.NewFolder();
-        TestMediaFixture.Seed(folder, Action.AudioG_To_Bin, "keep");
+        TestMediaFixture.Seed(folder, Action.AudioGToBin, "keep");
         string first = Path.Combine(folder, "DISC-00 - Artist - First.wav"), second = Path.Combine(folder, "DISC-01 - Artist - Second.wav");
         File.Move(Path.Combine(folder, "song.wav"), first); File.Copy(first, second);
         File.Move(Path.Combine(folder, "song.cdg"), Path.ChangeExtension(first, ".cdg")); File.Copy(Path.ChangeExtension(first, ".cdg"), Path.ChangeExtension(second, ".cdg"));
@@ -177,7 +178,7 @@ public class WorkflowRecoveryTests
     public async Task ChangedCompletedOutputBlocksRecoveryAndKeepsJournal()
     {
         string folder = TestMediaFixture.NewFolder(), index = TestMediaFixture.NewFolder();
-        TestMediaFixture.Seed(folder, Action.Zip_To_Bin, "keep"); await Crash("between", folder, index);
+        TestMediaFixture.Seed(folder, Action.ZipToBin, "keep"); await Crash("between", folder, index);
         string audio = Path.Combine(folder, "song.wav"); File.AppendAllText(audio, "user edit");
         string hash = FileTransaction.Hash(audio); var store = new RecoveryStore(index);
         await Assert.ThrowsAsync<IOException>(() => new RecipeRunner(new RecipeStepExecutor(store), store).ResumeAsync(Assert.Single(store.Find())));

@@ -1,6 +1,7 @@
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.FileOperations;
-using Action = KaraokeToolkit.Core.Conversion.OperationCatalog.defAction;
+using Action = KaraokeToolkit.Core.Execution.OperationId;
 
 namespace KaraokeToolkit.App.Metadata;
 
@@ -11,6 +12,12 @@ public enum OperationInputKind { None, FilesAndFolders, Folders }
 public sealed record OperationDefinition(string Id, Action? Action, string Label, string ShortDescription,
     string Description, OperationSection Section, OperationInputKind Inputs, bool Available)
 {
+    public OperationDefinition(OperationId operation, Action? action, string label, string shortDescription,
+        string description, OperationSection section, OperationInputKind inputs, bool available)
+        : this(OperationCatalog.Get(operation).Identifier, action, label, shortDescription, description, section, inputs, available) { }
+
+    // Saved favourite IDs remain strings; dynamic saved recipes use Recipe:<GUID>.
+    public OperationId? Operation => Section == OperationSection.Recipes ? null : OperationCatalog.Get(Id).Id;
     public bool IsRip { get; init; }
     public bool IsRestore { get; init; }
     public bool IsTagging { get; init; }

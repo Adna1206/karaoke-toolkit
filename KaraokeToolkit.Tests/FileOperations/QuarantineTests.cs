@@ -1,3 +1,4 @@
+using KaraokeToolkit.Core.Execution;
 using static KaraokeToolkit.Tests.Support.FileWorkflowFixture;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.FileOperations;
@@ -8,7 +9,7 @@ using System.IO.Compression;
 using System.Text.Json;
 using KaraokeToolkit.App.Services;
 using KaraokeToolkit.Core;
-using Action = KaraokeToolkit.Core.Conversion.OperationCatalog.defAction;
+using Action = KaraokeToolkit.Core.Execution.OperationId;
 
 namespace KaraokeToolkit.Tests.FileOperations;
 
@@ -20,7 +21,7 @@ public class QuarantineTests
     {
         string root = TestMediaFixture.NewFolder(), folder = Path.Combine(root, "Disc 1");
         Directory.CreateDirectory(folder);
-        TestMediaFixture.Seed(folder, Action.AudioG_To_Bin, "short-graphics");
+        TestMediaFixture.Seed(folder, Action.AudioGToBin, "short-graphics");
         var before = Directory.GetFiles(folder).ToDictionary(p => Path.GetFileName(p), FileTransaction.Hash);
         var finding = Assert.Single((await new ValidationService().ScanAsync([root], true)).Findings);
         var moved = Assert.Single(await new QuarantineService().MoveAsync([finding]));
@@ -76,7 +77,7 @@ public class QuarantineTests
     public async Task FailedPairMoveRollsBackTheMemberAlreadyMoved()
     {
         string folder = TestMediaFixture.NewFolder();
-        TestMediaFixture.Seed(folder, Action.AudioG_To_Bin, "short-graphics");
+        TestMediaFixture.Seed(folder, Action.AudioGToBin, "short-graphics");
         var finding = Assert.Single((await new ValidationService().ScanAsync([folder], false)).Findings);
         using (var locked = new FileStream(Path.Combine(folder, "song.wav"), FileMode.Open, FileAccess.Read, FileShare.Read))
         {
@@ -89,7 +90,7 @@ public class QuarantineTests
     public async Task InterruptedDamagedMoveCanBeRestoredFromManifest()
     {
         string root = TestMediaFixture.NewFolder();
-        TestMediaFixture.Seed(root, Action.AudioG_To_Bin, "short-graphics");
+        TestMediaFixture.Seed(root, Action.AudioGToBin, "short-graphics");
         var finding = Assert.Single((await new ValidationService().ScanAsync([root], false)).Findings);
         string batch = Path.Combine(root, "Damaged", "interrupted"), files = Path.Combine(batch, "files");
         Directory.CreateDirectory(files);

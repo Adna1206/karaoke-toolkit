@@ -1,5 +1,6 @@
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.Conversion;
-using Action = KaraokeToolkit.Core.Conversion.OperationCatalog.defAction;
+using Action = KaraokeToolkit.Core.Execution.OperationId;
 
 namespace KaraokeToolkit.Tests.Conversion;
 
@@ -13,10 +14,8 @@ public class CapabilityContractTests
     }
 
     [Theory]
-    [InlineData(Action.CDG_To_Bin, OperationSupport.HardwareUnverified)]
-    [InlineData(Action.CDG_To_Zip, OperationSupport.HardwareUnverified)]
-    [InlineData(Action.CDG_To_AudioG, OperationSupport.HardwareUnverified)]
-    [InlineData(Action.Rename_Files_From_Internet, OperationSupport.Deferred)]
+    [InlineData(Action.DiscRip, OperationSupport.HardwareUnverified)]
+    [InlineData(Action.RenameFilesFromInternet, OperationSupport.Deferred)]
     public void ExternalOperationsAreNotReportedAsVerifiedLocalConversions(Action action, OperationSupport expected)
         => Assert.Equal(expected, OperationCapabilities.Describe(action));
 }

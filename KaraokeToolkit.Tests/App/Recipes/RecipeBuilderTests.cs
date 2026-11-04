@@ -1,3 +1,4 @@
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.App.Features.Main;
 using KaraokeToolkit.App.Features.Recipes;
 using KaraokeToolkit.App.Metadata;
@@ -15,11 +16,11 @@ public class RecipeBuilderTests
         string directory = TestMediaFixture.NewFolder();
         var defaults = new RecipeStep { Options = new() { ZipCompression = ZipCompression.Level3 } };
         var model = new RecipeBuilderViewModel(directory, defaults);
-        model.SelectedOperation = model.Operations.Single(operation => operation.Id == "Zip_To_AudioG");
+        model.SelectedOperation = model.Operations.Single(operation => operation.Id == "ZipToAudioG");
         model.AddStepCommand.Execute(null);
         var first = Assert.Single(model.Steps);
         model.UpdateStep(first, first.Step with { Options = first.Step.Options with { ZipCompression = ZipCompression.SmallestSize } });
-        model.SelectedOperation = model.Operations.Single(operation => operation.Id == "AudioG_To_Zip");
+        model.SelectedOperation = model.Operations.Single(operation => operation.Id == "AudioGToZip");
         model.AddStepCommand.Execute(null);
         Assert.Equal(ZipCompression.Level3, defaults.Options.ZipCompression);
         Assert.Equal(ZipCompression.Level3, model.Steps[1].Step.Options.ZipCompression);
@@ -37,9 +38,9 @@ public class RecipeBuilderTests
         var model = new RecipeBuilderViewModel(TestMediaFixture.NewFolder(), new());
         Assert.All(model.Operations, definition => Assert.True(definition.Available));
         Assert.Equal(RecipeOperations.All.Select(operation => operation.Id).Order(), model.Operations.Select(operation => operation.Id).Order());
-        model.SelectedOperation = model.Operations.Single(operation => operation.Id == "Karaoke_To_Video");
+        model.SelectedOperation = model.Operations.Single(operation => operation.Id == "KaraokeToVideo");
         model.AddStepCommand.Execute(null);
-        model.SelectedOperation = model.Operations.Single(operation => operation.Id == "Zip_To_Bin");
+        model.SelectedOperation = model.Operations.Single(operation => operation.Id == "ZipToBin");
         model.AddStepCommand.Execute(null);
         Assert.Single(model.Steps);
         Assert.Contains("cannot accept", model.Error);
@@ -93,10 +94,10 @@ public class RecipeBuilderTests
         Assert.False(validation.CanDeleteOriginals); Assert.False(validation.HasZipSettings);
         Assert.False(validation.HasOverwriteSettings); Assert.False(validation.HasVideoSettings);
         var transcode = new RecipeStepOptionsViewModel(new()
-            { OperationId = "LosslessG_To_Mp3G", Options = new() { AudioEncoder = KaraokeToolkit.Core.Audio.AudioEncoder.WMA, AudioBitrate = 192 } });
+            { OperationId = "LosslessGToMp3G", Options = new() { AudioEncoder = KaraokeToolkit.Core.Audio.AudioEncoder.WMA, AudioBitrate = 192 } });
         Assert.True(transcode.HasAudioSettings); Assert.False(transcode.CanChooseEncoder);
         Assert.Equal(KaraokeToolkit.Core.Audio.AudioEncoder.MP3, transcode.ToOptions().AudioEncoder);
-        var video = new RecipeStepOptionsViewModel(new() { OperationId = "Karaoke_To_Video" });
+        var video = new RecipeStepOptionsViewModel(new() { OperationId = "KaraokeToVideo" });
         Assert.True(video.HasVideoSettings); Assert.True(video.CanValidateInputs); Assert.False(video.CanDeleteOriginals);
     }
 
@@ -105,13 +106,13 @@ public class RecipeBuilderTests
     {
         string folder = TestMediaFixture.NewFolder();
         var model = new RecipeBuilderViewModel(folder, new());
-        model.Load(new() { Name = "Video", Steps = [new() { OperationId = "Bin_To_Zip" }, new() { OperationId = "Karaoke_To_Video" }] });
+        model.Load(new() { Name = "Video", Steps = [new() { OperationId = "BinToZip" }, new() { OperationId = "KaraokeToVideo" }] });
         model.Save();
         Assert.True(model.CanSave);
         model.SelectedStep = model.Steps[1]; model.MoveUpCommand.Execute(null);
         Assert.False(model.CanSave); Assert.Contains("cannot accept", model.Error);
         Assert.Throws<ArgumentException>(() => model.Save());
-        Assert.Equal("Bin_To_Zip", Assert.Single(new RecipeStore(folder).Load()).Steps[0].OperationId);
+        Assert.Equal("BinToZip", Assert.Single(new RecipeStore(folder).Load()).Steps[0].OperationId);
         model.SelectedStep = model.Steps[0]; model.MoveDownCommand.Execute(null);
         Assert.True(model.CanSave);
     }
@@ -138,7 +139,7 @@ public class RecipeBuilderTests
     public async Task MainWindowRecipeExecutionProducesReportAndResettableStatus()
     {
         string directory = TestMediaFixture.NewFolder();
-        TestMediaFixture.Seed(directory, OperationCatalog.defAction.Zip_To_Bin, "normal");
+        TestMediaFixture.Seed(directory, OperationId.ZipToBin, "normal");
         var model = new MainViewModel(Path.Combine(directory, "settings.xml"));
         var options = model.Options;
         await model.RunRecipeAsync(new() { Name = "Check track", Steps = [new() { OperationId = "ValidateKaraoke" }] }, [Path.Combine(directory, "song.zip")]);

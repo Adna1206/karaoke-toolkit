@@ -1,3 +1,4 @@
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.Conversion;
 using System.Text.Json;
 
@@ -129,12 +130,18 @@ public sealed class RecoveryStore
 
 internal static class DurableJson
 {
+    // Human-readable checkpoints must not depend on enum member ordering.
+    internal static System.Text.Json.JsonSerializerOptions Settings { get; } = new()
+    {
+        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter(allowIntegerValues: false) }
+    };
+
     internal static void Write<T>(string path, T value)
     {
         string temporary = path + ".tmp";
         using (var stream = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None))
         {
-            JsonSerializer.Serialize(stream, value);
+            JsonSerializer.Serialize(stream, value, Settings);
             stream.Flush(flushToDisk: true);
         }
         // Windows readers/scanners can briefly deny replacement. Keep the old journal
@@ -153,8 +160,8 @@ internal static class DurableJson
 internal sealed class RunData
 {
     public string? OwnerWorkflow { get; set; }
-    public int Version { get; set; } = 1;
-    public required OperationRequest Request
+    public int Version { get; set; } = 2;
+    public required ConversionRequest Request
     {
         get; set;
     }
@@ -205,7 +212,7 @@ internal sealed class RunSession : IDisposable
     private readonly RecoveryStore store;
     internal static FileStream Lease(string directory) => new(Path.Combine(directory, "run.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
 
-    internal RunSession(RecoveryStore store, OperationRequest request, OverwritePolicy policy, string[] sources, bool validateBeforeConversion = false)
+    internal RunSession(RecoveryStore store, ConversionRequest request, OverwritePolicy policy, string[] sources, bool validateBeforeConversion = false)
     {
         this.store = store;
         rootLease = FileTransaction.AcquireLease(Path.Combine(Path.GetFullPath(request.Folder), ".karaoke-run-lease"));
@@ -268,9 +275,9 @@ internal sealed class RunSession : IDisposable
             throw new IOException("Invalid recovery journal location.");
         CheckPlainPath(directory);
         CheckPlainPath(journal);
-        var data = JsonSerializer.Deserialize<RunData>(File.ReadAllText(journal)) ?? throw new IOException("Empty recovery journal.");
+        var data = JsonSerializer.Deserialize<RunData>(File.ReadAllText(journal), DurableJson.Settings) ?? throw new IOException("Empty recovery journal.");
         string root = Path.GetDirectoryName(directory)!;
-        if (data.Version != 1 || data.Request == null || data.Sources == null || data.Results == null || data.Metadata == null || data.MetadataResults == null ||
+        if (data.Version != 2 || data.Request == null || data.Sources == null || data.Results == null || data.Metadata == null || data.MetadataResults == null ||
             !Enum.IsDefined(data.Policy) || !string.Equals(root, Path.GetFullPath(data.Request.Folder), StringComparison.OrdinalIgnoreCase))
             throw new IOException("Unsupported or misplaced recovery journal.");
         foreach (string source in data.Sources.Concat(data.Results.Keys).Concat(data.Metadata).Concat(data.Current == null ? [] : new[] { data.Current }))

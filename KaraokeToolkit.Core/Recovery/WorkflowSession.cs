@@ -11,7 +11,7 @@ public enum RecoveryKind { Conversion, Recipe, Tagging }
 
 internal sealed class WorkflowData
 {
-    public int Version { get; set; } = 1;
+    public int Version { get; set; } = 2;
     public RecoveryKind Kind { get; set; }
     public string[] Roots { get; set; } = [];
     public string[] Inputs { get; set; } = [];
@@ -92,8 +92,8 @@ internal sealed class WorkflowSession : IDisposable
         if (Path.GetFileName(journal) != "workflow.json" || !Path.GetFileName(directory).StartsWith(".karaoke-job-workflow-", StringComparison.Ordinal))
             throw new IOException("Invalid workflow journal location.");
         RunSession.CheckPlainPath(journal);
-        var data = JsonSerializer.Deserialize<WorkflowData>(File.ReadAllText(journal)) ?? throw new IOException("Empty workflow journal.");
-        if (data.Version != 1 || data.Kind is not (RecoveryKind.Recipe or RecoveryKind.Tagging) || data.Roots is not { Length: > 0 } ||
+        var data = JsonSerializer.Deserialize<WorkflowData>(File.ReadAllText(journal), DurableJson.Settings) ?? throw new IOException("Empty workflow journal.");
+        if (data.Version != 2 || data.Kind is not (RecoveryKind.Recipe or RecoveryKind.Tagging) || data.Roots is not { Length: > 0 } ||
             data.Inputs == null || data.CurrentInputs == null || data.Steps == null || data.Expected == null || data.TagFiles == null || data.TagResults == null ||
             !InputSelection.Paths.Equals(Path.GetDirectoryName(directory), data.Roots[0])) throw new IOException("Invalid workflow checkpoint.");
         foreach (string root in data.Roots)

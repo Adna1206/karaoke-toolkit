@@ -11,6 +11,11 @@ format support and validation.
   categories and displayed choices. The Options layout binds to these definitions
   through `OptionsViewModel.Definitions`; it remains hand-authored XAML.
 
+Built-in definitions take Core's `OperationId` and derive their existing saved
+string IDs through the shared catalogue. Presentation labels remain in App;
+dynamic saved recipes keep `Recipe:<GUID>` IDs. See [operation contracts](operations.md)
+for capabilities, general/conversion requests and explicit CLI exposure decisions.
+
 `ActionChoice` adds per-user favourite state to a shared operation definition.
 Favourites are saved separately by stable ID. The home category sidebar uses
 session selection; old section expansion preferences are retained for compatibility.

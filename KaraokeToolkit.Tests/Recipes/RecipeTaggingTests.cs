@@ -1,3 +1,4 @@
+using KaraokeToolkit.Core.Execution;
 using System.IO.Compression;
 using KaraokeToolkit.App.Features.Recipes;
 using KaraokeToolkit.App.Metadata;
@@ -5,7 +6,7 @@ using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Recipes;
 using KaraokeToolkit.Core.Recovery;
 using KaraokeToolkit.Core.Tagging;
-using Action = KaraokeToolkit.Core.Conversion.OperationCatalog.defAction;
+using Action = KaraokeToolkit.Core.Execution.OperationId;
 
 namespace KaraokeToolkit.Tests.Recipes;
 
@@ -39,20 +40,20 @@ public class RecipeTaggingTests
         foreach (var definition in OperationDefinitions.All)
             Assert.Equal(RecipeOperations.Supports(definition.Id), definition.CanUseInRecipes);
         Assert.Throws<ArgumentException>(() => RecipeOperations.Validate(new() { Steps = [new() { OperationId = "TagKaraoke", TaggingPattern = "%UNKNOWN%" }] }));
-        Assert.Throws<ArgumentException>(() => RecipeOperations.Validate(new() { Steps = [new() { OperationId = "Zip_To_Bin" }, new() { OperationId = "TagKaraoke" }] }));
-        Assert.Throws<ArgumentException>(() => RecipeOperations.Validate(new() { Steps = [new() { OperationId = "Karaoke_To_Video" }, new() { OperationId = "TagKaraoke" }, new() { OperationId = "AudioG_To_Zip" }] }));
+        Assert.Throws<ArgumentException>(() => RecipeOperations.Validate(new() { Steps = [new() { OperationId = "ZipToBin" }, new() { OperationId = "TagKaraoke" }] }));
+        Assert.Throws<ArgumentException>(() => RecipeOperations.Validate(new() { Steps = [new() { OperationId = "KaraokeToVideo" }, new() { OperationId = "TagKaraoke" }, new() { OperationId = "AudioGToZip" }] }));
     }
 
     [Fact]
     public async Task TagsAudioThenCreatesZipAndTagsZipWithoutChangingGraphics()
     {
-        string folder = TestMediaFixture.NewFolder(); TestMediaFixture.Seed(folder, Action.AudioG_To_Bin, "keep");
+        string folder = TestMediaFixture.NewFolder(); TestMediaFixture.Seed(folder, Action.AudioGToBin, "keep");
         string audio = Path.Combine(folder, "DISC-00 - Artist - Title.wav"), graphics = Path.ChangeExtension(audio, ".cdg");
         File.Move(Path.Combine(folder, "song.wav"), audio); File.Move(Path.Combine(folder, "song.cdg"), graphics);
         string graphicsHash = FileTransaction.Hash(graphics);
         var recipe = new RecipeDefinition { Steps = [
             new() { OperationId = "TagKaraoke", Tagging = new(ClearComments: false) },
-            new() { OperationId = "AudioG_To_Zip", Options = new() { DeleteOldFiles = false, AutoCreateCueText = false }, OverwritePolicy = OverwritePolicy.Fail },
+            new() { OperationId = "AudioGToZip", Options = new() { DeleteOldFiles = false, AutoCreateCueText = false }, OverwritePolicy = OverwritePolicy.Fail },
             new() { OperationId = "TagKaraoke", TaggingPattern = "%TITLE%", Tagging = new(FillEmptyOnly: true), Options = new() { ZipCompression = KaraokeToolkit.Core.Archives.ZipCompression.SmallestSize } }
         ] };
         var store = new RecoveryStore(TestMediaFixture.NewFolder());
@@ -70,9 +71,9 @@ public class RecipeTaggingTests
     [Fact]
     public async Task FilenameMismatchFailsRecipeBeforeFollowingStepAndLeavesSourceUntouched()
     {
-        string folder = TestMediaFixture.NewFolder(); TestMediaFixture.Seed(folder, Action.AudioG_To_Bin, "keep");
+        string folder = TestMediaFixture.NewFolder(); TestMediaFixture.Seed(folder, Action.AudioGToBin, "keep");
         string audio = Path.Combine(folder, "song.wav"), hash = FileTransaction.Hash(audio);
-        var recipe = new RecipeDefinition { Steps = [new() { OperationId = "TagKaraoke" }, new() { OperationId = "AudioG_To_Zip" }] };
+        var recipe = new RecipeDefinition { Steps = [new() { OperationId = "TagKaraoke" }, new() { OperationId = "AudioGToZip" }] };
         var result = await new RecipeRunner(recovery: new(TestMediaFixture.NewFolder())).RunAsync(recipe, [folder]);
         Assert.Single(result.Steps); Assert.Equal(1, result.Steps[0].Result.Failed); Assert.NotEmpty(result.StopReason);
         Assert.Equal(hash, FileTransaction.Hash(audio)); Assert.False(File.Exists(Path.Combine(folder, "song.zip")));

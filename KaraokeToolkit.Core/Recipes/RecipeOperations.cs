@@ -1,9 +1,10 @@
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Archives;
 using KaraokeToolkit.Core.Audio;
 using KaraokeToolkit.Core.Recovery;
 using KaraokeToolkit.Core.Tagging;
-using Action = KaraokeToolkit.Core.Conversion.OperationCatalog.defAction;
+using Action = KaraokeToolkit.Core.Execution.OperationId;
 
 namespace KaraokeToolkit.Core.Recipes;
 
@@ -11,30 +12,34 @@ namespace KaraokeToolkit.Core.Recipes;
 public enum RecipeInputKind { None = 0, Folders = 1, AudioGraphics = 2, Zip = 4, Bin = 8, Archive = 16, Video = 32 }
 
 /// <summary>Known chaining constraints; file contents and runtime support are checked by the engines.</summary>
-public sealed record RecipeOperation(string Id, RecipeInputKind Inputs, RecipeInputKind Outputs, Action? Action = null);
+public sealed record RecipeOperation(OperationId Operation, RecipeInputKind Inputs, RecipeInputKind Outputs, Action? Action = null)
+{
+    // Recipe JSON uses the same named identities as other operation requests.
+    public string Id => OperationCatalog.Get(Operation).Identifier;
+}
 
 public static class RecipeOperations
 {
     private const RecipeInputKind Karaoke = RecipeInputKind.AudioGraphics | RecipeInputKind.Zip | RecipeInputKind.Bin;
     public static IReadOnlyList<RecipeOperation> All { get; } = Array.AsReadOnly<RecipeOperation>([
-        new("Zip_To_Bin", RecipeInputKind.Folders | RecipeInputKind.Zip, RecipeInputKind.Bin, Action.Zip_To_Bin),
-        new("AudioG_To_Bin", RecipeInputKind.Folders | RecipeInputKind.AudioGraphics, RecipeInputKind.Bin, Action.AudioG_To_Bin),
-        new("Bin_To_Zip", RecipeInputKind.Folders | RecipeInputKind.Bin, RecipeInputKind.Zip, Action.Bin_To_Zip),
-        new("AudioG_To_Zip", RecipeInputKind.Folders | RecipeInputKind.AudioGraphics, RecipeInputKind.Zip, Action.AudioG_To_Zip),
-        new("Zip_To_AudioG", RecipeInputKind.Folders | RecipeInputKind.Zip, RecipeInputKind.AudioGraphics, Action.Zip_To_AudioG),
-        new("Bin_To_AudioG", RecipeInputKind.Folders | RecipeInputKind.Bin, RecipeInputKind.AudioGraphics, Action.Bin_To_AudioG),
-        new("Repack_Zip", RecipeInputKind.Folders | RecipeInputKind.Zip, RecipeInputKind.Zip, Action.Repack_Zip),
-        new("Archive_To_Zip", RecipeInputKind.Folders | RecipeInputKind.Archive, RecipeInputKind.Zip, Action.Archive_To_Zip),
-        new("LosslessG_To_Mp3G", RecipeInputKind.Folders | RecipeInputKind.AudioGraphics, RecipeInputKind.AudioGraphics, Action.LosslessG_To_Mp3G),
-        new("Karaoke_To_Video", RecipeInputKind.Folders | Karaoke, RecipeInputKind.Video, Action.Karaoke_To_Video),
-        new("Create_Cue_And_Text_Files", RecipeInputKind.Folders, RecipeInputKind.None, Action.Create_Cue_And_Text_Files),
-        new("Cleanup_Filenames", RecipeInputKind.Folders, RecipeInputKind.None, Action.Cleanup_Filenames),
-        new("OrganizeFiles", RecipeInputKind.Folders | Karaoke | RecipeInputKind.Archive | RecipeInputKind.Video, RecipeInputKind.None),
-        new("OrganizeFolders", RecipeInputKind.Folders, RecipeInputKind.None),
-        new("FlattenOneLayer", RecipeInputKind.Folders, RecipeInputKind.None),
-        new("FlattenAllLayers", RecipeInputKind.Folders, RecipeInputKind.None),
-        new("ValidateKaraoke", RecipeInputKind.Folders | Karaoke, RecipeInputKind.None),
-        new("TagKaraoke", RecipeInputKind.Folders | RecipeInputKind.AudioGraphics | RecipeInputKind.Zip | RecipeInputKind.Video, RecipeInputKind.None),
+        new(OperationId.ZipToBin, RecipeInputKind.Folders | RecipeInputKind.Zip, RecipeInputKind.Bin, Action.ZipToBin),
+        new(OperationId.AudioGToBin, RecipeInputKind.Folders | RecipeInputKind.AudioGraphics, RecipeInputKind.Bin, Action.AudioGToBin),
+        new(OperationId.BinToZip, RecipeInputKind.Folders | RecipeInputKind.Bin, RecipeInputKind.Zip, Action.BinToZip),
+        new(OperationId.AudioGToZip, RecipeInputKind.Folders | RecipeInputKind.AudioGraphics, RecipeInputKind.Zip, Action.AudioGToZip),
+        new(OperationId.ZipToAudioG, RecipeInputKind.Folders | RecipeInputKind.Zip, RecipeInputKind.AudioGraphics, Action.ZipToAudioG),
+        new(OperationId.BinToAudioG, RecipeInputKind.Folders | RecipeInputKind.Bin, RecipeInputKind.AudioGraphics, Action.BinToAudioG),
+        new(OperationId.RepackZip, RecipeInputKind.Folders | RecipeInputKind.Zip, RecipeInputKind.Zip, Action.RepackZip),
+        new(OperationId.ArchiveToZip, RecipeInputKind.Folders | RecipeInputKind.Archive, RecipeInputKind.Zip, Action.ArchiveToZip),
+        new(OperationId.LosslessGToMp3G, RecipeInputKind.Folders | RecipeInputKind.AudioGraphics, RecipeInputKind.AudioGraphics, Action.LosslessGToMp3G),
+        new(OperationId.KaraokeToVideo, RecipeInputKind.Folders | Karaoke, RecipeInputKind.Video, Action.KaraokeToVideo),
+        new(OperationId.CreateCueAndTextFiles, RecipeInputKind.Folders, RecipeInputKind.None, Action.CreateCueAndTextFiles),
+        new(OperationId.CleanUpFilenames, RecipeInputKind.Folders, RecipeInputKind.None, Action.CleanUpFilenames),
+        new(OperationId.OrganizeFiles, RecipeInputKind.Folders | Karaoke | RecipeInputKind.Archive | RecipeInputKind.Video, RecipeInputKind.None),
+        new(OperationId.OrganizeFolders, RecipeInputKind.Folders, RecipeInputKind.None),
+        new(OperationId.FlattenOneLayer, RecipeInputKind.Folders, RecipeInputKind.None),
+        new(OperationId.FlattenAllLayers, RecipeInputKind.Folders, RecipeInputKind.None),
+        new(OperationId.ValidateKaraoke, RecipeInputKind.Folders | Karaoke, RecipeInputKind.None),
+        new(OperationId.TagKaraoke, RecipeInputKind.Folders | RecipeInputKind.AudioGraphics | RecipeInputKind.Zip | RecipeInputKind.Video, RecipeInputKind.None),
     ]);
 
     public static bool Supports(string id) => All.Any(operation => operation.Id == id);
@@ -48,7 +53,7 @@ public static class RecipeOperations
         var operation = Get(operationId);
         if (operationId == "OrganizeFiles") return null;
         if (operationId == "TagKaraoke") return KaraokeTaggingService.MediaExtensions.Concat([".zip", ".cdg"]).ToArray();
-        if (operationId == "LosslessG_To_Mp3G") return LosslessAudioTranscoder.Extensions.Append(".cdg").ToArray();
+        if (operationId == "LosslessGToMp3G") return LosslessAudioTranscoder.Extensions.Append(".cdg").ToArray();
         var extensions = new List<string>();
         if (operation.Inputs.HasFlag(RecipeInputKind.Zip)) extensions.Add(".zip");
         if (operation.Inputs.HasFlag(RecipeInputKind.Bin)) extensions.Add(".bin");
@@ -103,7 +108,7 @@ public static class RecipeOperations
                 _ = new FilenameTagPattern(step.TaggingPattern);
                 if (step.Tagging == null) throw new ArgumentException("Tagging settings are missing.");
             }
-            new OperationRequest(operation.Action ?? Action.AudioG_To_Zip, ".", step.Options).Validate();
+            new ConversionRequest(operation.Action ?? Action.AudioGToZip, ".", step.Options).Validate();
             // None means pass-through: validation, listings and folder maintenance retain their input scope.
             if (operation.Outputs != RecipeInputKind.None) previous = operation.Outputs;
             else if (operation.Inputs == RecipeInputKind.Folders) previous = RecipeInputKind.Folders;

@@ -24,7 +24,7 @@ come from the pinned vendor archives, not new downloads.
    `Directory.Build.props`.
 2. Restores repository-local `vpk` using `.config/dotnet-tools.json`, checking that
    its version matches the App's Velopack NuGet reference. No global tool is needed.
-3. Runs `dotnet publish` in Release for each selected runtime with .NET included.
+3. Runs `dotnet publish` for App and CLI in Release for each runtime, with .NET included.
    Trimming and single-file publishing are disabled to preserve dependency behaviour
    and the separate TagLibSharp library.
 4. Checks required files, including FFmpeg/ffprobe, their manifest, common notices
@@ -38,6 +38,7 @@ from a different platform or overwrite earlier packages:
 - Packages: `artifacts/releases/<version>/<run-id>/<rid>/`
 
 Windows produces a Setup EXE, portable ZIP, full update package and release metadata.
+The CLI is included beside the desktop executable, sharing .NET, Core and FFmpeg.
 Linux produces an AppImage, full update package and release metadata. Linux disc
 ripping still requires an installed cdrdao or a configured executable path; it is
 not bundled in the Linux package. Velopack's Windows cross-packaging tool recognises

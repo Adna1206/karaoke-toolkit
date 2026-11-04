@@ -1,3 +1,4 @@
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.App.Features.Main;
 using KaraokeToolkit.App.Metadata;
 using KaraokeToolkit.Core.Conversion;
@@ -19,14 +20,14 @@ public class HomeRecipeTests
         string directory = TestMediaFixture.NewFolder();
         var main = new MainViewModel(Path.Combine(directory, "settings.xml"));
         Assert.DoesNotContain(main.VisibleSections, section => section.Section == OperationSection.Recipes);
-        var recipe = Recipe("Zip_To_AudioG");
+        var recipe = Recipe("ZipToAudioG");
         new RecipeStore(main.RecipeDirectory).Save(recipe);
         main.ReloadRecipes();
         main.SelectedSection = main.VisibleSections.Single(section => section.Section == OperationSection.Recipes);
         var choice = Assert.Single(main.VisibleOperations);
         Assert.Same(choice, main.SelectedOperation); Assert.True(choice.IsRecipe); Assert.False(choice.IsValidation);
         Assert.Contains("1 step:", main.ActionDescription); Assert.True(main.CanChooseFiles);
-        TestMediaFixture.Seed(directory, OperationCatalog.defAction.Zip_To_Bin, "normal");
+        TestMediaFixture.Seed(directory, OperationId.ZipToBin, "normal");
         string source = Path.Combine(directory, "song.zip");
         main.SetInputs([source]);
         Assert.Same(choice, main.SelectedOperation); Assert.True(main.CanStart);
@@ -67,7 +68,7 @@ public class HomeRecipeTests
         File.WriteAllText(zip, "selection only"); File.WriteAllText(audio, "selection only");
         var main = new MainViewModel(Path.Combine(directory, "settings.xml"));
         var store = new RecipeStore(main.RecipeDirectory);
-        var folders = Recipe("FlattenAllLayers"); var archives = Recipe("Zip_To_AudioG");
+        var folders = Recipe("FlattenAllLayers"); var archives = Recipe("ZipToAudioG");
         store.Save(folders); store.Save(archives); main.ReloadRecipes();
         main.SelectedOperation = main.RecipeChoices.Single(choice => choice.Recipe!.Id == folders.Id);
         Assert.False(main.CanChooseFiles); Assert.Equal("Source folders", main.SourceLabel);
@@ -75,7 +76,7 @@ public class HomeRecipeTests
         main.SetInputs([directory]); Assert.True(main.CanStart);
         main.SelectedOperation = main.RecipeChoices.Single(choice => choice.Recipe!.Id == archives.Id);
         Assert.True(main.CanChooseFiles); Assert.Equal("Source files or folders", main.SourceLabel);
-        Assert.Equal(new[] { ".zip" }, RecipeOperations.FileExtensions("Zip_To_AudioG"));
+        Assert.Equal(new[] { ".zip" }, RecipeOperations.FileExtensions("ZipToAudioG"));
         main.FolderPath = audio; Assert.False(main.CanStart);
         Assert.Throws<ArgumentException>(() => main.SetInputs([audio]));
         main.SetInputs([zip]); Assert.True(main.CanStart);

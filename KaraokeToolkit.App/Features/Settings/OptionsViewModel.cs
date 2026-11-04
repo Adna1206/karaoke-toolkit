@@ -1,3 +1,4 @@
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.Video;
 using KaraokeToolkit.Core.Audio;
 using KaraokeToolkit.Core.Archives;
@@ -45,7 +46,7 @@ public partial class OptionsViewModel : ViewModelBase
             if (!string.IsNullOrWhiteSpace(options.CdrdaoExecutablePath) &&
                 (!System.IO.Path.IsPathFullyQualified(options.CdrdaoExecutablePath) || !System.IO.File.Exists(options.CdrdaoExecutablePath)))
                 throw new System.IO.FileNotFoundException("Choose an existing cdrdao executable using its full path.");
-            new OperationRequest(OperationCatalog.defAction.AudioG_To_Zip, ".", options).Validate();
+            new ConversionRequest(OperationId.AudioGToZip, ".", options).Validate();
             audioBitrates.Validate();
             if (!Enum.IsDefined((ApplicationBackdrop)Backdrop)) throw new ArgumentOutOfRangeException(nameof(Backdrop));
             save(options, (OverwritePolicy)Overwrite, (ApplicationTheme)Theme, ValidateBeforeConversion,

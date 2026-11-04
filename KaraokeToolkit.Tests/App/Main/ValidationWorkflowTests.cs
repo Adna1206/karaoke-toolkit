@@ -1,3 +1,4 @@
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.App.Features.Reports;
 using KaraokeToolkit.App.Features.Main;
 using KaraokeToolkit.Core.Conversion;
@@ -9,7 +10,7 @@ using System.IO.Compression;
 using System.Text.Json;
 using KaraokeToolkit.App.Services;
 using KaraokeToolkit.Core;
-using Action = KaraokeToolkit.Core.Conversion.OperationCatalog.defAction;
+using Action = KaraokeToolkit.Core.Execution.OperationId;
 
 namespace KaraokeToolkit.Tests.App.Main;
 

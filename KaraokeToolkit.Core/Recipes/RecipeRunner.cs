@@ -117,7 +117,7 @@ public sealed class RecipeRunner(IRecipeStepExecutor? executor = null, RecoveryS
                     throw new ArgumentException("This step requires folder inputs.");
                 if (!session.Data.StepStarted) session.StartStep();
                 // File-moving operations must not move an interrupted conversion's journal or sources.
-                bool movesFiles = operation.Id is "OrganizeFiles" or "OrganizeFolders" or "FlattenOneLayer" or "FlattenAllLayers" or "Cleanup_Filenames";
+                bool movesFiles = operation.Id is "OrganizeFiles" or "OrganizeFolders" or "FlattenOneLayer" or "FlattenAllLayers" or "CleanUpFilenames";
                 foreach (string folder in current.Select(path => Directory.Exists(path) ? path : Path.GetDirectoryName(path)!).Distinct(InputSelection.Paths))
                 {
                     var interrupted = await Task.Run(() => new RecoveryStore().Find(folder, movesFiles || step.Options.RecurseFolders), token);
@@ -134,7 +134,7 @@ public sealed class RecipeRunner(IRecipeStepExecutor? executor = null, RecoveryS
                 results.Add(new(index + 1, step.OperationId, result));
                 if (operation.Outputs != RecipeInputKind.None)
                     current = result.Files.Where(file => !file.IsMetadata && file.Status == ConversionStatus.Succeeded)
-                        .SelectMany(file => operation.Id == "LosslessG_To_Mp3G" ? file.Outputs.Append(file.Source) : file.Outputs)
+                        .SelectMany(file => operation.Id == "LosslessGToMp3G" ? file.Outputs.Append(file.Source) : file.Outputs)
                         .Where(IsPrimaryOutput).Distinct(InputSelection.Paths).ToArray();
                 else if (operation.Id == "OrganizeFiles")
                     current = current.SelectMany(path => Directory.Exists(path) ? new[] { path }

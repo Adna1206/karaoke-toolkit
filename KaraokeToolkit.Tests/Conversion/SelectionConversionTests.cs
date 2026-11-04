@@ -1,3 +1,4 @@
+using KaraokeToolkit.Core.Execution;
 using static KaraokeToolkit.Tests.Support.FileWorkflowFixture;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.FileOperations;
@@ -8,7 +9,7 @@ using System.IO.Compression;
 using System.Text.Json;
 using KaraokeToolkit.App.Services;
 using KaraokeToolkit.Core;
-using Action = KaraokeToolkit.Core.Conversion.OperationCatalog.defAction;
+using Action = KaraokeToolkit.Core.Execution.OperationId;
 
 namespace KaraokeToolkit.Tests.Conversion;
 
@@ -20,7 +21,7 @@ public class SelectionConversionTests
     {
         string folder = ZipFolder();
         File.Copy(Path.Combine(folder, "song.zip"), Path.Combine(folder, "other.zip"));
-        var result = await Service().RunAsync(new(Action.Zip_To_AudioG, [Path.Combine(folder, "song.zip")], Options, OverwritePolicy.Fail));
+        var result = await Service().RunAsync(new(Action.ZipToAudioG, [Path.Combine(folder, "song.zip")], Options, OverwritePolicy.Fail));
         Assert.Equal(1, result.Succeeded);
         Assert.True(File.Exists(Path.Combine(folder, "song.cdg")));
         Assert.False(File.Exists(Path.Combine(folder, "other.cdg")));
@@ -30,15 +31,15 @@ public class SelectionConversionTests
     public void SelectingBothPairMembersAndTheirFolderDeduplicates()
     {
         string folder = TestMediaFixture.NewFolder();
-        TestMediaFixture.Seed(folder, Action.AudioG_To_Bin, "keep");
-        var plan = InputSelection.Plan(Action.AudioG_To_Zip, [folder, Path.Combine(folder, "song.wav"), Path.Combine(folder, "song.cdg")], true);
+        TestMediaFixture.Seed(folder, Action.AudioGToBin, "keep");
+        var plan = InputSelection.Plan(Action.AudioGToZip, [folder, Path.Combine(folder, "song.wav"), Path.Combine(folder, "song.cdg")], true);
         Assert.Single(Assert.Single(plan).Sources);
     }
     [Fact]
     public async Task MultiFolderSelectionProducesOneCombinedReport()
     {
         string first = ZipFolder(), second = ZipFolder();
-        var result = await Service().RunAsync(new(Action.Zip_To_AudioG, [first, second], Options, OverwritePolicy.Fail));
+        var result = await Service().RunAsync(new(Action.ZipToAudioG, [first, second], Options, OverwritePolicy.Fail));
         Assert.Equal(2, result.Found);
         Assert.Equal(2, result.Succeeded);
         Assert.True(File.Exists(Path.Combine(first, "song.cdg")));
@@ -48,8 +49,8 @@ public class SelectionConversionTests
     public void ExplicitWrongTypeCannotExpandIntoWholeFolder()
     {
         string folder = ZipFolder();
-        Assert.Throws<ArgumentException>(() => InputSelection.Plan(Action.Bin_To_Zip, [Path.Combine(folder, "song.zip")], true));
-        Assert.Throws<ArgumentException>(() => InputSelection.Plan(Action.Cleanup_Filenames, [Path.Combine(folder, "song.zip")], true));
+        Assert.Throws<ArgumentException>(() => InputSelection.Plan(Action.BinToZip, [Path.Combine(folder, "song.zip")], true));
+        Assert.Throws<ArgumentException>(() => InputSelection.Plan(Action.CleanUpFilenames, [Path.Combine(folder, "song.zip")], true));
     }
     [Fact]
     public async Task RetryUsesOnlyFailedSourcesAndSavedOptions()
@@ -57,7 +58,7 @@ public class SelectionConversionTests
         string folder = ZipFolder();
         string bad = Path.Combine(folder, "bad.zip");
         File.WriteAllText(bad, "broken");
-        var first = await Service().RunAsync(new(Action.Zip_To_AudioG, [folder], Options with
+        var first = await Service().RunAsync(new(Action.ZipToAudioG, [folder], Options with
         {
             DeleteOldFiles = true
         }, OverwritePolicy.Fail));
@@ -80,7 +81,7 @@ public class SelectionConversionTests
         string folder = ZipFolder();
         string blocked = Path.Combine(folder, Path.GetFileName(folder) + ".txt");
         Directory.CreateDirectory(blocked);
-        var result = await Service().RunAsync(new(Action.Zip_To_AudioG, [folder], Options with
+        var result = await Service().RunAsync(new(Action.ZipToAudioG, [folder], Options with
         {
             DeleteOldFiles = true,
             AutoCreateCueText = true
@@ -88,7 +89,7 @@ public class SelectionConversionTests
         Assert.Equal(1, result.Succeeded);
         Assert.Equal(1, result.Failed);
         var retry = Assert.Single(result.RetryRequests);
-        Assert.Equal(Action.Create_Cue_And_Text_Files, retry.Action);
+        Assert.Equal(Action.CreateCueAndTextFiles, retry.Action);
         Assert.False(File.Exists(Path.Combine(folder, "song.zip")));
         Directory.Delete(blocked);
         Assert.Equal(1, (await Service().RunAsync(retry)).Succeeded);
@@ -100,7 +101,7 @@ public class SelectionConversionTests
         string folder = ZipFolder();
         using var cancel = new CancellationTokenSource();
         cancel.Cancel();
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => Service().RunAsync(new(Action.Zip_To_AudioG, [folder], Options, OverwritePolicy.Fail), token: cancel.Token));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => Service().RunAsync(new(Action.ZipToAudioG, [folder], Options, OverwritePolicy.Fail), token: cancel.Token));
         Assert.Empty(Directory.GetDirectories(folder, ".karaoke-job-*"));
     }
 }

@@ -1,3 +1,4 @@
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.App.Metadata;
 using KaraokeToolkit.App.Features.Main;
 using KaraokeToolkit.Core.Conversion;
@@ -50,7 +51,7 @@ public class OperationSectionTests
         files.IsExpanded = false;
         Assert.True(files.IsExpanded);
         Assert.All(model.OperationSections, section => Assert.Same(model.SelectedOperation, section.SelectedOperation));
-        model.SelectedOperation = model.Operations.First(operation => operation.Action == OperationCatalog.defAction.Zip_To_AudioG);
+        model.SelectedOperation = model.Operations.First(operation => operation.Action == OperationId.ZipToAudioG);
         files.IsExpanded = false;
         Assert.False(files.IsExpanded);
     }
