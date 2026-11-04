@@ -43,7 +43,7 @@ Open `KaraokeToolkit.slnx` in Visual Studio with .NET 10 tooling. Projects:
 
 - `KaraokeToolkit.App`: Avalonia views and viewmodels.
 - `KaraokeToolkit.Core`: local workflows, media formats and native-tool integration.
-- `KaraokeToolkit.Core.Tests`: standalone unit and integration tests, plus opt-in benchmarks.
+- `KaraokeToolkit.Tests`: standalone unit and integration tests, plus opt-in benchmarks.
 
 Build selects a local, checksum-verified FFmpeg archive from `vendor/ffmpeg`.
 See [audio runtime and benchmarks](docs/audio-runtime.md) for platforms and packaging,
@@ -56,7 +56,7 @@ disc-reader tests use synthetic images and controlled child processes, without a
 
 ```powershell
 dotnet build KaraokeToolkit.slnx
-dotnet test KaraokeToolkit.Core.Tests/KaraokeToolkit.Core.Tests.csproj
+dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj
 ```
 
 In the agent sandbox, append `-p:UsedAvaloniaProducts=` if the Avalonia build-statistics

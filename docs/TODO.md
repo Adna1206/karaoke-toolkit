@@ -1,5 +1,33 @@
 # Planned features
 
+- [ ] **Command-line interface** — add a `KaraokeToolkit.Cli` console project for
+  operations and saved recipes without the GUI or an AI client. Support explicit
+  per-run settings, progress, cancellation, meaningful exit codes and optional JSON
+  output. Define noninteractive overwrite/deletion policies so unattended runs never
+  wait for GUI prompts. Share C# execution services and request/result contracts with
+  MCP; MCP calls these directly rather than launching CLI commands. CLI can precede
+  MCP, but is not a prerequisite.
+
+- [ ] **Local MCP integration** — investigate a separate `KaraokeToolkit.Mcp`
+  console project referencing Core and using the official C# MCP SDK over stdio.
+  Start with operation/settings discovery, validation, tagging previews and reports;
+  expand to conversions and recipes with explicit file-change permissions, progress,
+  cancellation and recovery. The MCP client launches the server on demand; no GUI,
+  hosted service or listening port is required. Prefer shipping the MCP executable
+  alongside App in the same installer, inactive until launched by a client. GUI
+  control is outside the initial scope.
+
+- [ ] **MCP setup page** — add an Integrations → MCP page with setup instructions,
+  the installed MCP executable path and a Copy Configuration button. Do not add a
+  GUI on/off toggle: the client controls process startup and MCP works without App
+  open. Consider future server-enforced access policies for read-only operations
+  versus file changes, independently of whether the GUI is running.
+
+- [ ] **Velopack credit in About** — add a concise visible credit such as
+  "Installation and updates powered by Velopack" alongside the existing technology
+  credits. Keep the full MIT notice in Third-party notices; describe updates as
+  enabled only once the release feed and update UI are connected.
+
 - [ ] **Windows MSI installer** — extend `scripts/Publish.ps1` to generate an MSI
   through Velopack's WiX integration (`vpk pack --msi`) alongside the existing
   one-click Setup EXE and portable ZIP. Configure installation scope and setup

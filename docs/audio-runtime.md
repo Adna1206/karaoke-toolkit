@@ -77,13 +77,13 @@ The standalone conversion and archive contract tests exercise the surrounding co
 
 ## Running benchmarks
 
-The small explicit harness lives in KaraokeToolkit.Core.Tests/Benchmarks and uses
+The small explicit harness lives in KaraokeToolkit.Tests/Benchmarks and uses
 the existing test executable. It is not discovered by xUnit; normal tests never
 fail because one codec took longer. No separate benchmark project is needed.
 
 ```powershell
-dotnet build KaraokeToolkit.Core.Tests/KaraokeToolkit.Core.Tests.csproj -c Release
-dotnet KaraokeToolkit.Core.Tests/bin/Release/net10.0/KaraokeToolkit.Core.Tests.dll --benchmark-audio 3
+dotnet build KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj -c Release
+dotnet KaraokeToolkit.Tests/bin/Release/net10.0/KaraokeToolkit.Tests.dll --benchmark-audio 3
 ```
 
 The optional count is 1–20 measured iterations after one warmup per case.

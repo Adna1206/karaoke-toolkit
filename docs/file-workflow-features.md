@@ -180,7 +180,7 @@ preferences and live Explorer registrations were not changed.
 The full suite is run using `FeatureValidation` while a Debug instance is open:
 
 ```powershell
-dotnet test KaraokeToolkit.Core.Tests/KaraokeToolkit.Core.Tests.csproj -c FeatureValidation --no-restore -p:UsedAvaloniaProducts=
+dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj -c FeatureValidation --no-restore -p:UsedAvaloniaProducts=
 ```
 
 The requested pre-processing preview remains in [TODO](TODO.md).

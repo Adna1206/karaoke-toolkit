@@ -1,6 +1,9 @@
 # Test structure
 
-KaraokeToolkit.Core.Tests owns standalone tests, deterministic fixtures and opt-in
+KaraokeToolkit.Tests is the shared suite for Core engines and App behaviour, with
+room for future CLI/MCP adapter tests. The product-wide name reflects that scope;
+separate project-specific suites can be introduced if dependencies or execution
+requirements warrant it. It owns standalone tests, deterministic fixtures and opt-in
 benchmarks. Test namespaces match their feature folders. No MP3+G Toolz binaries,
 BASS/DynaZip libraries, x86 bridge, or .NET Framework compiler/runtime is needed.
 
@@ -44,13 +47,13 @@ consumer, so its parser-specific tests and copied parser were removed together.
 Run everything with:
 
 ```powershell
-dotnet test KaraokeToolkit.Core.Tests/KaraokeToolkit.Core.Tests.csproj
+dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj
 ```
 
 Run the standalone contract suites with:
 
 ```powershell
-dotnet test KaraokeToolkit.Core.Tests/KaraokeToolkit.Core.Tests.csproj --filter FullyQualifiedName~ContractTests
+dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj --filter FullyQualifiedName~ContractTests
 ```
 
 Use .NET 10 tooling and the appropriate bundled FFmpeg runtime for integration tests.

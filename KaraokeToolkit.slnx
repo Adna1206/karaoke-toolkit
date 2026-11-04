@@ -1,6 +1,6 @@
 <Solution>
   <Project Path="KaraokeToolkit.App/KaraokeToolkit.App.csproj" />
   <Project Path="KaraokeToolkit.Core/KaraokeToolkit.Core.csproj" />
-  <Project Path="KaraokeToolkit.Core.Tests/KaraokeToolkit.Core.Tests.csproj" />
+  <Project Path="KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj" />
 </Solution>
 

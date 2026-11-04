@@ -18,7 +18,7 @@ ArtifactBuildName. Use this instead of relative BaseOutputPath overrides:
 
 ```powershell
 dotnet build KaraokeToolkit.App/KaraokeToolkit.App.csproj -p:ArtifactBuildName=verification
-dotnet test KaraokeToolkit.Core.Tests/KaraokeToolkit.Core.Tests.csproj --logger trx
+dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj --logger trx
 ```
 
 KaraokeToolkit.runsettings sets the results location relative to the repository root.
