@@ -8,6 +8,9 @@ ignored by `.gitignore`. Normal builds still use each project's standard bin/obj
 - `artifacts/tests/results/`: TRX, coverage and other test-runner output. Previous
   project-local TestResults contents are preserved in the `previous/` subdirectory.
 - `artifacts/tests/runs/<run-id>/fixtures/`: generated test input/output files.
+- `artifacts/publish/<version>/<run-id>/<rid>/`: self-contained publish staging.
+- `artifacts/releases/<version>/<run-id>/<rid>/`: Velopack installers, portable
+  packages, update metadata and SHA256 checksums. See [publishing](publishing.md).
 - Existing repository-level artifact folders remain where they were.
 
 Directory.Build.props defines RepositoryArtifactsPath and supports an optional

@@ -1,5 +1,11 @@
 # Planned features
 
+- [ ] **Windows MSI installer** — extend `scripts/Publish.ps1` to generate an MSI
+  through Velopack's WiX integration (`vpk pack --msi`) alongside the existing
+  one-click Setup EXE and portable ZIP. Configure installation scope and setup
+  pages, and test installation, upgrades and removal while preserving settings,
+  recipes and recovery data. See [Velopack installers](https://docs.velopack.io/packaging/installer).
+
 - [x] **Recipe tagging steps** — saved filename pattern, tag options and ZIP settings;
   noninteractive execution with a frozen preview and parent-recipe crash recovery.
 

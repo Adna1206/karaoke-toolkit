@@ -60,6 +60,7 @@ public partial class AboutViewModel : ViewModelBase
         "FFMpegCore.txt" => "FFMpegCore · MIT",
         "SharpCompress.txt" => "SharpCompress · MIT",
         "TagLibSharp.txt" => "TagLibSharp · LGPL v2.1",
+        "Velopack.txt" => "Velopack · MIT",
         "Inter.OFL.txt" => "Inter font · SIL OFL 1.1",
         "ANGLE.txt" => "ANGLE · BSD-style",
         "SkiaSharp.txt" => "SkiaSharp · MIT / notices",

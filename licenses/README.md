@@ -14,6 +14,7 @@ source or notice obligations.
 | FFMpegCore | 5.5.0 | `FFMpegCore.txt` (MIT) | Common |
 | SharpCompress | 0.50.4 | `SharpCompress.txt` (MIT) | Common |
 | TagLibSharp | 2.3.0 | `TagLibSharp.txt` (LGPL-2.1-only) | Common, separate managed DLL |
+| Velopack | 1.2.161 | `Velopack.txt` (MIT) | Common, App installation/update lifecycle; checks disabled |
 | SkiaSharp and native assets | 3.119.4 | `SkiaSharp.txt` (MIT) | Common |
 | HarfBuzzSharp and native assets | 8.3.1.3 | `HarfBuzzSharp.txt` (MIT) | Common |
 | ANGLE Windows native assets | 2.1.27548.20260419 | `ANGLE.txt` (BSD-style) | Windows |
@@ -34,6 +35,10 @@ The FFmpeg GPL texts came from pinned FFmpeg source revisions, the LGPL text
 from the BtbN archive, and CDRDAO's GPL text from its pinned source archive.
 The additional runtime notices come from the exact upstream revisions recorded
 in their restored NuGet packages:
+
+Velopack's MIT text comes from source revision
+`92d6a1c91716729d449034df5c50307dcce39493`, recorded in the 1.2.161 NuGet package.
+The .NET 10 target adds no transitive NuGet dependencies.
 
 TagLibSharp is an unmodified NuGet reference, loaded as a separate DLL. Its package
 declares LGPL-2.1-only; the full LGPL v2.1 text is included in `TagLibSharp.txt`.

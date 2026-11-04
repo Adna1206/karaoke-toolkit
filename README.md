@@ -88,8 +88,15 @@ Multi-file publication is not power-loss atomic. Keep pending recovery folders; 
 Online renaming and playback remain unavailable. Optical ripping is
 experimental and not hardware-tested. Audio and archive conversion use portable
 engines; only Windows has been validated end to end.
-Installers and self-contained publishing are deferred. Original comparison code
-and binaries remain available only in Git history.
+`scripts/Publish.ps1` generates self-contained Windows x64 installers/portable ZIPs
+and Linux x64 AppImages with the repository-pinned Velopack tool. See
+[publishing packages](docs/publishing.md). Signing, uploads and real installation/
+upgrade testing remain pending. Original comparison code and binaries remain
+available only in Git history.
+
+Velopack lifecycle integration is present in App, but update checks and automatic
+application of pending updates are disabled. No release feed is configured; see
+[update integration](docs/updates.md).
 
 ## Managed ZIP compression
 

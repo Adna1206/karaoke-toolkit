@@ -1,16 +1,19 @@
 using Avalonia;
 using System;
+using Velopack;
 
 namespace KaraokeToolkit.App;
 
 sealed class Program
 {
-    // Initialization code. Don't use any Avalonia, third-party APIs or any
-    // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
-    // yet and stuff might break.
+    // Velopack must handle install/update hooks before Avalonia creates any UI.
+    // Other UI or SynchronizationContext-dependent initialization belongs in App.
     [STAThread]
-    public static void Main(string[] args) => BuildAvaloniaApp()
-        .StartWithClassicDesktopLifetime(args);
+    public static void Main(string[] args)
+    {
+        VelopackApp.Build().SetAutoApplyOnStartup(false).Run();
+        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+    }
 
     // Avalonia configuration, don't remove; also used by visual designer.
     public static AppBuilder BuildAvaloniaApp()
