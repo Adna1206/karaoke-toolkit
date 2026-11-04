@@ -16,8 +16,12 @@ public sealed class AlphabeticalOrganizer
         IProgress<ConversionProgress>? progress = null, CancellationToken token = default, bool ignoreLeadingThe = false)
         => Task.Run(() => Run(inputs, scope, progress, token, ignoreLeadingThe), token);
 
+    public Task<ConversionResult> PreviewAsync(IEnumerable<string> inputs, AlphabeticalOrganizeScope scope,
+        CancellationToken token = default, bool ignoreLeadingThe = false)
+        => Task.Run(() => Run(inputs, scope, null, token, ignoreLeadingThe, true), token);
+
     private static ConversionResult Run(IEnumerable<string> inputs, AlphabeticalOrganizeScope scope, IProgress<ConversionProgress>? progress,
-        CancellationToken token, bool ignoreLeadingThe)
+        CancellationToken token, bool ignoreLeadingThe, bool preview = false)
     {
         if (!Enum.IsDefined(scope)) throw new ArgumentOutOfRangeException(nameof(scope));
         var timer = Stopwatch.StartNew();
@@ -64,6 +68,17 @@ public sealed class AlphabeticalOrganizer
                     Add(parent, mate);
         }
 
+        if (preview)
+        {
+            var planned = work.SelectMany(pair => pair.Value.Select(source =>
+            {
+                string target = Path.Combine(pair.Key, Bucket(Path.GetFileName(source), scope == AlphabeticalOrganizeScope.Files && ignoreLeadingThe), Path.GetFileName(source));
+                return new ConversionFileResult(source, File.Exists(target) || Directory.Exists(target) ? ConversionStatus.Failed : ConversionStatus.Succeeded,
+                    [target], "Planned move; existing destinations block the group.");
+            })).ToArray();
+            var conflicts = planned.GroupBy(p => p.Outputs[0], Paths).Where(g => g.Count() > 1).Select(g => g.Key).ToHashSet(Paths);
+            return new(planned.Select(p => conflicts.Contains(p.Outputs[0]) ? p with { Status = ConversionStatus.Failed, Message = "Multiple inputs target the same path." } : p).ToArray(), false) { Found = planned.Length };
+        }
         if (WorkflowSession.Current.Value is { } workflow)
         {
             var plan = new List<WorkflowMoveGroup>();

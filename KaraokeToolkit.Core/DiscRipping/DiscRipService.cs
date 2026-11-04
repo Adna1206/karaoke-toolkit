@@ -11,24 +11,24 @@ public sealed record DiscRipRequest(OpticalDisc Disc, int[] Tracks, string Desti
 /// <summary>Reads selected tracks into disposable staging, verifies them, then publishes each track atomically.</summary>
 public sealed class DiscRipService(IDiscReader reader)
 {
+    public static IReadOnlyList<string> GetOutputPaths(DiscRipRequest request, int track)
+    {
+        string stem = Path.Combine(Path.GetFullPath(request.Destination), $"{request.DiscName}-{track:00}");
+        return request.Format switch
+        {
+            RipFormat.Bin => [stem + ".bin"],
+            RipFormat.Zip => [stem + ".zip"],
+            RipFormat.AudioG => [stem + AudioEncoderService.Extension(request.Options.AudioEncoder), stem + ".cdg"],
+            _ => throw new ArgumentException("Invalid rip format.")
+        };
+    }
     public async Task<ConversionResult> RunAsync(DiscRipRequest request, OverwritePolicy policy,
         IProgress<ConversionProgress>? progress = null, CancellationToken token = default,
         Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolve = null)
     {
-        if (!request.Options.ExperimentalDiscRipping) throw new InvalidOperationException("Enable experimental CD+G ripping in Options first.");
-        if (!request.Disc.SupportsCdg) throw new NotSupportedException("This drive does not report CD+G reading support.");
-        if (!Enum.IsDefined(request.Format) || !Enum.IsDefined(policy)) throw new ArgumentException("Invalid ripping option.");
-        if (string.IsNullOrWhiteSpace(request.DiscName) || request.DiscName is "." or ".." || request.DiscName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || request.DiscName.Contains('/') || request.DiscName.Contains('\\') || request.DiscName.EndsWith('.') || request.DiscName.EndsWith(' '))
-            throw new ArgumentException("Enter a valid disc name without path separators.");
-        if (request.Tracks.Length == 0 || request.Tracks.Distinct().Count() != request.Tracks.Length) throw new ArgumentException("Select at least one track, without duplicates.");
-        var tracks = request.Tracks.Select(n => request.Disc.Tracks.SingleOrDefault(t => t.Number == n) ?? throw new ArgumentException("Selected track is not on this disc.")).OrderBy(t => t.Number).ToArray();
-        if (tracks.Any(t => t.AudioBytes <= 0 || t.AudioBytes % 2352 != 0)) throw new InvalidDataException("Invalid audio track length.");
-        new ConversionRequest(OperationId.BinToZip, request.Destination, request.Options).Validate();
-        if (request.Format != RipFormat.Bin)
-            AudioEncoderService.Validate(request.Options.AudioEncoder, request.Options.AudioBitrate);
+        ValidateRequest(request, policy);
+        var tracks = request.Tracks.Select(n => request.Disc.Tracks.Single(t => t.Number == n)).OrderBy(t => t.Number).ToArray();
         string destination = Path.GetFullPath(request.Destination);
-        if (!Directory.Exists(destination)) throw new DirectoryNotFoundException("Choose an existing output folder.");
-        RunSession.CheckPlainPath(destination);
         var results = new List<ConversionFileResult>();
         var watch = Stopwatch.StartNew();
         bool cancelled = false;
@@ -106,6 +106,24 @@ public sealed class DiscRipService(IDiscReader reader)
             catch (Exception error) { results.Add(new(destination, ConversionStatus.Failed, [], "CUE/TXT: " + error.Message) { IsMetadata = true }); }
         }
         return new(results, cancelled) { Found = tracks.Length, Elapsed = watch.Elapsed };
+    }
+    /// <summary>Preflight shared by execution and read-only CLI planning.</summary>
+    public static void ValidateRequest(DiscRipRequest request, OverwritePolicy policy)
+    {
+        if (!request.Options.ExperimentalDiscRipping) throw new InvalidOperationException("Enable experimental CD+G ripping in Options first.");
+        if (!request.Disc.SupportsCdg) throw new NotSupportedException("This drive does not report CD+G reading support.");
+        if (!Enum.IsDefined(request.Format) || !Enum.IsDefined(policy)) throw new ArgumentException("Invalid ripping option.");
+        if (string.IsNullOrWhiteSpace(request.DiscName) || request.DiscName is "." or ".." || request.DiscName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || request.DiscName.Contains('/') || request.DiscName.Contains('\\') || request.DiscName.EndsWith('.') || request.DiscName.EndsWith(' '))
+            throw new ArgumentException("Enter a valid disc name without path separators.");
+        if (request.Tracks.Length == 0 || request.Tracks.Distinct().Count() != request.Tracks.Length) throw new ArgumentException("Select at least one track, without duplicates.");
+        var tracks = request.Tracks.Select(n => request.Disc.Tracks.SingleOrDefault(t => t.Number == n) ?? throw new ArgumentException("Selected track is not on this disc.")).OrderBy(t => t.Number).ToArray();
+        if (tracks.Any(t => t.AudioBytes <= 0 || t.AudioBytes % 2352 != 0)) throw new InvalidDataException("Invalid audio track length.");
+        new ConversionRequest(OperationId.BinToZip, request.Destination, request.Options).Validate();
+        if (request.Format != RipFormat.Bin)
+            AudioEncoderService.Validate(request.Options.AudioEncoder, request.Options.AudioBitrate);
+        string destination = Path.GetFullPath(request.Destination);
+        if (!Directory.Exists(destination)) throw new DirectoryNotFoundException("Choose an existing output folder.");
+        RunSession.CheckPlainPath(destination);
     }
     private sealed class InlineProgress(System.Action<int> report) : IProgress<int> { public void Report(int value) => report(value); }
 }

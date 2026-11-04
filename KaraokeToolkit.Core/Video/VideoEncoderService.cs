@@ -19,6 +19,10 @@ internal static class VideoEncoderService
         string videoCodec = settings.VideoContainer == VideoContainer.AVI ? "mpeg4" : await ChooseH264Async(ffmpeg, token);
         string audioCodec = settings.VideoContainer == VideoContainer.AVI ? "libmp3lame" : "aac";
         int audioBitrate = await ResolveAudioBitrateKbpsAsync(audio, settings, options, token);
+        var sourceInfo = await FFProbe.AnalyseAsync(audio, options, token);
+        double audioSeconds = sourceInfo.Duration.TotalSeconds;
+        if (!double.IsFinite(audioSeconds) || audioSeconds <= 0)
+            throw new InvalidDataException("Input audio has no usable duration.");
         (int width, int height) = VideoOptions.Size(settings.VideoResolution);
         string scaling = VideoOptions.ScalingAlgorithm(settings.VideoGraphicsSmoothing);
         string filter = $"fps={settings.VideoFrameRate},scale={width}:{height}:force_original_aspect_ratio=decrease:flags={scaling}," +
@@ -32,7 +36,10 @@ internal static class VideoEncoderService
             "-c:v", videoCodec, "-b:v", settings.VideoBitrateKbps + "k", "-pix_fmt", "yuv420p",
             "-fps_mode:v", "cfr", "-g:v", settings.VideoFrameRate.ToString(),
             "-keyint_min:v", settings.VideoFrameRate.ToString(), "-sc_threshold:v", "0", "-bf:v", "0",
-            "-c:a", audioCodec, "-b:a", audioBitrate + "k", "-shortest"
+            // -shortest alone can overshoot when the cloned video stream queues
+            // frames ahead of audio. Keep the explicit limit independent of scheduling.
+            "-c:a", audioCodec, "-b:a", audioBitrate + "k", "-shortest",
+            "-t", audioSeconds.ToString("0.########", System.Globalization.CultureInfo.InvariantCulture)
         }.ToList();
         if (settings.VideoContainer == VideoContainer.MP4) { args.Add("-movflags"); args.Add("+faststart"); }
         args.Add(FFmpegRuntime.LocalPath(output));

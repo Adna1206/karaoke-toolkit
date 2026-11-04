@@ -281,15 +281,17 @@ internal sealed class RunSession : IDisposable
             !Enum.IsDefined(data.Policy) || !string.Equals(root, Path.GetFullPath(data.Request.Folder), StringComparison.OrdinalIgnoreCase))
             throw new IOException("Unsupported or misplaced recovery journal.");
         foreach (string source in data.Sources.Concat(data.Results.Keys).Concat(data.Metadata).Concat(data.Current == null ? [] : new[] { data.Current }))
-            if (!Within(root, source))
+            if (!Within(root, source) && !(data.IsMetadata && source == data.Current && source == data.Request.OutputFolder) &&
+                !(data.Metadata.Contains(source) && source == data.Request.OutputFolder))
                 throw new IOException("Recovery source is outside its root folder.");
-        if (data.Current != null && !(data.IsMetadata ? data.Sources.Any(s => string.Equals(Path.GetDirectoryName(s), data.Current, StringComparison.OrdinalIgnoreCase)) : data.Sources.Contains(data.Current, StringComparer.OrdinalIgnoreCase)))
+        if (data.Current != null && !(data.IsMetadata ? data.Current == data.Request.OutputFolder || data.Sources.Any(s => string.Equals(Path.GetDirectoryName(s), data.Current, StringComparison.OrdinalIgnoreCase)) : data.Sources.Contains(data.Current, StringComparer.OrdinalIgnoreCase)))
             throw new IOException("Invalid current recovery source.");
         if (data.Workspace != null)
         {
             string name = Path.GetFileName(data.Workspace);
             string? expectedFolder = data.Current == null ? null : Directory.Exists(data.Current) ? data.Current : Path.GetDirectoryName(data.Current);
-            if (!Within(root, data.Workspace) || !name.StartsWith(".karaoke-job-", StringComparison.Ordinal) ||
+            if (!string.IsNullOrEmpty(data.Request.OutputFolder)) expectedFolder = Path.TrimEndingDirectorySeparator(data.Request.OutputFolder);
+            if (!(Within(root, data.Workspace) || !string.IsNullOrEmpty(data.Request.OutputFolder) && Within(data.Request.OutputFolder, data.Workspace)) || !name.StartsWith(".karaoke-job-", StringComparison.Ordinal) ||
                 !Guid.TryParseExact(name[13..], "N", out _) ||
                 !string.Equals(Path.GetDirectoryName(data.Workspace), expectedFolder, StringComparison.OrdinalIgnoreCase))
                 throw new IOException("Invalid recovery workspace.");

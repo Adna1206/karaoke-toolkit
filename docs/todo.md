@@ -8,17 +8,13 @@
 
 - [ ] **GitHub CI and release automation** — consider pull-request/push build and
   test checks across supported platforms, retained test reports and package artifacts,
-  and manually triggered or version-tagged releases. Reuse the publish scripts and
+  and manually triggered or version-tagged releases. CLI platform testing now has
+  `.github/workflows/cli-platforms.yml`; release/package automation remains planned. Reuse the publish scripts and
   pinned tools; validate shared versions, generate release notes/checksums, and
   optionally sign and upload installers/update feeds after checks pass. Decide on
   release hosting (including a separate releases-only repo), protect signing/upload
   credentials, and review runner/LFS costs. Keep in-app update checks disabled until
   the feed and update UI are ready.
-
-- [ ] **CLI recipe support (deferred)** — individual CLI operations are implemented;
-  recipes are explicitly outside the current scope. When requested, extend the CLI
-  with saved-recipe selection, per-step settings and whole-workflow recovery using
-  shared Core services. See [the CLI guide](cli.md) for current capabilities.
 
 - [ ] **Local MCP integration** — investigate a separate `KaraokeToolkit.Mcp`
   console project referencing Core and using the official C# MCP SDK over stdio.

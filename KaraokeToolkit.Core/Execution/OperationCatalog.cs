@@ -45,8 +45,9 @@ public static class OperationCatalog
         OperationId.FlattenOneLayer => Local(id, "Remove one layer of child folders", folders: true),
         OperationId.FlattenAllLayers => Local(id, "Move descendant files into selected roots", folders: true),
         OperationId.RestoreQuarantined => Local(id, "Restore a Damaged batch from its manifest"),
+        OperationId.QuarantineInvalid => Local(id, "Validate and move eligible failures to Damaged"),
         OperationId.DiscRip => new(id, "Rip physical CD+G discs to track BINs, optionally using shared converters for Audio+G or ZIP; physical capture is hardware-unverified",
-            false, false, false, OperationSupport.HardwareUnverified),
+            false, false, true, OperationSupport.HardwareUnverified),
         OperationId.RenameFilesFromInternet => Deferred(id, "Online metadata lookup is deferred"),
         OperationId.PlayAudioG => Deferred(id, "Playback is deferred"),
         OperationId.CheckForUpdates => Deferred(id, "Update hosting and UI are not enabled")

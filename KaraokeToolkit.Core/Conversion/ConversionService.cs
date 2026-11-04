@@ -141,7 +141,7 @@ public sealed class ConversionService
                 Action.AudioGToZip or Action.BinToZip => ".zip",
                 _ => ".cdg"
             };
-            foreach (string folder in results.Where(r => r.Status == ConversionStatus.Succeeded).Select(r => Path.GetDirectoryName(r.Source)!).Distinct().ToArray())
+            foreach (string folder in results.Where(r => r.Status == ConversionStatus.Succeeded).Select(r => string.IsNullOrEmpty(request.OutputFolder) ? Path.GetDirectoryName(r.Source)! : request.OutputFolder).Distinct().ToArray())
             {
                 if (run.Data.Metadata.Contains(folder))
                     continue;
@@ -171,7 +171,8 @@ public sealed class ConversionService
                         RecurseFolders = false
                     }, overwrite)
                 {
-                    ValidateBeforeConversion = validateBeforeConversion
+                    ValidateBeforeConversion = validateBeforeConversion,
+                    OutputFolder = request.OutputFolder
                 }).ToArray()
         };
     }
@@ -207,7 +208,8 @@ public sealed class ConversionService
     private static async Task<ConversionFileResult> ConvertOneAsync(string source, ConversionRequest request, OverwritePolicy overwrite, CancellationToken token, System.Action<int, string> report,
         Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolveConflict)
     {
-        using var transaction = new FileTransaction(Path.GetDirectoryName(source)!);
+        string destination = string.IsNullOrEmpty(request.OutputFolder) ? Path.GetDirectoryName(source)! : request.OutputFolder;
+        using var transaction = new FileTransaction(destination);
         string staged = await transaction.CopyInputAsync(source, token);
         var inputs = new List<string> { source };
         var outputs = new List<string>();
@@ -239,6 +241,7 @@ public sealed class ConversionService
             report(35, "Encoding MP3: " + source);
             await LosslessAudioTranscoder.EncodeAsync(stagedAudio, mp3, request.Options.AudioBitrate, token);
             outputs.Add(mp3);
+            if (!string.IsNullOrEmpty(request.OutputFolder)) outputs.Add(graphics);
         }
         if (request.Action is Action.ZipToAudioG or Action.ZipToBin)
         {
@@ -334,7 +337,7 @@ public sealed class ConversionService
         // existing output. Source fingerprints still guard against concurrent changes.
         overwrite = request.Action == Action.RepackZip && request.Options.DeleteOldFiles
             ? OverwritePolicy.Fail
-            : await ResolveOverwriteAsync(Path.GetDirectoryName(source)!, outputs, overwrite, resolveConflict, token);
+            : await ResolveOverwriteAsync(destination, outputs, overwrite, resolveConflict, token);
         // The CDG remains the graphics half of MP3+G; only the old lossless audio may be removed.
         var retired = request.Options.DeleteOldFiles && request.Action != Action.KaraokeToVideo
             ? request.Action == Action.LosslessGToMp3G ? inputs.Skip(1).ToArray() : inputs.ToArray()

@@ -59,5 +59,4 @@ See [disc ripping](disc-ripping.md).
 App metadata and recipe registrations derive built-in IDs from the enum's names.
 Recipe step `OperationId` fields remain strings. User-created recipe instances use
 `Recipe:<GUID>` IDs rather than compile-time enum entries. This pre-production
-cleanup does not migrate earlier underscored IDs. CLI recipe execution remains
-out of scope.
+cleanup does not migrate earlier underscored IDs. CLI recipes use the saved definition/settings through Core's recipe runner; dedicated disc commands use typed disc requests.

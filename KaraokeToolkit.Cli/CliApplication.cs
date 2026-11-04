@@ -4,11 +4,12 @@ using System.Text.Json.Serialization;
 using KaraokeToolkit.Core;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Execution;
+using KaraokeToolkit.Core.DiscRipping;
 
 namespace KaraokeToolkit.Cli;
 
 /// <summary>Console adapter only. All file-processing rules remain in Core.</summary>
-public sealed class CliApplication(IOperationExecutor? executor = null)
+public sealed class CliApplication(IOperationExecutor? executor = null, IDiscReader? discReader = null)
 {
     private readonly IOperationExecutor executor = executor ?? new OperationExecutionService();
     public static JsonSerializerOptions JsonOptions { get; } = new() { WriteIndented = true, Converters = { new JsonStringEnumConverter() } };
@@ -18,18 +19,20 @@ public sealed class CliApplication(IOperationExecutor? executor = null)
         bool json = args.TakeWhile(a => a != "--").Contains("--json");
         try
         {
+            var advanced = await new CliAdvancedCommands(executor as OperationExecutionService ?? new(), discReader).TryRunAsync(args, output, error, token);
+            if (advanced is { } advancedCode) return advancedCode;
             var parsed = CliArguments.Parse(args); json = parsed.Json;
-            if (parsed.Command == "help") { await output.WriteLineAsync(Help); return 0; }
+            if (parsed.Command == "help") { await output.WriteLineAsync(CliHelp.For(parsed.HelpTopic)); return 0; }
             if (parsed.Command == "version") { await output.WriteLineAsync(ApplicationInfo.Version); return 0; }
             if (parsed.Command == "operations")
             {
-                var descriptions = CliOperationCatalog.Exposed.Select(o => new { Command = o.Name, Id = o.OperationId, OperationCatalog.Get(o.OperationId).Description, OperationCatalog.Get(o.OperationId).RequiresFolders }).ToArray();
+                var descriptions = CliOperationCatalog.Exposed.Select(o => new { Command = o.Name, Id = o.OperationId, OperationCatalog.Get(o.OperationId).Description, OperationCatalog.Get(o.OperationId).RequiresFolders, o.DedicatedCommand, OperationCatalog.Get(o.OperationId).Support }).ToArray();
                 if (json) await output.WriteLineAsync(JsonSerializer.Serialize(descriptions, JsonOptions));
                 else
                 {
                     await output.WriteLineAsync($"{"Command",-29} {"Core ID",-23} Description");
                     foreach (var operation in descriptions)
-                        await output.WriteLineAsync($"{operation.Command,-29} {operation.Id,-23} {operation.Description}" + (operation.RequiresFolders ? " (folders only)" : ""));
+                        await output.WriteLineAsync($"{operation.Command,-29} {operation.Id,-23} {operation.Description}" + (operation.RequiresFolders ? " (folders only)" : "") + (operation.DedicatedCommand ? " (dedicated command; use --help)" : ""));
                 }
                 return 0;
             }
@@ -44,7 +47,20 @@ public sealed class CliApplication(IOperationExecutor? executor = null)
             var progress = parsed.Quiet ? null : new ConsoleProgress(error);
             var result = parsed.Command == "recover"
                 ? await recoveryService.ResumeAsync(parsed.Journal!, progress, token)
+                : parsed.DryRun ? await new OperationPlanner().PlanAsync(parsed.Request!, token)
                 : await executor.ExecuteAsync(parsed.Request!, progress, token);
+            return await WriteResultAsync(parsed, result, output, error);
+        }
+        catch (OperationCanceledException) { await Failure(output, error, json, "Cancelled. Completed changes remain committed.", 130); return 130; }
+        catch (Exception failure) when (failure is CliUsageException or ArgumentException)
+        { await Failure(output, error, json, failure.Message, 2); return 2; }
+        catch (Exception failure)
+        { await Failure(output, error, json, failure.Message, 1); return 1; }
+    }
+
+    internal static async Task<int> WriteResultAsync(CliArguments parsed, ExecutionResult result, TextWriter output, TextWriter error)
+    {
+            bool json = parsed.Json;
             if (parsed.ReportPath != null)
             {
                 string text = Path.GetExtension(parsed.ReportPath).Equals(".json", StringComparison.OrdinalIgnoreCase) ? result.Report.ToJson() : result.Report.ToText();
@@ -64,18 +80,12 @@ public sealed class CliApplication(IOperationExecutor? executor = null)
                 if (exitCode == 3) await error.WriteLineAsync("No matching items found.");
             }
             return exitCode;
-        }
-        catch (OperationCanceledException) { await Failure(output, error, json, "Cancelled. Completed changes remain committed.", 130); return 130; }
-        catch (Exception failure) when (failure is CliUsageException or ArgumentException)
-        { await Failure(output, error, json, failure.Message, 2); return 2; }
-        catch (Exception failure)
-        { await Failure(output, error, json, failure.Message, 1); return 1; }
     }
 
     private static Task Failure(TextWriter output, TextWriter error, bool json, string message, int code) =>
         json ? output.WriteLineAsync(JsonSerializer.Serialize(new { ExitCode = code, Error = message }, JsonOptions)) : error.WriteLineAsync(message);
 
-    private sealed class ConsoleProgress(TextWriter writer) : IProgress<ConversionProgress>
+    internal sealed class ConsoleProgress(TextWriter writer) : IProgress<ConversionProgress>
     {
         public void Report(ConversionProgress value) { lock (writer) writer.WriteLine($"[{value.TotalPercent}%] {value.Message}"); }
     }
@@ -92,15 +102,25 @@ public sealed class CliApplication(IOperationExecutor? executor = null)
           karaoke-toolkit tag PATH... [options]
           karaoke-toolkit recovery-list [FOLDER...] [--json]
           karaoke-toolkit recover JOURNAL [--json] [--quiet] [--report PATH]
+          karaoke-toolkit recipe list|show|validate|run ...
+          karaoke-toolkit quarantine PATH... [--dry-run] [--no-recurse]
+          karaoke-toolkit disc-list [--cdrdao EXECUTABLE] [--json]
+          karaoke-toolkit disc-rip --device DEVICE --output FOLDER --disc-name NAME --experimental
+          karaoke-toolkit completion powershell|bash|zsh
+          karaoke-toolkit path powershell|bash|zsh
+          karaoke-toolkit help [COMMAND|OPERATION]
           karaoke-toolkit --version
 
         PATH may also be specified with repeated --input PATH. Use -- before paths
         beginning with a dash. See operations for names; stable Core IDs also work.
-        No GUI, prompts, recipes, physical disc capture or automatic quarantine.
+        No GUI or prompts. Recipe steps use their saved settings and cannot use Ask.
+        Quarantine is explicit; physical disc capture requires --experimental.
 
         Output: --json (one JSON document on stdout), --quiet (no progress on stderr),
                 --report NEW.json|NEW.txt (never overwrites an existing file)
         Processing:
+          --dry-run                    Read-only plan; not an encoding guarantee
+          --output EXISTING_FOLDER     Media conversions; keep originals required
           --options FILE.json          Typed ConversionOptions; flags override the file
           --overwrite fail|skip|replace (default fail; Ask is unsupported)
           --delete-originals | --keep-originals (default keep)
@@ -142,7 +162,7 @@ public sealed class CliApplication(IOperationExecutor? executor = null)
         See docs/cli.md in the source repository for workflows and settings examples.
 
         Ctrl+C cancels remaining work; completed groups remain committed.
-        Recovery uses saved settings. Recipe recovery is not available here.
+        Recovery uses saved settings, including recipe snapshots and remaining steps.
         Exit codes: 0 success, 1 processing/validation failure, 2 invalid usage,
                     3 no matching items, 130 cancelled.
         """;

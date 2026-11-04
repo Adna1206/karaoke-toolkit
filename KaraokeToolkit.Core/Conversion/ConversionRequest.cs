@@ -24,6 +24,16 @@ public sealed record ConversionRequest(
             throw new NotSupportedException("This operation is not handled by the conversion engine.");
         if (string.IsNullOrWhiteSpace(Folder))
             throw new ArgumentException("A source folder is required.", nameof(Folder));
+        if (!string.IsNullOrEmpty(OutputFolder))
+        {
+            if (Action is OperationId.CleanUpFilenames or OperationId.CreateCueAndTextFiles)
+                throw new ArgumentException("Folder maintenance does not support a separate output folder.");
+            if (Options.DeleteOldFiles)
+                throw new ArgumentException("A separate output folder requires keeping originals.");
+            if (!Path.IsPathFullyQualified(OutputFolder) || !Directory.Exists(OutputFolder))
+                throw new ArgumentException("Choose an existing absolute output folder.");
+            KaraokeToolkit.Core.Recovery.RunSession.CheckPlainPath(OutputFolder);
+        }
         if (!Enum.IsDefined(Options.AudioEncoder))
             throw new ArgumentOutOfRangeException(nameof(Options.AudioEncoder));
         if (!Enum.IsDefined(Options.ZipAlgorithm))

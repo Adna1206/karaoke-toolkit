@@ -9,6 +9,8 @@ public enum FolderFlattenScope { OneLayer, AllLayers }
 /// <summary>Flattens one directory layer or moves all descendant files into selected roots.</summary>
 public sealed class FlattenFolderLayer
 {
+    public Task<ConversionResult> PreviewAsync(IEnumerable<string> folders, FolderFlattenScope scope, CancellationToken token = default)
+        => Task.Run(() => Run(folders, null, token, scope, true), token);
     private static readonly StringComparer Paths = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
 
     public Task<ConversionResult> RunAsync(IEnumerable<string> folders,
@@ -17,7 +19,7 @@ public sealed class FlattenFolderLayer
         Task.Run(() => Run(folders, progress, token, scope), token);
 
     private static ConversionResult Run(IEnumerable<string> folders, IProgress<ConversionProgress>? progress, CancellationToken token,
-        FolderFlattenScope scope)
+        FolderFlattenScope scope, bool preview = false)
     {
         if (!Enum.IsDefined(scope)) throw new ArgumentOutOfRangeException(nameof(scope));
         var timer = Stopwatch.StartNew();
@@ -49,6 +51,17 @@ public sealed class FlattenFolderLayer
         foreach (string root in roots)
             foreach (string child in Directory.GetDirectories(root).Order(Paths))
                 Plan(root, child);
+        if (preview)
+        {
+            var planned = work.SelectMany(w => w.Protected
+                ? new[] { new ConversionFileResult(w.Child, ConversionStatus.Skipped, [], "Protected or linked child folder left in place.") }
+                : w.Entries.Select(source => new ConversionFileResult(source, ConversionStatus.Succeeded,
+                    [Path.Combine(w.Root, Path.GetFileName(source))], "Planned move"))
+                    .Append(new(w.Child, ConversionStatus.Succeeded, [], "Remove folder only if empty after planned moves."))).ToArray();
+            var duplicates = planned.Where(p => p.Outputs.Count > 0).GroupBy(p => p.Outputs[0], Paths).Where(g => g.Count() > 1).Select(g => g.Key).ToHashSet(Paths);
+            return new(planned.Select(p => p.Outputs.Count > 0 && (File.Exists(p.Outputs[0]) || Directory.Exists(p.Outputs[0]) || duplicates.Contains(p.Outputs[0]))
+                ? p with { Status = ConversionStatus.Failed, Message = "Destination collision; move will be blocked." } : p).ToArray(), false) { Found = planned.Length };
+        }
         if (WorkflowSession.Current.Value is { } workflow)
         {
             var plan = new List<WorkflowMoveGroup>();

@@ -1,0 +1,65 @@
+name: CLI platform tests
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'KaraokeToolkit.Cli/**'
+      - 'KaraokeToolkit.Core/**'
+      - 'KaraokeToolkit.Tests/**'
+      - 'Directory.Build.*'
+      - 'scripts/ffmpeg/**'
+      - 'scripts/cdrdao/**'
+      - 'vendor/**'
+      - '.github/workflows/cli-platforms.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  cli:
+    name: CLI on ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Run CLI, shared contracts and native-media tests
+        run: >-
+          dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj -c Release
+          -p:UsedAvaloniaProducts= -p:ArtifactBuildName=CliPlatforms -v minimal
+          --filter 'FullyQualifiedName~KaraokeToolkit.Tests.Cli|FullyQualifiedName~KaraokeToolkit.Tests.Execution|FullyQualifiedName~KaraokeToolkit.Tests.Video.KaraokeVideoTests.RendersAllKaraokeSourcesAndRetainsOriginals'
+          --logger 'trx;LogFileName=cli-platform.trx' --results-directory artifacts/tests/results
+      - name: Smoke-test built CLI executable
+        run: |
+          $binary = if ($IsWindows) { './artifacts/builds/KaraokeToolkit.Cli/CliPlatforms/Release/net10.0/karaoke-toolkit.exe' } else { './artifacts/builds/KaraokeToolkit.Cli/CliPlatforms/Release/net10.0/karaoke-toolkit' }
+          & $binary --version
+          if ($LASTEXITCODE -ne 0) { throw 'CLI version failed' }
+          & $binary operations --json | ConvertFrom-Json | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'CLI discovery failed' }
+      - name: Check Bash and Zsh completion syntax
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          ./artifacts/builds/KaraokeToolkit.Cli/CliPlatforms/Release/net10.0/karaoke-toolkit completion bash > artifacts/cli-completion.bash
+          bash -n artifacts/cli-completion.bash
+          if command -v zsh >/dev/null; then
+            ./artifacts/builds/KaraokeToolkit.Cli/CliPlatforms/Release/net10.0/karaoke-toolkit completion zsh > artifacts/cli-completion.zsh
+            zsh -n artifacts/cli-completion.zsh
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cli-tests-${{ matrix.os }}
+          path: artifacts/tests/results/*.trx

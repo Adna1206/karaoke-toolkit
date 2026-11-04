@@ -226,7 +226,7 @@ public class CliTests
     [Fact]
     public async Task CliProcessRunsWithoutGuiAndReturnsVersionAndUsageExitCode()
     {
-        foreach (var (arguments, expected) in new[] { (new[] { "--version" }, 0), (new[] { "recipe", "run", "x", "--json" }, 2) })
+        foreach (var (arguments, expected) in new[] { (new[] { "--version" }, 0), (new[] { "recipe", "unknown", "x", "--json" }, 2) })
         {
             var start = new ProcessStartInfo("dotnet") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
             start.ArgumentList.Add(typeof(CliApplication).Assembly.Location);

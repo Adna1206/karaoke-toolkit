@@ -90,6 +90,11 @@ public class WorkflowRecoveryTests
             { Assert.False(child.HasExited, "Workflow worker exited before its crash boundary."); await Task.Delay(50, timeout.Token); }
             Assert.Empty(new RecoveryStore(index).Find()); // Owned workflows and their children are hidden while running.
             child.Kill(true); await child.WaitForExitAsync(timeout.Token);
+            // Windows can release killed-process file handles just after process exit.
+            // Wait for the durable journal's lease to become discoverable, rather than
+            // racing discovery's intentional exclusion of still-owned workflows.
+            while (new RecoveryStore(index).Find().Count == 0)
+                await Task.Delay(25, timeout.Token);
         }
         finally { if (!child.HasExited) { child.Kill(true); await child.WaitForExitAsync(); } }
     }

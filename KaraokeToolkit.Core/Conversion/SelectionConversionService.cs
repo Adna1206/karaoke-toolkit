@@ -8,6 +8,7 @@ public sealed record ConversionRetry(OperationId Action, string[] Inputs, Conver
     {
         get; init;
     }
+    public string OutputFolder { get; init; } = "";
 }
 
 /// <summary>Creates every folder checkpoint before starting a multi-folder selection.</summary>
@@ -52,7 +53,7 @@ public sealed class SelectionConversionService(RecoveryStore? recovery = null)
                     var operation = new ConversionRequest(request.Action, plan.Folder, request.Options with
                     {
                         RecurseFolders = false
-                    });
+                    }) { OutputFolder = request.OutputFolder };
                     operation.Validate();
                     if (OperationCapabilities.Describe(request.Action) != OperationSupport.Supported)
                         throw new NotSupportedException("This operation is unavailable.");

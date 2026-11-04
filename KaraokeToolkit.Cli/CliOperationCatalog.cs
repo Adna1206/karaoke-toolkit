@@ -5,6 +5,7 @@ namespace KaraokeToolkit.Cli;
 public sealed record CliOperationRegistration(OperationId OperationId, string? Name, string? ExclusionReason)
 {
     public bool Exposed => Name != null;
+    public bool DedicatedCommand { get; init; }
 }
 
 /// <summary>Every Core identity needs an explicit CLI decision. Command names and
@@ -49,8 +50,9 @@ public static class CliOperationCatalog
         OperationId.FlattenOneLayer => Include(id, "flatten-one-layer"),
         OperationId.FlattenAllLayers => Include(id, "flatten-all-layers"),
         OperationId.RestoreQuarantined => Include(id, "restore-quarantined-files"),
+        OperationId.QuarantineInvalid => Include(id, "quarantine-invalid"),
         OperationId.DiscRip
-            => Exclude(id, "Physical disc capture is not exposed by the CLI."),
+            => new(id, "disc-rip", null) { DedicatedCommand = true },
         OperationId.RenameFilesFromInternet => Exclude(id, "Online metadata lookup is deferred."),
         OperationId.PlayAudioG => Exclude(id, "Playback is deferred."),
         OperationId.CheckForUpdates => Exclude(id, "Release hosting and update UI are not enabled.")

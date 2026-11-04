@@ -149,7 +149,7 @@ request-level choices. The CLI neither reads nor changes saved GUI preferences.
 
 Use the exact journal path returned by `recovery-list`, not the placeholder `ID`.
 Recovery uses its saved settings; processing flags cannot override it. Recipe
-recovery requires the desktop app. Restoration instead uses an actual Damaged
+recovery uses its saved snapshot and remaining steps through the same command. Restoration instead uses an actual Damaged
 batch manifest to return previously quarantined files to their original locations.
 It is a separate operation, not crash recovery.
 
@@ -167,3 +167,89 @@ else { $result | ConvertTo-Json -Depth 20 }
 Capture the exit code immediately. Exit 1 means processing/validation issues,
 2 means invalid usage/settings and 130 means cancellation. Progress uses stderr;
 `--quiet` suppresses it while keeping the final stdout result.
+
+## Run or recover a recipe
+
+Export a recipe JSON file from the desktop builder. Each step must use Fail, Skip
+or Replace instead of Ask. The CLI preserves each step's settings, rather than
+replacing them with flags from the invoking shell.
+
+```powershell
+.\karaoke-toolkit.exe recipe list "D:\Recipes"
+.\karaoke-toolkit.exe recipe show "D:\Recipes\convert-and-tag.json"
+.\karaoke-toolkit.exe recipe validate "D:\Recipes\convert-and-tag.json"
+.\karaoke-toolkit.exe recipe run "D:\Recipes\convert-and-tag.json" "D:\Incoming" --dry-run --json
+.\karaoke-toolkit.exe recipe run "D:\Recipes\convert-and-tag.json" "D:\Incoming" --quiet
+.\karaoke-toolkit.exe recovery-list "D:\Incoming" --json
+.\karaoke-toolkit.exe recover "D:\Incoming\.karaoke-job-workflow-ID\workflow.json" --quiet
+```
+
+The dry run plans the first step and lists later steps as deferred until actual
+outputs exist. Recovery uses the journal's recipe snapshot even if the exported
+recipe has since changed or been deleted. Use the exact journal path from discovery.
+
+## Preview changes and choose an output folder
+
+```powershell
+.\karaoke-toolkit.exe run flatten-all-layers "D:\Incoming" --dry-run --json
+.\karaoke-toolkit.exe run zip-to-audiog "D:\Incoming" --output "D:\Converted" --no-cue-text --dry-run
+.\karaoke-toolkit.exe run zip-to-audiog "D:\Incoming" --output "D:\Converted" --no-cue-text
+.\karaoke-toolkit.exe run create-cue-and-text-files "D:\Converted"
+```
+
+Create `D:\Converted` first. Outputs from all selected source folders share that
+flat destination; duplicate targets block processing. This mode keeps originals
+and rejects `--delete-originals`. For multiple source folders, disable automatic
+CUE/TXT generation and create one listing afterward as shown. The destination
+must be outside selected input folders. Plans are snapshots, not guarantees of
+successful decoding/encoding or protection against later changes to files.
+
+## Move eligible validation failures into Damaged
+
+```powershell
+.\karaoke-toolkit.exe quarantine "D:\Karaoke" --dry-run --json
+.\karaoke-toolkit.exe quarantine "D:\Karaoke" --json --quiet
+```
+
+Only eligible failed groups move; valid files stay in place. The report includes
+restoration manifests. Unreadable or otherwise nonmovable findings remain issues.
+The ordinary `validate` command continues to be read-only.
+
+## Discover and rip a disc
+
+```powershell
+.\karaoke-toolkit.exe disc-list --json
+.\karaoke-toolkit.exe disc-rip --device "0,1,0" --output "D:\Ripped" --disc-name "DISC123" --tracks "1,3-5" --format Bin --experimental --dry-run
+.\karaoke-toolkit.exe disc-rip --device "0,1,0" --output "D:\Ripped" --disc-name "DISC123" --tracks "1,3-5" --format Zip --encoder MP3 --bitrate 192 --experimental
+```
+
+Use the device address returned by `disc-list`, not the sample address. Add
+`--cdrdao "C:\Tools\cdrdao.exe"` (or a Unix executable path) to select a manual
+installation. Windows CLI builds bundle cdrdao; Linux/macOS can use an installed
+copy. Hardware compatibility remains experimental and the CLI never elevates.
+A dry run scans the disc but does not read its full image or publish tracks.
+
+## Enable shell help and completion
+
+```powershell
+.\karaoke-toolkit.exe help karaoke-to-video
+.\karaoke-toolkit.exe run repack-zip --help
+(& .\karaoke-toolkit.exe completion powershell | Out-String) | Invoke-Expression
+(& .\karaoke-toolkit.exe path powershell | Out-String) | Invoke-Expression
+```
+
+The last two commands opt into setup for the current PowerShell session. Review
+the printed script first if desired; save it in your profile for future sessions.
+The executable itself never edits that profile. Setup paths point to the current
+installation, so update them after moving it or switching a versioned payload.
+
+For Bash (replace `bash` with `zsh` for Zsh):
+
+```bash
+eval "$(./karaoke-toolkit completion bash)"
+eval "$(./karaoke-toolkit path bash)"
+karaoke-toolkit --help
+```
+
+Completion suggests command and option words, leaving file completion to the shell.
+It does not yet select enum values based on the preceding option.

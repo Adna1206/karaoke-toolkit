@@ -4,6 +4,7 @@ using KaraokeToolkit.Core.Recovery;
 using KaraokeToolkit.Core.Reporting;
 using KaraokeToolkit.Core.Tagging;
 using KaraokeToolkit.Core.Validation;
+using KaraokeToolkit.Core.Recipes;
 using Action = KaraokeToolkit.Core.Execution.OperationId;
 
 namespace KaraokeToolkit.Core.Execution;
@@ -19,8 +20,8 @@ public interface IOperationExecutor
 }
 
 /// <summary>Reusable unattended adapters to existing engines. Processing, verification and
-/// transactions remain in those engines; recipes and physical disc capture are not exposed here.</summary>
-public sealed class OperationExecutionService(RecoveryStore? recovery = null) : IOperationExecutor
+/// transactions remain in those engines. Physical capture uses its typed disc request.</summary>
+public sealed partial class OperationExecutionService(RecoveryStore? recovery = null) : IOperationExecutor
 {
     private readonly RecoveryStore recovery = recovery ?? new();
 
@@ -30,7 +31,9 @@ public sealed class OperationExecutionService(RecoveryStore? recovery = null) : 
         if (!operation.CanRunUnattended) throw new NotSupportedException("This operation has no unattended execution contract: " + operation.Identifier);
         if (request.OverwritePolicy == OverwritePolicy.Ask || !Enum.IsDefined(request.OverwritePolicy))
             throw new ArgumentException("Headless execution requires overwrite fail, skip or replace.");
-        new ConversionRequest(operation.IsConversion ? operation.Id : Action.AudioGToZip, ".", request.Options).Validate();
+        if (!string.IsNullOrEmpty(request.OutputFolder) && !operation.IsConversion)
+            throw new ArgumentException("This operation has no output-folder option.");
+        new ConversionRequest(operation.IsConversion ? operation.Id : Action.AudioGToZip, ".", request.Options) { OutputFolder = request.OutputFolder }.Validate();
         if (request.Inputs.Count == 0) throw new ArgumentException("At least one input is required.");
         var inputs = request.Inputs.Select(p => Path.TrimEndingDirectorySeparator(Path.GetFullPath(p))).Distinct(InputSelection.Paths).ToArray();
         foreach (string path in inputs)
@@ -40,6 +43,17 @@ public sealed class OperationExecutionService(RecoveryStore? recovery = null) : 
             if (operation.RequiresFolders && !Directory.Exists(path)) throw new ArgumentException("This operation requires folder inputs: " + path);
         }
         token.ThrowIfCancellationRequested();
+        if (operation.Id == Action.QuarantineInvalid)
+            return await QuarantineAsync(inputs, request.Options.RecurseFolders, progress, token);
+        if (!string.IsNullOrEmpty(request.OutputFolder))
+        {
+            if (inputs.Any(p => Directory.Exists(p) && RunSession.Within(p, request.OutputFolder)))
+                throw new ArgumentException("The output folder must be outside selected input folders.");
+            if (recovery.Find(request.OutputFolder, true).Count > 0)
+                throw new IOException("Recover interrupted work in the output folder first.");
+            var plan = await new OperationPlanner().PlanAsync(request, token);
+            if (plan.HasIssues) throw new IOException("Output plan has collisions. Run with --dry-run to inspect it.");
+        }
         if (operation.Id == Action.ValidateKaraoke)
         {
             var validation = await new ValidationService().ScanAsync(inputs, request.Options.RecurseFolders, progress, token);
@@ -59,7 +73,7 @@ public sealed class OperationExecutionService(RecoveryStore? recovery = null) : 
         ConversionResult result;
         if (operation.IsConversion)
             result = await new SelectionConversionService(recovery).RunAsync(new(operation.Id, inputs, request.Options, request.OverwritePolicy)
-                { ValidateBeforeConversion = request.ValidateBeforeConversion }, progress, token);
+                { ValidateBeforeConversion = request.ValidateBeforeConversion, OutputFolder = request.OutputFolder }, progress, token);
         else if (operation.Id == Action.TagKaraoke)
         {
             var service = new KaraokeTaggingService(recovery);
@@ -106,7 +120,12 @@ public sealed class OperationExecutionService(RecoveryStore? recovery = null) : 
         var job = recovery.Find(root).SingleOrDefault(j => InputSelection.Paths.Equals(j.JournalPath, full))
             ?? throw new ArgumentException("No available recovery job matches that journal. Use recovery-list first.");
         if (job.Problem != null) throw new IOException(job.Problem);
-        if (job.Kind == RecoveryKind.Recipe) throw new NotSupportedException("Recipe recovery is not exposed by this interface. Use the desktop application.");
+        if (job.Kind == RecoveryKind.Recipe)
+        {
+            var recipe = RecipeRunner.ReadRecoveryRecipe(job);
+            RequireUnattendedRecipe(recipe);
+            return FromRecipe(recipe.Name, await new RecipeRunner(recovery: recovery).ResumeAsync(job, progress, token));
+        }
         var result = job.Kind == RecoveryKind.Tagging
             ? await new KaraokeTaggingService(recovery).ResumeAsync(job, progress, token)
             : await new ConversionService(recovery).ResumeAsync(job, progress, token);

@@ -3,7 +3,8 @@
 `KaraokeToolkit.Cli` is a .NET 10 console project referencing Core, with no Avalonia
 or Velopack runtime dependency. The executable is `karaoke-toolkit` (`.exe` on
 Windows). It does not launch the GUI, run in the background, load desktop preferences
-or modify saved app settings. Recipes and physical disc capture are not exposed.
+or modify saved app settings. Recipes, explicit quarantine and experimental physical
+disc capture use the existing Core services.
 
 ## Running
 
@@ -21,16 +22,9 @@ the runtime, Core and native tools. Run it by full path or from its containing
 directory; the installer does not add it to PATH. In Velopack portable ZIPs,
 the actual executables are inside `current/`.
 
-The Linux AppImage's normal entry point is the GUI. For CLI-only Linux use, publish
-the console project directly, or extract the AppImage (`--appimage-extract`) and
-run `karaoke-toolkit` from its extracted `usr/bin` directory.
-
-The CLI can also be published on its own:
-
-```powershell
-dotnet publish KaraokeToolkit.Cli/KaraokeToolkit.Cli.csproj -c Release -r win-x64 --self-contained true -o artifacts/publish/cli/win-x64
-dotnet publish KaraokeToolkit.Cli/KaraokeToolkit.Cli.csproj -c Release -r linux-x64 --self-contained true -o artifacts/publish/cli/linux-x64
-```
+The Linux AppImage's normal entry point is the GUI. To use the bundled CLI,
+extract the AppImage (`--appimage-extract`) and run `karaoke-toolkit` from its
+extracted `usr/bin` directory. CLI ships with App rather than as a separate product.
 
 Close CLI operations before manually installing/updating the application. Packaging
 does not enable automatic update checks or imply native Linux runtime testing.
@@ -112,9 +106,14 @@ Disc-capture fields are not useful here because ripping is excluded. Request
 settings such as overwrite policy, input validation, tagging pattern/cleanup and
 the leading-The rule are separate flags, not fields in this JSON file.
 
-Operations normally write beside their source files; folder tools use the selected
-roots. There is no general `--output` destination option or persistent CLI profile.
-Use an options file to reuse conversion settings without loading GUI preferences.
+Operations write beside sources by default. Media conversions accept `--output FOLDER`
+for an existing destination outside selected input folders. This preserves originals;
+`--delete-originals` is rejected with `--output`. Outputs are flattened into the
+destination, with conflicts checked before processing and again at publication.
+Multiple source folders sharing a destination require `--no-cue-text` for conversions
+that would generate listings; create a single listing there afterward. Folder maintenance,
+tagging and validation have no separate destination. Options files provide reusable
+conversion preferences without loading GUI settings.
 
 ## Output and exit codes
 
@@ -152,27 +151,72 @@ read-only and does not automatically quarantine files.
 Without folders, `recovery-list` uses the app's startup recovery index. With folders,
 it also discovers journals there. `recover` takes an available journal from that
 list, retaining the saved processing/deletion/overwrite settings. Saved `Ask`
-conflicts cannot prompt and will fail. Recipe recovery is explicitly rejected;
-use the desktop application for recipes. Damaged journals and changed files remain
+conflicts cannot prompt and will fail. Recipe recovery uses its saved definition/settings even if the recipe file was deleted. Damaged journals and changed files remain
 protected. See [crash recovery](crash-recovery.md).
 
-## Current boundaries
+## Recipes, previews and quarantine
 
-- Recipes and recipe recovery remain excluded by agreement. Individual operations,
-  conversion recovery and tagging recovery are available.
-- Physical disc capture and moving validation failures into Damaged are not exposed.
-  Existing Damaged batches can be restored using `restore-quarantined-files`.
-- There is no general dry-run/processing plan. `tag-preview` previews metadata;
-  `validate` checks files without modifying them.
-- There is no shell completion, operation-specific help page, persistent CLI profile
-  or general output-directory override. Discovery, shared help and options files
-  are available; the installer does not add the CLI to PATH.
-- Online lookup, playback and enabled update checks are deferred application
-  features, not working desktop operations awaiting a CLI switch.
+`recipe list FOLDER`, `recipe show FILE`, `recipe validate FILE` and
+`recipe run FILE PATH...` work on the existing portable recipe JSON format.
+Each step uses its saved settings. CLI processing overrides are rejected for recipes;
+all steps must use Fail, Skip or Replace, never Ask. Recipe validation checks the
+whole known pipeline before any processing. `recover JOURNAL` also resumes recipe
+snapshots, interrupted steps and remaining steps through Core's existing recovery.
+No script runner or recipe editing UI is introduced.
 
-Windows execution is tested. Linux packages can be cross-built but Linux runtime
-testing is outstanding; macOS packaging is still deferred. These platform checks
-are separate from command coverage.
+`--dry-run` plans file conversions, folder moves/renames, restoration and quarantine
+without changing inputs or creating outputs/journals. Plans list candidate targets
+and detectable collisions, not guarantees that content will encode successfully.
+`tag --dry-run` uses tagging preview; `validate --dry-run` remains a read-only check.
+Recipe dry runs inspect the first step and list later steps as deferred: their
+actual scope depends on outputs that do not exist yet. Disc dry runs scan the disc
+and report tracks, without reading its full image or publishing tracks.
+`--report` can explicitly save the dry-run report. Execution repeats its safety checks;
+files may change after a plan was printed.
+
+`quarantine PATH...` (also `run quarantine-invalid PATH...`) validates inputs and
+moves only eligible failures into Damaged with restoration manifests. Valid files
+remain in place; unreadable/nonmovable findings are reported as issues. Use
+`--dry-run` first, and `run restore-quarantined-files MANIFEST` to restore a group.
+Quarantine is never an automatic side effect of `validate`.
+
+## Disc commands
+
+Use `disc-list [--cdrdao EXECUTABLE] [--json]` to discover exact device addresses.
+`disc-rip --device DEVICE --output FOLDER --disc-name NAME --experimental`
+accepts `--tracks all|1,2,4-6`, `--format Bin|AudioG|Zip`, `--cdrdao EXECUTABLE`,
+normal encoding/compression/CUE preferences, overwrite policy and output/report flags.
+Use `disc-rip --help` for the command's syntax; `run disc-rip` is deliberately rejected.
+BIN is the default output. Capture uses Core's cdrdao reader and track publication,
+including disc identity checks, cancellation and verified output transactions.
+Windows cdrdao is bundled with the app/CLI package. Linux/macOS resolve an
+external installation or explicit executable path. CLI never requests elevation.
+Physical drive/subchannel compatibility still requires hardware testing.
+
+## Help and shell integration
+
+`help OPERATION` and `run OPERATION --help` show operation-specific guidance.
+`help recipe`, `help disc-rip` and other dedicated-command topics show their syntax.
+`operations --json` identifies dedicated commands and hardware-unverified support.
+
+`completion powershell|bash|zsh` prints completion registration for commands and flags;
+it does not edit a profile. File completion remains handled by the shell. It provides
+word completion rather than full context-sensitive enum-value completion.
+`path powershell|bash|zsh` prints opt-in PATH setup for the current installation.
+Evaluate it for the current shell or save it in your profile yourself. Neither
+command modifies the environment or profile automatically. Update the path after
+moving the installation or switching a versioned Velopack payload directory.
+
+## Platform verification
+
+The local test suite runs on Windows. `.github/workflows/cli-platforms.yml` is a
+read-only-permission, manually runnable/PR workflow for Windows, Linux, macOS ARM64
+and macOS Intel. It runs CLI/shared-contract tests and native FFmpeg video fixtures,
+smoke-tests the built CLI executable, and retains TRX reports. App and CLI continue
+to be published together by the existing publish script. Non-Windows jobs also check completion script syntax where shells exist.
+The workflow must run on those hosts before claiming Linux/macOS verification;
+adding it is not evidence that those runs passed. macOS installer packaging remains
+separate future work. Tests use fake disc readers rather than physical drives.
 
 ## Architecture and tests
 

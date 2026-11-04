@@ -17,6 +17,18 @@ internal sealed class QuarantineManifest
 /// <summary>Explicit, reversible moves. Each source group has a journal before the first rename.</summary>
 public sealed class QuarantineService
 {
+    public IReadOnlyList<string> PreviewRestore(string manifestPath)
+    {
+        RunSession.CheckPlainPath(manifestPath);
+        var manifest = JsonSerializer.Deserialize<QuarantineManifest>(File.ReadAllText(manifestPath)) ?? throw new IOException("Empty Damaged manifest.");
+        var paths = Resolve(manifestPath, manifest);
+        foreach (var item in paths)
+        {
+            RequireHash(item.Destination, item.Hash);
+            if (File.Exists(item.Original) || Directory.Exists(item.Original)) throw new IOException("Restore destination already exists: " + item.Original);
+        }
+        return paths.Select(p => p.Original).ToArray();
+    }
     public Task<IReadOnlyList<QuarantineResult>> MoveAsync(IEnumerable<ValidationFinding> selection, CancellationToken token = default)
         => Task.Run<IReadOnlyList<QuarantineResult>>(() =>
         {

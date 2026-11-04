@@ -20,7 +20,9 @@ IDs and test counts as dated evidence; verify them before relying on them.
 - `KaraokeToolkit.Tests`: shared xUnit suite for Core, App and CLI, grouped by feature.
   This project was renamed from Core.Tests; use the current name in commands.
 - `KaraokeToolkit.Cli`: console adapter over Core's unattended execution services.
-  No GUI dependency; recipes and physical disc capture are not exposed. See [CLI](docs/cli.md).
+  No GUI dependency. Includes recipes/recovery, explicit quarantine, dry runs and
+  experimental disc capture. Never prompt or elevate; recipe steps cannot use Ask.
+  See [CLI](docs/cli.md).
 - Keep namespaces aligned with folders. App uses feature folders; Core uses
   responsibility folders. Read [App structure](docs/app-structure.md),
   [Core structure](docs/core-structure.md) and [test structure](docs/test-structure.md).
@@ -94,6 +96,10 @@ dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj -c Release -p:UsedA
   and recovery guarantees. Read [crash recovery](docs/crash-recovery.md) before
   changing publication/checkpoint behaviour. Completed workflow changes are not
   rolled back as an entire recipe.
+- CLI output-folder conversions keep originals and use destination-volume staging
+  with saved destination-aware recovery. Do not extend this to cross-directory
+  source deletion without a durable transaction design. Dry runs never invoke
+  publishing; later recipe-step scopes are explicitly deferred until outputs exist.
 - Windows is the validated runtime platform. Linux packages are cross-built;
   macOS packaging via a macOS CI runner is a TODO. Disc ripping is experimental
   and not verified with physical hardware. See [disc ripping](docs/disc-ripping.md).

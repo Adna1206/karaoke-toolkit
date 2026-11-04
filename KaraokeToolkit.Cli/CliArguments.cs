@@ -15,13 +15,16 @@ public sealed class CliUsageException(string message) : Exception(message);
 
 public sealed record CliArguments(string Command, OperationRequest? Request, string[] Inputs, string? Journal, bool Json, bool Quiet, string? ReportPath)
 {
+    public bool DryRun { get; init; }
+    public string? HelpTopic { get; init; }
     private static readonly HashSet<string> Flags = ["json", "quiet", "recurse", "no-recurse", "delete-originals", "keep-originals", "cue-text", "no-cue-text",
-        "validate-inputs", "ignore-leading-the", "fill-empty-only", "preserve-comments", "preserve-other-tags", "video-audio-fallback-only"];
+        "validate-inputs", "ignore-leading-the", "fill-empty-only", "preserve-comments", "preserve-other-tags", "video-audio-fallback-only", "dry-run"];
     private static readonly HashSet<string> Values = ["input", "options", "overwrite", "encoder", "bitrate", "zip-level", "zip-algorithm", "pattern", "report",
-        "video-container", "video-resolution", "video-smoothing", "video-frame-rate", "video-bitrate", "video-audio-bitrate"];
+        "video-container", "video-resolution", "video-smoothing", "video-frame-rate", "video-bitrate", "video-audio-bitrate", "output"];
     public static CliArguments Parse(string[] args)
     {
-        if (args.Length == 0 || args.TakeWhile(a => a != "--").Any(a => a is "--help" or "-h")) return new("help", null, [], null, false, false, null);
+        if (args.Length == 0 || args.TakeWhile(a => a != "--").Any(a => a is "--help" or "-h")) return new("help", null, [], null, false, false, null)
+        { HelpTopic = args.Length > 1 && args[0] == "run" && !args[1].StartsWith('-') ? args[1] : args.FirstOrDefault(a => !a.StartsWith('-')) };
         if (args.Length == 1 && args[0] == "--version") return new("version", null, [], null, false, false, null);
         string command = args[0].ToLowerInvariant();
         int start = 1;
@@ -30,7 +33,9 @@ public sealed record CliArguments(string Command, OperationRequest? Request, str
         {
             if (args.Length < 2 || args[1].StartsWith('-')) throw new CliUsageException("run requires an operation. Use operations to list choices.");
             string key = args[1]; start = 2;
-            operation = CliOperationCatalog.Resolve(key).OperationId;
+            var registration = CliOperationCatalog.Resolve(key);
+            if (registration.DedicatedCommand) throw new CliUsageException("Use " + registration.Name + " directly; see " + registration.Name + " --help.");
+            operation = registration.OperationId;
         }
         else if (command is "validate" or "tag" or "tag-preview") operation = CliOperationCatalog.Resolve(command).OperationId;
         else if (command is not ("operations" or "recovery-list" or "recover")) throw new CliUsageException("Unknown command: " + args[0]);
@@ -108,13 +113,17 @@ public sealed record CliArguments(string Command, OperationRequest? Request, str
             throw new CliUsageException("--ignore-leading-the requires run organize-files.");
         if (tagging) _ = new FilenameTagPattern(pattern);
         var capability = OperationCatalog.Get(operation.Value);
-        new ConversionRequest(capability.IsConversion ? capability.Id : OperationId.AudioGToZip, ".", processing).Validate();
+        string outputFolder = options.TryGetValue("output", out var destination) ? Path.TrimEndingDirectorySeparator(Path.GetFullPath(destination!)) : "";
+        if (outputFolder.Length > 0 && (!capability.IsConversion || operation is OperationId.CleanUpFilenames or OperationId.CreateCueAndTextFiles))
+            throw new CliUsageException("--output is available for media conversions only.");
+        new ConversionRequest(capability.IsConversion ? capability.Id : OperationId.AudioGToZip, ".", processing) { OutputFolder = outputFolder }.Validate();
         return new(command, new(operation.Value, inputs.ToArray())
         {
             Options = processing, OverwritePolicy = overwrite, ValidateBeforeConversion = options.ContainsKey("validate-inputs"),
+            OutputFolder = outputFolder,
             IgnoreLeadingThe = options.ContainsKey("ignore-leading-the"), TaggingPattern = pattern,
             Tagging = new(options.ContainsKey("fill-empty-only"), !options.ContainsKey("preserve-comments"), !options.ContainsKey("preserve-other-tags"))
-        }, inputs.ToArray(), null, json, quiet, report);
+        }, inputs.ToArray(), null, json, quiet, report) { DryRun = options.ContainsKey("dry-run") };
     }
 
     private static int Number(string text, string name) => int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out int number)

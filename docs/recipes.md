@@ -1,6 +1,8 @@
 # Recipe Builder
 
 Recipe Builder is experimental. Review each step's settings before running.
+The [CLI](cli.md) can validate/run exported recipes and recover interrupted workflows;
+its steps must use Fail, Skip or Replace rather than interactive Ask conflicts.
 Completed changes cannot be undone as a whole recipe. After an interruption,
 the recovery prompt offers to resume the saved workflow; it never resumes silently.
 

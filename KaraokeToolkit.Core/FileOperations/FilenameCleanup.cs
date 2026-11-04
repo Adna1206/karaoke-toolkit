@@ -18,7 +18,7 @@ internal static class FilenameCleanup
             throw new InvalidDataException("Filename has no usable title.");
         return stem + extension;
     }
-    internal static async Task<ConversionFileResult> RunAsync(string folder, CancellationToken token)
+    internal static async Task<ConversionFileResult> RunAsync(string folder, CancellationToken token, bool preview = false)
     {
         var files = Directory.GetFiles(folder).Where(p => KaraokeArchive.AudioExtensions.Concat([".cdg", ".bin", ".zip"]).Contains(Path.GetExtension(p), StringComparer.OrdinalIgnoreCase)).ToArray();
         var destinations = files.Select(p => Path.Combine(folder, Clean(Path.GetFileName(p)))).ToArray();
@@ -27,6 +27,7 @@ internal static class FilenameCleanup
         var changed = files.Select((p, i) => (Source: p, Destination: destinations[i])).Where(p => p.Source != p.Destination).ToArray();
         if (changed.Length == 0)
             return new(folder, ConversionStatus.Skipped, [], "Names already clean.");
+        if (preview) return new(folder, ConversionStatus.Succeeded, changed.Select(p => p.Destination).ToArray(), $"Planned rename of {changed.Length} files.");
         using var transaction = new FileTransaction(folder);
         // Copy into separate input directory, then stage final names; this also handles case-only renames.
         var staged = new List<string>();

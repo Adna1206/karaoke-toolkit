@@ -13,4 +13,5 @@ public sealed record OperationRequest(OperationId OperationId, IReadOnlyList<str
     public bool IgnoreLeadingThe { get; init; }
     public string TaggingPattern { get; init; } = FilenameTagPattern.Default;
     public TaggingOptions Tagging { get; init; } = new();
+    public string OutputFolder { get; init; } = "";
 }

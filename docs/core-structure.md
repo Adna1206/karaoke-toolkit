@@ -1,5 +1,9 @@
 # Core structure
 
+`Execution` also contains the read-only `OperationPlanner` and workflow execution
+adapters for unattended recipes and explicit quarantine. Destination-folder
+conversion requests preserve originals and checkpoint their actual output location.
+
 Core groups related implementation and data types by responsibility. Namespaces
 match folders; the app and test tools import those namespaces explicitly.
 

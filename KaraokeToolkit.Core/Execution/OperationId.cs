@@ -26,6 +26,7 @@ public enum OperationId
     FlattenOneLayer,
     FlattenAllLayers,
     RestoreQuarantined,
+    QuarantineInvalid,
     DiscRip,
     RenameFilesFromInternet,
     PlayAudioG,
