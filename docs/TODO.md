@@ -1,5 +1,20 @@
 # Planned features
 
+- [ ] **macOS packaging via GitHub Actions** — consider macOS runners to publish
+  Intel and Apple Silicon builds and run Velopack's macOS packaging tools, with
+  downloadable workflow artifacts. Review native dependency availability and
+  redistribution requirements, test on macOS, and plan signing/notarization before
+  public distribution. Local Windows development should not require a physical Mac.
+
+- [ ] **GitHub CI and release automation** — consider pull-request/push build and
+  test checks across supported platforms, retained test reports and package artifacts,
+  and manually triggered or version-tagged releases. Reuse the publish scripts and
+  pinned tools; validate shared versions, generate release notes/checksums, and
+  optionally sign and upload installers/update feeds after checks pass. Decide on
+  release hosting (including a separate releases-only repo), protect signing/upload
+  credentials, and review runner/LFS costs. Keep in-app update checks disabled until
+  the feed and update UI are ready.
+
 - [ ] **Command-line interface** — add a `KaraokeToolkit.Cli` console project for
   operations and saved recipes without the GUI or an AI client. Support explicit
   per-run settings, progress, cancellation, meaningful exit codes and optional JSON
