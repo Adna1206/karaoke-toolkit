@@ -1,7 +1,11 @@
 # Experimental cdrdao CD+G reader
 
+Enable **Settings → CD+G Ripping → Enable experimental CD+G ripping**, then select
+**Disc Ripping → Rip CD+G (Experimental)** and press Start. Refresh the devices,
+select tracks, an existing output folder and BIN, Audio+G or ZIP output.
+
 The application uses `NativeDiscReader`, a managed adapter that launches cdrdao
-as a separate process. No BASS DLL or x86 .NET helper is required by the app.
+as a separate process.
 The adapter uses only read commands: `scanbus`, `read-toc` and `read-cd`.
 
 Windows x64 builds copy the checksum-verified cdrdao 1.2.6 executable and its MSYS
@@ -63,4 +67,3 @@ tests also cover lossy encoding, overwrite prompts and GUI behaviour.
 
 These are format and workflow tests using synthetic images. Real drive support, damaged-disc performance,
 audio/graphics timing and visual correctness still require hardware tests on each OS.
-No legacy bridge or original native-library bundle is needed to run these tests.

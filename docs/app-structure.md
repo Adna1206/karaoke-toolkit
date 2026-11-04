@@ -11,8 +11,9 @@ directories, and views share their feature namespace with their view models.
 | Features/Reports | Session report window and its view model |
 | Features/DiscRipping | Disc ripping window and its view model |
 | Features/Recipes | Recipe library, builder and per-step settings editor |
+| Features/Tagging | Filename-pattern configuration, editable tag preview and tag submission |
 | Metadata | Shared operation and setting definitions |
-| Services | Shared platform interactions such as Explorer integration and opening folders |
+| Services | Explorer integration, folder launching and the disabled update-check scaffold |
 | Shared | View model base, view locator, window titles and modal dialog presentation |
 | Assets | Logos, icons and other bundled visuals |
 
@@ -47,6 +48,6 @@ The builder edits saved recipes only. Its library populates the home Recipes
 category and Favourites; input controls follow the selected recipe's first step.
 
 The view locator resolves a feature's `*ViewModel` to its `*Window` in the same
-namespace. Window creation and operation execution still use their existing
-explicit routes. Test folders follow the corresponding Core responsibility or
-App feature; test support, legacy comparisons and benchmarks stay separate.
+namespace. Window creation and operation execution use explicit routes. Test folders
+follow the corresponding Core responsibility or App feature; shared fixtures and
+opt-in benchmarks have their own folders in `KaraokeToolkit.Tests`.

@@ -1,8 +1,8 @@
 # Recipe Builder
 
-Recipe Builder is experimental. Review each step's settings before running;
-completed changes cannot be undone as a whole recipe, and interrupted recipes
-do not automatically resume.
+Recipe Builder is experimental. Review each step's settings before running.
+Completed changes cannot be undone as a whole recipe. After an interruption,
+the recovery prompt offers to resume the saved workflow; it never resumes silently.
 
 Open **Tools → Recipe Builder (Experimental)** to create a named sequence of built-in operations.
 Add steps, reorder them, and use **Step Settings** to configure each step. New

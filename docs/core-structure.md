@@ -10,10 +10,11 @@ match folders; the app and test tools import those namespaces explicitly.
 | Audio | Audio encoding/decoding, lossless transcoding and shared FFmpeg runtime discovery |
 | Video | Karaoke video rendering and video format settings |
 | Tagging | Filename templates, tag previews, staged metadata writes and packet-payload verification |
-| FileOperations | Filename cleanup, CUE/TXT creation, quarantine and restoration |
+| FileOperations | Alphabetical organization, flattening, filename cleanup, CUE/TXT, quarantine and restoration |
 | Validation | Read-only integrity checks and findings |
 | Recovery | Conversion and recipe/tagging checkpoints, saved move plans and transactional file publication |
 | Reporting | Run reports and shared report headers |
+| Recipes | Saved workflows, step settings, chaining constraints and execution adapters |
 | Settings | Processing preferences and atomic XML settings persistence |
 | DiscRipping | cdrdao discovery, disc capture, track extraction and ripping workflow |
 
@@ -27,6 +28,6 @@ store composes them with Core's processing settings in the existing XML file,
 using a single atomic transaction. Core preserves unknown entries and remains
 usable without App or Avalonia. Saved XML names remain unchanged.
 
-This organization does not introduce new projects or change serialized setting
-names, recovery fields, or persisted operation values. Tests use deterministic
-media fixtures and explicit expectations; no original-engine adapters are retained.
+Keep serialized setting names, recovery fields and persisted operation values
+stable when reorganizing folders. Tests use deterministic media fixtures and
+explicit expected outcomes.

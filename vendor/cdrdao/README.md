@@ -7,8 +7,9 @@ identified as PE x64 and printed version 1.2.6 during a no-drive command check.
 
 The official release does not provide Linux or macOS binaries. Build those from
 the pinned source on the target platform and review the resulting runtime
-dependencies before adding them here. No CDRDAO binary is wired into the app
-yet; the current experimental Windows disc reader still uses BASSCD.
+dependencies before adding them here. Windows builds bundle this reader for the
+experimental CD+G operation; Linux/macOS use an installed executable or configured
+path. See [disc ripping](../../docs/disc-ripping.md) for integration and limits.
 
 CDRDAO's source archive includes GPL v2 `COPYING`. Review the licenses and
 source obligations of the bundled MSYS DLLs before shipping the Windows ZIP

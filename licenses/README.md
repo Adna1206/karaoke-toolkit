@@ -2,7 +2,7 @@
 
 This directory keeps readable license texts for dependencies currently used or
 stored in KaraokeToolkit. The repository does not yet have its own application
-license. `vendor/VERSIONS.md` and the vendor manifests pin binary versions and
+license. `vendor/versions.md` and the vendor manifests pin binary versions and
 checksums; the files here do not by themselves complete a public release's
 source or notice obligations.
 

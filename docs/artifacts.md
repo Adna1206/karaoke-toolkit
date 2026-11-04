@@ -3,15 +3,19 @@
 All custom artifacts live in the repository-root `artifacts/` directory, already
 ignored by `.gitignore`. Normal builds still use each project's standard bin/obj.
 
-- `artifacts/builds/<project>/<name>/`: custom build outputs; previous per-project
-  artifacts were moved here without overwriting or deleting their contents.
-- `artifacts/tests/results/`: TRX, coverage and other test-runner output. Previous
-  project-local TestResults contents are preserved in the `previous/` subdirectory.
+- `artifacts/builds/<project>/<name>/`: custom build outputs.
+- `artifacts/tests/results/`: TRX, coverage and other test-runner output.
 - `artifacts/tests/runs/<run-id>/fixtures/`: generated test input/output files.
 - `artifacts/publish/<version>/<run-id>/<rid>/`: self-contained publish staging.
 - `artifacts/releases/<version>/<run-id>/<rid>/`: Velopack installers, portable
   packages, update metadata and SHA256 checksums. See [publishing](publishing.md).
-- Existing repository-level artifact folders remain where they were.
+- `artifacts/runtime/`: reusable extracted native-tool cache.
+- `artifacts/benchmarks/`: measurement reports and generated benchmark media.
+
+Builds, publish staging and generated test/benchmark media can be regenerated and
+removed when no running process needs them. Keep reports useful for investigations,
+packages you want to distribute, and the runtime cache to avoid repeated extraction.
+Do not confuse these outputs with source-folder recovery journals or vendored inputs.
 
 Directory.Build.props defines RepositoryArtifactsPath and supports an optional
 ArtifactBuildName. Use this instead of relative BaseOutputPath overrides:

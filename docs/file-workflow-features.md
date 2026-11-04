@@ -1,22 +1,23 @@
 # File workflow features
 
-The home operation panel uses collapsible Karaoke Conversion, Archive Tools,
-File & Folder Tools, and Validation & Reports sections. Disc Ripping appears
-only when its experimental setting is enabled. Section expansion preferences
-persist across restarts; selecting an operation opens its section and keeps it
-visible. Unavailable online renaming is hidden.
+The home screen has a category sidebar and an operation list for Karaoke Conversion,
+Archive Tools, File & Folder Tools, and Validation & Reports. Disc Ripping appears
+when its experimental setting is enabled, and Recipes appears when saved recipes
+exist. Selecting an operation keeps its category synchronized. Unavailable online
+renaming is hidden. Category selection is session state, not an expander preference.
 
 Each operation has a star button to add or remove it from Favourites. This section
 appears at the top only when it has visible operations. Favourites use the same
 operation instances and execution flow as their original sections, in the usual
 operation order. Choices are saved immediately using stable operation identifiers.
 A favourited disc-ripping action is hidden while ripping is disabled, but its star
-is remembered. Section expansion choices also apply to Favourites.
+is remembered.
 
 ## Input
 
-Drop folders or karaoke files onto the main window, select folders with **Browse…**,
-or select individual files with **Files…**. Multiple selections are supported. Typing
+Drop folders or karaoke files onto the main window, select folders with **Add Folders…**,
+or select individual files with **Add Files…**. Picker/drop actions accumulate inputs;
+**Clear** resets them. Multiple selections are supported. Typing
 into the source box replaces the prior selection. Homogeneous ZIP, BIN or audio/CDG
 file selections choose a matching default conversion action; opening input never
 starts a conversion automatically.
@@ -36,9 +37,41 @@ starting conversion. Following an interruption, those pending folder runs can be
 recovered individually. Normal cancellation ends the unstarted runs rather than leaving
 them as crash-recovery jobs.
 
+## ZIP compression
+
+ZIP operations use SharpCompress. Settings offers Deflate levels 0-9, defaulting
+to 5 (Balanced). Level 0 stores files without compression; levels 1-9 trade speed
+for smaller files. Stored numeric preferences retain their values when loaded.
+
+BZip2 and LZMA are also available for ZIP creation. The 0-9 setting applies only
+to Deflate; BZip2 and LZMA use library defaults. Deflate is recommended for older
+karaoke players. Algorithm choices persist in preferences, recipes and recovery.
+
+## Convert Archive to ZIP
+
+Choose **Archive Tools → Convert Archive to ZIP** for non-ZIP files or folders.
+Supported extensions are 7z, rar, tar, gz/tgz, bz2/tbz/tbz2, xz/txz, lz and zst;
+decoding depends on the archive format and variant. ZIP input is excluded.
+
+The operation preserves member contents, relative paths, empty files/directories
+and available modification times. It accepts general archives, not only karaoke
+pairs, and does not recursively unpack nested archives. ZIP metadata cannot
+represent every source format's permissions, attributes or comments.
+
+Output is beside the source (`album.tar.gz` becomes `album.zip`) using the chosen
+ZIP algorithm and Deflate level. Existing-output and Delete Originals settings
+apply. No automatic CUE/TXT is generated. General archive contents are checked
+during conversion, rather than using the optional karaoke-pair validation precheck.
+Payload hashes are verified before publication and requested source deletion.
+
+Encrypted, multi-volume, linked, unsafe and duplicate-path entries are rejected;
+members must be smaller than 4 GiB. Failed items can be retried. Cancellation keeps
+the current source. Tests include TAR, TGZ, GZip, solid/encrypted 7z, output
+algorithms, source retention, overwrite, cancellation, retry and checkpoint resume.
+
 ## Repack ZIP for Compatibility
 
-Choose **Conversions → Repack ZIP for Compatibility** for selected ZIP files or
+Choose **Archive Tools → Repack ZIP for Compatibility** for selected ZIP files or
 folders containing ZIPs. Folder input follows the recursion setting. The operation
 rebuilds the archive using the ZIP algorithm and compression level saved in Options;
 the defaults are **Deflate, level 5**. Deflate is recommended for legacy karaoke
@@ -83,7 +116,7 @@ not change either flattening operation; choose the operation for the depth you w
 
 Experimental CD+G ripping now uses cdrdao on all supported desktop platforms;
 Windows x64 bundles the reader, while Linux/macOS currently use an installed executable.
-See [disc ripping](disc-ripping.md) for capture behaviour, fixture parity and hardware limits.
+See [disc ripping](disc-ripping.md) for capture behaviour, synthetic tests and hardware limits.
 
 ## Completion reports
 
@@ -110,19 +143,19 @@ to choose the next operation; **Retry failed** remains an explicit results actio
 
 ## Windows Explorer
 
-Use **Options → Explorer → Enable / update** to register **Open in KaraokeToolkit**
+Use **Settings → Explorer → Enable / update** to register **Open in Karaoke Toolkit**
 for folders, folder backgrounds, ZIP/BIN/CDG and supported audio extensions. This is a
 per-user classic context-menu command, normally under **Show more options** on Windows
 11. It uses no administrator access and does not change default file associations.
 
 **Remove** removes only Toolkit-owned entries. Enable/update again after moving the
 application. These buttons apply immediately, independently of Options OK/Cancel.
-The Explorer command handles one selected item; use Files… or drag-and-drop for a
+The Explorer command handles one selected item; use Add Files… or drag-and-drop for a
 multi-file selection. A compiled application executable must be present.
 
 ## Validation and Damaged
 
-Choose **Validate karaoke files** in the operation list and press **Start** to read
+Choose **Validate Karaoke Files** in the operation list and press **Start** to read
 files without converting or moving them. Validation is a standalone operation, not
 a separate main-panel button. It reports:
 
@@ -137,15 +170,15 @@ a separate main-panel button. It reports:
 
 ZIP checks read entries and verify CRCs without extracting. BIN/CDG checks verify
 sector/packet structure. Validation does not decode audio, listen to tracks, render
-graphics or certify sync/quality. A structurally valid result has that limitation in
-its message. Cancellation returns the findings collected so far.
+graphics or certify sync/quality. Non-ZIP archives are reported as unsupported and
+can be processed with Convert Archive to ZIP. A structurally valid result has its
+limitations in the message. Cancellation returns findings collected so far.
 
-**Options → General → Validate inputs before conversion** enables an additional
+**Settings → General → Validate inputs before conversion** enables an additional
 read-only check of each source group immediately before conversion. A group with an
 issue is reported as failed and remains unchanged; other groups continue. This setting
-defaults to **off**, because the original `ToolzActions` workflow directly invokes each
-conversion routine and `ZipToAudio` extracts while checking the extraction result,
-without a separate validation pass. Mandatory integrity/publication checks remain
+defaults to **off**. Conversions already perform mandatory integrity/publication
+checks; this preference adds a separate validation pass. Those mandatory checks remain
 enabled regardless. The preference persists and is retained for retries and crash recovery.
 
 No result causes an automatic move. In Results, explicitly select issues and choose
@@ -173,14 +206,12 @@ read-only scans, exclusions, move/restore hashes, collision refusal, pair rollba
 interrupted quarantine and report exports. Explorer registration/removal is tested in
 an isolated temporary registry branch, without installing live Explorer entries.
 
-Native UI inspection exercised a read-only scan on disposable malformed BIN/orphan CDG
-fixtures, reviewed the results window and inspected Explorer settings. User media,
-preferences and live Explorer registrations were not changed.
-
-The full suite is run using `FeatureValidation` while a Debug instance is open:
+For the shared suite and verification commands, see
+[test structure](test-structure.md). A named artifact build can avoid replacing
+binaries used by a running development instance:
 
 ```powershell
-dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj -c FeatureValidation --no-restore -p:UsedAvaloniaProducts=
+dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj -c Release -p:ArtifactBuildName=StandaloneTests -p:UsedAvaloniaProducts=
 ```
 
-The requested pre-processing preview remains in [TODO](TODO.md).
+The requested pre-processing preview remains in [TODO](todo.md).

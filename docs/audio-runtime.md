@@ -1,12 +1,11 @@
 # Audio runtime and benchmarks
 
-Audio decoding and MP3/OGG encoding use FFMpegCore 5.5.0 (MIT), restored by NuGet.
+Audio decoding and MP3/OGG/WMA/WAV/FLAC/AAC encoding use FFMpegCore 5.5.0 (MIT),
+restored by NuGet.
 FFMpegCore invokes bundled FFmpeg/ffprobe processes; NuGet does not supply those
-executables. BASS, lame.exe and oggenc.exe are no longer used for file conversion.
-Experimental CD reading uses cdrdao. No original native libraries are used by tests.
+executables. Experimental CD reading uses cdrdao.
 See [disc ripping](disc-ripping.md) for packaging and hardware-test limitations.
-Tests assert deterministic PCM, graphics, duration and timing expectations without
-the original audio engine.
+Tests assert deterministic PCM, graphics, duration and timing expectations.
 
 ## Runtime preparation
 
@@ -26,7 +25,7 @@ ZIPs are assembled into `bin/` with the applicable GPL text and provider notice.
 Linux/macOS build hosts need PowerShell 7 (`pwsh`); tar is needed for tar archives.
 Build preparation sets executable permissions on macOS when run there. Cross-
 publishing from Windows does not verify macOS execution or signing. Media tests
-use the native runtime for their build target; no Windows-only reference engine is needed.
+use the native runtime for their build target.
 
 `-p:SkipFFmpegPrepare=true` is for compilation-only checks; it does not produce a
 runnable package unless the runtime is already present. The retained Windows
@@ -57,8 +56,8 @@ checks as clearance for public redistribution.
 ## Behavior and tests
 
 BIN audio remains 44.1 kHz, stereo, signed 16-bit PCM. Inputs with another sample
-rate/channel count are rejected rather than silently resampled. Encoding keeps
-MP3/OGG and the existing bitrate options. Encoded output is decoded and its duration
+rate/channel count are rejected rather than silently resampled. Encoding uses
+the selected format and applicable bitrate options. Encoded output is decoded and its duration
 checked before publication. Processes support cancellation and a 30-minute limit;
 existing staging, overwrite and recovery behavior remains in charge of publication.
 Local file/pipe protocols are allowed; network input protocols are not enabled.
@@ -93,8 +92,8 @@ Keep the machine idle and run with the same configuration when comparing results
 
 Cases use shared deterministic 2-second and 30-second stereo multitone audio:
 WAV/MP3/OGG/FLAC decoding; MP3/OGG encoding plus verification at 192 kbps; and
-BIN split, MP3 encode, verification, ZIP creation and verification. Both pipelines
-use the same managed ZIP engine. GUI, final publication and source deletion are
+BIN split, MP3 encode, verification, ZIP creation and verification. Pipeline cases
+use the managed ZIP engine. GUI, final publication and source deletion are
 excluded. The harness measures FFmpeg only, for comparison across builds. Wall-clock measurements include
 process startup and disk I/O; this is a practical smoke benchmark, not a codec-only
 microbenchmark or a listening-quality assessment. Lossy sample/padding differences
@@ -102,5 +101,4 @@ are expected. Real music and longer tracks may behave differently.
 
 Results include one FFmpeg measurement per case, output sizes, hashes and PCM
 durations. Compare reports from the same machine, runtime and corpus; timing is
-never a unit-test pass/fail gate. Previous original-engine comparisons are historical
-and available in Git history, rather than requiring those binaries in today's checkout.
+never a unit-test pass/fail gate.
