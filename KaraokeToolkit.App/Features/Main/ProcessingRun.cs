@@ -15,6 +15,7 @@ internal sealed class ProcessingRun : IDisposable
     public CancellationToken Token { get; }
     public IProgress<ConversionProgress> Progress { get; }
 
+    /// <summary>Captures the caller's synchronization context for progress delivery until stopped or disposed.</summary>
     public ProcessingRun(Action<ConversionProgress> report)
     {
         Token = cancellation.Token;
@@ -29,6 +30,7 @@ internal sealed class ProcessingRun : IDisposable
         });
     }
 
+    /// <summary>Rejects future deliveries, including already queued callbacks, without requesting cancellation.</summary>
     public void StopProgress()
     {
         lock (gate) accepting = false;
@@ -42,6 +44,7 @@ internal sealed class ProcessingRun : IDisposable
         }
     }
 
+    /// <summary>Stops progress and releases the cancellation source without cancelling the operation.</summary>
     public void Dispose()
     {
         lock (gate)

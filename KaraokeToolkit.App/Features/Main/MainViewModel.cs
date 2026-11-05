@@ -23,6 +23,9 @@ using Action = KaraokeToolkit.Core.Execution.OperationId;
 namespace KaraokeToolkit.App.Features.Main;
 
 public sealed record ActivityEntry(string Time, string Message);
+/// <summary>Coordinates main-screen selection, preferences, commands and presentation of processing results.</summary>
+/// <remarks>Core services own file processing and recovery guarantees. ProcessingRun owns each run's
+/// cancellation and progress lifetime; this viewmodel owns the corresponding busy state and reports.</remarks>
 public partial class MainViewModel : ViewModelBase
 {
     private ProcessingRun? activeRun;
@@ -457,6 +460,7 @@ public partial class MainViewModel : ViewModelBase
         return true; // Later never starts a fresh run over an interrupted one.
     }
 
+    /// <summary>Starts a processing lifetime and resets the shared busy, progress and report presentation.</summary>
     private ProcessingRun BeginRun(string title, string status)
     {
         if (activeRun != null) throw new InvalidOperationException("A processing run is already active.");
@@ -485,6 +489,7 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
+    /// <summary>Disposes progress/cancellation before returning the active run's screen state to idle.</summary>
     private void EndRun(ProcessingRun? run)
     {
         run?.Dispose();

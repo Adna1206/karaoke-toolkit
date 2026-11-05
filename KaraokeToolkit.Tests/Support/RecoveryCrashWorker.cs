@@ -7,6 +7,9 @@ using KaraokeToolkit.Core.Tagging;
 
 namespace KaraokeToolkit.Tests.Support;
 
+/// <summary>Runs disposable conversion/workflow children that pause at explicit recovery-test crash boundaries.</summary>
+/// <remarks>Ready files signal the parent that the requested state is durable; the parent terminates the process
+/// so normal disposal cannot clean it up. Uses generated fixtures, not user media.</remarks>
 internal static class RecoveryCrashWorker
 {
     // This runs in a disposable child process, never in the application. The parent test

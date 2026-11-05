@@ -191,6 +191,7 @@ internal sealed class WorkflowSession : IDisposable
         return result;
     }
     internal void Attach(string workspace) { Data.Workspace = workspace; Save(); }
+    /// <summary>Durably records published content and removed paths before transaction backups can be cleaned.</summary>
     internal void Published(IReadOnlyList<string> outputs, IReadOnlyList<string> removed)
     {
         foreach (string path in removed) Data.Expected.Remove(path);
@@ -199,6 +200,8 @@ internal sealed class WorkflowSession : IDisposable
             Data.TagResults[Data.TagCurrent] = new(Data.TagCurrent, ConversionStatus.Succeeded, outputs, "Tags verified and published.");
         Save();
     }
+    /// <summary>Resolves the attached transaction and records its publication before deleting disposable files.</summary>
+    /// <remarks>Uses the workflow's saved state; failures leave its workspace available for a later recovery attempt.</remarks>
     internal void RecoverTransaction()
     {
         if (Data.Workspace == null || !Directory.Exists(Data.Workspace)) return;

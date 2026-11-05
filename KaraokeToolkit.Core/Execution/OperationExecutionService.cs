@@ -14,6 +14,7 @@ public sealed record ExecutionResult(CompletionReport Report, int Found, bool Ha
     public IReadOnlyList<TaggingPreview>? TagPreview { get; init; }
 }
 
+/// <summary>Executes a typed operation without requiring a desktop UI or reading its preferences.</summary>
 public interface IOperationExecutor
 {
     Task<ExecutionResult> ExecuteAsync(OperationRequest request, IProgress<ConversionProgress>? progress, CancellationToken token);
@@ -25,6 +26,9 @@ public sealed partial class OperationExecutionService(RecoveryStore? recovery = 
 {
     private readonly RecoveryStore recovery = recovery ?? new();
 
+    /// <summary>Validates unattended policy and dispatches a request to its Core processing engine.</summary>
+    /// <remarks>Rejects Ask and unsupported unattended operations. Results contain operation findings and
+    /// per-item failures; invalid requests and blocked recovery can throw before execution begins.</remarks>
     public async Task<ExecutionResult> ExecuteAsync(OperationRequest request, IProgress<ConversionProgress>? progress = null, CancellationToken token = default)
     {
         var operation = OperationCatalog.Get(request.OperationId);
@@ -113,6 +117,8 @@ public sealed partial class OperationExecutionService(RecoveryStore? recovery = 
             : recovery.Find();
     }
 
+    /// <summary>Resumes the saved conversion, tagging workflow or unattended recipe identified by a journal.</summary>
+    /// <remarks>Uses persisted settings and progress rather than rebuilding a request from current preferences.</remarks>
     public async Task<ExecutionResult> ResumeAsync(string journal, IProgress<ConversionProgress>? progress = null, CancellationToken token = default)
     {
         string full = Path.GetFullPath(journal);

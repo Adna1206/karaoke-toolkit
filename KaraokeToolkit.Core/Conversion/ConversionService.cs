@@ -17,6 +17,8 @@ public sealed class ConversionService
     private readonly RecoveryStore recovery;
     public ConversionService(RecoveryStore? recovery = null) => this.recovery = recovery ?? new();
 
+    /// <summary>Resolves pending publication and continues a conversion using its saved request and source plan.</summary>
+    /// <remarks>Completed groups remain committed. Recovery validation failures propagate to the caller.</remarks>
     public Task<ConversionResult> ResumeAsync(RecoveryJob job, IProgress<ConversionProgress>? progress = null,
         CancellationToken cancellationToken = default,
         Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolveConflict = null)
@@ -30,6 +32,9 @@ public sealed class ConversionService
             return await RunCoreAsync(run.Data.Request, run.Data.Policy, progress, cancellationToken, resolveConflict, run, run.Data.ValidateBeforeConversion);
         }, CancellationToken.None);
 
+    /// <summary>Converts selected source groups through verified staging and durable per-group checkpoints.</summary>
+    /// <remarks>Cancellation preserves previously published groups. Per-source outcomes are reported in the result;
+    /// request/preflight failures can throw. Ask requires a conflict resolver when an overwrite decision arises.</remarks>
     public Task<ConversionResult> RunAsync(ConversionRequest request,
         OverwritePolicy overwrite = OverwritePolicy.Fail, IProgress<ConversionProgress>? progress = null,
         CancellationToken cancellationToken = default,

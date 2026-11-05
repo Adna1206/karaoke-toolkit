@@ -4,6 +4,8 @@ using KaraokeToolkit.Core.Recovery;
 
 namespace KaraokeToolkit.Tests.Recovery;
 
+/// <summary>Checks disposable-file cleanup, retained recovery state and protection of files outside staging.</summary>
+/// <remarks>Open-handle deletion failures use Windows semantics; ordinary read-only cleanup is portable.</remarks>
 public class TransactionCleanupTests
 {
     [Fact]
@@ -54,6 +56,9 @@ public class TransactionCleanupTests
         Assert.True((File.GetAttributes(source) & FileAttributes.ReadOnly) != 0);
     }
 
+    /// <summary>Blocks staging cleanup and proves its owner stays resumable until the handle is released.</summary>
+    /// <param name="committed">True locks an original backup after publication; false locks an unpublished staged input.</param>
+    /// <remarks>Windows denies deletion through this handle; Unix permits unlinking open files, so this scenario returns there.</remarks>
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

@@ -19,6 +19,9 @@ public sealed class RecoveryStore
     public RecoveryStore(string? indexDirectory = null) => IndexDirectory = indexDirectory ?? Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "KaraokeToolkit", "Recovery");
 
+    /// <summary>Discovers unfinished jobs through the startup index or an explicitly supplied folder scope.</summary>
+    /// <remarks>Excludes jobs whose leases are held and folds child conversions into their owning workflow.
+    /// Discovery does not resume publication or sweep orphan transaction backups.</remarks>
     public IReadOnlyList<RecoveryJob> Find(string? folder = null, bool recurse = true)
     {
         var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -328,6 +331,8 @@ internal sealed class RunSession : IDisposable
         if (Data.Workspace != null && Directory.Exists(Data.Workspace))
             throw new IOException("Recovery required. Publication or transaction cleanup is incomplete. Any published outputs remain in place. Files retained at " + Data.Workspace);
     }
+    /// <summary>Reconciles the attached transaction, saves any missing success receipt, then removes disposable staging.</summary>
+    /// <remarks>Cleanup failure retains the workspace reference so the owner remains resumable.</remarks>
     internal void RecoverPending()
     {
         if (Data.Workspace == null || !Directory.Exists(Data.Workspace))

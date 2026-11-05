@@ -9,6 +9,8 @@ using Action = KaraokeToolkit.Core.Execution.OperationId;
 
 namespace KaraokeToolkit.Tests.Recovery;
 
+/// <summary>Verifies durable recipe/tagging ownership, saved plans and restart behaviour across interrupted steps.</summary>
+/// <remarks>Process cases stop at worker-signalled boundaries; lock cases exercise Windows sharing semantics.</remarks>
 public class WorkflowRecoveryTests
 {
     [Fact]
@@ -102,6 +104,7 @@ public class WorkflowRecoveryTests
         Assert.Equal("unchanged", File.ReadAllText(source));
     }
 
+    /// <summary>Kills the worker at its requested signalled boundary, then waits for its recovery lease to become available.</summary>
     private static async Task Crash(string mode, string folder, string index)
     {
         var start = new ProcessStartInfo("dotnet") { UseShellExecute = false, CreateNoWindow = true };
@@ -123,6 +126,9 @@ public class WorkflowRecoveryTests
         finally { if (!child.HasExited) { child.Kill(true); await child.WaitForExitAsync(); } }
     }
 
+    /// <summary>Resumes a killed two-step recipe through its parent checkpoint without offering its child conversion separately.</summary>
+    /// <param name="mode">Crash boundary: between steps or inside the first conversion.</param>
+    /// <param name="completed">Number of recipe steps durably completed before termination.</param>
     [Theory]
     [InlineData("between", 1)]
     [InlineData("conversion", 0)]
@@ -145,6 +151,7 @@ public class WorkflowRecoveryTests
         Assert.Empty(store.Find()); Assert.Empty(Directory.GetDirectories(folder, ".karaoke-job-*"));
     }
 
+    /// <summary>Defers a discovered tagging job, then resumes its frozen preview without rewriting its completed file.</summary>
     [Fact]
     public async Task StartupTagRecoveryUsesSavedPreviewSkipsFinishedFileAndSupportsLater()
     {
@@ -214,6 +221,7 @@ public class WorkflowRecoveryTests
         Assert.Equal(hash, FileTransaction.Hash(audio)); Assert.Single(store.Find()); Assert.False(File.Exists(Path.Combine(folder, "song.zip")));
     }
 
+    /// <summary>Resumes an interrupted flatten using frozen moves so the changed layout cannot trigger an extra flattening pass.</summary>
     [Fact]
     public async Task FlattenCrashUsesOriginalPlanInsteadOfFlatteningAnotherLayer()
     {
@@ -229,6 +237,7 @@ public class WorkflowRecoveryTests
         Assert.Equal(2, result.Steps.Count); Assert.Empty(store.Find());
     }
 
+    /// <summary>Completes a move interrupted between paired files before passing their final locations to the next step.</summary>
     [Fact]
     public async Task HalfMovedPairIsFinishedAndPassedToRemainingStep()
     {

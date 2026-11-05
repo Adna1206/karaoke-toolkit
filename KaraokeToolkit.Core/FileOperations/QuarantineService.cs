@@ -17,6 +17,8 @@ internal sealed class QuarantineManifest
 /// <summary>Explicit, reversible moves. Each source group has a journal before the first rename.</summary>
 public sealed class QuarantineService
 {
+    /// <summary>Verifies quarantined content and unoccupied restore destinations without moving files.</summary>
+    /// <returns>The original paths that restoration would recreate; this snapshot does not reserve them.</returns>
     public IReadOnlyList<string> PreviewRestore(string manifestPath)
     {
         RunSession.CheckPlainPath(manifestPath);
@@ -29,6 +31,9 @@ public sealed class QuarantineService
         }
         return paths.Select(p => p.Original).ToArray();
     }
+    /// <summary>Moves eligible validated groups into Damaged folders with hash-checked restoration manifests.</summary>
+    /// <remarks>Cancellation is observed between groups. Group IO failures become results after attempted
+    /// restoration; completed groups remain quarantined. Existing destination files are never overwritten.</remarks>
     public Task<IReadOnlyList<QuarantineResult>> MoveAsync(IEnumerable<ValidationFinding> selection, CancellationToken token = default)
         => Task.Run<IReadOnlyList<QuarantineResult>>(() =>
         {
@@ -85,6 +90,8 @@ public sealed class QuarantineService
             return results;
         }, CancellationToken.None);
 
+    /// <summary>Restores manifest-owned files after checking hashes and refusing occupied original paths.</summary>
+    /// <remarks>Recognizes already restored entries so interrupted restoration can be retried.</remarks>
     public Task RestoreAsync(string manifestPath) => Task.Run(() =>
     {
         RunSession.CheckPlainPath(manifestPath);

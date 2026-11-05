@@ -12,6 +12,7 @@ internal sealed class TransactionJournal
     public RecoveryBackup[] Backups { get; set; } = [];
 }
 
+/// <summary>Reconciles journaled file-group publication or rollback against recorded content hashes.</summary>
 internal static class FileTransactionRecovery
 {
     // Journals contain only leaf names. Never trust paths supplied by a journal.
@@ -22,6 +23,10 @@ internal static class FileTransactionRecovery
         return name;
     }
 
+    /// <summary>Finishes interrupted publication, or resumes rollback when its journal requests it.</summary>
+    /// <returns>Verified published paths, or null for interrupted staging or a rolled-back group.</returns>
+    /// <remarks>Retains the workspace for owner receipts and subsequent cleanup. Repeated recovery is supported;
+    /// edited files or unsafe journal paths block recovery rather than being overwritten.</remarks>
     internal static IReadOnlyList<string>? Recover(string workspace)
     {
         RunSession.CheckPlainPath(workspace);
@@ -116,6 +121,9 @@ internal static class FileTransactionRecovery
         return journal.Outputs.Select(x => Path.Combine(folder, x.Name)).ToArray();
     }
 
+    /// <summary>Restores verified originals and removes verified new outputs, recording restartable rollback progress.</summary>
+    /// <remarks>Preflights the group before moving files; unexpected content blocks restoration.
+    /// Leaves the journal and workspace for the caller to retain or clean.</remarks>
     internal static void Rollback(string workspace, TransactionJournal journal)
     {
         string folder = Path.GetDirectoryName(workspace)!;

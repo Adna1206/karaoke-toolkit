@@ -9,6 +9,7 @@ using ModelContextProtocol.Protocol;
 
 namespace KaraokeToolkit.Tests.Mcp;
 
+/// <summary>Checks MCP exposure and write policy with fakes, plus schemas, reports and recovery through real stdio children.</summary>
 public class McpTests
 {
     private sealed class FakeExecutor : IOperationExecutor
@@ -116,6 +117,8 @@ public class McpTests
         Assert.Equal(1, json.RootElement.GetProperty("found").GetInt32());
     }
 
+    /// <summary>Reads protocol stdout directly to verify ordered progress and final completion before the tool response.</summary>
+    /// <remarks>SDK client callbacks can run concurrently, so callback arrival order cannot prove wire order.</remarks>
     [Fact]
     public async Task StdioProgressIsMonotonicOnTheWireBeforeTheToolResponse()
     {

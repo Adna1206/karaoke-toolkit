@@ -7,6 +7,13 @@ namespace KaraokeToolkit.Core.Recovery;
 /// <summary>Deletes resolved transaction or completed checkpoint workspaces, journal last.</summary>
 internal static class RecoveryWorkspaceCleanup
 {
+    /// <summary>Deletes an owner-resolved workspace with bounded retries, removing its journal last.</summary>
+    /// <param name="workspace">A generated transaction or checkpoint directory whose contents are disposable.</param>
+    /// <param name="journalName">The recovery, run or workflow journal matching the directory prefix.</param>
+    /// <remarks>The caller must establish that publication is resolved or the checkpoint is finished.
+    /// Preflights links before clearing read-only attributes inside staging. Windows cloud placeholders
+    /// are allowed; other linked paths are refused. A failed final removal attempts journal restoration.</remarks>
+    /// <exception cref="IOException">Cleanup is unsafe or incomplete; the message identifies retained files.</exception>
     internal static void Delete(string workspace, string journalName = "recovery.json")
     {
         workspace = Path.GetFullPath(workspace);

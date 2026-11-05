@@ -14,6 +14,8 @@ public static class InputSelection
     public static readonly string[] Extensions = [".zip", ".bin", ".cdg", ".mp3", ".ogg", ".wav", ".flac", ".ape", ".wma", ".aif", ".aiff", ".m4a", ".wv"];
     internal static readonly StringComparer Paths = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
 
+    /// <summary>Returns distinct absolute inputs after rejecting missing, unsupported or protected paths.</summary>
+    /// <remarks>Uses platform-specific path comparison; does not expand folders or modify files.</remarks>
     public static string[] Normalize(IEnumerable<string> paths)
     {
         var selected = paths.Select(p => Path.TrimEndingDirectorySeparator(Path.GetFullPath(p))).Distinct(Paths).ToArray();
@@ -34,6 +36,9 @@ public static class InputSelection
 
     internal static bool IsExcludedFolder(string name) => name.StartsWith(".karaoke-job-", StringComparison.OrdinalIgnoreCase) || name.Equals("Damaged", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>Builds per-folder source groups for an operation, expanding folders within the requested scope.</summary>
+    /// <remarks>Explicit audio/CDG selections map to their source group rather than selecting every sibling.
+    /// Folder-only maintenance rejects individual file selections. Planning does not publish outputs.</remarks>
     public static IReadOnlyList<SelectionBatch> Plan(OperationId action, IEnumerable<string> paths, bool recurse)
     {
         string[] selected = Normalize(paths);

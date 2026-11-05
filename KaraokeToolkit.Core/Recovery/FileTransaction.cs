@@ -51,6 +51,8 @@ internal sealed class FileTransaction : IDisposable
         using var file = File.OpenRead(path);
         return Convert.ToHexString(SHA256.HashData(file));
     }
+    /// <summary>Copies an input into staging and records its verified hash for publication checks.</summary>
+    /// <returns>The staged path; the original remains unchanged.</returns>
     internal async Task<string> CopyInputAsync(string path, CancellationToken token)
     {
         if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
@@ -75,6 +77,11 @@ internal sealed class FileTransaction : IDisposable
             observedTargets[target] = File.Exists(target) ? Hash(target) : null;
         }
     }
+    /// <summary>Publishes staged outputs and removes selected sources as one recoverable file group.</summary>
+    /// <remarks>Ask must be resolved beforehand. Inputs and observed targets are checked before moves;
+    /// failed publication attempts rollback. Cancellation is checked before publication, not between moves.
+    /// Durable owner receipts precede cleanup; this is not a power-loss-atomic filesystem operation.</remarks>
+    /// <returns>Published destination paths.</returns>
     internal IReadOnlyList<string> Commit(IReadOnlyList<string> outputs, IReadOnlyList<string> removeSources,
         OverwritePolicy policy, CancellationToken token)
     {
@@ -159,6 +166,9 @@ internal sealed class FileTransaction : IDisposable
             throw;
         }
     }
+    /// <summary>Removes resolved staging and releases the folder lease, retaining unresolved recovery files.</summary>
+    /// <exception cref="IOException">Publication requires recovery or disposable files could not be cleaned.
+    /// Already published outputs may still exist when cleanup fails.</exception>
     public void Dispose()
     {
         if (disposed) return;

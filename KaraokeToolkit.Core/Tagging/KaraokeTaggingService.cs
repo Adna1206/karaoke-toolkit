@@ -58,6 +58,9 @@ public sealed class KaraokeTaggingService(RecoveryStore? recovery = null)
         return paths;
     }
 
+    /// <summary>Parses filename-derived tags and reads input fingerprints without modifying media.</summary>
+    /// <remarks>Returns applicability/errors per candidate. The preview is a snapshot, not a reservation;
+    /// application must still verify that its inputs have not changed.</remarks>
     public Task<IReadOnlyList<TaggingPreview>> PreviewAsync(IEnumerable<string> inputs, string pattern, bool recurse, CancellationToken token = default)
         => Task.Run(async () =>
         {
@@ -112,6 +115,9 @@ public sealed class KaraokeTaggingService(RecoveryStore? recovery = null)
             return (IReadOnlyList<TaggingPreview>)result;
         }, token);
 
+    /// <summary>Checkpoints the supplied preview and publishes verified tag updates from staged copies.</summary>
+    /// <remarks>Checks saved fingerprints before writing and verifies media payload preservation.
+    /// Completed files remain published if a later file fails or the run is cancelled.</remarks>
     public Task<ConversionResult> ApplyAsync(IReadOnlyList<TaggingPreview> preview, TaggingOptions options,
         ConversionOptions processing, IProgress<ConversionProgress>? progress = null, CancellationToken token = default)
         => Task.Run(async () =>
@@ -129,6 +135,7 @@ public sealed class KaraokeTaggingService(RecoveryStore? recovery = null)
             return await ApplyCoreAsync(session, progress, token);
         });
 
+    /// <summary>Resolves pending tag publication and continues the saved preview, retaining completed file results.</summary>
     public Task<ConversionResult> ResumeAsync(RecoveryJob job, IProgress<ConversionProgress>? progress = null, CancellationToken token = default)
         => Task.Run(async () =>
         {

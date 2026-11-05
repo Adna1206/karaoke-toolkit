@@ -4,10 +4,23 @@ Snapshot: 2026-11-05, Africa/Johannesburg. Verify Git/files before editing.
 
 ## Checkout and release
 
-- Branch `master`, current base `060c5d1`; shared version **2026.11.10**.
-  Cleanup code/tests and documentation below are included in the current commit,
-  with commit/push requested. No version bump requested for this follow-up.
+- Branch `master`, current base `cadf89e`; shared version **2026.11.10**.
+  Cleanup changes are committed and pushed. The documentation-only summary pass
+  below is included in this commit for the requested push; no version bump requested.
   No package publish or installation requested.
+
+## Contract and test summaries
+
+- Added XML summaries/remarks to transaction publication, rollback, cleanup,
+  conversion/recipe/tagging execution and recovery, selection/planning, quarantine,
+  disc capture and main-screen processing lifetimes. Focus is side effects,
+  partial completion, ownership and non-obvious return/failure behaviour.
+- Added suite/helper and scenario summaries for recovery boundaries, process-crash
+  handshakes, cleanup locks, queued UI progress, MCP wire ordering and audio fidelity.
+  Simple tests/getters remain concise; no processing code or assertions changed.
+- Verification: comment-only C# diff and XML syntax checks; no runtime tests needed
+  for this documentation pass. The prior cleanup suite result below remains dated
+  evidence, not a new test run.
 
 ## Workspace cleanup and naming backlog
 

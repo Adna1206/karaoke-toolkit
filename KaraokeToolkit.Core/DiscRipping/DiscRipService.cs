@@ -11,6 +11,7 @@ public sealed record DiscRipRequest(OpticalDisc Disc, int[] Tracks, string Desti
 /// <summary>Reads selected tracks into disposable staging, verifies them, then publishes each track atomically.</summary>
 public sealed class DiscRipService(IDiscReader reader)
 {
+    /// <summary>Calculates a track's destination paths without creating files or reserving their names.</summary>
     public static IReadOnlyList<string> GetOutputPaths(DiscRipRequest request, int track)
     {
         string stem = Path.Combine(Path.GetFullPath(request.Destination), $"{request.DiscName}-{track:00}");
@@ -22,6 +23,9 @@ public sealed class DiscRipService(IDiscReader reader)
             _ => throw new ArgumentException("Invalid rip format.")
         };
     }
+    /// <summary>Captures, verifies and publishes selected tracks, retaining tracks already completed on cancellation.</summary>
+    /// <remarks>Physical capture cannot automatically resume without rechecking the disc.
+    /// Multi-file track publication uses the transaction journal and rollback safeguards.</remarks>
     public async Task<ConversionResult> RunAsync(DiscRipRequest request, OverwritePolicy policy,
         IProgress<ConversionProgress>? progress = null, CancellationToken token = default,
         Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolve = null)

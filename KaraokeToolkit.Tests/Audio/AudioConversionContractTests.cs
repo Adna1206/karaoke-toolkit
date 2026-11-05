@@ -7,6 +7,8 @@ using Action = KaraokeToolkit.Core.Execution.OperationId;
 
 namespace KaraokeToolkit.Tests.Audio;
 
+/// <summary>Checks audio timing/fidelity and exact graphics preservation using deterministic synthetic media.</summary>
+/// <remarks>Lossy encoding uses duration/alignment tolerances; BIN packing is checked against decoded PCM bytes.</remarks>
 public class AudioConversionContractTests
 {
     private static ConversionOptions Options(AudioEncoder encoder, int bitrate = 128) => new()
@@ -15,6 +17,9 @@ public class AudioConversionContractTests
         AutoCreateCueText = false, RenameBins = false, AutoRenameZip = false
     };
 
+    /// <summary>Checks lossy BIN extraction against source duration and an aligned sample window, with exact CDG bytes.</summary>
+    /// <remarks>Allows encoder padding in decoded length and requires sample correlation above .98;
+    /// this does not claim byte-identical lossy audio or a complete perceptual quality assessment.</remarks>
     [Theory]
     [InlineData(AudioEncoder.MP3, 128, ".mp3")]
     [InlineData(AudioEncoder.MP3, 192, ".mp3")]
@@ -43,6 +48,8 @@ public class AudioConversionContractTests
         Assert.True(dot / Math.Sqrt(actualEnergy * expectedEnergy) > .98, "Audio must remain aligned to the source timeline.");
     }
 
+    /// <summary>Compares packed BIN payloads to decoded compressed input samples and original graphics, including padding.</summary>
+    /// <remarks>The reference is decoded input PCM, not the pre-encoding waveform; originals must also remain present.</remarks>
     [Theory]
     [InlineData(AudioEncoder.MP3, ".mp3")]
     [InlineData(AudioEncoder.OGG, ".ogg")]

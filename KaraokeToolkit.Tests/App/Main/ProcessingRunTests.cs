@@ -3,8 +3,10 @@ using KaraokeToolkit.Core.Conversion;
 
 namespace KaraokeToolkit.Tests.App.Main;
 
+/// <summary>Checks run-scoped cancellation and suppresses delayed progress after completion or replacement.</summary>
 public class ProcessingRunTests
 {
+    /// <summary>Holds posted callbacks until explicitly drained to reproduce late UI progress deterministically.</summary>
     private sealed class QueuedContext : SynchronizationContext
     {
         private readonly Queue<(SendOrPostCallback Callback, object? State)> pending = new();

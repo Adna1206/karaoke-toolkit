@@ -70,6 +70,9 @@ public sealed class RecipeRunner(IRecipeStepExecutor? executor = null, RecoveryS
         return data.Recipe!;
     }
 
+    /// <summary>Validates the pipeline and checkpoints its input scope before running steps in sequence.</summary>
+    /// <remarks>Failure or cancellation stops later steps without undoing completed changes.
+    /// Primary outputs feed the next step; folder maintenance retains the selected root scope.</remarks>
     public Task<RecipeRunResult> RunAsync(RecipeDefinition recipe, IEnumerable<string> inputs,
         IProgress<ConversionProgress>? progress = null, CancellationToken token = default, Func<string, string>? operationLabel = null)
         => Task.Run(async () =>
@@ -83,6 +86,8 @@ public sealed class RecipeRunner(IRecipeStepExecutor? executor = null, RecoveryS
         return await RunCoreAsync(session, progress, token, operationLabel);
     });
 
+    /// <summary>Continues the saved pipeline and input plan, reconciling interrupted work before later steps.</summary>
+    /// <remarks>The persisted recipe is authoritative; a current recipe-library entry is not required.</remarks>
     public Task<RecipeRunResult> ResumeAsync(RecoveryJob job, IProgress<ConversionProgress>? progress = null,
         CancellationToken token = default, Func<string, string>? operationLabel = null)
         => Task.Run(async () =>

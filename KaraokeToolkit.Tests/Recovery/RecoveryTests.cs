@@ -8,8 +8,13 @@ using Action = KaraokeToolkit.Core.Execution.OperationId;
 
 namespace KaraokeToolkit.Tests.Recovery;
 
+/// <summary>Exercises interrupted transaction states, durable conversion plans and recovery discovery.</summary>
+/// <remarks>Most cases construct exact journal/file states; the process test separately kills a real worker.
+/// Reconstructed states verify recovery contracts rather than simulating physical power loss.</remarks>
 public class RecoveryTests
 {
+    /// <summary>Kills a worker after staging with one prior failure recorded, then resumes only unfinished work.</summary>
+    /// <remarks>The ready-file handshake establishes the crash boundary; active leases hide the job until exit.</remarks>
     [Fact]
     public async Task KilledConversionProcessIsDiscoveredAndResumed()
     {
@@ -46,6 +51,7 @@ public class RecoveryTests
         finally { if (!child.HasExited) { child.Kill(true); await child.WaitForExitAsync(); } }
     }
 
+    /// <summary>Creates a publishing journal, original ZIP/graphics and staged replacement audio/graphics before any moves.</summary>
     private static (string Folder, string Workspace, TransactionJournal Journal) Stage()
     {
         string folder = TestMediaFixture.NewFolder();
@@ -69,6 +75,9 @@ public class RecoveryTests
             File.Move(Path.Combine(folder, old.Name), Path.Combine(workspace, "backups", old.Slot));
     }
 
+    /// <summary>Completes publication from each represented move boundary and checks that repeating recovery is safe.</summary>
+    /// <param name="backups">Number of originals already moved into their journaled backup slots.</param>
+    /// <param name="outputs">Number of staged outputs already moved into their published paths.</param>
     [Theory]
     [InlineData(0, 0)]
     [InlineData(1, 0)]
@@ -88,6 +97,7 @@ public class RecoveryTests
         Assert.False(File.Exists(Path.Combine(folder, "source.zip")));
         Assert.Equal("source", File.ReadAllText(Path.Combine(workspace, "backups", "1")));
     }
+    /// <summary>Edits one staged, backed-up, published or unexpected file and requires recovery to leave the entire tree unchanged.</summary>
     [Theory]
     [InlineData("staged")]
     [InlineData("backup")]
@@ -122,6 +132,7 @@ public class RecoveryTests
         Assert.Throws<IOException>(() => FileTransactionRecovery.Recover(workspace));
         Assert.Equal(before, Snapshot(folder));
     }
+    /// <summary>Reconstructs rollback interrupted after removing one new output; repeated recovery must restore originals.</summary>
     [Fact]
     public void InterruptedRollbackRestoresOriginalsIdempotently()
     {

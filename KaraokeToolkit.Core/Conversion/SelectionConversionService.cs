@@ -16,6 +16,8 @@ public sealed class SelectionConversionService(RecoveryStore? recovery = null)
 {
     private readonly RecoveryStore recovery = recovery ?? new();
 
+    /// <summary>Plans the selected source groups and prepares folder checkpoints before running conversions.</summary>
+    /// <remarks>Aggregates per-folder outcomes and retry requests while preserving completed work on cancellation.</remarks>
     public async Task<ConversionResult> RunAsync(ConversionRetry request, IProgress<ConversionProgress>? progress = null,
         CancellationToken token = default, Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolveConflict = null)
     {

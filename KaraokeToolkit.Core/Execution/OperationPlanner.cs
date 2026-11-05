@@ -12,6 +12,8 @@ namespace KaraokeToolkit.Core.Execution;
 /// <summary>Read-only scope/output planning. A plan is a snapshot, not an integrity or encoding guarantee.</summary>
 public sealed class OperationPlanner
 {
+    /// <summary>Inspects operation scope, proposed destinations and conflicts without publishing changes.</summary>
+    /// <remarks>Reads current inputs; it neither reserves paths nor guarantees that later execution will succeed.</remarks>
     public async Task<ExecutionResult> PlanAsync(OperationRequest request, CancellationToken token = default)
     {
         var operation = OperationCatalog.Get(request.OperationId);
