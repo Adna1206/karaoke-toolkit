@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:shared="using:KaraokeToolkit.App.Shared" xmlns:core="using:KaraokeToolkit.Core"
         xmlns:services="using:KaraokeToolkit.App.Services" xmlns:vm="using:KaraokeToolkit.App.Features.Settings"
+        xmlns:integrations="using:KaraokeToolkit.App.Features.Settings.Integrations"
         x:Class="KaraokeToolkit.App.Features.Settings.OptionsWindow" x:DataType="vm:OptionsViewModel"
         Title="{x:Static shared:WindowTitles.Settings}" Width="700" Height="640" MinWidth="660" MinHeight="540"
         WindowStartupLocation="CenterOwner">
@@ -129,6 +130,9 @@
                                    TextWrapping="Wrap" Opacity="0.7" ToolTip.Tip="{Binding Definitions.VideoContainer.Description}"/>
                     </StackPanel>
                 </ScrollViewer>
+            </TabItem>
+            <TabItem Header="Integrations">
+                <integrations:CliIntegrationView/>
             </TabItem>
         </TabControl>
         <TextBlock Grid.Row="2" Text="{Binding Error}" TextWrapping="Wrap"/>

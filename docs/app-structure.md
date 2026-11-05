@@ -7,6 +7,7 @@ directories, and views share their feature namespace with their view models.
 | --- | --- |
 | Features/Main | Main window, operation selection, favourites, progress and workflow coordination |
 | Features/Settings | Options window and view model, UI preferences, persistence and window layout |
+| Features/Settings/Integrations | CLI availability, shell-specific examples, clipboard actions and interactive terminal launching |
 | Features/About | About window, application credits and bundled licence notice presentation |
 | Features/Reports | Session report window and its view model |
 | Features/DiscRipping | Disc ripping window and its view model |

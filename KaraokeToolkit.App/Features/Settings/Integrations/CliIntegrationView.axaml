@@ -1,0 +1,57 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:KaraokeToolkit.App.Features.Settings.Integrations"
+             x:Class="KaraokeToolkit.App.Features.Settings.Integrations.CliIntegrationView"
+             x:DataType="vm:CliIntegrationViewModel">
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="0,20,12,20" Spacing="12">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                <TextBlock Text="Command Line" FontWeight="SemiBold" VerticalAlignment="Center"
+                           ToolTip.Tip="Use toolkit operations from a terminal or script. No background service or enable switch is needed."/>
+                <Button Grid.Column="1" Content="Open Terminal Here" Click="OpenTerminal_Click" IsEnabled="{Binding IsAvailable}"
+                        ToolTip.Tip="Open the system terminal in the application folder. No CLI command runs automatically."/>
+            </Grid>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                <TextBox Text="{Binding ExecutablePath, Mode=OneWay}" IsReadOnly="True"
+                         AutomationProperties.Name="CLI executable path" ToolTip.Tip="{Binding ExecutablePath}"/>
+                <Button Grid.Column="1" Content="Copy Path" Click="CopyPath_Click"
+                        ToolTip.Tip="Copy the full path to the CLI executable."/>
+            </Grid>
+            <TextBlock Text="{Binding Availability}" IsVisible="{Binding IsMissing}" TextWrapping="Wrap" FontSize="12" Opacity="0.7"/>
+
+            <TextBlock Text="Shell for copied commands" Margin="0,6,0,0"
+                       ToolTip.Tip="Choose the syntax of examples and setup instructions. This does not change the terminal opened by Open Terminal Here."/>
+            <ComboBox ItemsSource="{Binding Shells}" SelectedItem="{Binding Shell}" Width="260" HorizontalAlignment="Left"
+                      AutomationProperties.Name="Example shell"/>
+            <Expander Header="Command examples" HorizontalAlignment="Stretch">
+                <StackPanel Spacing="10" Margin="0,10,0,0">
+                    <ComboBox ItemsSource="{Binding Examples}" SelectedIndex="{Binding ExampleIndex}" Width="300" HorizontalAlignment="Left"
+                              AutomationProperties.Name="Example command"/>
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                        <TextBox Text="{Binding CommandText, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True"
+                                 MinHeight="64" MaxHeight="96" FontFamily="Consolas, Menlo, monospace" AutomationProperties.Name="CLI example command"/>
+                        <Button Grid.Column="1" Content="Copy Command" Click="CopyCommand_Click" VerticalAlignment="Top"
+                                ToolTip.Tip="Copy this example without running it."/>
+                    </Grid>
+                    <TextBlock Text="Replace &lt;karaoke-folder&gt; with your folder path." IsVisible="{Binding ExampleNeedsFolder}"
+                               TextWrapping="Wrap" FontSize="12" Opacity="0.7"/>
+                </StackPanel>
+            </Expander>
+            <Expander Header="Shell setup" HorizontalAlignment="Stretch">
+                <StackPanel Spacing="10" Margin="0,10,0,0">
+                    <TextBlock Text="Optional: enable completion and add the CLI to PATH for the selected shell." TextWrapping="Wrap"
+                               ToolTip.Tip="These commands apply to the current shell session when you run them. This panel does not change PATH or edit shell profiles."/>
+                    <TextBox Text="{Binding SetupText, Mode=OneWay}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap"
+                             MaxHeight="140" FontFamily="Consolas, Menlo, monospace" AutomationProperties.Name="Shell setup commands"/>
+                    <Button Content="Copy Setup Commands" Click="CopySetup_Click" HorizontalAlignment="Left"/>
+                    <TextBlock Text="Review before running. Save the generated scripts in your shell profile for future sessions."
+                               TextWrapping="Wrap" FontSize="12" Opacity="0.7"
+                               ToolTip.Tip="Setup uses this installation's path. Update it after moving the app or switching a versioned installation. Copying does not apply the setup."/>
+                </StackPanel>
+            </Expander>
+            <TextBlock Text="CLI commands use their own settings." TextWrapping="Wrap" FontSize="12" Opacity="0.7"
+                       ToolTip.Tip="Use command arguments or an options file. Desktop encoding preferences are not passed to the CLI. Copy and terminal actions take effect immediately without Apply; no background service is enabled."/>
+            <TextBlock Text="{Binding Status}" IsVisible="{Binding HasStatus}" TextWrapping="Wrap" FontSize="12"
+                       AutomationProperties.Name="CLI integration status"/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

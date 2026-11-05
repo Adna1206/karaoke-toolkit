@@ -127,7 +127,7 @@ public sealed class CliApplication(IOperationExecutor? executor = null, IDiscRea
           --recurse | --no-recurse      (default recurse)
           --cue-text | --no-cue-text    (default generate where applicable)
           --validate-inputs            Additional source validation
-          --encoder MP3|OGG|WMA|WAV|FLAC|AAC   --bitrate KBPS (default MP3, 128)
+          --encoder MP3|OGG|WMA|WAV|FLAC|AAC   --bitrate KBPS (default MP3, 320)
           --zip-algorithm Deflate|BZip2|LZMA   --zip-level 0..9 (default 5)
           --ignore-leading-the         Organize Files bucket rule
           Deflate is the default; legacy karaoke software generally prefers it.

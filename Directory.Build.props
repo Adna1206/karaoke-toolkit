@@ -7,7 +7,7 @@
   <!-- Shared release version: YEAR.MONTH.BUILD. Increment BUILD for each release
        within a month; start at 1 when changing YEAR.MONTH. No automatic date bump. -->
   <PropertyGroup Condition="'$(MSBuildProjectName)' == 'KaraokeToolkit.App' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Core' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Cli' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Tests'">
-    <Version>2026.11.4</Version>
+    <Version>2026.11.5</Version>
     <AssemblyVersion>$(Version).0</AssemblyVersion>
     <FileVersion>$(Version).0</FileVersion>
     <InformationalVersion>$(Version)</InformationalVersion>

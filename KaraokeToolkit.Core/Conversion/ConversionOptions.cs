@@ -8,9 +8,10 @@ namespace KaraokeToolkit.Core.Conversion;
 [JsonConverter(typeof(ConversionOptionsJsonConverter))]
 public sealed record ConversionOptions
 {
+    public const int DefaultAudioBitrate = 320;
     public bool ExperimentalDiscRipping { get; init; }
     public string CdrdaoExecutablePath { get; init; } = "";
-    public int AudioBitrate { get; init; } = 128;
+    public int AudioBitrate { get; init; } = DefaultAudioBitrate;
     public AudioEncoder AudioEncoder { get; init; } = AudioEncoder.MP3;
     public bool AutoCreateCueText { get; init; } = true;
     public bool AutoRenameZip { get; init; } = true;

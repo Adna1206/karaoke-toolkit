@@ -1,5 +1,15 @@
 # Planned features
 
+- [ ] **Revamp the entire Settings menu** — revisit navigation/categories, grouping,
+  labels, spacing and help across every tab as one coherent design. Reduce persistent
+  explanatory text, use progressive disclosure for advanced features, and keep
+  controls beside the content they affect. Include CLI integration: place shell
+  selection within the relevant command/example/setup section rather than as a
+  disconnected shared control. Review keyboard navigation, accessibility, small-window
+  layouts and consistency of Apply/OK/Cancel versus immediate actions. Preserve
+  existing preferences and processing behaviour. Current Settings work is stopped;
+  resume this redesign only when requested.
+
 - [ ] **macOS packaging via GitHub Actions** — consider macOS runners to publish
   Intel and Apple Silicon builds and run Velopack's macOS packaging tools, with
   downloadable workflow artifacts. Review native dependency availability and

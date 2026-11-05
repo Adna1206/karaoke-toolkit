@@ -86,6 +86,7 @@ public class CliTests
     {
         var parsed = CliArguments.Parse(["tag", "--pattern", "%ARTIST% - %TITLE%", "--fill-empty-only", "--preserve-comments", "--preserve-other-tags", "--", "--help"]);
         Assert.Equal("--help", Assert.Single(parsed.Inputs)); Assert.False(parsed.Request!.Options.DeleteOldFiles);
+        Assert.Equal(320, parsed.Request.Options.AudioBitrate);
         Assert.Equal(OverwritePolicy.Fail, parsed.Request.OverwritePolicy); Assert.True(parsed.Request.Tagging.FillEmptyOnly);
         Assert.False(parsed.Request.Tagging.ClearComments); Assert.False(parsed.Request.Tagging.ClearOtherDescriptiveTags);
         Assert.Equal("%ARTIST% - %TITLE%", parsed.Request.TaggingPattern);

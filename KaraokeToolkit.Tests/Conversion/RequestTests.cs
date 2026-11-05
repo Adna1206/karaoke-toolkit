@@ -34,10 +34,10 @@ public class RequestTests
         new ConversionRequest(Action.BinToZip, ".", new() { AudioEncoder = encoder, AudioBitrate = 0 }).Validate();
 
     [Fact]
-    public void DefaultsMatchOriginalOptions()
+    public void DefaultsMatchCurrentEncodingPreferences()
     {
         var o = new ConversionOptions();
-        Assert.Equal(128, o.AudioBitrate); Assert.Equal(AudioEncoder.MP3, o.AudioEncoder);
+        Assert.Equal(320, o.AudioBitrate); Assert.Equal(AudioEncoder.MP3, o.AudioEncoder);
         Assert.True(o.DeleteOldFiles); Assert.True(o.RecurseFolders); Assert.True(o.AutoCreateCueText);
         Assert.True(o.AutoRenameZip); Assert.True(o.RenameBins); Assert.Equal(ZipCompression.Balanced, o.ZipCompression);
         Assert.Equal("DISC-TRACK ARTIST - TITLE", o.NamingFormat);

@@ -14,7 +14,7 @@ public class SettingsTests
     public void MissingFileUsesDocumentedDefaults()
     {
         var actual = new SettingsStore(FilePath()).Load();
-        Assert.Equal(128, actual.AudioBitrate);
+        Assert.Equal(320, actual.AudioBitrate);
         Assert.Equal(AudioEncoder.MP3, actual.AudioEncoder);
         Assert.True(actual.AutoCreateCueText); Assert.True(actual.AutoRenameZip);
         Assert.True(actual.DeleteOldFiles); Assert.True(actual.RecurseFolders); Assert.True(actual.RenameBins);
@@ -80,7 +80,7 @@ public class SettingsTests
     }
 
     [Theory]
-    [InlineData("", "", "", true, true, 128)]
+    [InlineData("", "", "", true, true, 320)]
     [InlineData("0", "-1", "256", false, true, 256)]
     [InlineData("False", "True", "96", false, true, 96)]
     public void PartialEmptyAndVbBooleanValuesHaveExplicitExpectedValues(string recurse, string delete,

@@ -75,7 +75,7 @@ override the file. Unknown/repeated properties are rejected. Omitted deletion
 preferences still default to keeping originals. ZIP compression accepts 0-9 as a
 number, numeric string or current enum name (`Balanced` means level 5).
 
-Defaults are MP3 at 128 kbps, Deflate at level 5, recursion and CUE/TXT generation
+Defaults are MP3 at 320 kbps, Deflate at level 5, recursion and CUE/TXT generation
 enabled where applicable. Optional input validation is off; the engines retain
 their required output checks. Shared flags apply only where the engine uses them:
 extracting a ZIP does not re-encode its audio. Video flags require
@@ -194,6 +194,19 @@ external installation or explicit executable path. CLI never requests elevation.
 Physical drive/subchannel compatibility still requires hardware testing.
 
 ## Help and shell integration
+
+In the desktop app, **Settings → Integrations → Command Line** shows the packaged
+CLI path and availability, Copy Path, Open Terminal Here, and copyable examples for
+PowerShell/Bash/Zsh. The shell selector changes example syntax; the terminal button
+opens the platform's terminal in the app folder without running an operation.
+The panel also supplies opt-in completion/PATH setup instructions. Its copy/launch
+actions are immediate and do not need Apply. Development builds with no CLI beside
+App explain that the published package includes it. No processing preferences,
+shell profiles or PATH values are changed, and no CLI background service is started.
+MCP remains future work rather than an enabled integration in this panel.
+The compact layout keeps the executable and terminal action together, uses one shell
+selector for all copied commands, and initially collapses Command examples and Shell
+setup. Brief hints appear only when relevant; longer explanations live in tooltips.
 
 `help OPERATION` and `run OPERATION --help` show operation-specific guidance.
 `help recipe`, `help disc-rip` and other dedicated-command topics show their syntax.

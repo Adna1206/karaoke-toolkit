@@ -98,8 +98,8 @@ public class PreferenceTests
         new SettingsStore(path).Save(new ConversionOptions {AudioEncoder=AudioEncoder.OGG,AudioBitrate=224});
         var reopened=new MainViewModel(path);
         Assert.Equal(224,reopened.AudioBitrates.Ogg);
-        Assert.Equal(128,reopened.AudioBitrates.Mp3);
-        Assert.Equal(128,reopened.AudioBitrates.Wma);
-        Assert.Equal(128,reopened.AudioBitrates.Aac);
+        Assert.Equal(320,reopened.AudioBitrates.Mp3);
+        Assert.Equal(320,reopened.AudioBitrates.Wma);
+        Assert.Equal(320,reopened.AudioBitrates.Aac);
     }
 }

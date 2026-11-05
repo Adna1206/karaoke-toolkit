@@ -4,7 +4,11 @@ using KaraokeToolkit.Core.Conversion;
 namespace KaraokeToolkit.Core.Settings;
 
 /// <summary>Saved encoding bitrates for bitrate-controlled output codecs.</summary>
-public sealed record AudioBitratePreferences(int Mp3 = 128, int Ogg = 128, int Wma = 128, int Aac = 128)
+public sealed record AudioBitratePreferences(
+    int Mp3 = ConversionOptions.DefaultAudioBitrate,
+    int Ogg = ConversionOptions.DefaultAudioBitrate,
+    int Wma = ConversionOptions.DefaultAudioBitrate,
+    int Aac = ConversionOptions.DefaultAudioBitrate)
 {
     public int For(AudioEncoder encoder) => encoder switch
     {
