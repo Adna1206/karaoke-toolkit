@@ -48,6 +48,15 @@ through the existing main progress/report screen. See [recipes.md](recipes.md).
 The builder edits saved recipes only. Its library populates the home Recipes
 category and Favourites; input controls follow the selected recipe's first step.
 
+`ProcessingRun` owns cancellation and UI-dispatched progress for one processing
+run. Conversion/retry/recovery, validation, file operations, tagging and recipes
+use the same begin/end setup in `MainViewModel`. Progress is stopped before successful
+results are presented and always disposed before the UI becomes idle, so queued callbacks
+cannot overwrite a completed report or a subsequent run. Outcome text, reports,
+retry scopes and recovery discovery remain specific to each workflow. Tagging's
+configuration dialog, disc ripping and quarantine restoration retain their
+separate modal busy-state handling.
+
 The view locator resolves a feature's `*ViewModel` to its `*Window` in the same
 namespace. Window creation and operation execution use explicit routes. Test folders
 follow the corresponding Core responsibility or App feature; shared fixtures and

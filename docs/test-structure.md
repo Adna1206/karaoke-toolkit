@@ -23,6 +23,8 @@ format and workflow expectations using self-contained fixtures.
 - App: screen/view-model tests grouped by their App feature or shared responsibility.
 - Cli: parsing/settings, unattended policies, output/exit codes, executable processes and adapter integration.
 - Mcp: explicit exposure, access policy, safe options, protocol schemas and real stdio client calls.
+  Progress ordering is checked directly on stdio before the tool response; SDK client
+  notification callbacks may execute concurrently and do not establish wire order.
 - Benchmarks: opt-in FFmpeg measurements; never timing assertions in unit tests.
 - Support: TestMediaFixture, synchronous progress, artifact paths and controlled test-child entry point.
 

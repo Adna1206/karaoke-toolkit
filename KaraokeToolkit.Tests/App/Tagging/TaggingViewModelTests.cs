@@ -9,6 +9,34 @@ namespace KaraokeToolkit.Tests.App.Tagging;
 
 public class TaggingViewModelTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CancelledOrFailedTaggingDialogLeavesTheScreenUsable(bool fail)
+    {
+        string folder = TestMediaFixture.NewFolder();
+        var model = new MainViewModel(Path.Combine(TestMediaFixture.NewFolder(), "settings.xml"));
+        model.SelectedOperation = model.Operations.Single(operation => operation.IsTagging);
+        model.SetInputs([folder]);
+        model.ConfigureTaggingAsync = _ => fail
+            ? Task.FromException<TaggingRequest?>(new IOException("Dialog failed"))
+            : Task.FromResult<TaggingRequest?>(null);
+
+        await model.StartCommand.ExecuteAsync(null);
+
+        Assert.False(model.IsBusy);
+        Assert.False(model.IsRecoveryMode);
+        Assert.False(model.ShowProgress);
+        Assert.Null(model.LastReport);
+        Assert.True(model.CanStart);
+        if (fail) Assert.Contains("Dialog failed", model.Status);
+
+        model.SelectedOperation = model.Operations.Single(operation => operation.IsValidation);
+        await model.StartCommand.ExecuteAsync(null);
+        Assert.False(model.IsBusy);
+        Assert.Equal("Validation Report", model.LastReport!.ReportType);
+    }
+
     [Fact]
     public void PatternHistoryIsUniquePersistentAndSurvivesOtherSettingsSaves()
     {

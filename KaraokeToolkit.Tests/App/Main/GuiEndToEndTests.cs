@@ -2,6 +2,7 @@ using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.App.Features.Settings;
 using KaraokeToolkit.App.Features.Main;
 using KaraokeToolkit.Core.Conversion;
+using KaraokeToolkit.Core.Settings;
 using KaraokeToolkit.Core;
 using Action=KaraokeToolkit.Core.Execution.OperationId;
 namespace KaraokeToolkit.Tests.App.Main;
@@ -42,11 +43,57 @@ public class GuiEndToEndTests
         model.ShowProgress=false;model.FolderPath=TestMediaFixture.NewFolder();TestMediaFixture.Seed(model.FolderPath,Action.AudioGToBin,"keep");
         await model.StartCommand.ExecuteAsync(null).WaitAsync(TimeSpan.FromSeconds(30));Assert.True(File.Exists(Path.Combine(model.FolderPath,"song.bin")));
     }
-    [Fact] public async Task CancelCommandAtStartDoesNotDeleteInputsOrLeaveBusyState()
+    [Fact]
+    public async Task FailedItemsCanBeRetriedWithoutLosingTheSavedRetryScope()
     {
-        string folder=TestMediaFixture.NewFolder();TestMediaFixture.Seed(folder,Action.AudioGToBin,"keep");var before=TestMediaFixture.Snapshot(folder);var model=Model(folder,Action.AudioGToBin);
-        model.PropertyChanged+=(_,e)=>{if(e.PropertyName==nameof(model.ShowProgress)&&model.ShowProgress)model.CancelCommand.Execute(null);};
+        string folder = TestMediaFixture.NewFolder();
+        TestMediaFixture.Seed(folder, Action.AudioGToBin, "overwrite");
+        var model = Model(folder, Action.AudioGToBin);
+        model.SaveOptions(model.Options, OverwritePolicy.Fail);
+
+        await model.StartCommand.ExecuteAsync(null);
+
+        Assert.False(model.IsBusy);
+        Assert.True(model.CanRetry);
+        Assert.Equal("Failed", Assert.Single(model.LastReport!.Entries).Status);
+
+        File.Delete(Path.Combine(folder, "song.bin"));
+        await model.RetryFailedAsync();
+
+        Assert.False(model.IsBusy);
+        Assert.False(model.CanRetry);
+        Assert.Equal("Succeeded", Assert.Single(model.LastReport!.Entries).Status);
+        Assert.True(File.Exists(Path.Combine(folder, "song.bin")));
+    }
+
+    [Fact]
+    public async Task CancelCommandAtStartDoesNotDeleteInputsOrLeaveBusyState()
+    {
+        string folder = TestMediaFixture.NewFolder();
+        TestMediaFixture.Seed(folder, Action.AudioGToBin, "keep");
+        var before = TestMediaFixture.Snapshot(folder);
+        var model = Model(folder, Action.AudioGToBin);
+        void CancelAtStart(object? sender, System.ComponentModel.PropertyChangedEventArgs change)
+        {
+            if (change.PropertyName == nameof(model.ShowProgress) && model.ShowProgress)
+                model.CancelCommand.Execute(null);
+        }
+        model.PropertyChanged += CancelAtStart;
+
         await model.StartCommand.ExecuteAsync(null).WaitAsync(TimeSpan.FromSeconds(30));
-        Assert.True(model.CancelRequested);Assert.False(model.IsBusy);Assert.False(model.CancelCommand.CanExecute(null));Assert.Equal(before,TestMediaFixture.Snapshot(folder));
+
+        Assert.True(model.CancelRequested);
+        Assert.False(model.IsBusy);
+        Assert.False(model.CancelCommand.CanExecute(null));
+        Assert.Equal(before, TestMediaFixture.Snapshot(folder));
+
+        model.PropertyChanged -= CancelAtStart;
+        model.ShowProgress = false;
+        await model.StartCommand.ExecuteAsync(null).WaitAsync(TimeSpan.FromSeconds(30));
+
+        Assert.False(model.CancelRequested);
+        Assert.False(model.IsBusy);
+        Assert.Equal(RunStatus.Success, model.StatusOutcome);
+        Assert.True(File.Exists(Path.Combine(folder, "song.bin")));
     }
 }

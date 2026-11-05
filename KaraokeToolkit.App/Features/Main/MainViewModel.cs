@@ -25,7 +25,7 @@ namespace KaraokeToolkit.App.Features.Main;
 public sealed record ActivityEntry(string Time, string Message);
 public partial class MainViewModel : ViewModelBase
 {
-    private CancellationTokenSource? cancellation;
+    private ProcessingRun? activeRun;
     private readonly ApplicationSettingsStore store;
     private bool sectionsReady;
     public IReadOnlyList<OperationSectionViewModel> OperationSections { get; }
@@ -457,6 +457,42 @@ public partial class MainViewModel : ViewModelBase
         return true; // Later never starts a fresh run over an interrupted one.
     }
 
+    private ProcessingRun BeginRun(string title, string status)
+    {
+        if (activeRun != null) throw new InvalidOperationException("A processing run is already active.");
+        var run = new ProcessingRun(Report);
+        activeRun = run;
+        try
+        {
+            IsBusy = true;
+            CancelRequested = false;
+            ShowProgress = true;
+            RunTitle = title;
+            Activity.Clear();
+            lastMessage = "";
+            LastReport = null;
+            ValidationFindings = [];
+            retryRequests = [];
+            Progress = TotalProgress = FoundFiles = 0;
+            Elapsed = "00:00:00";
+            Status = status;
+            return run;
+        }
+        catch
+        {
+            EndRun(run);
+            throw;
+        }
+    }
+
+    private void EndRun(ProcessingRun? run)
+    {
+        run?.Dispose();
+        activeRun = null;
+        IsBusy = false;
+        IsRecoveryMode = false;
+    }
+
     private async Task ExecuteAsync(RecoveryJob? recoveryJob, IReadOnlyList<ConversionRetry>? retries = null)
     {
         if (recoveryJob != null)
@@ -473,29 +509,12 @@ public partial class MainViewModel : ViewModelBase
         var runOptions = action == Action.LosslessGToMp3G
             ? Options with { AudioBitrate = AudioBitrates.Mp3 }
             : Options;
-        using var source = new CancellationTokenSource();
-        cancellation = source;
-        IsBusy = true;
-        CancelRequested = false;
-        ShowProgress = true;
+        var run = BeginRun((recoveryJob != null ? "Recovery — " : "") + selected.Label, "Starting conversion…");
         IsRecoveryMode = recoveryJob != null;
         RecoveryAvailable = IsRecoveryMode;
         RecoveryMessage = IsRecoveryMode ? "Recovery mode — checking interrupted publication and resuming unfinished work." : "";
-        RunTitle = (IsRecoveryMode ? "Recovery — " : "") + selected.Label;
-        LastReport = null;
-        ValidationFindings = [];
-        retryRequests = [];
-        Progress = TotalProgress = FoundFiles = 0;
-        Elapsed = "00:00:00";
-        Activity.Clear();
-        lastMessage = "";
-        Status = "Starting conversion…";
         try
         {
-            // UI progress callbacks can arrive after the awaited task completes; ignore stale callbacks.
-            bool accepting = true;
-            var progressGate = new object();
-            var reporter = new Progress<ConversionProgress>(report => { lock (progressGate) { if (accepting) Report(report); } });
             ConversionResult result;
             try
             {
@@ -508,12 +527,12 @@ public partial class MainViewModel : ViewModelBase
                     bool cancelled = false;
                     foreach (var retry in retries)
                     {
-                        if (source.IsCancellationRequested)
+                        if (run.Token.IsCancellationRequested)
                         {
                             cancelled = true;
                             break;
                         }
-                        var attempt = await new SelectionConversionService(recovery).RunAsync(retry, reporter, source.Token, ResolveConflictAsync);
+                        var attempt = await new SelectionConversionService(recovery).RunAsync(retry, run.Progress, run.Token, ResolveConflictAsync);
                         all.AddRange(attempt.Files);
                         nextRetry.AddRange(attempt.RetryRequests);
                         total += attempt.Found;
@@ -532,22 +551,22 @@ public partial class MainViewModel : ViewModelBase
                     };
                 }
                 else if (recoveryJob != null)
-                    result = await new ConversionService(recovery).ResumeAsync(recoveryJob, reporter, source.Token, ResolveConflictAsync);
+                    result = await new ConversionService(recovery).ResumeAsync(recoveryJob, run.Progress, run.Token, ResolveConflictAsync);
                 else if (selectedInputs.Length > 0 || File.Exists(FolderPath))
                     result = await new SelectionConversionService(recovery).RunAsync(new(action, CurrentInputs, runOptions, OverwritePolicy)
                     {
                         ValidateBeforeConversion = ValidateBeforeConversion
-                    }, reporter, source.Token, ResolveConflictAsync);
+                    }, run.Progress, run.Token, ResolveConflictAsync);
                 else
-                    result = await new ConversionService(recovery).RunAsync(new(action, FolderPath, runOptions), OverwritePolicy, reporter, source.Token, ResolveConflictAsync, ValidateBeforeConversion);
+                    result = await new ConversionService(recovery).RunAsync(new(action, FolderPath, runOptions), OverwritePolicy, run.Progress, run.Token, ResolveConflictAsync, ValidateBeforeConversion);
             }
-            finally { lock (progressGate) { accepting = false; } }
+            finally { run.StopProgress(); }
             retryRequests = result.RetryRequests;
             ValidationFindings = [];
             LastReport = CompletionReport.FromConversion((retries != null ? "Retry failed: " : "") + RunTitle, result);
             OnPropertyChanged(nameof(CanRetry));
-        OnPropertyChanged(nameof(CanViewReport));
-        OnPropertyChanged(nameof(CanChooseSource));
+            OnPropertyChanged(nameof(CanViewReport));
+            OnPropertyChanged(nameof(CanChooseSource));
             FoundFiles = result.Found;
             Elapsed = result.Elapsed.ToString(@"hh\:mm\:ss");
             if (!result.Cancelled)
@@ -571,9 +590,7 @@ public partial class MainViewModel : ViewModelBase
         }
         finally
         {
-            cancellation = null;
-            IsBusy = false;
-            IsRecoveryMode = false;
+            EndRun(run);
             try
             {
                 RecoveryAvailable = recovery.Find().Count > 0;
@@ -590,21 +607,7 @@ public partial class MainViewModel : ViewModelBase
 
     private async Task RunFileOperationAsync()
     {
-        using var source = new CancellationTokenSource();
-        cancellation = source;
-        IsBusy = true;
-        CancelRequested = false;
-        ShowProgress = true;
-        RunTitle = SelectedOperation?.Label ?? "File Operation";
-        Activity.Clear();
-        LastReport = null;
-        retryRequests = [];
-        ValidationFindings = [];
-        Progress = TotalProgress = FoundFiles = 0;
-        Elapsed = "00:00:00";
-        Status = "Processing selected folders…";
-        bool accepting = true;
-        var progressGate = new object();
+        var run = BeginRun(SelectedOperation?.Label ?? "File Operation", "Processing selected folders…");
         try
         {
             // Avoid moving an interrupted conversion's recovery data or its input folders.
@@ -614,12 +617,11 @@ public partial class MainViewModel : ViewModelBase
                 if (recovery.Find(folder, true).Count > 0)
                     throw new IOException("Recover the interrupted conversion before moving files: " + folder);
             }
-            var reporter = new Progress<ConversionProgress>(p => { lock (progressGate) { if (accepting) Report(p); } });
             var result = SelectedOperation!.IsFlatten
-                ? await new FlattenFolderLayer().RunAsync(CurrentInputs, reporter, source.Token, SelectedOperation.FlattenScope!.Value)
-                : await new AlphabeticalOrganizer().RunAsync(CurrentInputs, SelectedOperation.OrganizeMode!.Value, reporter, source.Token,
+                ? await new FlattenFolderLayer().RunAsync(CurrentInputs, run.Progress, run.Token, SelectedOperation.FlattenScope!.Value)
+                : await new AlphabeticalOrganizer().RunAsync(CurrentInputs, SelectedOperation.OrganizeMode!.Value, run.Progress, run.Token,
                     IgnoreLeadingTheForFileOrganization);
-            lock (progressGate) { accepting = false; }
+            run.StopProgress();
             LastReport = CompletionReport.FromConversion(RunTitle, result) with { ReportType = "File Organization Report" };
             FoundFiles = result.Found;
             Elapsed = result.Elapsed.ToString(@"hh\:mm\:ss");
@@ -637,32 +639,17 @@ public partial class MainViewModel : ViewModelBase
             StatusOutcome = RunStatus.Failure;
             LastReport = new(RunTitle, DateTimeOffset.Now, false, [new ReportEntry(FolderPath, "Failed", error.Message, [])]);
         }
-        finally { lock (progressGate) { accepting = false; } cancellation = null; IsBusy = false; }
+        finally { EndRun(run); }
     }
 
     [RelayCommand(CanExecute = nameof(CanValidate))]
     private async Task ValidateAsync()
     {
-        using var source = new CancellationTokenSource();
-        cancellation = source;
-        IsBusy = true;
-        CancelRequested = false;
-        ShowProgress = true;
-        RunTitle = "Validate Karaoke Files";
-        Activity.Clear();
-        lastMessage = "";
-        LastReport = null;
-        ValidationFindings = [];
-        retryRequests = [];
-        Progress = TotalProgress = FoundFiles = 0;
-        Status = "Scanning files without changing them...";
-        bool accepting = true;
-        var progressGate = new object();
+        var run = BeginRun("Validate Karaoke Files", "Scanning files without changing them...");
         try
         {
-            var reporter = new Progress<ConversionProgress>(p => { lock (progressGate) { if (accepting) Report(p); } });
-            var result = await new ValidationService().ScanAsync(CurrentInputs, Options.RecurseFolders, reporter, source.Token);
-            lock (progressGate) { accepting = false; }
+            var result = await new ValidationService().ScanAsync(CurrentInputs, Options.RecurseFolders, run.Progress, run.Token);
+            run.StopProgress();
             ValidationFindings = result.Findings;
             retryRequests = [];
             LastReport = CompletionReport.FromValidation(result);
@@ -682,7 +669,7 @@ public partial class MainViewModel : ViewModelBase
             StatusOutcome = RunStatus.Failure;
             LastReport = new(RunTitle, DateTimeOffset.Now, false, [new ReportEntry(FolderPath, "Unreadable", error.Message, [])]);
         }
-        finally { lock (progressGate) { accepting = false; } cancellation = null; IsBusy = false; }
+        finally { EndRun(run); }
     }
 
     private void Report(ConversionProgress report)
@@ -702,7 +689,7 @@ public partial class MainViewModel : ViewModelBase
     private void Cancel()
     {
         CancelRequested = true;
-        cancellation?.Cancel();
+        activeRun?.Cancel();
         Status = "Cancellation requested. Finishing any publication already in progress.";
     }
 }

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Recipes;
@@ -70,25 +69,16 @@ public partial class MainViewModel
         try { FolderPath = launchInputs.FirstOrDefault() ?? ""; selectedInputs = launchInputs; }
         finally { settingInputs = false; }
         InputSummary = string.Join("; ", launchInputs);
-        using var source = new CancellationTokenSource();
-        cancellation = source;
-        IsBusy = true; CancelRequested = false; ShowProgress = true;
+        var run = BeginRun((job == null ? "Recipe — " : "Recovery — ") + recipe.Name, "Starting recipe…");
         IsRecoveryMode = job != null;
         RecoveryMessage = job == null ? "" : "Recovery mode — resuming the saved recipe and its remaining steps.";
-        RunTitle = (job == null ? "Recipe — " : "Recovery — ") + recipe.Name;
-        Activity.Clear(); LastReport = null; retryRequests = []; ValidationFindings = [];
-        Progress = TotalProgress = FoundFiles = 0; Elapsed = "00:00:00"; lastMessage = "";
-        Status = "Starting recipe…";
-        bool accepting = true;
-        var gate = new object();
         try
         {
-            var progress = new Progress<ConversionProgress>(p => { lock (gate) { if (accepting) Report(p); } });
             string Label(string operationId) => OperationDefinitions.All.Single(operation => operation.Id == operationId).Label;
             var runner = new RecipeRunner(new RecipeStepExecutor(recovery, ResolveConflictAsync), recovery);
-            var result = job == null ? await runner.RunAsync(recipe, launchInputs, progress, source.Token, Label)
-                : await runner.ResumeAsync(job, progress, source.Token, Label);
-            lock (gate) { accepting = false; }
+            var result = job == null ? await runner.RunAsync(recipe, launchInputs, run.Progress, run.Token, Label)
+                : await runner.ResumeAsync(job, run.Progress, run.Token, Label);
+            run.StopProgress();
             LastReport = result.ToReport(recipe.Name, Label);
             FoundFiles = result.Steps.Sum(step => step.Result.Found);
             Elapsed = result.Elapsed.ToString(@"hh\:mm\:ss");
@@ -109,8 +99,7 @@ public partial class MainViewModel
         }
         finally
         {
-            lock (gate) { accepting = false; }
-            cancellation = null; IsBusy = false; IsRecoveryMode = false;
+            EndRun(run);
             try
             {
                 RecoveryAvailable = recovery.Find().Count > 0;

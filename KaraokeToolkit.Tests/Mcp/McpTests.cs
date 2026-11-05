@@ -110,13 +110,86 @@ public class McpTests
         Assert.False(plan.IsError ?? false); Assert.False(File.Exists(Path.Combine(root, "song.wav")));
         var denied = await client.CallToolAsync("run_operation", new Dictionary<string, object?> { ["request"] = request });
         Assert.True(denied.IsError);
-        var wireProgress = new ProgressSink();
-        var result = await client.CallToolAsync("run_operation", new Dictionary<string, object?> { ["request"] = request, ["confirmFileChanges"] = true }, progress: wireProgress);
+        var result = await client.CallToolAsync("run_operation", new Dictionary<string, object?> { ["request"] = request, ["confirmFileChanges"] = true });
         Assert.False(result.IsError ?? false); Assert.True(File.Exists(Path.Combine(root, "song.wav"))); Assert.True(File.Exists(Path.Combine(root, "song.zip")));
         Assert.NotNull(result.StructuredContent); using var json = Json(result);
         Assert.Equal(1, json.RootElement.GetProperty("found").GetInt32());
-        Assert.NotEmpty(wireProgress.Values);
-        Assert.Equal(wireProgress.Values.Select(p => p.Progress).Order(), wireProgress.Values.Select(p => p.Progress));
+    }
+
+    [Fact]
+    public async Task StdioProgressIsMonotonicOnTheWireBeforeTheToolResponse()
+    {
+        string root = TestMediaFixture.NewFolder();
+        TestMediaFixture.Seed(root, OperationId.ZipToBin, "keep");
+        var start = new System.Diagnostics.ProcessStartInfo("dotnet")
+        {
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+        start.ArgumentList.Add(typeof(McpTools).Assembly.Location);
+        start.ArgumentList.Add("--allow-writes");
+        using var process = System.Diagnostics.Process.Start(start)!;
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var diagnostics = process.StandardError.ReadToEndAsync();
+        var values = new List<float>();
+
+        async Task Send(object message)
+        {
+            await process.StandardInput.WriteLineAsync(JsonSerializer.Serialize(message).AsMemory(), timeout.Token);
+            await process.StandardInput.FlushAsync(timeout.Token);
+        }
+
+        async Task<JsonElement> ReadResponse(int id)
+        {
+            while (true)
+            {
+                string line = await process.StandardOutput.ReadLineAsync(timeout.Token)
+                    ?? throw new IOException("MCP exited before returning its response.");
+                using var message = JsonDocument.Parse(line);
+                var value = message.RootElement;
+                if (value.TryGetProperty("method", out var method) && method.GetString() == "notifications/progress")
+                {
+                    var parameters = value.GetProperty("params");
+                    Assert.Equal("wire-test", parameters.GetProperty("progressToken").GetString());
+                    values.Add(parameters.GetProperty("progress").GetSingle());
+                }
+                if (value.TryGetProperty("id", out var responseId) && responseId.GetInt32() == id)
+                    return value.Clone();
+            }
+        }
+
+        try
+        {
+            await Send(new { jsonrpc = "2.0", id = 1, method = "initialize", @params = new
+            {
+                protocolVersion = "2025-06-18", capabilities = new { }, clientInfo = new { name = "wire-test", version = "1.0" }
+            } });
+            Assert.True((await ReadResponse(1)).TryGetProperty("result", out _));
+            await Send(new { jsonrpc = "2.0", method = "notifications/initialized" });
+            await Send(new { jsonrpc = "2.0", id = 2, method = "tools/call", @params = new
+            {
+                name = "run_operation",
+                arguments = new { request = new { operationId = "ZipToAudioG", inputs = new[] { root },
+                    options = new { AutoCreateCueText = false, DeleteOldFiles = false } }, confirmFileChanges = true },
+                _meta = new { progressToken = "wire-test" }
+            } });
+            var response = await ReadResponse(2);
+            Assert.True(response.TryGetProperty("result", out var result));
+            Assert.False(result.TryGetProperty("isError", out var error) && error.GetBoolean());
+            // Read stdout directly: the SDK's concurrent client callbacks are not wire order.
+            Assert.NotEmpty(values);
+            Assert.Equal(values.Order(), values);
+            Assert.Equal(100, values[^1]);
+        }
+        finally
+        {
+            if (!process.HasExited) process.Kill(entireProcessTree: true);
+            await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(5));
+            await diagnostics.WaitAsync(TimeSpan.FromSeconds(5));
+        }
     }
 
     [Fact]
@@ -149,7 +222,9 @@ public class McpTests
         };
         var result = await client.CallToolAsync("run_recipe", new Dictionary<string, object?>
         { ["recipe"] = recipe, ["inputs"] = new[] { root }, ["confirmFileChanges"] = true });
-        Assert.False(result.IsError ?? false); using var report = Json(result);
+        Assert.False(result.IsError ?? false, string.Join(Environment.NewLine,
+            result.Content.OfType<TextContentBlock>().Select(block => block.Text)));
+        using var report = Json(result);
         Assert.Equal("Recipe Report", report.RootElement.GetProperty("report").GetProperty("reportType").GetString());
         Assert.True(File.Exists(Path.Combine(root, "song.zip"))); Assert.True(File.Exists(Path.Combine(root, "song.wav")));
     }

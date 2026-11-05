@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using KaraokeToolkit.App.Features.Tagging;
 using KaraokeToolkit.App.Shared;
@@ -16,6 +15,7 @@ public partial class MainViewModel
     public Func<TaggingViewModel, Task<TaggingRequest?>>? ConfigureTaggingAsync { get; set; }
     private async Task RunTaggingAsync(RecoveryJob? job = null)
     {
+        ProcessingRun? run = null;
         IsBusy = true;
         try
         {
@@ -31,28 +31,18 @@ public partial class MainViewModel
             }
             // Remember only combinations accepted by the user, preserving processing settings atomically.
             if (request != null) store.Save(Options, taggingPatterns: store.LoadTaggingPatterns().Append(request.Pattern).Distinct(StringComparer.Ordinal).ToArray(), lastTaggingPattern: request.Pattern);
-            using var source = new CancellationTokenSource();
-            cancellation = source;
-            CancelRequested = false;
-            ShowProgress = true;
+            run = BeginRun(job == null ? "Tag Karaoke Files" : "Recovery — Tag Karaoke Files", "Applying tags…");
             IsRecoveryMode = job != null;
             RecoveryMessage = job == null ? "" : "Recovery mode — resuming the saved tagging preview and remaining files.";
             if (job != null) SelectedOperation = Operations.Single(o => o.IsTagging);
-            RunTitle = job == null ? "Tag Karaoke Files" : "Recovery — Tag Karaoke Files";
-            Activity.Clear(); lastMessage = ""; LastReport = null; retryRequests = []; ValidationFindings = [];
-            Progress = TotalProgress = FoundFiles = 0; Elapsed = "00:00:00";
-            Status = "Applying tags…";
-            bool accepting = true;
-            var gate = new object();
-            var reporter = new Progress<ConversionProgress>(p => { lock (gate) { if (accepting) Report(p); } });
             ConversionResult result;
             try
             {
                 var service = new KaraokeTaggingService(recovery);
-                result = job == null ? await service.ApplyAsync(request!.Files, request.Options, Options, reporter, source.Token)
-                    : await service.ResumeAsync(job, reporter, source.Token);
+                result = job == null ? await service.ApplyAsync(request!.Files, request.Options, Options, run.Progress, run.Token)
+                    : await service.ResumeAsync(job, run.Progress, run.Token);
             }
-            finally { lock (gate) { accepting = false; } }
+            finally { run.StopProgress(); }
             LastReport = CompletionReport.FromConversion(RunTitle, result) with { ReportType = "Tagging Report" };
             FoundFiles = result.Found; Elapsed = result.Elapsed.ToString(@"hh\:mm\:ss");
             if (!result.Cancelled) Progress = TotalProgress = 100;
@@ -68,7 +58,7 @@ public partial class MainViewModel
         }
         finally
         {
-            cancellation = null; IsBusy = false; IsRecoveryMode = false;
+            EndRun(run);
             try { RecoveryAvailable = recovery.Find().Count > 0; RecoveryMessage = RecoveryAvailable ? "An interrupted workflow remains. Use Recover to review it." : ""; }
             catch { /* Keep the tagging outcome visible. */ }
         }
