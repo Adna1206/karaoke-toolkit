@@ -120,7 +120,9 @@ conversion preferences without loading GUI settings.
 Progress goes to stderr. `--quiet` suppresses progress, not results. `--json` writes
 one JSON document to stdout; operation results include `ExitCode`, `Found`,
 `HasIssues`, the standard `Report`, and optional `TagPreview`. Error responses carry
-`ExitCode` and `Error`. Discovery commands return JSON arrays. `--version` prints
+`ExitCode` and `Error`. Unknown operations identify the unregistered name and point
+to `karaoke-toolkit operations`; deliberately excluded IDs explain their reason.
+These usage errors exit with code 2. Discovery commands return JSON arrays. `--version` prints
 the shared app version.
 
 `--report NEW.json|NEW.txt` saves the standard completion report, with the shared
@@ -203,7 +205,8 @@ The panel also supplies opt-in completion/PATH setup instructions. Its copy/laun
 actions are immediate and do not need Apply. Development builds with no CLI beside
 App explain that the published package includes it. No processing preferences,
 shell profiles or PATH values are changed, and no CLI background service is started.
-MCP remains future work rather than an enabled integration in this panel.
+The [MCP executable](mcp.md) is available separately from this panel; its setup UI
+remains deferred with the Settings redesign.
 The compact layout keeps the executable and terminal action together, uses one shell
 selector for all copied commands, and initially collapses Command examples and Shell
 setup. Brief hints appear only when relevant; longer explanations live in tooltips.
@@ -239,7 +242,7 @@ without a decision fails compilation. Command names, parsing, formatting and exi
 codes stay in CLI. General requests use the enum; conversion engines receive a
 separate `ConversionRequest`. See [operation contracts](operations.md).
 `OperationExecutionService` calls existing engines and can be reused directly by
-a future MCP adapter, without launching CLI subprocesses. The desktop routes remain
+the MCP adapter, without launching CLI subprocesses. The desktop routes remain
 unchanged.
 
 `KaraokeToolkit.Tests/Cli` tests argument/settings mapping, safe defaults, JSON,

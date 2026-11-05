@@ -23,6 +23,10 @@ IDs and test counts as dated evidence; verify them before relying on them.
   No GUI dependency. Includes recipes/recovery, explicit quarantine, dry runs and
   experimental disc capture. Never prompt or elevate; recipe steps cannot use Ask.
   See [CLI](docs/cli.md).
+- `KaraokeToolkit.Mcp`: client-launched local stdio tool provider over Core, with
+  explicit operation include/exclude decisions and CS8509 as an error. No CLI/App
+  dependency, listening port or background service. Read-only by default; writes
+  require owner startup `--allow-writes` and per-call confirmation. See [MCP](docs/mcp.md).
 - Keep namespaces aligned with folders. App uses feature folders; Core uses
   responsibility folders. Read [App structure](docs/app-structure.md),
   [Core structure](docs/core-structure.md) and [test structure](docs/test-structure.md).
@@ -85,11 +89,13 @@ dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj -c Release -p:UsedA
   See [updates](docs/updates.md).
 - No karaoke player/preview playback yet; it is deferred for discussion. A planned
   processing preview means outputs/conflicts/deletions, not media playback.
-- CLI calls shared C# execution services/Core directly. MCP remains planned and
-  should reuse those services, not shell out to CLI commands. Initial MCP is
-  local stdio, client-launched, independent of the GUI and a hosted web server.
-- The proposed MCP setup page supplies instructions/path/copyable configuration,
-  without a GUI enable/disable switch. See TODO for the full agreed scope.
+- CLI and MCP call shared Core services directly; never shell out to each other.
+  MCP is local stdio, client-launched and independent of the GUI or a hosted server.
+  Check its explicit catalogue for direct calls, recipe steps and recovery alike.
+- Settings → Integrations → MCP supplies path/copyable client configuration. Its
+  file-access dropdown defaults to Read only; Allow file changes adds
+  `--allow-writes` only to that example;
+  MCP reads startup arguments, never App preferences. No GUI service switch.
 - Existing Windows Explorer integration is classic/per-user. Modern Windows 11
   shell integration and an additional MSI are future work, not delivered features.
 - File-changing operations must retain existing transaction, overwrite, validation

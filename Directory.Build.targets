@@ -5,13 +5,13 @@
     <FFmpegPowerShell Condition="$([MSBuild]::IsOSPlatform('Windows'))">powershell.exe</FFmpegPowerShell>
     <FFmpegPowerShell Condition="'$(FFmpegPowerShell)' == ''">pwsh</FFmpegPowerShell>
   </PropertyGroup>
-  <Target Name="PrepareFFmpeg" AfterTargets="Build" Condition="'$(DesignTimeBuild)' != 'true' And ('$(MSBuildProjectName)' == 'KaraokeToolkit.App' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Cli' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Tests') And '$(SkipFFmpegPrepare)' != 'true'">
+  <Target Name="PrepareFFmpeg" AfterTargets="Build" Condition="'$(DesignTimeBuild)' != 'true' And ('$(MSBuildProjectName)' == 'KaraokeToolkit.App' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Cli' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Mcp' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Tests') And '$(SkipFFmpegPrepare)' != 'true'">
     <Exec Command="&quot;$(FFmpegPowerShell)&quot; -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)scripts/ffmpeg/Prepare.ps1&quot; -RuntimeIdentifier &quot;$(FFmpegRid)&quot; -OutputDirectory &quot;$(TargetDir)ffmpeg&quot;" />
   </Target>
-  <Target Name="PrepareCdrdao" AfterTargets="Build" Condition="'$(DesignTimeBuild)' != 'true' And ('$(MSBuildProjectName)' == 'KaraokeToolkit.App' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Cli' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Tests') And '$(SkipCdrdaoPrepare)' != 'true'">
+  <Target Name="PrepareCdrdao" AfterTargets="Build" Condition="'$(DesignTimeBuild)' != 'true' And ('$(MSBuildProjectName)' == 'KaraokeToolkit.App' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Cli' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Mcp' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Tests') And '$(SkipCdrdaoPrepare)' != 'true'">
     <Exec Command="&quot;$(FFmpegPowerShell)&quot; -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)scripts/cdrdao/Prepare.ps1&quot; -RuntimeIdentifier &quot;$(FFmpegRid)&quot; -OutputDirectory &quot;$(TargetDir)cdrdao&quot;" />
   </Target>
-  <Target Name="PublishDiscReader" BeforeTargets="ComputeFilesToPublish" DependsOnTargets="PrepareCdrdao" Condition="'$(MSBuildProjectName)' == 'KaraokeToolkit.App' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Cli'">
+  <Target Name="PublishDiscReader" BeforeTargets="ComputeFilesToPublish" DependsOnTargets="PrepareCdrdao" Condition="'$(MSBuildProjectName)' == 'KaraokeToolkit.App' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Cli' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Mcp'">
     <ItemGroup>
       <_DiscReaderPublish Include="$(TargetDir)cdrdao/**/*" />
       <ResolvedFileToPublish Include="@(_DiscReaderPublish)">
@@ -20,7 +20,7 @@
       </ResolvedFileToPublish>
     </ItemGroup>
   </Target>
-  <Target Name="PublishFFmpeg" BeforeTargets="ComputeFilesToPublish" DependsOnTargets="PrepareFFmpeg" Condition="'$(MSBuildProjectName)' == 'KaraokeToolkit.App' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Cli'">
+  <Target Name="PublishFFmpeg" BeforeTargets="ComputeFilesToPublish" DependsOnTargets="PrepareFFmpeg" Condition="'$(MSBuildProjectName)' == 'KaraokeToolkit.App' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Cli' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Mcp'">
     <ItemGroup>
       <_FFmpegPublish Include="$(TargetDir)ffmpeg/**/*" />
       <ResolvedFileToPublish Include="@(_FFmpegPublish)">

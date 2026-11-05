@@ -132,7 +132,7 @@
                 </ScrollViewer>
             </TabItem>
             <TabItem Header="Integrations">
-                <integrations:CliIntegrationView/>
+                <integrations:IntegrationsView/>
             </TabItem>
         </TabControl>
         <TextBlock Grid.Row="2" Text="{Binding Error}" TextWrapping="Wrap"/>

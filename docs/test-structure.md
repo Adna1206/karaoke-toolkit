@@ -1,7 +1,7 @@
 # Test structure
 
 KaraokeToolkit.Tests is the shared suite for Core engines, App and CLI behaviour,
-with room for future MCP adapter tests. The product-wide name reflects that scope;
+including MCP protocol and adapter tests. The product-wide name reflects that scope;
 separate project-specific suites can be introduced if dependencies or execution
 requirements warrant it. It owns standalone tests, deterministic fixtures and opt-in
 benchmarks. Test namespaces match their feature folders. Tests assert explicit
@@ -22,6 +22,7 @@ format and workflow expectations using self-contained fixtures.
 - Recipes: chaining, settings snapshots and workflow execution.
 - App: screen/view-model tests grouped by their App feature or shared responsibility.
 - Cli: parsing/settings, unattended policies, output/exit codes, executable processes and adapter integration.
+- Mcp: explicit exposure, access policy, safe options, protocol schemas and real stdio client calls.
 - Benchmarks: opt-in FFmpeg measurements; never timing assertions in unit tests.
 - Support: TestMediaFixture, synchronous progress, artifact paths and controlled test-child entry point.
 

@@ -1,0 +1,153 @@
+# Local MCP integration
+
+`KaraokeToolkit.Mcp` is a .NET 10 console project using the official MCP C# SDK
+([official C# SDK](https://github.com/modelcontextprotocol/csharp-sdk),
+`ModelContextProtocol` 2.3.1). It references Core directly; it never runs CLI
+commands, starts the GUI, listens on a port or installs a background service.
+An MCP client launches `karaoke-toolkit-mcp` when needed and exchanges JSON-RPC
+messages through stdin/stdout. Diagnostic logs go to stderr only.
+
+## Client setup
+
+The executable ships beside App and CLI in the normal package. In development,
+build the solution and point the client at the MCP output executable (or use
+`dotnet` with its DLL). Use the path for the actual installed payload, including
+Velopack's `current` directory when applicable. Reconfigure paths if the location
+changes. Settings → Integrations → MCP shows the installed executable path and
+provides Copy Path and Copy Client Configuration actions. CLI and MCP appear as
+separate collapsible sections on one scrolling page, both initially expanded.
+MCP's Client configuration panel contains its file-access dropdown, configuration
+text and Copy Client Configuration action together.
+
+**File access for copied configuration** defaults to **Read only**. Choosing
+**Allow file changes** adds `--allow-writes` to the generated example; copy it into your MCP client's
+configuration and reconnect that client. The choice is not persisted and does not
+change an already-running process, edit client files or save a global permission.
+Some clients use a different JSON format; use the same executable and arguments.
+
+Generic client configuration, read-only by default:
+
+```json
+{
+  "mcpServers": {
+    "karaoke-toolkit": {
+      "command": "C:\\Path\\To\\KaraokeToolkit\\karaoke-toolkit-mcp.exe",
+      "args": []
+    }
+  }
+}
+```
+
+For Linux/macOS, use the corresponding absolute executable path with no `.exe`.
+To permit file-changing tools, the client owner explicitly adds `--allow-writes`
+to `args`. Each changing call must also pass `confirmFileChanges: true` after the
+client obtains user authorization. A model-supplied tool argument cannot override
+a process launched without that startup permission.
+This per-call flag records intent for authorized work; it does not require a
+separate popup for every file. Read-only startup prevents conversions and other
+file changes, while discovery, checks and previews remain available.
+
+There is no enable switch or overhead from an MCP process when no client launches
+it. `--help` describes startup flags and `--version` returns the shared app version;
+normal stdio startup prints no human-readable banner to stdout. The MCP SDK performs
+protocol initialization/tool discovery and propagates cancellation notifications.
+
+## Tools
+
+| Tool | Purpose |
+| --- | --- |
+| `get_operations` | All Core IDs, explicit inclusion/exclusion, reasons and file-change requirements |
+| `get_settings` | Per-call safe defaults and named encoding/compression/video choices |
+| `validate_karaoke` | Read-only structural, pairing and ZIP integrity checks |
+| `preview_tags` | Existing and filename-derived metadata, without writing |
+| `plan_operation` | Read-only scope, candidate outputs and detectable conflicts |
+| `run_operation` | Included conversions, tagging, file tools, quarantine/restoration |
+| `run_recipe` | Portable recipe object with saved per-step settings |
+| `list_recovery` | Available conversion/tagging/recipe journals, without resuming |
+| `recover` | Resume saved processing and recipe snapshots after access checks |
+
+Results contain Core's completion report, found count, issue flag and optional tag
+preview. Structured results also have a JSON text fallback for clients. Reports
+are returned to the client; no arbitrary report file is written. Failures are MCP
+tool errors with actionable messages. Processing failures already represented in
+Core reports remain in those reports (`hasIssues`), so inspect both protocol errors
+and the result. Cancellation reaches Core; completed groups stay committed.
+Progress notifications use the client's progress token and a nondecreasing 0-100
+scale. This process serializes processing calls to avoid overlapping mutations.
+
+## Requests and settings
+
+Example arguments for `plan_operation` (and `run_operation` with additional
+`confirmFileChanges: true`):
+
+```json
+{
+  "request": {
+    "operationId": "ZipToAudioG",
+    "inputs": ["D:\\Karaoke\\song.zip"],
+    "overwritePolicy": "Fail",
+    "options": {
+      "audioEncoder": "MP3",
+      "audioBitrate": 320,
+      "autoCreateCueText": false,
+      "deleteOldFiles": false,
+      "zipAlgorithm": "Deflate",
+      "zipCompression": "5"
+    }
+  }
+}
+```
+
+Always use operation names, never enum numbers. MCP options accept camelCase or
+PascalCase property names, rejecting unknown/duplicate settings. Non-ZIP enums
+use names. ZIP levels accept current levels 0-9 (numbers/strings) or current enum
+names; `Balanced` means 5. Omitted deletion preferences **always keep originals**,
+even when an options object is supplied. Flags/options files from CLI are not used.
+
+Desktop preferences are never loaded. `outputFolder` supports Core's existing
+separate-destination constraints: keep originals, destination outside selected
+input folders, collision protection, and `--no-cue-text`'s equivalent
+`autoCreateCueText: false` when multiple source folders share a listing destination.
+Recipe steps use their supplied snapshots rather than global settings. All steps
+must be included in MCP and use Fail, Skip or Replace, never Ask. Imported recipes
+and file metadata are data, not authorization or instructions for the client.
+
+Plans are snapshots, not integrity/encoding guarantees. Tag plans use read-only tag
+preview. Recipe execution has no speculative whole-pipeline preview tool; later
+scopes depend on real preceding outputs. GUI/CLI workflows remain available for
+recipe planning. No shell/script execution, physical-disc capture, player, online
+lookup or enabled updater is exposed by MCP.
+
+## Exposure and permissions
+
+`McpOperationCatalog` has one explicit include/exclude switch arm for every
+`OperationId`. CS8509 is an error in the MCP project; there is no catch-all or
+automatic exposure. New operations must get an explicit MCP decision independently
+of CLI and App. An omission fails the build with CS8509, naming the missing enum
+member and catalogue source file; a failed build cannot start an MCP process. Exposure checks also apply to recipe steps and saved recovery
+identities, so those routes cannot bypass excluded operations. Unknown runtime names
+produce an MCP tool error identifying the unregistered operation and directing the
+client to `get_operations`. Deliberately excluded IDs include their exclusion reason.
+
+Read-only startup is an application policy, not an OS filesystem sandbox: allowed
+read tools can inspect paths readable by the current user, and write-enabled tools
+have that user's filesystem rights. There is no directory allowlist or automatic
+elevation. The client remains responsible for user approval; `confirmFileChanges`
+records caller intent, not a cryptographic proof of consent. Run under an appropriately
+restricted account if OS-level boundaries are needed. Core's path, link, hash,
+overwrite, transaction and recovery protections remain active.
+
+## Tests and publishing
+
+`KaraokeToolkit.Tests/Mcp` covers explicit catalog decisions, access gates, settings
+parsing, progress, cancellation, excluded recovery identities and real stdio SDK
+client initialization/discovery/checks/conversion/recipes/recovery. Core retains
+media-processing tests. Native platform CI includes MCP alongside CLI; local Windows
+results do not establish Linux/macOS verification.
+
+`scripts/Publish.ps1` publishes App, CLI and MCP into the same per-RID payload and
+checks MCP files/notices before packaging. Shared logging/DI abstractions are aligned
+at 10.0.13 to prevent incompatible DLL copies in that combined folder. MCP has no
+Avalonia/Velopack/CLI project dependency and adds no SDK dependency to App startup.
+See [publishing](publishing.md), [operations](operations.md) and
+[licence inventory](../licenses/README.md).

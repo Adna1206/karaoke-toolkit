@@ -19,7 +19,8 @@ Core does not decide GUI labels, CLI command names or which operations an interf
 chooses to expose. App's metadata retains those labels and input-picker behaviour.
 CLI's `CliOperationCatalog` explicitly includes each operation with a command name,
 or excludes it with a reason. Core still validates execution capabilities independently.
-MCP can later have its own exposure decisions over these same identities.
+MCP has its own explicit `McpOperationCatalog` over these identities, with the same
+CS8509 compiler guard. Its decisions also apply to recipe/recovery calls. See [MCP](mcp.md).
 
 ## Adding an operation
 

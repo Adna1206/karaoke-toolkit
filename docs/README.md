@@ -10,6 +10,7 @@ the current checkout. [Planned work](todo.md) is a backlog, not implemented beha
 | --- | --- |
 | [File workflows](file-workflow-features.md) | Selection, archives, compression, folder tools, reports, validation and Explorer integration |
 | [CLI](cli.md) | Headless commands, per-run settings, JSON, exit codes and recovery |
+| [MCP](mcp.md) | Local stdio tools, client setup, operation exposure and file-change policy |
 | [CLI examples](cli-examples.md) | Practical conversion, tagging, video, folder and scripting workflows |
 | [Tagging](tagging.md) | Filename patterns, editable previews, supported formats and tag verification |
 | [Recipes](recipes.md) | Saved multi-step operations, step settings, chaining and execution |

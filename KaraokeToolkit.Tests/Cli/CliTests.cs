@@ -15,6 +15,19 @@ namespace KaraokeToolkit.Tests.Cli;
 
 public class CliTests
 {
+    [Theory]
+    [InlineData("FutureUnknownOperation", "Unregistered CLI operation")]
+    [InlineData("PlayAudioG", "Playback is deferred")]
+    public async Task OperationErrorsExplainUnknownOrExcludedIdsInJson(string operation, string expected)
+    {
+        var executor = new FakeExecutor(); var output = new StringWriter(); var error = new StringWriter();
+        Assert.Equal(2, await new CliApplication(executor).RunAsync(["run", operation, "unused", "--json"], output, error));
+        using var json = JsonDocument.Parse(output.ToString());
+        string message = json.RootElement.GetProperty("Error").GetString()!;
+        Assert.Contains(expected, message); Assert.Contains(operation, message); Assert.Contains("karaoke-toolkit operations", message);
+        Assert.Null(executor.Request); Assert.Empty(error.ToString());
+    }
+
     private sealed class FakeExecutor : IOperationExecutor
     {
         public OperationRequest? Request;

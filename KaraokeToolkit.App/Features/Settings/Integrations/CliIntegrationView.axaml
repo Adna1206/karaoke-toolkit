@@ -2,14 +2,9 @@
              xmlns:vm="using:KaraokeToolkit.App.Features.Settings.Integrations"
              x:Class="KaraokeToolkit.App.Features.Settings.Integrations.CliIntegrationView"
              x:DataType="vm:CliIntegrationViewModel">
-    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-        <StackPanel Margin="0,20,12,20" Spacing="12">
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                <TextBlock Text="Command Line" FontWeight="SemiBold" VerticalAlignment="Center"
-                           ToolTip.Tip="Use toolkit operations from a terminal or script. No background service or enable switch is needed."/>
-                <Button Grid.Column="1" Content="Open Terminal Here" Click="OpenTerminal_Click" IsEnabled="{Binding IsAvailable}"
+        <StackPanel Margin="0,12,0,8" Spacing="12">
+                <Button HorizontalAlignment="Left" Content="Open Terminal Here" Click="OpenTerminal_Click" IsEnabled="{Binding IsAvailable}"
                         ToolTip.Tip="Open the system terminal in the application folder. No CLI command runs automatically."/>
-            </Grid>
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
                 <TextBox Text="{Binding ExecutablePath, Mode=OneWay}" IsReadOnly="True"
                          AutomationProperties.Name="CLI executable path" ToolTip.Tip="{Binding ExecutablePath}"/>
@@ -53,5 +48,4 @@
             <TextBlock Text="{Binding Status}" IsVisible="{Binding HasStatus}" TextWrapping="Wrap" FontSize="12"
                        AutomationProperties.Name="CLI integration status"/>
         </StackPanel>
-    </ScrollViewer>
 </UserControl>

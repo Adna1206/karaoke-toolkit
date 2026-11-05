@@ -61,6 +61,8 @@ public partial class AboutViewModel : ViewModelBase
         "SharpCompress.txt" => "SharpCompress · MIT",
         "TagLibSharp.txt" => "TagLibSharp · LGPL v2.1",
         "Velopack.txt" => "Velopack · MIT",
+        "ModelContextProtocol.txt" => "MCP C# SDK · Apache 2.0 / MIT notices",
+        "ModelContextProtocol.Notice.txt" => "MCP C# SDK · notices",
         "Inter.OFL.txt" => "Inter font · SIL OFL 1.1",
         "ANGLE.txt" => "ANGLE · BSD-style",
         "SkiaSharp.txt" => "SkiaSharp · MIT / notices",

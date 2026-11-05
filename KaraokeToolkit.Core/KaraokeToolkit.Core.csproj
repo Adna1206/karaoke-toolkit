@@ -14,5 +14,8 @@
     <PackageReference Include="FFMpegCore" Version="5.5.0" />
     <PackageReference Include="SharpCompress" Version="0.50.4" />
     <PackageReference Include="TagLibSharp" Version="2.3.0" />
+    <!-- Keep shared abstractions aligned across the combined App/CLI/MCP payload. -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.13" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.13" />
   </ItemGroup>
 </Project>

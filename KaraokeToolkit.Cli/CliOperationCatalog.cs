@@ -15,14 +15,23 @@ public static class CliOperationCatalog
     public static IReadOnlyList<CliOperationRegistration> All { get; } = Array.AsReadOnly(Enum.GetValues<OperationId>().Select(Get).ToArray());
     public static IReadOnlyList<CliOperationRegistration> Exposed { get; } = Array.AsReadOnly(All.Where(o => o.Exposed).ToArray());
 
-    public static CliOperationRegistration Resolve(string command) => Exposed.SingleOrDefault(o =>
-        o.Name!.Equals(command, StringComparison.OrdinalIgnoreCase) || o.OperationId.ToString().Equals(command, StringComparison.OrdinalIgnoreCase))
-        ?? throw new CliUsageException("Unknown or excluded operation: " + command);
+    public static CliOperationRegistration Resolve(string command)
+    {
+        var registration = All.SingleOrDefault(o =>
+            string.Equals(o.Name, command, StringComparison.OrdinalIgnoreCase) || o.OperationId.ToString().Equals(command, StringComparison.OrdinalIgnoreCase));
+        if (registration == null)
+            throw new CliUsageException($"Unregistered CLI operation '{command}'. Run 'karaoke-toolkit operations' to list supported operations.");
+        if (!registration.Exposed)
+            throw new CliUsageException($"CLI operation '{registration.OperationId}' is excluded: {registration.ExclusionReason} Run 'karaoke-toolkit operations' for available operations.");
+        return registration;
+    }
 
     public static CliOperationRegistration Get(OperationId operation)
     {
-        if (!Enum.IsDefined(operation)) throw new ArgumentOutOfRangeException(nameof(operation));
-        return Registration(operation);
+        if (!Enum.IsDefined(operation)) throw new ArgumentOutOfRangeException(nameof(operation), operation, "Unregistered CLI operation. Run 'karaoke-toolkit operations' for supported names.");
+        try { return Registration(operation); }
+        catch (System.Runtime.CompilerServices.SwitchExpressionException error)
+        { throw new CliUsageException($"Unregistered CLI operation '{operation}'. This installation has mismatched Core/CLI versions; rebuild/update the complete application and update CliOperationCatalog. {error.Message}"); }
     }
 
     // Get rejects undefined numbers. CS8509 is an error: adding a named Core enum

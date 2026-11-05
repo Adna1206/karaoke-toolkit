@@ -5,6 +5,7 @@ on:
   pull_request:
     paths:
       - 'KaraokeToolkit.Cli/**'
+      - 'KaraokeToolkit.Mcp/**'
       - 'KaraokeToolkit.Core/**'
       - 'KaraokeToolkit.Tests/**'
       - 'Directory.Build.*'
@@ -39,7 +40,7 @@ jobs:
         run: >-
           dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj -c Release
           -p:UsedAvaloniaProducts= -p:ArtifactBuildName=CliPlatforms -v minimal
-          --filter 'FullyQualifiedName~KaraokeToolkit.Tests.Cli|FullyQualifiedName~KaraokeToolkit.Tests.Execution|FullyQualifiedName~KaraokeToolkit.Tests.Video.KaraokeVideoTests.RendersAllKaraokeSourcesAndRetainsOriginals'
+          --filter 'FullyQualifiedName~KaraokeToolkit.Tests.Cli|FullyQualifiedName~KaraokeToolkit.Tests.Mcp|FullyQualifiedName~KaraokeToolkit.Tests.Execution|FullyQualifiedName~KaraokeToolkit.Tests.Video.KaraokeVideoTests.RendersAllKaraokeSourcesAndRetainsOriginals'
           --logger 'trx;LogFileName=cli-platform.trx' --results-directory artifacts/tests/results
       - name: Smoke-test built CLI executable
         run: |

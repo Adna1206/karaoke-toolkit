@@ -15,12 +15,14 @@ source or notice obligations.
 | SharpCompress | 0.50.4 | `SharpCompress.txt` (MIT) | Common |
 | TagLibSharp | 2.3.0 | `TagLibSharp.txt` (LGPL-2.1-only) | Common, separate managed DLL |
 | Velopack | 1.2.161 | `Velopack.txt` (MIT) | Common, App installation/update lifecycle; checks disabled |
+| ModelContextProtocol / ModelContextProtocol.Core | 2.3.1 | `ModelContextProtocol.txt` (Apache-2.0 plus retained MIT notices) | MCP executable, dormant until client-launched |
+| Microsoft.Extensions.AI.Abstractions | 10.11.0 | `Microsoft.Extensions.txt` (MIT), `Microsoft.Extensions.ThirdPartyNotices.txt` | MCP SDK dependency |
 | SkiaSharp and native assets | 3.119.4 | `SkiaSharp.txt` (MIT) | Common |
 | HarfBuzzSharp and native assets | 8.3.1.3 | `HarfBuzzSharp.txt` (MIT) | Common |
 | ANGLE Windows native assets | 2.1.27548.20260419 | `ANGLE.txt` (BSD-style) | Windows |
 | Instances (FFMpegCore dependency) | 3.1.0 | `Instances.txt` (MIT) | Common |
 | MicroCom.Runtime (Avalonia dependency) | 0.11.6 | `MicroCom.Runtime.txt` (MIT) | Common |
-| Microsoft.Extensions.Logging / DependencyInjection.Abstractions | 8.0.0 | `Microsoft.Extensions.txt` (MIT), `Microsoft.Extensions.ThirdPartyNotices.txt` | Common |
+| Microsoft.Extensions components | 10.0.13 | `Microsoft.Extensions.txt` (MIT), `Microsoft.Extensions.ThirdPartyNotices.txt` | Shared logging/DI abstractions aligned at 10.0.13; MCP hosting components |
 | Microsoft.IO.RecyclableMemoryStream (SharpCompress dependency) | 3.0.1 | `Microsoft.IO.RecyclableMemoryStream.txt` (MIT) | Common |
 | Tmds.DBus.Protocol (Avalonia Linux integration) | 0.94.1 | `Tmds.DBus.Protocol.txt` (MIT) | Included with app notices |
 | FFmpeg, Windows/Linux BtbN builds | 8.1 branch | `FFmpeg.LGPLv3.txt` and `FFmpeg.GPLv3.txt` | In `ffmpeg/` for those RIDs |

@@ -52,6 +52,7 @@ Open `KaraokeToolkit.slnx` in Visual Studio with .NET 10 tooling. Projects:
 - `KaraokeToolkit.Core`: local workflows, media formats and native-tool integration.
 - `KaraokeToolkit.Tests`: standalone unit and integration tests, plus opt-in benchmarks.
 - `KaraokeToolkit.Cli`: [command-line operations and recipes](docs/cli.md), shipped with App and usable without a GUI.
+- `KaraokeToolkit.Mcp`: [local MCP tools](docs/mcp.md), launched by a client and shipped with App; no hosted service.
 
 Build selects a local, checksum-verified FFmpeg archive from `vendor/ffmpeg`.
 See [audio runtime and benchmarks](docs/audio-runtime.md) for platforms and packaging,

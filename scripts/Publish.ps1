@@ -17,6 +17,7 @@ $ErrorActionPreference = 'Stop'
 $repo = Split-Path $PSScriptRoot -Parent
 $project = Join-Path $repo 'KaraokeToolkit.App/KaraokeToolkit.App.csproj'
 $cliProject = Join-Path $repo 'KaraokeToolkit.Cli/KaraokeToolkit.Cli.csproj'
+$mcpProject = Join-Path $repo 'KaraokeToolkit.Mcp/KaraokeToolkit.Mcp.csproj'
 
 function Invoke-DotNet([string[]]$Arguments) {
     & dotnet @Arguments
@@ -61,12 +62,18 @@ try {
             '-o', $publish, '-p:PublishSingleFile=false', '-p:PublishTrimmed=false',
             '-p:ArtifactBuildName=Publish', '-p:UsedAvaloniaProducts=')
 
+        # MCP is an additional inactive stdio entry point in the same app package.
+        Invoke-DotNet @('publish', $mcpProject, '-c', 'Release', '-r', $rid, '--self-contained', 'true',
+            '-o', $publish, '-p:PublishSingleFile=false', '-p:PublishTrimmed=false',
+            '-p:ArtifactBuildName=Publish', '-p:UsedAvaloniaProducts=')
+
         $isWindowsTarget = $rid.StartsWith('win-')
         $mainExe = if ($isWindowsTarget) { 'KaraokeToolkit.App.exe' } else { 'KaraokeToolkit.App' }
         $ffmpegExe = if ($isWindowsTarget) { 'ffmpeg.exe' } else { 'ffmpeg' }
         $ffprobeExe = if ($isWindowsTarget) { 'ffprobe.exe' } else { 'ffprobe' }
         $cliExe = if ($isWindowsTarget) { 'karaoke-toolkit.exe' } else { 'karaoke-toolkit' }
-        foreach ($file in @($mainExe, $cliExe, 'karaoke-toolkit.deps.json', 'karaoke-toolkit.runtimeconfig.json', 'Velopack.dll', 'KaraokeToolkit.Core.dll',
+        $mcpExe = if ($isWindowsTarget) { 'karaoke-toolkit-mcp.exe' } else { 'karaoke-toolkit-mcp' }
+        foreach ($file in @($mainExe, $cliExe, $mcpExe, 'karaoke-toolkit-mcp.deps.json', 'karaoke-toolkit-mcp.runtimeconfig.json', 'ModelContextProtocol.dll', 'licenses/ModelContextProtocol.txt', 'karaoke-toolkit.deps.json', 'karaoke-toolkit.runtimeconfig.json', 'Velopack.dll', 'KaraokeToolkit.Core.dll',
             "ffmpeg/bin/$ffmpegExe", "ffmpeg/bin/$ffprobeExe", 'ffmpeg/runtime-manifest.json',
             'licenses/README.md', 'licenses/Velopack.txt', 'licenses/TagLibSharp.txt')) {
             if (!(Test-Path -LiteralPath (Join-Path $publish $file) -PathType Leaf)) { throw "Published $rid build is missing $file" }
