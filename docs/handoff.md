@@ -5,6 +5,9 @@ Snapshot: 2026-11-05, Africa/Johannesburg. Verify Git/files before editing.
 ## Checkout and release
 
 - Branch `master`; shared version **2026.11.6** in `Directory.Build.props`.
+- Follow-up to release `0c24904`: Settings heading expanded to Command Line
+  Interface (CLI). Text-only change; diff checked, tests not rerun. Existing
+  packages predate this heading change; no version bump or republish requested.
 - This release commit follows `e7b39b6` (CLI settings/320 kbps defaults). User
   authorized version bump, commit and local publish. No push requested for this
   release; last known pushed base is `f36c40e`. Check Git for actual commit ID.

@@ -3,7 +3,7 @@
              x:Class="KaraokeToolkit.App.Features.Settings.Integrations.IntegrationsView">
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="0,20,12,20" Spacing="16">
-            <Expander Header="Command Line (CLI)" IsExpanded="True" HorizontalAlignment="Stretch">
+            <Expander Header="Command Line Interface (CLI)" IsExpanded="True" HorizontalAlignment="Stretch">
                 <integrations:CliIntegrationView/>
             </Expander>
             <Expander Header="Model Context Protocol (MCP)" IsExpanded="True" HorizontalAlignment="Stretch">
