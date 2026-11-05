@@ -129,6 +129,31 @@ try {
         # LGPL v3 incorporates the GPL v3 terms; preserve both texts together.
         Copy-Item -LiteralPath (Join-Path $repo 'licenses/FFmpeg.GPLv3.txt') -Destination (Join-Path $output 'COPYING.GPLv3')
     }
+    $licenseDirectory = Join-Path (Split-Path $output -Parent) 'licenses/ffmpeg'
+    # Replace this generated component folder so renamed notices cannot linger.
+    if (![IO.Path]::GetFullPath($licenseDirectory).StartsWith($repoRoot, $comparison)) { throw 'Unexpected FFmpeg notice directory.' }
+    if ([IO.Path]::GetFullPath($licenseDirectory).StartsWith((Join-Path $repoRoot 'licenses') + [IO.Path]::DirectorySeparatorChar, $comparison)) { throw 'Refusing to replace repository source notices.' }
+    if (Test-Path -LiteralPath $licenseDirectory) {
+        if ((Get-Item -LiteralPath $licenseDirectory).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'Refusing to replace linked FFmpeg notices.' }
+        Remove-Item -LiteralPath $licenseDirectory -Recurse -Force
+    }
+    New-Item -ItemType Directory -Path $licenseDirectory -Force | Out-Null
+    # Preserve upstream files and expose a canonical copy for About and publishing.
+    foreach ($notice in Get-ChildItem -LiteralPath $output -File -Recurse | Where-Object { $_.Name -match '^(LICENSE|COPYING|NOTICE)' }) {
+        $relative = $notice.FullName.Substring($output.TrimEnd([IO.Path]::DirectorySeparatorChar).Length + 1)
+        $document = if ($notice.Name -match '^COPYING\.(.+)$') { $Matches[1] }
+            elseif ($notice.Name -match '^LICENSE(?:\.(?:txt|md))?$') { 'Notices' }
+            elseif ($notice.Name -match '^NOTICE(?:\.(?:txt|md))?$') { 'Attributions' }
+            else { $notice.Name }
+        $relativeFolder = Split-Path $relative -Parent
+        $destination = Join-Path (Join-Path $licenseDirectory $relativeFolder) ('FFmpeg.' + $document + '.txt')
+        New-Item -ItemType Directory -Path (Split-Path $destination -Parent) -Force | Out-Null
+        if ((Test-Path -LiteralPath $destination) -and (Get-Sha256 $destination) -ne (Get-Sha256 $notice.FullName)) {
+            throw "FFmpeg notices have conflicting canonical names: $relative"
+        }
+        Copy-Item -LiteralPath $notice.FullName -Destination $destination -Force
+    }
+    Copy-Item -LiteralPath $manifestPath -Destination (Join-Path $licenseDirectory 'runtime-manifest.json') -Force
     if ($paired -and $env:OS -ne 'Windows_NT') {
         & chmod +x (Join-Path $output 'bin/ffmpeg') (Join-Path $output 'bin/ffprobe')
         if ($LASTEXITCODE -ne 0) { throw 'Could not set FFmpeg executable permissions.' }

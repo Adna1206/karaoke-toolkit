@@ -37,7 +37,8 @@ builds now use the vendored copy. Store large archives with Git LFS.
 The vendored Windows and Linux FFmpeg builds are LGPL **version 3** (they enable
 version3, without GPL or nonfree components). Their `LICENSE.txt`, the GPL v3
 text incorporated by LGPL v3, and `runtime-manifest.json` are included in the
-FFmpeg output folder. The app also publishes common package notices from
+FFmpeg output folder and copied to `licenses/ffmpeg/`, which About reads.
+The app also publishes common package notices from
 [`licenses/`](../licenses/README.md). Each RID has its own version, hash and
 source metadata in the manifest.
 

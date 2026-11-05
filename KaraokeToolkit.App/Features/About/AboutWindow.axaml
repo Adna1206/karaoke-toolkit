@@ -23,15 +23,14 @@
                 <TextBlock Text="Created by" Opacity="0.65" FontSize="12"/>
                 <TextBlock Text="André Almeida (ADNA)" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap"/>
                 <TextBlock Text="Copyright © 2026 · GPL-3.0-or-later" TextWrapping="Wrap" FontSize="12"/>
-                <TextBlock Text="You may redistribute and modify this software under GNU GPL v3 or later. Provided without warranty; see Application licence." TextWrapping="Wrap" FontSize="12" Opacity="0.8"/>
+                <TextBlock Text="Provided without warranty. See Application licence for terms." TextWrapping="Wrap" FontSize="12" Opacity="0.8"/>
               </StackPanel>
             </Border>
             <StackPanel Spacing="8">
               <TextBlock Text="Built with" FontWeight="SemiBold"/>
               <TextBlock Text="Avalonia · Community Toolkit · Inter&#10;FFMpegCore · SharpCompress · TagLibSharp · SkiaSharp · HarfBuzzSharp" TextWrapping="Wrap" Opacity="0.8"/>
-              <TextBlock Text="FFmpeg provides audio and video processing (LGPL/GPL, depending on the bundled build). cdrdao provides disc reading (GPL v2 or later)." TextWrapping="Wrap" FontSize="12" Opacity="0.8"/>
-              <TextBlock Text="TagLibSharp provides media tagging (LGPL v2.1)." TextWrapping="Wrap" FontSize="12" Opacity="0.8"/>
-              <TextBlock Text="Full licence texts, additional components and source information are available under Third-party notices." TextWrapping="Wrap" FontSize="12" Opacity="0.65"/>
+              <TextBlock Text="FFmpeg provides audio and video processing. cdrdao provides disc reading." TextWrapping="Wrap" FontSize="12" Opacity="0.8"/>
+              <TextBlock Text="Full licence texts and bundled component notices are available under Third-party notices." TextWrapping="Wrap" FontSize="12" Opacity="0.65"/>
             </StackPanel>
           </StackPanel>
         </ScrollViewer>

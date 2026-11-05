@@ -40,8 +40,12 @@ from a different platform or overwrite earlier packages:
 Windows produces a Setup EXE, portable ZIP, full update package and release metadata.
 The Setup EXE has the evaluated app version appended before its extension, for
 example `KaraokeToolkit-win-Setup-2026.11.7.exe`. Checksums use the final filename.
-App, CLI and MCP outputs include the application `LICENSE` (GNU GPL v3) and
-`NOTICE.txt` (GPL-3.0-or-later grant and copyright), alongside third-party notices.
+App, CLI and MCP outputs include `licenses/application/LICENSE` (GNU GPL v3)
+and `licenses/application/NOTICE.txt` (GPL-3.0-or-later grant and copyright).
+All displayed notices come from `licenses/`, with native texts named
+`Component.Document.txt` in `licenses/ffmpeg/` and `licenses/cdrdao/`. About reads
+only this tree and excludes audit/source manifests from its licence list.
+Upstream FFmpeg notices are additionally preserved in its original layout.
 CLI and MCP are included beside the desktop executable, sharing .NET, Core and
 FFmpeg. MCP stays inactive until an MCP client launches it.
 Linux produces an AppImage, full update package and release metadata. Linux disc

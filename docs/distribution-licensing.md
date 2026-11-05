@@ -42,10 +42,22 @@ The runtime package contains a bare Git repository; its recipe selects
 contain their upstream release archives. cdrdao's own pinned source remains
 under `vendor/cdrdao/source/` and is already copied beside its executable.
 
-Runtime licence texts and notices are retained under `vendor/cdrdao/notices/`
-and copied into cdrdao build/publish output. About discovers those top-level
-LICENSE/COPYING files. Preparation verifies each DLL against the reviewed hash,
+Runtime licence texts and notices are retained under `licenses/cdrdao/`
+and copied to the same subfolder in build/publish output. About reads only the
+output `licenses/` tree: common notices at its root, native notices under
+`ffmpeg/` and `cdrdao/`, and the application licence under `application/`.
+Native copies use `Component.Document.txt`, such as `GCC.Runtime-Exception.txt`;
+About derives origin/component/document labels directly from these names.
+Source manifests remain shipped as supporting documentation, outside the UI list.
+Common duplicate native licence entries are omitted from that list.
+The single `GCC.GPLv3.txt` copy also supplies the GPL v3 terms incorporated by
+`MSYS2.LGPLv3.txt`; the complete texts and exceptions remain unchanged.
+Original upstream FFmpeg notices are also preserved in its distribution layout.
+Preparation verifies each cdrdao DLL against the reviewed hash,
 so updating the ZIP also requires reviewing this inventory.
+The full upstream newlib notice collection is retained conservatively; its
+individual sections have not all been proven applicable to this Windows binary.
+No legal text was removed as part of filename and presentation simplification.
 
 ### TagLibSharp
 

@@ -29,4 +29,14 @@
       </ResolvedFileToPublish>
     </ItemGroup>
   </Target>
+  <Target Name="PublishNativeLicenses" BeforeTargets="ComputeFilesToPublish" DependsOnTargets="PrepareFFmpeg;PrepareCdrdao" Condition="'$(MSBuildProjectName)' == 'KaraokeToolkit.App' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Cli' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Mcp'">
+    <ItemGroup>
+      <_NativeLicensePublish Include="$(TargetDir)licenses/ffmpeg/**/*" Component="ffmpeg" />
+      <_NativeLicensePublish Include="$(TargetDir)licenses/cdrdao/**/*" Component="cdrdao" />
+      <ResolvedFileToPublish Include="@(_NativeLicensePublish)">
+        <RelativePath>licenses/%(_NativeLicensePublish.Component)/%(_NativeLicensePublish.RecursiveDir)%(_NativeLicensePublish.Filename)%(_NativeLicensePublish.Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
 </Project>

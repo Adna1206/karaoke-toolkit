@@ -112,6 +112,13 @@ dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj -c Release -p:UsedA
 - Preserve/update shipped third-party notices and About entries when dependencies
   change. [Licence inventory](licenses/README.md) records remaining distribution
   obligations; generated packages are not evidence those obligations are complete.
+- Copy all application and third-party licence texts, notices and displayed source
+  information into the output `licenses/` tree. About reads only that tree; use
+  component subfolders and retain origin/component/document labels. Root repository
+  LICENSE/NOTICE entry points and notices inside pinned upstream archives may remain.
+- Name maintained native notice copies `Component.Document.txt` under their tool's
+  licence subfolder; derive display labels from those names. Keep audit metadata
+  available as documentation rather than listing it as a licence in About.
 
 ## Maintain this guidance
 

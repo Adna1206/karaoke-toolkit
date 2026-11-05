@@ -40,7 +40,9 @@ $output = Join-Path $repo ('artifacts/distribution-sources/' + (Get-Date -Format
 New-Item -ItemType Directory -Path $output -Force | Out-Null
 foreach ($source in $verified) { Copy-Item -LiteralPath $source.Path -Destination (Join-Path $output $source.Archive) }
 Copy-Item -LiteralPath $manifestPath -Destination $output
-foreach ($file in @('LICENSE', 'NOTICE.txt')) { Copy-Item -LiteralPath (Join-Path $repo $file) -Destination $output }
+$applicationLicenses = Join-Path $output 'licenses/application'
+New-Item -ItemType Directory -Path $applicationLicenses -Force | Out-Null
+foreach ($file in @('LICENSE', 'NOTICE.txt')) { Copy-Item -LiteralPath (Join-Path $repo $file) -Destination $applicationLicenses }
 Copy-Item -LiteralPath (Join-Path $repo 'docs/distribution-licensing.md') -Destination (Join-Path $output 'README.md')
 $verified | ForEach-Object { $_.Hash + '  ' + $_.Archive } | Set-Content -LiteralPath (Join-Path $output 'SHA256SUMS.txt') -Encoding ascii
 if (!$manifest.completeForPublicDistribution) { Write-Warning 'Source evidence is incomplete for public distribution. Read README.md and the manifest limitations.' }

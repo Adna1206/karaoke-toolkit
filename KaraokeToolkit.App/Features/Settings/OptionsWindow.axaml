@@ -140,7 +140,7 @@
             <Button Content="{Binding Definitions.ResetDefaults.Label}" Click="ResetDefaults_Click" ToolTip.Tip="{Binding Definitions.ResetDefaults.Description}"/>
         <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
             <Button Content="{Binding Definitions.Save.Label}" Click="Save_Click" MinWidth="85" ToolTip.Tip="{Binding Definitions.Save.Description}"/>
-            <Button Content="{Binding Definitions.Cancel.Label}" Click="Cancel_Click" MinWidth="85" ToolTip.Tip="{Binding Definitions.Cancel.Description}"/>
+            <Button Content="{Binding Definitions.Cancel.Label}" Click="Cancel_Click" IsCancel="True" MinWidth="85" ToolTip.Tip="{Binding Definitions.Cancel.Description}"/>
             <Button Content="{Binding Definitions.Apply.Label}" Click="Apply_Click" IsEnabled="{Binding HasChanges}" MinWidth="85" ToolTip.Tip="{Binding Definitions.Apply.Description}"/>
         </StackPanel>
         </Grid>

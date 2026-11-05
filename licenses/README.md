@@ -35,9 +35,9 @@ runtime source matches, source assembly and remaining FFmpeg work.
 | FFmpeg, macOS Intel Evermeet build | 9.0.2 | `FFmpeg.GPLv3.txt` | In `ffmpeg/` for `osx-x64` |
 | FFmpeg, macOS Apple Silicon OSXExperts build | 9.0 site label | `FFmpeg.GPLv2.txt` | In `ffmpeg/` for `osx-arm64` |
 | CDRDAO | 1.2.6 | `CDRDAO.GPLv2.txt` | Bundled Windows x64 reader, with source archive |
-| MSYS2 runtime | 3.6.5-1 | LGPL v3 or later with linking exception; additional newlib notices, under `vendor/cdrdao/notices/` | Windows cdrdao directory |
-| GCC runtime DLLs | gcc-libs 15.2.0-1 | GPL v3 or later with GCC Runtime Library Exception 3.1, under `vendor/cdrdao/notices/` | Windows cdrdao directory |
-| GNU libiconv | 1.18-1 | LGPL v2.1 or later, under `vendor/cdrdao/notices/` | Windows cdrdao directory |
+| MSYS2 runtime | 3.6.5-1 | LGPL v3 or later with linking exception; additional newlib notices, under `licenses/cdrdao/` | Windows `licenses/cdrdao/` |
+| GCC runtime DLLs | gcc-libs 15.2.0-1 | GPL v3 or later with GCC Runtime Library Exception 3.1, under `licenses/cdrdao/` | Windows `licenses/cdrdao/` |
+| GNU libiconv | 1.18-1 | LGPL v2.1 or later, under `licenses/cdrdao/` | Windows `licenses/cdrdao/` |
 
 The Avalonia text comes from its pinned source revision. The Community Toolkit,
 SkiaSharp, HarfBuzzSharp and ANGLE files come from the exact restored NuGet
@@ -67,8 +67,13 @@ library, and provide corresponding library source as required when distributing.
 Microsoft Extensions' licence and third-party notices were copied directly from
 the restored 8.0.0 package; both abstraction packages contain identical texts.
 The app includes these files in build and publish output. **About → Third-party
-notices** displays the full texts shipped in `licenses/`, together with licence
-files in the native tools' directories and FFmpeg's version/source manifest.
+notices** reads only `licenses/`: common texts at its root and native notice texts
+in `ffmpeg/` and `cdrdao/`. Native copies use `Component.Document.txt`; their folder
+and filename supply the display label. Audit/source manifests remain available
+as documentation and are not licence-list entries. Common duplicate native texts
+are also omitted from that list. The application licence is copied to
+`licenses/application/` for the separate Application licence tab. This Markdown inventory
+remains available in the package as documentation.
 
 Except for TagLibSharp, NuGet package metadata lists the remaining runtime packages in the current
 `KaraokeToolkit.App/obj/project.assets.json` as MIT except ANGLE and the

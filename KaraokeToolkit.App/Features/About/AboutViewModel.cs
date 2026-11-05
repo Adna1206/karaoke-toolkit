@@ -24,11 +24,12 @@ public partial class AboutViewModel : ViewModelBase
 
     public AboutViewModel(string installationDirectory)
     {
+        string licenseDirectory = System.IO.Path.Combine(installationDirectory, "licenses");
         try
         {
-            ApplicationLicenseText = File.ReadAllText(System.IO.Path.Combine(installationDirectory, "NOTICE.txt"))
+            ApplicationLicenseText = File.ReadAllText(System.IO.Path.Combine(licenseDirectory, "application", "NOTICE.txt"))
                 + Environment.NewLine + Environment.NewLine
-                + File.ReadAllText(System.IO.Path.Combine(installationDirectory, "LICENSE"));
+                + File.ReadAllText(System.IO.Path.Combine(licenseDirectory, "application", "LICENSE"));
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {
@@ -37,19 +38,22 @@ public partial class AboutViewModel : ViewModelBase
                 + "\nhttps://www.gnu.org/licenses/gpl-3.0.html";
         }
         var notices = new List<ThirdPartyNotice>();
-        foreach (string folder in new[] { "licenses", "ffmpeg", "cdrdao" })
+        foreach (string folder in new[] { "", "ffmpeg", "cdrdao" })
         {
-            string directory = System.IO.Path.Combine(installationDirectory, folder);
+            string directory = System.IO.Path.Combine(licenseDirectory, folder);
             if (!Directory.Exists(directory)) continue;
-            foreach (string file in Directory.EnumerateFiles(directory).OrderBy(System.IO.Path.GetFileName, StringComparer.OrdinalIgnoreCase))
+            var search = folder == "" ? SearchOption.TopDirectoryOnly : SearchOption.AllDirectories;
+            foreach (string file in Directory.EnumerateFiles(directory, "*", search).OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
             {
                 string name = System.IO.Path.GetFileName(file);
-                bool isNotice = folder == "licenses" ? name.EndsWith(".txt", StringComparison.OrdinalIgnoreCase) || name == "README.md"
-                    : name.StartsWith("LICENSE", StringComparison.OrdinalIgnoreCase) || name.StartsWith("COPYING", StringComparison.OrdinalIgnoreCase)
-                      || (folder == "cdrdao" && name == "CDRDAO.GPLv2.txt");
-                if (folder == "ffmpeg" && name == "runtime-manifest.json")
-                    notices.Add(new("FFmpeg · Build and source information", file));
-                else if (isNotice) notices.Add(new(folder == "licenses" ? DisplayName(name) : NativeDisplayName(folder, name), file));
+                // Show the bundled tool's canonical notices, not common duplicate texts.
+                if (folder == "" && ((name.StartsWith("FFmpeg.", StringComparison.OrdinalIgnoreCase)
+                    && Directory.Exists(System.IO.Path.Combine(licenseDirectory, "ffmpeg")))
+                    || (name.Equals("CDRDAO.GPLv2.txt", StringComparison.OrdinalIgnoreCase)
+                    && File.Exists(System.IO.Path.Combine(licenseDirectory, "cdrdao", "cdrdao.GPLv2.txt"))))) continue;
+                if (name.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
+                    notices.Add(new(folder == "" ? DisplayName(name)
+                    : NativeDisplayName(folder, System.IO.Path.GetRelativePath(directory, file)), file));
             }
         }
         Notices = notices.AsReadOnly();
@@ -66,7 +70,6 @@ public partial class AboutViewModel : ViewModelBase
 
     private static string DisplayName(string filename) => filename switch
     {
-        "README.md" => "Component inventory",
         "Avalonia.txt" => "Avalonia · MIT",
         "CommunityToolkit.Mvvm.txt" => "CommunityToolkit.Mvvm · MIT",
         "CommunityToolkit.Mvvm.ThirdPartyNotices.txt" => "Community Toolkit · notices",
@@ -95,18 +98,10 @@ public partial class AboutViewModel : ViewModelBase
 
     private static string NativeDisplayName(string folder, string filename)
     {
-        string component = folder == "ffmpeg" ? "FFmpeg" : "cdrdao";
-        string description = filename.ToUpperInvariant() switch
-        {
-            "COPYING.GPLV2" => "GPL v2",
-            "COPYING.GPLV3" => "GPL v3",
-            "COPYING.LGPLV2.1" => "LGPL v2.1",
-            "COPYING.LGPLV3" => "LGPL v3",
-            "CDRDAO.GPLV2.TXT" => "GPL v2 or later",
-            // A distribution's LICENSE can contain multiple notices; do not assume a licence from its filename.
-            "LICENSE" or "LICENSE.TXT" or "LICENSE.MD" or "COPYING" => "Licence and notices",
-            _ => "Additional notices"
-        };
-        return component + " · " + description;
+        string origin = folder == "ffmpeg" ? "FFmpeg" : folder;
+        string[] parts = System.IO.Path.ChangeExtension(filename, null)!.Split('.', 2);
+        string document = string.Join(" · ", parts.Length > 1 && parts[0].Equals(origin, StringComparison.OrdinalIgnoreCase)
+            ? parts.Skip(1) : parts).Replace('-', ' ');
+        return origin + " · " + document;
     }
 }

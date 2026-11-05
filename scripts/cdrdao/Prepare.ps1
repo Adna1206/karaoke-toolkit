@@ -42,10 +42,24 @@ foreach ($component in $runtimeComponents) {
     }
 }
 Copy-Item -LiteralPath (Join-Path $repo 'vendor/cdrdao/runtime-components.json') -Destination $OutputDirectory -Force
-Copy-Item -LiteralPath (Join-Path $repo 'licenses/CDRDAO.GPLv2.txt') -Destination $OutputDirectory -Force
+$licenseDirectory = Join-Path (Split-Path ([IO.Path]::GetFullPath($OutputDirectory)) -Parent) 'licenses/cdrdao'
+$repoRoot = [IO.Path]::GetFullPath($repo).TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+if (![IO.Path]::GetFullPath($licenseDirectory).StartsWith($repoRoot, [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'Refusing to replace cdrdao notices outside the repository.'
+}
+if ([IO.Path]::GetFullPath($licenseDirectory).StartsWith((Join-Path $repoRoot 'licenses') + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'Refusing to replace repository source notices.'
+}
+if (Test-Path -LiteralPath $licenseDirectory) {
+    if ((Get-Item -LiteralPath $licenseDirectory).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'Refusing to replace linked cdrdao notices.' }
+    Remove-Item -LiteralPath $licenseDirectory -Recurse -Force
+}
+New-Item -ItemType Directory -Path $licenseDirectory -Force | Out-Null
+Copy-Item -LiteralPath (Join-Path $repo 'vendor/cdrdao/runtime-components.json') -Destination $licenseDirectory -Force
+Copy-Item -LiteralPath (Join-Path $repo 'licenses/CDRDAO.GPLv2.txt') -Destination (Join-Path $licenseDirectory 'cdrdao.GPLv2.txt') -Force
 # Preserve the licences for the exact runtime DLLs shipped in the reader ZIP.
-Get-ChildItem -LiteralPath (Join-Path $repo 'vendor/cdrdao/notices') -Filter '*.txt' -File |
-    Copy-Item -Destination $OutputDirectory -Force
+Get-ChildItem -LiteralPath (Join-Path $repo 'licenses/cdrdao') -Filter '*.txt' -File |
+    Copy-Item -Destination $licenseDirectory -Force
 # Keep the exact cdrdao source alongside the distributed executable.
 $source = Join-Path (Join-Path $repo 'vendor/cdrdao') $manifest.source.archive
 if ((Get-Sha256 $source) -ne $manifest.source.sha256) { throw 'cdrdao source checksum mismatch.' }

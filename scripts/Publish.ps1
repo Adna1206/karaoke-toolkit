@@ -75,11 +75,19 @@ try {
         $mcpExe = if ($isWindowsTarget) { 'karaoke-toolkit-mcp.exe' } else { 'karaoke-toolkit-mcp' }
         foreach ($file in @($mainExe, $cliExe, $mcpExe, 'karaoke-toolkit-mcp.deps.json', 'karaoke-toolkit-mcp.runtimeconfig.json', 'ModelContextProtocol.dll', 'licenses/ModelContextProtocol.txt', 'karaoke-toolkit.deps.json', 'karaoke-toolkit.runtimeconfig.json', 'Velopack.dll', 'KaraokeToolkit.Core.dll',
             "ffmpeg/bin/$ffmpegExe", "ffmpeg/bin/$ffprobeExe", 'ffmpeg/runtime-manifest.json',
-            'LICENSE', 'NOTICE.txt', 'licenses/README.md', 'licenses/Velopack.txt', 'licenses/TagLibSharp.txt')) {
+            'licenses/application/LICENSE', 'licenses/application/NOTICE.txt', 'licenses/ffmpeg/FFmpeg.Notices.txt', 'licenses/ffmpeg/runtime-manifest.json',
+            'licenses/README.md', 'licenses/Velopack.txt', 'licenses/TagLibSharp.txt')) {
             if (!(Test-Path -LiteralPath (Join-Path $publish $file) -PathType Leaf)) { throw "Published $rid build is missing $file" }
         }
         if ($isWindowsTarget -and !(Test-Path -LiteralPath (Join-Path $publish 'cdrdao/cdrdao.exe') -PathType Leaf)) {
             throw 'Published Windows build is missing cdrdao.'
+        }
+        if ($isWindowsTarget) {
+            foreach ($notice in @('cdrdao.GPLv2.txt') + @(Get-ChildItem -LiteralPath (Join-Path $repo 'licenses/cdrdao') -File | Select-Object -ExpandProperty Name)) {
+                if (!(Test-Path -LiteralPath (Join-Path $publish ('licenses/cdrdao/' + $notice)) -PathType Leaf)) {
+                    throw "Published Windows build is missing cdrdao notice: $notice"
+                }
+            }
         }
 
         $directive = if ($isWindowsTarget) { '[win]' } else { '[linux]' }
