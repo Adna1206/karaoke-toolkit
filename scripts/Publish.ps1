@@ -75,7 +75,7 @@ try {
         $mcpExe = if ($isWindowsTarget) { 'karaoke-toolkit-mcp.exe' } else { 'karaoke-toolkit-mcp' }
         foreach ($file in @($mainExe, $cliExe, $mcpExe, 'karaoke-toolkit-mcp.deps.json', 'karaoke-toolkit-mcp.runtimeconfig.json', 'ModelContextProtocol.dll', 'licenses/ModelContextProtocol.txt', 'karaoke-toolkit.deps.json', 'karaoke-toolkit.runtimeconfig.json', 'Velopack.dll', 'KaraokeToolkit.Core.dll',
             "ffmpeg/bin/$ffmpegExe", "ffmpeg/bin/$ffprobeExe", 'ffmpeg/runtime-manifest.json',
-            'licenses/README.md', 'licenses/Velopack.txt', 'licenses/TagLibSharp.txt')) {
+            'LICENSE', 'NOTICE.txt', 'licenses/README.md', 'licenses/Velopack.txt', 'licenses/TagLibSharp.txt')) {
             if (!(Test-Path -LiteralPath (Join-Path $publish $file) -PathType Leaf)) { throw "Published $rid build is missing $file" }
         }
         if ($isWindowsTarget -and !(Test-Path -LiteralPath (Join-Path $publish 'cdrdao/cdrdao.exe') -PathType Leaf)) {
@@ -94,6 +94,12 @@ try {
         $expectedPattern = if ($isWindowsTarget) { '*-Setup.exe' } else { '*.AppImage' }
         if (@(Get-ChildItem -LiteralPath $packages -Filter $expectedPattern -File).Count -eq 0) {
             throw "Velopack did not produce the expected $rid package."
+        }
+        if ($isWindowsTarget) {
+            # Append the evaluated app version before checksums record final names.
+            foreach ($installer in Get-ChildItem -LiteralPath $packages -Filter '*-Setup.exe' -File) {
+                Rename-Item -LiteralPath $installer.FullName -NewName ($installer.BaseName + '-' + $version + $installer.Extension)
+            }
         }
         $hashes = Get-ChildItem -LiteralPath $packages -File | Get-FileHash -Algorithm SHA256 |
             ForEach-Object { $_.Hash.ToLowerInvariant() + '  ' + [IO.Path]::GetFileName($_.Path) }

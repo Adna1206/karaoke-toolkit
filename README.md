@@ -1,5 +1,11 @@
 # Karaoke Toolkit
 
+Copyright © 2026 André Almeida (ADNA).
+Karaoke Toolkit is licensed under **GPL-3.0-or-later**: you may redistribute
+and modify it under GNU GPL version 3 or any later version. It comes without
+warranty. See [LICENSE](LICENSE) and [the application notice](NOTICE.txt).
+Third-party components retain their own licences; see [the inventory](licenses/README.md).
+
 Inspired by MP3+G Toolz, Karaoke Toolkit is an Avalonia desktop app for local
 karaoke-file conversion, metadata and file management. Windows is the validated
 runtime platform; Windows and Linux x64 packages can be generated locally.

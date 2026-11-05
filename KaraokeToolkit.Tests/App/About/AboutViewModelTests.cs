@@ -11,6 +11,8 @@ public class AboutViewModelTests
         string folder = TestMediaFixture.NewFolder();
         foreach (string directory in new[] { "licenses", "ffmpeg", "cdrdao" })
             Directory.CreateDirectory(Path.Combine(folder, directory));
+        File.WriteAllText(Path.Combine(folder, "NOTICE.txt"), "Application copyright and GPL-3.0-or-later grant");
+        File.WriteAllText(Path.Combine(folder, "LICENSE"), "Complete application GPL text");
         File.WriteAllText(Path.Combine(folder, "licenses", "Avalonia.txt"), "Complete MIT notice");
         File.WriteAllText(Path.Combine(folder, "licenses", "TagLibSharp.txt"), "Full LGPL v2.1 text");
         File.WriteAllText(Path.Combine(folder, "licenses", "Velopack.txt"), "Full Velopack MIT notice");
@@ -22,6 +24,8 @@ public class AboutViewModelTests
         var model = new AboutViewModel(folder);
         Assert.Equal(ApplicationInfo.Name, model.AppName);
         Assert.Equal("Version " + ApplicationInfo.Version, model.Version);
+        Assert.Contains("Application copyright and GPL-3.0-or-later grant", model.ApplicationLicenseText);
+        Assert.Contains("Complete application GPL text", model.ApplicationLicenseText);
         Assert.Equal(7, model.Notices.Count);
         Assert.Equal("Complete MIT notice", model.NoticeText);
         model.SelectedNotice = model.Notices.Single(notice => notice.Name == "TagLibSharp · LGPL v2.1");
@@ -43,6 +47,8 @@ public class AboutViewModelTests
     {
         string folder = TestMediaFixture.NewFolder();
         var empty = new AboutViewModel(folder);
+        Assert.Contains("GPL-3.0-or-later", empty.ApplicationLicenseText);
+        Assert.Contains("could not be opened", empty.ApplicationLicenseText);
         Assert.Empty(empty.Notices);
         Assert.Null(empty.SelectedNotice);
         Assert.Contains("No bundled notices", empty.NoticeText);

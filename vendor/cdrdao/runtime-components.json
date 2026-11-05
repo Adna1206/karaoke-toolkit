@@ -1,0 +1,38 @@
+[
+  {
+    "file": "msys-2.0.dll",
+    "package": "msys2-runtime",
+    "version": "3.6.5-1",
+    "license": "LGPL-3.0-or-later WITH linking exception; additional newlib notices",
+    "sha256": "435f94f5ba4c31f20c77c0d92eb26ee0c5c822add6bce5b5ea92711ae6c3bf65",
+    "binaryOrigin": "https://repo.msys2.org/msys/x86_64/msys2-runtime-3.6.5-1-x86_64.pkg.tar.zst",
+    "sourceArchive": "msys2-runtime-3.6.5-1.src.tar.zst"
+  },
+  {
+    "file": "msys-gcc_s-seh-1.dll",
+    "package": "gcc-libs",
+    "version": "15.2.0-1",
+    "license": "GPL-3.0-or-later WITH GCC-exception-3.1",
+    "sha256": "a9cfd10e2a4bf74f60530fc2f4f8fbe4055b50ff7ccd61b9440ef2fbe9c85aef",
+    "binaryOrigin": "https://repo.msys2.org/msys/x86_64/gcc-libs-15.2.0-1-x86_64.pkg.tar.zst",
+    "sourceArchive": "gcc-15.2.0-1.src.tar.zst"
+  },
+  {
+    "file": "msys-stdc++-6.dll",
+    "package": "gcc-libs",
+    "version": "15.2.0-1",
+    "license": "GPL-3.0-or-later WITH GCC-exception-3.1",
+    "sha256": "7f6f5b90eb574b595f09c96b8d9fe5ff71ca93d9fa63e3738cbf105ff20dba4e",
+    "binaryOrigin": "https://repo.msys2.org/msys/x86_64/gcc-libs-15.2.0-1-x86_64.pkg.tar.zst",
+    "sourceArchive": "gcc-15.2.0-1.src.tar.zst"
+  },
+  {
+    "file": "msys-iconv-2.dll",
+    "package": "libiconv",
+    "version": "1.18-1",
+    "license": "LGPL-2.1-or-later",
+    "sha256": "5d890c42222c7b86519f7c368836cc2930f11dc975341b7ded30f26ef8770e0b",
+    "binaryOrigin": "https://repo.msys2.org/msys/x86_64/libiconv-1.18-1-x86_64.pkg.tar.zst",
+    "sourceArchive": "libiconv-1.18-1.src.tar.zst"
+  }
+]

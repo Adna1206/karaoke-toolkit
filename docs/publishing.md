@@ -38,6 +38,10 @@ from a different platform or overwrite earlier packages:
 - Packages: `artifacts/releases/<version>/<run-id>/<rid>/`
 
 Windows produces a Setup EXE, portable ZIP, full update package and release metadata.
+The Setup EXE has the evaluated app version appended before its extension, for
+example `KaraokeToolkit-win-Setup-2026.11.7.exe`. Checksums use the final filename.
+App, CLI and MCP outputs include the application `LICENSE` (GNU GPL v3) and
+`NOTICE.txt` (GPL-3.0-or-later grant and copyright), alongside third-party notices.
 CLI and MCP are included beside the desktop executable, sharing .NET, Core and
 FFmpeg. MCP stays inactive until an MCP client launches it.
 Linux produces an AppImage, full update package and release metadata. Linux disc
@@ -50,6 +54,9 @@ The script does not install packages, upload releases, enable update checks, sig
 packages, change Explorer registrations or bump the app version. Packages are local
 unsigned build outputs. Signing, real install/upgrade/uninstall testing, Linux runtime
 testing and distribution/source obligations remain release-readiness work.
+See [distribution licensing](distribution-licensing.md) for the separate source
+assembly command and unresolved FFmpeg inputs. Its current output is incomplete
+source evidence, not a complete public-release source bundle.
 
 ## Build versus publish
 

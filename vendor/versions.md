@@ -18,7 +18,12 @@ The complete Windows and Linux archives are in `ffmpeg/<rid>/`; the macOS vendor
 | Target | Version | Release | License | Archive SHA256 | Status |
 |---|---|---|---|---|---|
 | Source | 1.2.6 | [Official release](https://github.com/cdrdao/cdrdao/releases/tag/rel_1_2_6) | GPL v2 (`COPYING` in source) | `10d15b0dc78bd44a9a4a8d7d85498c734771036159d05aa940e17f18fc40d40f` | Stored |
-| `win-x64` | 1.2.6 | [Official release](https://github.com/cdrdao/cdrdao/releases/tag/rel_1_2_6) | GPL v2 for CDRDAO; bundled MSYS notices to review | `653e56c49f94771f87cd9f4ceefc255329714ba5066bd78e30edaa464c322a3a` | Bundled experimental reader; version command checked; hardware untested |
+| `win-x64` | 1.2.6 | [Official release](https://github.com/cdrdao/cdrdao/releases/tag/rel_1_2_6) | GPL v2 for CDRDAO; runtime notices under `cdrdao/notices/` | `653e56c49f94771f87cd9f4ceefc255329714ba5066bd78e30edaa464c322a3a` | Bundled experimental reader; version command checked; hardware untested |
 | `linux-x64`, `osx-x64`, `osx-arm64` | — | Official release has no binaries | — | — | Target builds needed |
 
-`cdrdao/manifest.json` records these assets. The Windows ZIP includes MSYS runtime DLLs; review their licenses and dependencies before public distribution. The experimental disc reader now uses cdrdao. Linux/macOS currently require an installed executable; no bundled builds are present.
+`cdrdao/manifest.json` records these assets. The four Windows runtime DLLs are
+matched to archived MSYS2 packages in `cdrdao/runtime-components.json`; their
+notices are shipped and matching source packages are pinned in
+`distribution-sources.json`. See [distribution licensing](../docs/distribution-licensing.md)
+for source assembly and unresolved FFmpeg inputs. The experimental disc reader
+uses cdrdao. Linux/macOS require an installed executable; no bundled builds are present.

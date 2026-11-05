@@ -15,6 +15,7 @@ public partial class AboutViewModel : ViewModelBase
 {
     public string AppName => ApplicationInfo.Name;
     public string Version => "Version " + ApplicationInfo.Version;
+    public string ApplicationLicenseText { get; }
     public IReadOnlyList<ThirdPartyNotice> Notices { get; }
     [ObservableProperty] private ThirdPartyNotice? selectedNotice;
     [ObservableProperty] private string noticeText = "No bundled notices were found in this installation.";
@@ -23,6 +24,18 @@ public partial class AboutViewModel : ViewModelBase
 
     public AboutViewModel(string installationDirectory)
     {
+        try
+        {
+            ApplicationLicenseText = File.ReadAllText(System.IO.Path.Combine(installationDirectory, "NOTICE.txt"))
+                + Environment.NewLine + Environment.NewLine
+                + File.ReadAllText(System.IO.Path.Combine(installationDirectory, "LICENSE"));
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            ApplicationLicenseText = "Karaoke Toolkit is licensed under GPL-3.0-or-later.\n"
+                + "The bundled application licence could not be opened: " + error.Message
+                + "\nhttps://www.gnu.org/licenses/gpl-3.0.html";
+        }
         var notices = new List<ThirdPartyNotice>();
         foreach (string folder in new[] { "licenses", "ffmpeg", "cdrdao" })
         {

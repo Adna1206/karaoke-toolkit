@@ -1,0 +1,23 @@
+Karaoke Toolkit
+Copyright (C) 2026 André Almeida (ADNA)
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program in LICENSE. If not, see
+https://www.gnu.org/licenses/.
+
+Source repository and project contact:
+https://github.com/Adna1206/karaoke-toolkit
+
+This notice applies to Karaoke Toolkit's original code and assets.
+Third-party components retain their respective copyrights and licences;
+see licenses/README.md and the notices shipped with the native tools.

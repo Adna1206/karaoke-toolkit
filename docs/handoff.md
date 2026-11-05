@@ -2,6 +2,90 @@
 
 Snapshot: 2026-11-05, Africa/Johannesburg. Verify Git/files before editing.
 
+## Version 2026.11.8
+
+- Bumped the shared version from 2026.11.7 on `master` / `f71ff64` for the
+  GPL application licence, dependency source/notice work and installer naming.
+- Release suite: `dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj
+  -c Release --no-restore -p:UsedAvaloniaProducts= -p:ArtifactBuildName=StandaloneTests
+  -v minimal --logger trx --results-directory artifacts/tests/results` ran outside
+  the sandbox: 668 passed, one MCP progress-order assertion failed. The failing
+  test passed on a targeted `--no-build --no-restore` rerun. No package published.
+- Next: distinguish cdrdao runtime notices in About and omit the component inventory
+  from the in-app notice list; retain the inventory in the package.
+
+## Application licence applied
+
+- Owner selected the recommended **GPL-3.0-or-later** on 2026-11-05. Copyright
+  © 2026 André Almeida (ADNA). Root LICENSE contains the unmodified
+  GPL v3 text; NOTICE.txt grants v3-or-later for original code/assets and preserves
+  third-party terms. README, build metadata and licensing documentation updated.
+- Owner subsequently shortened the public name to **André Almeida (ADNA)**;
+  notices, About, metadata and documentation now use it consistently. MSBuild
+  copyright evaluation and diff checks passed; text-only follow-up, no test rerun.
+- Core content items copy LICENSE/NOTICE.txt to Core/App/CLI/MCP outputs and
+  publish payloads; publisher checks for both. About has a separate Application
+  licence tab and redistribution/no-warranty notice. Source evidence assembly
+  also includes the application licence for its accompanying documentation.
+- Targeted About tests passed **2/2** with the established Release command,
+  `--no-restore`, `ArtifactBuildName=StandaloneTests`, filter
+  `FullyQualifiedName~AboutViewModelTests`, minimal verbosity and TRX output.
+  Sandboxed invocation failed without diagnostics; identical unsandboxed run passed.
+  MSBuild metadata/content evaluation and full GPL text hash comparison passed.
+  No visual UI verification, full suite, package publish, version bump or commit.
+- Third-party source audit and installer-name edits remain uncommitted. Application
+  licence decision is resolved; FFmpeg source-completeness work remains open below.
+
+## Installer filename follow-up
+
+- On `master` / `f71ff64`, version 2026.11.7, updated `scripts/Publish.ps1`
+  to append the evaluated app version to Windows Setup EXE filenames before
+  generating checksums, e.g. `KaraokeToolkit-win-Setup-2026.11.7.exe`.
+- PowerShell parser check and execution of the actual rename block against
+  disposable artifact fixtures passed; update-package filename preserved.
+  `git diff --check` passed. No full publish, version bump or installer run.
+  Existing licensing edits preserved; no change to that work's open decisions.
+
+## Licensing follow-up
+
+- Authorized review/work on application licensing and dependency source/notices,
+  based on `master` / `f71ff64`, version 2026.11.7 unchanged. Prior handoff
+  assessment edits preserved. Application licence is now GPL-3.0-or-later as
+  recorded above; copyright holder: André Almeida (ADNA).
+- Matched all four cdrdao runtime DLLs byte-for-byte to archived MSYS2 binary
+  packages; recorded versions/hashes/source mappings, retained runtime licence
+  texts and added copying plus hash checks to cdrdao preparation.
+- Added checksummed source evidence manifest and explicit offline-by-default
+  source assembly script. Six source archives retrieved into ignored audit cache;
+  source assembly output is under `artifacts/distribution-sources/`.
+- Verified with Windows PowerShell: `scripts/cdrdao/Prepare.ps1 -RuntimeIdentifier
+  win-x64 -OutputDirectory artifacts/checks/licensing/prepared-cdrdao` and
+  `scripts/Prepare-DistributionSources.ps1` both passed. Sources include MSYS2
+  upstream code/patches/recipes, cdrdao, TagLibSharp release and FFmpeg core.
+  This is not full-suite, installer or complete source-compliance verification.
+- Remaining: FFmpeg external-library revisions/notices/build inputs are unresolved;
+  recorded BtbN release and recipe tag return 404. No binary replacement, version
+  bump, republish, commit or upload. Public source
+  access is not configured. See [distribution licensing](distribution-licensing.md).
+- Next decision: recover exact FFmpeg build inputs or authorize a source-complete
+  replacement build with media regression checks.
+
+## Repository assessment follow-up
+
+- Reviewed on 2026-11-05 at `master` / `f71ff64`, version 2026.11.7;
+  checkout initially clean. No product changes; this snapshot is the only edit.
+- Sampled architecture, transactions, MCP access policy, tests and CI. Fresh-runner
+  concern: native archives use Git LFS but `cli-platforms.yml` checkout does not
+  enable LFS retrieval; verify/fix before relying on that workflow.
+- Attempted the established Release test command with `ArtifactBuildName=StandaloneTests`,
+  TRX logger and `artifacts/tests/results`; exited 1 before tests. Retried with
+  `--no-restore`, including diagnostic verbosity: build failed with no useful error
+  reported. Diagnostic output: ignored `artifacts/repo-review-test.log`.
+  The earlier 669-pass result below was not reproduced during this assessment.
+- Suggested next decision: prioritize fresh-checkout CI and Windows installation/
+  recovery verification before expanding features. Public distribution obligations
+  remain recorded in the licence inventory; no release work authorized here.
+
 ## Checkout and release
 
 - Branch `master`; shared version **2026.11.7** in `Directory.Build.props`.

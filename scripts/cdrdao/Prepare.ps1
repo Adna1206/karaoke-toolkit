@@ -35,7 +35,17 @@ try {
         finally { $inputStream.Dispose(); $outputStream.Dispose() }
     }
 } finally { $zip.Dispose() }
+$runtimeComponents = Get-Content -LiteralPath (Join-Path $repo 'vendor/cdrdao/runtime-components.json') -Raw | ConvertFrom-Json
+foreach ($component in $runtimeComponents) {
+    if ((Get-Sha256 (Join-Path $OutputDirectory $component.file)) -ne $component.sha256) {
+        throw "cdrdao runtime no longer matches its reviewed source package: $($component.file)"
+    }
+}
+Copy-Item -LiteralPath (Join-Path $repo 'vendor/cdrdao/runtime-components.json') -Destination $OutputDirectory -Force
 Copy-Item -LiteralPath (Join-Path $repo 'licenses/CDRDAO.GPLv2.txt') -Destination $OutputDirectory -Force
+# Preserve the licences for the exact runtime DLLs shipped in the reader ZIP.
+Get-ChildItem -LiteralPath (Join-Path $repo 'vendor/cdrdao/notices') -Filter '*.txt' -File |
+    Copy-Item -Destination $OutputDirectory -Force
 # Keep the exact cdrdao source alongside the distributed executable.
 $source = Join-Path (Join-Path $repo 'vendor/cdrdao') $manifest.source.archive
 if ((Get-Sha256 $source) -ne $manifest.source.sha256) { throw 'cdrdao source checksum mismatch.' }

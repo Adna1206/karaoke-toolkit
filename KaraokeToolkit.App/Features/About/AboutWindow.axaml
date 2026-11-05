@@ -21,7 +21,9 @@
             <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,1,0,0" Padding="0,18,0,0">
               <StackPanel Spacing="5">
                 <TextBlock Text="Created by" Opacity="0.65" FontSize="12"/>
-                <TextBlock Text="André Almeida (ADNA)" FontSize="16" FontWeight="SemiBold"/>
+                <TextBlock Text="André Almeida (ADNA)" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                <TextBlock Text="Copyright © 2026 · GPL-3.0-or-later" TextWrapping="Wrap" FontSize="12"/>
+                <TextBlock Text="You may redistribute and modify this software under GNU GPL v3 or later. Provided without warranty; see Application licence." TextWrapping="Wrap" FontSize="12" Opacity="0.8"/>
               </StackPanel>
             </Border>
             <StackPanel Spacing="8">
@@ -33,6 +35,11 @@
             </StackPanel>
           </StackPanel>
         </ScrollViewer>
+      </TabItem>
+      <TabItem Header="Application licence">
+        <TextBox Margin="0,16,0,0" Text="{Binding ApplicationLicenseText, Mode=OneWay}" IsReadOnly="True"
+                 AcceptsReturn="True" TextWrapping="Wrap" FontSize="12"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto"/>
       </TabItem>
       <TabItem Header="Third-party notices">
         <Grid Margin="0,16,0,0" RowDefinitions="Auto,*" RowSpacing="12">

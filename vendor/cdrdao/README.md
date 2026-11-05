@@ -11,7 +11,11 @@ dependencies before adding them here. Windows builds bundle this reader for the
 experimental CD+G operation; Linux/macOS use an installed executable or configured
 path. See [disc ripping](../../docs/disc-ripping.md) for integration and limits.
 
-CDRDAO's source archive includes GPL v2 `COPYING`. Review the licenses and
-source obligations of the bundled MSYS DLLs before shipping the Windows ZIP
-with a public release. A drive and CD+G disc are required to establish ripping
+CDRDAO's source archive includes GPL v2 `COPYING`. All four runtime DLLs now
+match archived MSYS2 packages byte-for-byte; `runtime-components.json` records
+their identities and source archives. `notices/` retains their licence texts,
+which build preparation copies beside the DLLs. Source packages, patches and
+build recipes can be assembled with `scripts/Prepare-DistributionSources.ps1`;
+see [distribution licensing](../../docs/distribution-licensing.md). Public source
+access still needs arranging alongside any binary release. A drive and CD+G disc are required to establish ripping
 compatibility; the version check did not access a drive.

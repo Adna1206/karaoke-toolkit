@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "completeForPublicDistribution": false,
+  "limitations": [
+    "FFmpeg external libraries, build recipe and patches are not yet fully matched.",
+    "TagLibSharp archive is the upstream release source; NuGet does not record a source commit, so binary reproducibility is not established.",
+    "macOS FFmpeg source and redistribution provenance remain unresolved."
+  ],
+  "sources": [
+    {
+      "component": "gcc-runtime",
+      "archive": "gcc-15.2.0-1.src.tar.zst",
+      "origin": "https://repo.msys2.org/msys/sources/gcc-15.2.0-1.src.tar.zst",
+      "sha256": "711af8f46db0d55c092c2444c13f5e07fed02833944a4852b6b5023ed2eb1604"
+    },
+    {
+      "component": "libiconv",
+      "archive": "libiconv-1.18-1.src.tar.zst",
+      "origin": "https://repo.msys2.org/msys/sources/libiconv-1.18-1.src.tar.zst",
+      "sha256": "f126a38c3b1f84c2240c44aeb3c824796cbf37d5c206a09ef83e58d55b82aa8a"
+    },
+    {
+      "component": "msys2-runtime",
+      "archive": "msys2-runtime-3.6.5-1.src.tar.zst",
+      "origin": "https://repo.msys2.org/msys/sources/msys2-runtime-3.6.5-1.src.tar.zst",
+      "sha256": "f670a95a25e25679f1658840d8930eb11a0fe6ba22e748d657ee44235a3b628c"
+    },
+    {
+      "component": "FFmpeg-core-only",
+      "archive": "ffmpeg-ff48edd8b29406ec2614db1137e972e77b15a10b.tar.gz",
+      "origin": "https://codeload.github.com/FFmpeg/FFmpeg/tar.gz/ff48edd8b29406ec2614db1137e972e77b15a10b",
+      "sha256": "2fcd84e0b69fff94d4c56f1fd79b7096e677e06d823fa56266fdc09ee390a16d"
+    },
+    {
+      "component": "TagLibSharp",
+      "archive": "taglib-sharp-b5ae84f2e84087bf160bb0471420200dd2b5d809.tar.gz",
+      "origin": "https://codeload.github.com/mono/taglib-sharp/tar.gz/b5ae84f2e84087bf160bb0471420200dd2b5d809",
+      "sha256": "2e54eb7382991caeafd2ac414ca5ab6ca2a4d2b5fe9bba4d8abff3fc1b308195"
+    },
+    {
+      "component": "cdrdao",
+      "archive": "cdrdao-1.2.6.tar.gz",
+      "repositoryPath": "vendor/cdrdao/source/cdrdao-1.2.6.tar.gz",
+      "sha256": "10d15b0dc78bd44a9a4a8d7d85498c734771036159d05aa940e17f18fc40d40f"
+    }
+  ]
+}

@@ -9,11 +9,13 @@
   <!-- Shared release version: YEAR.MONTH.BUILD. Increment BUILD for each release
        within a month; start at 1 when changing YEAR.MONTH. No automatic date bump. -->
   <PropertyGroup Condition="'$(MSBuildProjectName)' == 'KaraokeToolkit.App' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Core' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Cli' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Mcp' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Tests'">
-    <Version>2026.11.7</Version>
+    <Version>2026.11.8</Version>
     <AssemblyVersion>$(Version).0</AssemblyVersion>
     <FileVersion>$(Version).0</FileVersion>
     <InformationalVersion>$(Version)</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Product>Karaoke Toolkit</Product>
+    <Copyright>Copyright © 2026 André Almeida (ADNA)</Copyright>
+    <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
   </PropertyGroup>
 </Project>

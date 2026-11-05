@@ -1,10 +1,16 @@
 # Third-party licenses and notices
 
 This directory keeps readable license texts for dependencies currently used or
-stored in KaraokeToolkit. The repository does not yet have its own application
-license. `vendor/versions.md` and the vendor manifests pin binary versions and
+stored in KaraokeToolkit. Karaoke Toolkit's original code and assets use
+GPL-3.0-or-later; see [LICENSE](../LICENSE) and [NOTICE.txt](../NOTICE.txt).
+`vendor/versions.md` and the vendor manifests pin binary versions and
 checksums; the files here do not by themselves complete a public release's
 source or notice obligations.
+
+Copyright © 2026 André Almeida (ADNA). The application licence
+does not replace third-party licences or resolve source-distribution obligations. See the
+[distribution licensing record](../docs/distribution-licensing.md) for verified
+runtime source matches, source assembly and remaining FFmpeg work.
 
 | Component | Version / scope | License text | App package |
 |---|---|---|---|
@@ -29,6 +35,9 @@ source or notice obligations.
 | FFmpeg, macOS Intel Evermeet build | 9.0.2 | `FFmpeg.GPLv3.txt` | In `ffmpeg/` for `osx-x64` |
 | FFmpeg, macOS Apple Silicon OSXExperts build | 9.0 site label | `FFmpeg.GPLv2.txt` | In `ffmpeg/` for `osx-arm64` |
 | CDRDAO | 1.2.6 | `CDRDAO.GPLv2.txt` | Bundled Windows x64 reader, with source archive |
+| MSYS2 runtime | 3.6.5-1 | LGPL v3 or later with linking exception; additional newlib notices, under `vendor/cdrdao/notices/` | Windows cdrdao directory |
+| GCC runtime DLLs | gcc-libs 15.2.0-1 | GPL v3 or later with GCC Runtime Library Exception 3.1, under `vendor/cdrdao/notices/` | Windows cdrdao directory |
+| GNU libiconv | 1.18-1 | LGPL v2.1 or later, under `vendor/cdrdao/notices/` | Windows cdrdao directory |
 
 The Avalonia text comes from its pinned source revision. The Community Toolkit,
 SkiaSharp, HarfBuzzSharp and ANGLE files come from the exact restored NuGet
@@ -66,9 +75,14 @@ Except for TagLibSharp, NuGet package metadata lists the remaining runtime packa
 developer-only AvaloniaUI.DiagnosticsSupport package, which has no license
 expression in its package metadata. Test-only packages are not in app releases.
 
-Before public distribution, resolve the licenses and source obligations of the
-MSYS DLLs in CDRDAO's Windows ZIP, and the matching source/notice obligations
-for each FFmpeg binary. OSXExperts calls its downloads "for educational
+The four MSYS DLLs in CDRDAO's Windows ZIP now have byte-for-byte upstream
+package matches, shipped licence notices and checksummed source-package
+references. The source assembly command prepares those archives locally;
+public release source access still needs arranging. TagLibSharp release source
+and the pinned Windows/Linux FFmpeg core source are also recorded in
+`vendor/distribution-sources.json`. FFmpeg's external-library sources, notices
+and exact build recipe are not yet complete; see the distribution licensing record.
+OSXExperts calls its downloads "for educational
 purposes only"; that build's redistribution provenance remains unresolved.
 The macOS binaries also need native execution and signing checks. This index is
 an inventory, not a declaration that these releases are ready to distribute.
