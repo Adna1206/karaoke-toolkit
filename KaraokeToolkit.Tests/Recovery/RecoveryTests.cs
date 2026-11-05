@@ -248,6 +248,26 @@ public class RecoveryTests
     }
 
     [Fact]
+    public void CommittedPublicationSurvivesPartiallyDeletedBackupsButStillChecksOutputs()
+    {
+        var (folder, workspace, journal) = Stage();
+        MoveBackups(folder, workspace, journal, journal.Backups.Length);
+        FileTransactionRecovery.Recover(workspace);
+        File.Delete(Path.Combine(workspace, "backups", "0"));
+
+        Assert.Equal(2, FileTransactionRecovery.Recover(workspace)!.Count);
+        File.Delete(Path.Combine(workspace, "backups", "1"));
+        Assert.Equal(2, FileTransactionRecovery.Recover(workspace)!.Count);
+        Assert.False(File.Exists(Path.Combine(folder, "source.zip")));
+
+        string output = Path.Combine(folder, "song.mp3");
+        File.WriteAllText(output, "changed after publication");
+        Assert.Throws<IOException>(() => FileTransactionRecovery.Recover(workspace));
+        Assert.Equal("changed after publication", File.ReadAllText(output));
+        Assert.True(File.Exists(Path.Combine(workspace, "recovery.json")));
+    }
+
+    [Fact]
     public async Task CrashAfterCheckpointBeforeBackupCleanupKeepsCompletedOutputs()
     {
         var (folder, workspace, transaction) = Stage();

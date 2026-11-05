@@ -12,6 +12,30 @@ namespace KaraokeToolkit.Tests.Recovery;
 public class WorkflowRecoveryTests
 {
     [Fact]
+    public async Task RecoveryIndexDeletionSurvivesBriefWindowsReaderLock()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        string path = Path.Combine(TestMediaFixture.NewFolder(), "index.json");
+        DurableJson.Write(path, "journal path");
+        var reader = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        var release = Task.Run(() => { Thread.Sleep(60); reader.Dispose(); });
+        try { DurableJson.Delete(path); }
+        finally { await release; reader.Dispose(); }
+        Assert.False(File.Exists(path));
+    }
+
+    [Fact]
+    public void PermanentlyBlockedIndexDeletionKeepsItsContents()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        string path = Path.Combine(TestMediaFixture.NewFolder(), "index.json");
+        DurableJson.Write(path, "journal path");
+        using var reader = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        Assert.ThrowsAny<IOException>(() => DurableJson.Delete(path));
+        Assert.Equal("\"journal path\"", File.ReadAllText(path));
+    }
+
+    [Fact]
     public async Task CheckpointReplacementSurvivesBriefWindowsReaderLock()
     {
         if (!OperatingSystem.IsWindows()) return;

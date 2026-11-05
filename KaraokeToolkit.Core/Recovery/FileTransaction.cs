@@ -14,6 +14,8 @@ internal sealed class FileTransaction : IDisposable
     private readonly Dictionary<string, string> fingerprints = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string?> observedTargets = new(StringComparer.OrdinalIgnoreCase);
     private bool retain;
+    private bool publicationResolved;
+    private bool disposed;
     private readonly FileStream folderLease;
     internal string Workspace
     {
@@ -134,6 +136,7 @@ internal sealed class FileTransaction : IDisposable
             // A durable receipt precedes deletion of the journal and backups in Dispose.
             RunSession.Current.Value?.Committed(targets);
             WorkflowSession.Current.Value?.Published(targets, removeSources);
+            publicationResolved = true;
             return targets;
         }
         catch (Exception original)
@@ -146,6 +149,7 @@ internal sealed class FileTransaction : IDisposable
             try
             {
                 FileTransactionRecovery.Rollback(Workspace, journal);
+                publicationResolved = true;
             }
             catch (Exception rollback)
             {
@@ -157,17 +161,15 @@ internal sealed class FileTransaction : IDisposable
     }
     public void Dispose()
     {
-        if (retain)
-        {
-            folderLease.Dispose();
-            return;
-        }
+        if (disposed) return;
+        disposed = true;
         try
         {
-            Directory.Delete(Workspace, recursive: true);
+            if (retain) return;
+            if (!publicationResolved && File.Exists(Path.Combine(Workspace, "recovery.json")))
+                throw new IOException("Recovery required before cleaning transaction files: " + Workspace);
+            RecoveryWorkspaceCleanup.Delete(Workspace);
         }
-        catch (IOException) { /* Retain journal/backups rather than hide a successful conversion. */ }
-        catch (UnauthorizedAccessException) { }
         finally { folderLease.Dispose(); }
     }
 }

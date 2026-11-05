@@ -207,7 +207,7 @@ internal sealed class WorkflowSession : IDisposable
         var outputs = FileTransactionRecovery.Recover(Data.Workspace);
         if (outputs != null)
             Published(outputs, journal!.Backups.Select(b => Path.Combine(Path.GetDirectoryName(Data.Workspace)!, b.Name)).ToArray());
-        DeleteTree(Data.Workspace);
+        RecoveryWorkspaceCleanup.Delete(Data.Workspace);
         Data.Workspace = null; Save();
     }
     internal void RecordChild(string journal, RunData child)
@@ -220,27 +220,20 @@ internal sealed class WorkflowSession : IDisposable
             plan.Result = new(child.Results.Values.Concat(child.MetadataResults.Values.Where(r => r.Status is ConversionStatus.Failed or ConversionStatus.Skipped)).ToArray(), false) { Found = child.Sources.Length };
         Save();
     }
-    internal bool HasPendingPublication => Data.Workspace != null && File.Exists(Path.Combine(Data.Workspace, "recovery.json"));
+    internal bool HasPendingPublication => Data.Workspace != null && Directory.Exists(Data.Workspace);
     internal void Finish()
     {
         bool partialMove = Data.Moves?.Any(group => group.Results == null && group.SkipReason == null &&
             group.Items.Any(move => !WorkflowMoves.Exists(move.Source))) == true;
         if (HasPendingPublication || partialMove || Data.Conversions?.Any(p => p.Journal != null && File.Exists(p.Journal) && !RunSession.Read(p.Journal).Finished) == true)
             throw new IOException("An interrupted publication remains. Use Recover to resume this workflow.");
-        Data.Finished = true; Save(); File.Delete(Store.IndexPath(Journal));
-    }
-    internal static void DeleteTree(string directory)
-    {
-        RunSession.CheckPlainPath(directory);
-        foreach (string entry in Directory.GetFileSystemEntries(directory))
-            if (Directory.Exists(entry)) DeleteTree(entry); else { RunSession.CheckPlainPath(entry); File.Delete(entry); }
-        Directory.Delete(directory);
+        Data.Finished = true; Save(); DurableJson.Delete(Store.IndexPath(Journal));
     }
     public void Dispose()
     {
         if (Current.Value == this) Current.Value = previous;
         lease.Dispose();
-        if (Data.Finished) try { DeleteTree(Path.GetDirectoryName(Journal)!); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+        if (Data.Finished) RecoveryWorkspaceCleanup.Delete(Path.GetDirectoryName(Journal)!, "workflow.json");
     }
 
     internal static string TreeHash(string directory)

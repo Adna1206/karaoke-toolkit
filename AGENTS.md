@@ -106,7 +106,11 @@ dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj -c Release -p:UsedA
   with saved destination-aware recovery. Do not extend this to cross-directory
   source deletion without a durable transaction design. Dry runs never invoke
   publishing; later recipe-step scopes are explicitly deferred until outputs exist.
-- Windows is the validated runtime platform. Linux packages are cross-built;
+- Windows is the primary target and validated runtime platform, but aim to keep
+  shared functionality compatible across platforms. Prefer portable APIs; isolate
+  unavoidable OS-specific code behind platform guards and preserve usable behaviour
+  elsewhere. Distinguish intended compatibility from verified platform support.
+  Linux packages are cross-built;
   macOS packaging via a macOS CI runner is a TODO. Disc ripping is experimental
   and not verified with physical hardware. See [disc ripping](docs/disc-ripping.md).
 - Preserve/update shipped third-party notices and About entries when dependencies

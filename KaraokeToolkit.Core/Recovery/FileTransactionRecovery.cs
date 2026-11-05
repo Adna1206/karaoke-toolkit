@@ -56,6 +56,19 @@ internal static class FileTransactionRecovery
             Rollback(workspace, journal);
             return null;
         }
+        if (journal.Phase == "Committed")
+        {
+            // Publication is durable. Cleanup may already have deleted some old
+            // backups; do not require deleted originals or attempt publication again.
+            foreach (var output in journal.Outputs)
+                RequireHash(Path.Combine(folder, output.Name), output.Hash);
+            foreach (var backup in journal.Backups)
+            {
+                string old = Path.Combine(workspace, "backups", backup.Slot);
+                if (Exists(old)) RequireHash(old, backup.Hash);
+            }
+            return journal.Outputs.Select(output => Path.Combine(folder, output.Name)).ToArray();
+        }
 
         // Preflight every file before moving anything. An unrelated or edited file blocks recovery.
         foreach (var old in journal.Backups)

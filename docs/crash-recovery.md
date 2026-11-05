@@ -41,6 +41,25 @@ dialog. Old journals from before this feature lack the necessary hashes and requ
 manual inspection; they are never automatically applied. A folder with a retained
 transaction journal is protected against a fresh transaction.
 
+### Workspace cleanup
+
+Resolved transactions and completed run/workflow checkpoints use bounded cleanup
+retries. Cleanup clears the read-only attribute only inside the disposable workspace,
+deletes its journal last, and reports persistent failures with the remaining path.
+Pending transaction cleanup keeps its owner checkpoint resumable. Recovery accepts
+partially removed backups after committed publication while still verifying outputs.
+If removing the final directory fails, cleanup attempts to restore its journal.
+
+Deletion, attributes and retries use portable .NET APIs. Windows cloud placeholders
+are recognized through an OS-guarded metadata query; symbolic links, junctions and
+unknown reparse providers are refused. There is no external utility dependency.
+Linux/macOS runtime cleanup has not been verified.
+
+Startup discovery does not sweep historical orphan transaction folders without
+owner journals. A missing journal alone does not establish that backups are safe to
+delete. Persistent cleanup failure for an already finished run/workflow is reported,
+but its metadata folder is not presented as an unfinished job.
+
 ## Storage and guarantees
 
 The source root contains `.karaoke-job-run-<id>/run.json`, plus a lease file. Each

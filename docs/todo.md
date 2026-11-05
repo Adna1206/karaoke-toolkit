@@ -1,5 +1,11 @@
 # Planned features
 
+- [ ] **Configurable generated output names** — add settings for the names or
+  naming templates of generated artefacts, including TXT track listings and CUE
+  sheets. Keep current names as defaults; define supported placeholders and apply
+  filename validation, collision/overwrite policies and recovery consistently to
+  standalone generation and automatic post-conversion output.
+
 - [ ] **Revamp the entire Settings menu** — revisit navigation/categories, grouping,
   labels, spacing and help across every tab as one coherent design. Reduce persistent
   explanatory text, use progressive disclosure for advanced features, and keep

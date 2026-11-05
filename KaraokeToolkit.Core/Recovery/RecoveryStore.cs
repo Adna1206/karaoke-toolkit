@@ -146,12 +146,17 @@ internal static class DurableJson
         }
         // Windows readers/scanners can briefly deny replacement. Keep the old journal
         // intact and retry only the atomic rename; never fall back to an in-place write.
+        Retry(() => File.Move(temporary, path, overwrite: true));
+    }
+
+    internal static void Delete(string path) => Retry(() => File.Delete(path));
+
+    private static void Retry(Action action)
+    {
         for (int attempt = 0; ; attempt++)
         {
-            try { File.Move(temporary, path, overwrite: true); return; }
-            catch (Exception error) when (attempt < 4 && OperatingSystem.IsWindows() &&
-                (error is UnauthorizedAccessException && (error.HResult & 0xffff) == 5 ||
-                 error is IOException && (error.HResult & 0xffff) is 32 or 33))
+            try { action(); return; }
+            catch (Exception error) when (attempt < 4 && (error is IOException or UnauthorizedAccessException))
             { Thread.Sleep(25 * (attempt + 1)); }
         }
     }
@@ -320,8 +325,8 @@ internal sealed class RunSession : IDisposable
     }
     internal void ThrowIfUnresolved()
     {
-        if (Data.Workspace != null && File.Exists(Path.Combine(Data.Workspace, "recovery.json")))
-            throw new IOException("Recovery required. Publication could not be completed safely. Files retained at " + Data.Workspace);
+        if (Data.Workspace != null && Directory.Exists(Data.Workspace))
+            throw new IOException("Recovery required. Publication or transaction cleanup is incomplete. Any published outputs remain in place. Files retained at " + Data.Workspace);
     }
     internal void RecoverPending()
     {
@@ -334,19 +339,10 @@ internal sealed class RunSession : IDisposable
             if (outputs != null)
                 Committed(outputs);
         }
-        // Only disposable staged files and checkpointed backups remain. Refuse links anywhere.
-        CheckTree(Data.Workspace);
-        Directory.Delete(Data.Workspace, true);
+        // Only disposable staged files and checkpointed backups remain.
+        RecoveryWorkspaceCleanup.Delete(Data.Workspace);
         Data.Workspace = null;
         Save();
-    }
-    private static void CheckTree(string directory)
-    {
-        CheckPlainPath(directory);
-        foreach (string file in Directory.GetFiles(directory))
-            CheckPlainPath(file);
-        foreach (string child in Directory.GetDirectories(directory))
-            CheckTree(child);
     }
     internal void Begin(string source, bool metadata = false)
     {
@@ -377,17 +373,12 @@ internal sealed class RunSession : IDisposable
     {
         Data.Finished = true;
         Save();
-        File.Delete(store.IndexPath(Journal));
+        DurableJson.Delete(store.IndexPath(Journal));
     }
     public void Dispose()
     {
         lease.Dispose();
         rootLease.Dispose();
-        if (Data.Finished)
-            try
-            {
-                Directory.Delete(Path.GetDirectoryName(Journal)!, true);
-            }
-            catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
+        if (Data.Finished) RecoveryWorkspaceCleanup.Delete(Path.GetDirectoryName(Journal)!, "run.json");
     }
 }

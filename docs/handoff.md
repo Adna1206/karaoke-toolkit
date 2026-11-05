@@ -4,10 +4,45 @@ Snapshot: 2026-11-05, Africa/Johannesburg. Verify Git/files before editing.
 
 ## Checkout and release
 
-- Branch `master`, base commit `f90e51a`; shared version **2026.11.10**, bumped
-  from 2026.11.9 for the completed maintenance below. Current request: bump,
-  commit and push. Verify Git for the resulting commit and push status.
+- Branch `master`, current base `060c5d1`; shared version **2026.11.10**.
+  Cleanup code/tests and documentation below are included in the current commit,
+  with commit/push requested. No version bump requested for this follow-up.
   No package publish or installation requested.
+
+## Workspace cleanup and naming backlog
+
+- Follow-up on `master` / `060c5d1`, version 2026.11.10, initially clean.
+  User asked why a `.karaoke-job-*` folder remains and requested an output-naming TODO.
+- Read-only inspection of the supplied OneDrive example found `backups/0`
+  (4,474,905 bytes), read-only/cloud reparse attributes, and no recovery/run/workflow
+  journal. No user files were modified or deleted.
+- Reproduced the exact failure with disposable ignored artifacts: Windows
+  `Directory.Delete(workspace, true)` removed recovery.json, then threw
+  UnauthorizedAccessException on the read-only backup, leaving it behind.
+  Previous disposal suppressed the exception; startup does not sweep these orphans.
+- Implemented shared transaction/completed-checkpoint cleanup: preflight links,
+  clear only disposable read-only attributes, bounded retries, delete journal last,
+  attempt restoration if final directory deletion fails, and report persistent errors.
+  Pending staging/publication cleanup retains its resumable owner checkpoint.
+  Committed recovery accepts missing cleaned backups but verifies published outputs.
+- Portable .NET deletion/retries; only Windows cloud-tag inspection uses guarded
+  native metadata APIs. No product shell utilities. Linux/macOS runtime unverified.
+  Historical orphans remain untouched; failed finished-checkpoint cleanup reports
+  its path but does not appear as an unfinished job. See crash-recovery documentation.
+- Full testing exposed transient shared recovery-index reader locks and silent
+  workflow-folder cleanup failure; index deletion and checkpoint cleanup now retry.
+- Added requested configurable generated-output names/templates TODO (TXT/CUE,
+  defaults, validation, conflicts and recovery). No unrelated backlog implemented.
+- Current verification: recovery/recipe/tagging subset **117 passed**; complete
+  Release suite **691 passed, 0 failed, 0 skipped**, using command below with
+  `ArtifactBuildName=Cleanup`. TRX:
+  `artifacts/tests/results/almei_ANDRE_2026-11-05_12_48_22_net10.0.trx`.
+  Coverage includes read-only staging/backups, blocked cleanup/resume, partial
+  committed cleanup, links/cloud tags and transient/persistent index locks.
+- Updated AGENTS: Windows remains the primary validated target; prefer portable
+  APIs, guard OS-specific code and distinguish compatibility goals from validation.
+- Next: package/installation and actual
+  OneDrive cleanup execution have not been verified. Supplied folder is unchanged.
 - Existing installers remain 2026.11.6. The publish script appends the evaluated app
   version to Windows Setup EXE names before generating checksums.
 - Application licence: GPL-3.0-or-later, copyright © 2026 André Almeida (ADNA).
