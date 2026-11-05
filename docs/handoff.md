@@ -4,7 +4,14 @@ Snapshot: 2026-11-05, Africa/Johannesburg. Verify Git/files before editing.
 
 ## Checkout and release
 
-- Branch `master`; shared version **2026.11.6** in `Directory.Build.props`.
+- Branch `master`; shared version **2026.11.7** in `Directory.Build.props`.
+- Latest user request: bump, commit and push the GUID definition/version, based
+  on `de33f72`. No republish requested; existing installers remain 2026.11.6.
+  Metadata-only follow-up: evaluated MSBuild properties and diff checked; full
+  runtime suite not repeated. Check Git for final commit/push state.
+- Fixed `ApplicationGuid` defined in `Directory.Build.props`,
+  generated once using .NET's GUID generator. Definition only; existing Velopack
+  package identity stays `KaraokeToolkit`. MSBuild property evaluation verified.
 - Follow-up to release `0c24904`: Settings heading expanded to Command Line
   Interface (CLI). Text-only change; diff checked, tests not rerun. Existing
   packages predate this heading change; no version bump or republish requested.
@@ -75,5 +82,5 @@ and pending update application stay disabled. No player. Linux disc capture need
 installed cdrdao/configured path. See [AGENTS](../AGENTS.md), [TODO](todo.md),
 [publishing](publishing.md) and [licence inventory](../licenses/README.md).
 
-Next: user can install the new Windows package, configure an MCP client and verify
-native platforms. Push only when requested; broader Settings redesign needs authorization.
+Next: user can install the 2026.11.6 Windows package, configure an MCP client and
+verify native platforms. Broader Settings redesign needs authorization.

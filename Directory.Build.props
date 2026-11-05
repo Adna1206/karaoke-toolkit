@@ -1,5 +1,7 @@
 <Project>
   <PropertyGroup>
+    <!-- Fixed application identifier. Preserve across releases; not a COM or installer ID. -->
+    <ApplicationGuid>50e6a39d-575f-42a7-8d2c-29018d9ef436</ApplicationGuid>
     <RepositoryArtifactsPath>$(MSBuildThisFileDirectory)artifacts/</RepositoryArtifactsPath>
     <!-- Optional named verification builds; ordinary builds retain bin/obj. -->
     <BaseOutputPath Condition="'$(ArtifactBuildName)' != ''">$(RepositoryArtifactsPath)builds/$(MSBuildProjectName)/$(ArtifactBuildName)/</BaseOutputPath>
@@ -7,7 +9,7 @@
   <!-- Shared release version: YEAR.MONTH.BUILD. Increment BUILD for each release
        within a month; start at 1 when changing YEAR.MONTH. No automatic date bump. -->
   <PropertyGroup Condition="'$(MSBuildProjectName)' == 'KaraokeToolkit.App' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Core' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Cli' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Mcp' Or '$(MSBuildProjectName)' == 'KaraokeToolkit.Tests'">
-    <Version>2026.11.6</Version>
+    <Version>2026.11.7</Version>
     <AssemblyVersion>$(Version).0</AssemblyVersion>
     <FileVersion>$(Version).0</FileVersion>
     <InformationalVersion>$(Version)</InformationalVersion>
