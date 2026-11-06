@@ -4,12 +4,19 @@ Snapshot: 2026-11-06, Africa/Johannesburg. Verify Git/files before editing.
 
 ## Checkout and release
 
-- Branch `master`, release based on `277607c`; shared version **2026.11.11**.
-  This release includes the conversion activity log fix.
-- `./scripts/Publish.ps1` produced Windows and Linux x64 packages under
-  `artifacts/releases/2026.11.11/20261106-142610-550522`. Both SHA256 manifests
-  verified. Windows Setup is `KaraokeToolkit-win-Setup-2026.11.11.exe`.
-  Installation and Linux runtime verification remain open.
+- Branch `master`, release based on `cc84ed3`; shared version **2026.11.12**.
+- `./scripts/Publish.ps1` built both x64 targets under
+  `artifacts/releases/2026.11.12/20261106-143436-21e05e`. Asset manifest paths and
+  SHA-256 checksums verified. Next step is manual installation and UI verification.
+
+## Packaging and resolution labels follow-up
+
+- The publish script versions the Linux AppImage filename and updates both
+  platforms' asset manifests before hashing.
+- Desktop resolution choices now show width × height. Saved values and default
+  selection are unchanged. The Release test command below with
+  `ArtifactBuildName=Cleanup` and `--filter 'FullyQualifiedName~Settings'` passed
+  all 99 tests at 2026.11.12. Linux runtime, installation and manual UI checks remain open.
 
 ## Conversion activity log
 

@@ -103,10 +103,17 @@ try {
         if (@(Get-ChildItem -LiteralPath $packages -Filter $expectedPattern -File).Count -eq 0) {
             throw "Velopack did not produce the expected $rid package."
         }
-        if ($isWindowsTarget) {
-            # Append the evaluated app version before checksums record final names.
-            foreach ($installer in Get-ChildItem -LiteralPath $packages -Filter '*-Setup.exe' -File) {
-                Rename-Item -LiteralPath $installer.FullName -NewName ($installer.BaseName + '-' + $version + $installer.Extension)
+        # Append the evaluated app version before checksums record final names.
+        $assetManifest = Join-Path $packages $(if ($isWindowsTarget) { 'assets.win.json' } else { 'assets.linux.json' })
+        foreach ($package in Get-ChildItem -LiteralPath $packages -Filter $expectedPattern -File) {
+            $versionedName = $package.BaseName + '-' + $version + $package.Extension
+            Rename-Item -LiteralPath $package.FullName -NewName $versionedName
+            if (Test-Path -LiteralPath $assetManifest) {
+                $assets = @([IO.File]::ReadAllText($assetManifest) | ConvertFrom-Json)
+                foreach ($asset in $assets) {
+                    if ($asset.RelativeFileName -ceq $package.Name) { $asset.RelativeFileName = $versionedName }
+                }
+                [IO.File]::WriteAllText($assetManifest, (ConvertTo-Json -InputObject $assets -Compress))
             }
         }
         $hashes = Get-ChildItem -LiteralPath $packages -File | Get-FileHash -Algorithm SHA256 |

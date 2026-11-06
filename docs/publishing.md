@@ -48,7 +48,8 @@ only this tree and excludes audit/source manifests from its licence list.
 Upstream FFmpeg notices are additionally preserved in its original layout.
 CLI and MCP are included beside the desktop executable, sharing .NET, Core and
 FFmpeg. MCP stays inactive until an MCP client launches it.
-Linux produces an AppImage, full update package and release metadata. Linux disc
+Linux produces a versioned AppImage (for example `KaraokeToolkit-2026.11.11.AppImage`),
+a full update package and release metadata. Checksums use the final AppImage name. Linux disc
 ripping still requires an installed cdrdao or a configured executable path; it is
 not bundled in the Linux package. Velopack's Windows cross-packaging tool recognises
 ELF executables, giving bundled Linux binaries executable permissions in the AppImage.
