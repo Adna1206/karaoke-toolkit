@@ -87,7 +87,7 @@ public sealed class SettingsDefinitions
     public ChoiceSettingDefinition<string> VideoResolution { get; } = new(
         "VideoResolution", "Resolution", "Resolution",
         "Choose the output video dimensions. CD+G graphics are letterboxed without stretching; higher resolution does not add detail to the original graphics.",
-        SettingCategory.Video, Array.AsReadOnly<string>(["640 × 480", "1280 × 720", "1920 × 1080", "2560 × 1440", "3840 × 2160"]));
+        SettingCategory.Video, Array.AsReadOnly<string>(["640 × 480", "1280 × 720 (default)", "1920 × 1080", "2560 × 1440", "3840 × 2160"]));
     public ChoiceSettingDefinition<string> VideoGraphicsSmoothing { get; } = new(
         "VideoGraphicsSmoothing", "Graphics smoothing", "Smooths pixel edges; does not recreate lyrics or add detail.",
         "None (default) preserves the original CD+G pixel edges. Bilinear softens edges, Bicubic uses cubic interpolation, and Lanczos uses a sharper resampling filter that can produce edge ringing. Smoothing changes scaling only; lyrics, colours and timing are kept. It does not recreate graphics or recover missing detail.",

@@ -4,19 +4,20 @@ Snapshot: 2026-11-06, Africa/Johannesburg. Verify Git/files before editing.
 
 ## Checkout and release
 
-- Branch `master`, release based on `cc84ed3`; shared version **2026.11.12**.
+- Branch `master`, release based on `6969da4`; shared version **2026.11.13**.
 - `./scripts/Publish.ps1` built both x64 targets under
-  `artifacts/releases/2026.11.12/20261106-143436-21e05e`. Asset manifest paths and
+  `artifacts/releases/2026.11.13/20261106-143757-c73b7f`. Asset manifest paths and
   SHA-256 checksums verified. Next step is manual installation and UI verification.
 
 ## Packaging and resolution labels follow-up
 
+- Restored the `1280 × 720 (default)` label. Other choices show dimensions only.
 - The publish script versions the Linux AppImage filename and updates both
   platforms' asset manifests before hashing.
 - Desktop resolution choices now show width × height. Saved values and default
   selection are unchanged. The Release test command below with
   `ArtifactBuildName=Cleanup` and `--filter 'FullyQualifiedName~Settings'` passed
-  all 99 tests at 2026.11.12. Linux runtime, installation and manual UI checks remain open.
+  all 99 tests at 2026.11.13. Linux runtime, installation and manual UI checks remain open.
 
 ## Conversion activity log
 
