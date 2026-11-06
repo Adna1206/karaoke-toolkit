@@ -581,8 +581,14 @@ public partial class MainViewModel : ViewModelBase
             }
             Status = $"{(result.Cancelled ? "Cancelled" : "Processing finished")}: {result.Succeeded} succeeded, {result.Skipped} skipped, {result.Failed} failed.";
             StatusOutcome = RunStatusSummary.From(result);
+            // Keep outcomes that did not reach the live log, including queued progress suppressed at completion.
+            var loggedMessages = Activity.Select(entry => entry.Message).ToHashSet(StringComparer.Ordinal);
             foreach (var file in result.Files)
-                Activity.Add(new(Elapsed, $"{file.Status}: {file.Source} — {file.Message}"));
+            {
+                string message = $"{file.Status}: {file.Source} — {file.Message}";
+                if (loggedMessages.Add(message))
+                    Activity.Add(new(Elapsed, message));
+            }
             Activity.Add(new(Elapsed, Status));
         }
         catch (OperationCanceledException) { Status = "Cancelled. Unpublished changes were discarded."; Activity.Add(new(Elapsed, Status)); }

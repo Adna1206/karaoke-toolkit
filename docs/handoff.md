@@ -1,13 +1,26 @@
 # Current handoff
 
-Snapshot: 2026-11-05, Africa/Johannesburg. Verify Git/files before editing.
+Snapshot: 2026-11-06, Africa/Johannesburg. Verify Git/files before editing.
 
 ## Checkout and release
 
-- Branch `master`, current base `cadf89e`; shared version **2026.11.10**.
-  Cleanup changes are committed and pushed. The documentation-only summary pass
-  below is included in this commit for the requested push; no version bump requested.
-  No package publish or installation requested.
+- Branch `master`, release based on `277607c`; shared version **2026.11.11**.
+  This release includes the conversion activity log fix.
+- `./scripts/Publish.ps1` produced Windows and Linux x64 packages under
+  `artifacts/releases/2026.11.11/20261106-142610-550522`. Both SHA256 manifests
+  verified. Windows Setup is `KaraokeToolkit-win-Setup-2026.11.11.exe`.
+  Installation and Linux runtime verification remain open.
+
+## Conversion activity log
+
+- At batch completion, append only result lines absent from the current activity log.
+  Keep outcomes missed by live progress, the batch totals and the full report.
+- Verified `git diff --check` and 12 passing tests with
+  `dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj -c Release --no-restore -p:UsedAvaloniaProducts= -p:ArtifactBuildName=Cleanup --filter 'FullyQualifiedName~GuiEndToEndTests|FullyQualifiedName~ProcessingRunTests' -v minimal`.
+  Full Release suite at 2026.11.11: **691 passed, 0 failed, 0 skipped**, using
+  the command below with `ArtifactBuildName=Cleanup` and without `--no-build`.
+  TRX: `artifacts/tests/results/almei_ANDRE_2026-11-06_14_25_41_net10.0.trx`.
+  Manual desktop batch verification remains open.
 
 ## Contract and test summaries
 
@@ -56,8 +69,6 @@ Snapshot: 2026-11-05, Africa/Johannesburg. Verify Git/files before editing.
   APIs, guard OS-specific code and distinguish compatibility goals from validation.
 - Next: package/installation and actual
   OneDrive cleanup execution have not been verified. Supplied folder is unchanged.
-- Existing installers remain 2026.11.6. The publish script appends the evaluated app
-  version to Windows Setup EXE names before generating checksums.
 - Application licence: GPL-3.0-or-later, copyright © 2026 André Almeida (ADNA).
   Runtime licence copies and About reads use `licenses/`; native notice names use
   `Component.Document.txt`. See [distribution licensing](distribution-licensing.md).
