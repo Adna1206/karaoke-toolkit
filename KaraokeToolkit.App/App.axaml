@@ -11,6 +11,12 @@
 
     <Application.Styles>
         <FluentTheme />
+        <Style Selector="ListBox, ListBoxItem">
+            <Setter Property="CornerRadius" Value="8"/>
+        </Style>
+        <Style Selector="ListBox">
+            <Setter Property="ClipToBounds" Value="True"/>
+        </Style>
         <Style Selector="ToolTip TextBlock">
             <Setter Property="MaxWidth" Value="380"/>
             <Setter Property="TextWrapping" Value="Wrap"/>

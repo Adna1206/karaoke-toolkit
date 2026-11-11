@@ -2,6 +2,7 @@ using KaraokeToolkit.Core.Video;
 using KaraokeToolkit.Core.Audio;
 using KaraokeToolkit.Core.Archives;
 using KaraokeToolkit.Core.Conversion;
+using KaraokeToolkit.Core.FileOperations;
 using System.Globalization;
 using System.Xml.Linq;
 using Microsoft.VisualBasic.CompilerServices;
@@ -38,8 +39,10 @@ public sealed class SettingsStore(string path, bool persistRenameBins = false)
                 converted = property.PropertyType == typeof(bool) ? Conversions.ToBoolean(value)
                     : property.PropertyType == typeof(int) ? Conversions.ToInteger(value)
                     : property.PropertyType.IsEnum ? Enum.ToObject(property.PropertyType, Conversions.ToInteger(value)) : value;
+                if (property.Name == nameof(ConversionOptions.TrackListingName)) MetadataFileNames.Resolve(value, "Example folder", ".txt");
+                if (property.Name == nameof(ConversionOptions.CueSheetName)) MetadataFileNames.Resolve(value, "Example folder", ".cue");
             }
-            catch (Exception error) when (error is InvalidCastException or FormatException or OverflowException) { continue; }
+            catch (Exception error) when (error is InvalidCastException or FormatException or OverflowException or ArgumentException) { continue; }
             if (property.PropertyType.IsEnum && !Enum.IsDefined(property.PropertyType, converted)) continue;
             if (property.Name == nameof(ConversionOptions.AudioBitrate) && (int)converted is <= 0 or > short.MaxValue) continue;
             property.SetValue(options, converted);
@@ -110,6 +113,8 @@ public sealed class SettingsStore(string path, bool persistRenameBins = false)
         IReadOnlyCollection<string>? knownAdditionalKeysForCleanup = null)
     {
         ArgumentNullException.ThrowIfNull(options);
+        MetadataFileNames.Resolve(options.TrackListingName, "Example folder", ".txt");
+        MetadataFileNames.Resolve(options.CueSheetName, "Example folder", ".cue");
         if (!Enum.IsDefined(options.ZipAlgorithm)) throw new ArgumentOutOfRangeException(nameof(options.ZipAlgorithm));
         if (!Enum.IsDefined(options.ZipCompression)) throw new ArgumentOutOfRangeException(nameof(options.ZipCompression));
         VideoOptions.Validate(options);

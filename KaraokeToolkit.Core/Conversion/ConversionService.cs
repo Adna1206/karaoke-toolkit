@@ -115,7 +115,7 @@ public sealed class ConversionService
                 if (request.Action is Action.CleanUpFilenames)
                     result = await FilenameCleanup.RunAsync(source, token);
                 else if (request.Action == Action.CreateCueAndTextFiles)
-                    result = await WriteMetadataAsync(source, overwrite, token, resolveConflict);
+                    result = await WriteMetadataAsync(source, request.Options, overwrite, token, resolveConflict);
                 else
                     result = await ConvertOneAsync(source, request, overwrite, token, Report, resolveConflict);
                 run.Complete(result);
@@ -153,7 +153,7 @@ public sealed class ConversionService
                 run.Begin(folder, metadata: true);
                 try
                 {
-                    var metadata = await WriteMetadataAsync(folder, overwrite, token, resolveConflict, listingExtension);
+                    var metadata = await WriteMetadataAsync(folder, request.Options, overwrite, token, resolveConflict, listingExtension);
                     run.Complete(metadata);
                 }
                 catch (OperationCanceledException) { cancelled = true; break; }
@@ -198,11 +198,11 @@ public sealed class ConversionService
         }
     }
     internal static bool IsVideoSource(string path) => Path.GetExtension(path).ToLowerInvariant() is ".bin" or ".zip" or ".cdg";
-    internal static async Task<ConversionFileResult> WriteMetadataAsync(string folder, OverwritePolicy overwrite, CancellationToken token,
+    internal static async Task<ConversionFileResult> WriteMetadataAsync(string folder, ConversionOptions options, OverwritePolicy overwrite, CancellationToken token,
         Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolveConflict, string? extension = null)
     {
         using var transaction = new FileTransaction(folder);
-        var outputs = CueTextService.Write(folder, transaction.Workspace, extension);
+        var outputs = CueTextService.Write(folder, transaction.Workspace, options, extension);
         if (outputs.Count == 0)
             return new(folder, ConversionStatus.Skipped, [], "No tracks for CUE/text output.");
         transaction.ObserveTargets(outputs);

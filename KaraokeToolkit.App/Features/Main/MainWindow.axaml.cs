@@ -123,10 +123,14 @@ public partial class MainWindow : Window
             return;
         try
         {
-            var folders = await ModalDialog.RunAsync(this, () => StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = "Choose source folder", AllowMultiple = true }));
+            using var startFolder = await GetInputPickerStartFolderAsync(model);
+            var folders = await ModalDialog.RunAsync(this, () => StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            {
+                Title = "Choose source folder", AllowMultiple = true, SuggestedStartLocation = startFolder
+            }));
             if (folders.Count > 0 && !model.IsBusy)
             {
-                model.AddInputs(folders.Select(f => f.TryGetLocalPath()).OfType<string>());
+                model.AddPickedInputs(folders.Select(f => f.TryGetLocalPath()).OfType<string>().ToArray());
                 foreach (var path in model.CurrentInputs)
                 if (await model.CheckForRecoveryAsync(path))
                     break;
@@ -165,10 +169,12 @@ public partial class MainWindow : Window
         try
         {
             var recipeExtensions = model.SelectedOperation?.Recipe is { } recipe ? RecipeOperations.FileExtensions(recipe.Steps[0].OperationId) : null;
+            using var startFolder = await GetInputPickerStartFolderAsync(model);
             var files = await ModalDialog.RunAsync(this, () => StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = model.SelectedOperation?.IsOrganizer == true ? "Choose files to organize" : "Choose karaoke files",
                 AllowMultiple = true,
+                SuggestedStartLocation = startFolder,
                 FileTypeFilter = model.SelectedOperation?.IsRecipe == true
                     ? new[] { new FilePickerFileType("Recipe inputs") { Patterns = recipeExtensions?.Select(ext => "*" + ext).ToArray() ?? ["*"] } }
                     : model.SelectedOperation?.IsTagging == true
@@ -178,10 +184,18 @@ public partial class MainWindow : Window
                     : new[] { new FilePickerFileType("Karaoke files and archives") { Patterns = InputSelection.Extensions.Concat(ArchiveZipConverter.Extensions).Select(ext => "*" + ext).ToArray() } }
             }));
             if (files.Count > 0 && !model.IsBusy)
-                model.AddInputs(files.Select(f => f.TryGetLocalPath()).OfType<string>());
+                model.AddPickedInputs(files.Select(f => f.TryGetLocalPath()).OfType<string>().ToArray());
         }
         catch (Exception error) { model.Status = "Could not select files: " + error.Message; }
     }
+    private async Task<IStorageFolder?> GetInputPickerStartFolderAsync(MainViewModel model)
+    {
+        if (model.InputPickerStartFolder is not { } folder) return null;
+        try { return await StorageProvider.TryGetFolderFromPathAsync(folder); }
+        catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException or NotSupportedException)
+        { return null; }
+    }
+
     private async Task RestoreQuarantinedFilesAsync()
     {
         if (DataContext is not MainViewModel model || model.IsBusy)
@@ -246,7 +260,7 @@ public partial class MainWindow : Window
         if (DataContext is MainViewModel { IsBusy: false } model)
         {
             var dialog = new OptionsWindow(model.Options, model.OverwritePolicy, model.Theme, model.ValidateBeforeConversion,
-                model.IgnoreLeadingTheForFileOrganization, model.AudioBitrates, model.SaveOptions, model.Backdrop);
+                model.IgnoreLeadingTheForFileOrganization, model.AudioBitrates, model.SaveOptions, model.Backdrop, model.RememberInputFolder);
             dialog.RestorePresentation(this, model.OptionsWindowSize, model.OptionsTabIndex);
             await ModalDialog.ShowAsync(dialog, this);
             model.RememberOptionsWindow(dialog.LastNormalSize, dialog.CurrentTabIndex);

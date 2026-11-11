@@ -8,7 +8,7 @@ namespace KaraokeToolkit.Core.FileOperations;
 /// <summary>Generates local CUE sheets and track listings without online metadata.</summary>
 internal static class CueTextService
 {
-    internal static IReadOnlyList<string> Write(string folder, string stage, string? preferredExtension = null)
+    internal static IReadOnlyList<string> Write(string folder, string stage, ConversionOptions options, string? preferredExtension = null)
     {
         string[] files = Directory.GetFiles(folder).OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase).ToArray();
         string[] bins = files.Where(p => Path.GetExtension(p).Equals(".bin", StringComparison.OrdinalIgnoreCase)).ToArray();
@@ -18,9 +18,7 @@ internal static class CueTextService
             : files.Where(p => Path.GetExtension(p).Equals(preferredExtension, StringComparison.OrdinalIgnoreCase)).ToArray();
         var outputs = new List<string>();
         var generatedAt = DateTimeOffset.Now;
-        string name = new DirectoryInfo(folder).Name;
-        if (string.IsNullOrEmpty(name))
-            name = "tracks";
+        string name = MetadataFileNames.FolderName(folder);
         if (bins.Length > 99)
             throw new InvalidDataException("A CUE sheet supports at most 99 tracks.");
         if (bins.Length > 0 && (preferredExtension is null or ".bin"))
@@ -34,14 +32,14 @@ internal static class CueTextService
                     throw new InvalidDataException("Filename cannot be represented in CUE syntax.");
                 cue.Append($"FILE \"{filename}\" BINARY\r\n  TRACK {(i + 1).ToString("D2", CultureInfo.InvariantCulture)} CDG\r\n    INDEX 01 00:00:00\r\n");
             }
-            string path = Path.Combine(stage, name + ".cue");
+            string path = Path.Combine(stage, MetadataFileNames.Resolve(options.CueSheetName, name, ".cue"));
             File.WriteAllText(path, cue.ToString(), new UTF8Encoding(false));
             outputs.Add(path);
         }
         if (tracks.Length > 0)
         {
             string text = new ReportHeader("Track Listing", generatedAt).ToText() + string.Concat(tracks.Select((p, i) => $"{(i + 1).ToString("D2", CultureInfo.InvariantCulture)}. {Path.GetFileNameWithoutExtension(p)}\r\n"));
-            string path = Path.Combine(stage, name + ".txt");
+            string path = Path.Combine(stage, MetadataFileNames.Resolve(options.TrackListingName, name, ".txt"));
             File.WriteAllText(path, text, new UTF8Encoding(false));
             outputs.Add(path);
         }

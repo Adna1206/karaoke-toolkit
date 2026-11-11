@@ -40,6 +40,42 @@ public class MaintenanceContractTests
     }
 
     [Fact]
+    public async Task CustomMetadataNamesMatchPlanAndRespectOverwritePolicy()
+    {
+        string folder = TestMediaFixture.NewFolder();
+        TestMediaFixture.Seed(folder, Action.BinToAudioG, "keep");
+        var options = new ConversionOptions { TrackListingName = "{folder} - tracks", CueSheetName = "Disc.cue" };
+        string cue = Path.Combine(folder, "Disc.cue");
+        string text = Path.Combine(folder, Path.GetFileName(folder) + " - tracks.txt");
+        var plan = await new OperationPlanner().PlanAsync(new(Action.CreateCueAndTextFiles, [folder]) { Options = options });
+        Assert.Equal([cue, text], Assert.Single(plan.Report.Entries).Outputs);
+
+        File.WriteAllText(text, "keep this listing");
+        var request = new ConversionRequest(Action.CreateCueAndTextFiles, folder, options);
+        var skipped = await Service().RunAsync(request, OverwritePolicy.Skip);
+        Assert.Equal(1, skipped.Skipped);
+        Assert.False(File.Exists(cue));
+        Assert.Equal("keep this listing", File.ReadAllText(text));
+
+        var replaced = await Service().RunAsync(request, OverwritePolicy.Replace);
+        Assert.Equal([cue, text], Assert.Single(replaced.Files).Outputs);
+        Assert.Contains("song.bin", File.ReadAllText(cue));
+    }
+
+    [Fact]
+    public async Task AutomaticTrackListingUsesCustomName()
+    {
+        string folder = TestMediaFixture.NewFolder();
+        TestMediaFixture.Seed(folder, Action.BinToAudioG, "keep");
+        var options = new ConversionOptions { TrackListingName = "My tracks", DeleteOldFiles = false, RenameBins = false };
+
+        var result = await Service().RunAsync(new(Action.BinToAudioG, folder, options));
+
+        Assert.Equal(0, result.Failed);
+        Assert.Equal(Path.Combine(folder, "My tracks.txt"), Assert.Single(Directory.GetFiles(folder, "*.txt")));
+    }
+
+    [Fact]
     public async Task WmaOutputIsReadableAndPreservesBinAndGraphics()
     {
         string folder = TestMediaFixture.NewFolder(); TestMediaFixture.Seed(folder, Action.BinToAudioG, "keep");

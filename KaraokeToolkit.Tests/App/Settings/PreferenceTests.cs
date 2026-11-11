@@ -13,6 +13,51 @@ namespace KaraokeToolkit.Tests.App.Settings;
 public class PreferenceTests
 {
     [Fact]
+    public void PickerRemembersOnlyAcceptedInputsAndDisablingClearsTheSavedFolder()
+    {
+        string path = Path.Combine(TestMediaFixture.NewFolder(), "options.xmls");
+        string folder = TestMediaFixture.NewFolder();
+        string file = Path.Combine(folder, "song.zip");
+        File.WriteAllText(file, "picker fixture");
+        var model = new MainViewModel(path);
+        model.AddPickedInputs([file]);
+        Assert.Null(model.InputPickerStartFolder);
+
+        model.SaveOptions(model.Options, model.OverwritePolicy, model.Theme, false, false, model.AudioBitrates, model.Backdrop, true);
+        model.AddPickedInputs([file]);
+        var reopened = new MainViewModel(path);
+        Assert.Equal(folder, reopened.InputPickerStartFolder);
+        Assert.Empty(reopened.SelectedInputs);
+        Assert.Throws<FileNotFoundException>(() => reopened.AddPickedInputs([Path.Combine(folder, "missing.zip")]));
+        Assert.Equal(folder, reopened.InputPickerStartFolder);
+
+        reopened.SaveOptions(reopened.Options, reopened.OverwritePolicy, reopened.Theme, false, false, reopened.AudioBitrates, reopened.Backdrop, false);
+        Assert.Equal((false, (string?)null), new ApplicationSettingsStore(path).LoadInputFolderPreference());
+        Assert.DoesNotContain("LastInputFolder", File.ReadAllText(path));
+    }
+
+    [Fact]
+    public void OutputNamePreferencesPreviewPersistAndRejectUnsafeNames()
+    {
+        string path = Path.Combine(TestMediaFixture.NewFolder(), "settings.xmls");
+        var store = new ApplicationSettingsStore(path);
+        var draft = new OptionsViewModel(store.Load()) { TrackListingName = "{folder} - tracks", CueSheetName = "Disc" };
+        Assert.Equal("Example: Party Mix - tracks.txt", draft.TrackListingPreview);
+        Assert.Equal("Example: Disc.cue", draft.CueSheetPreview);
+        Assert.True(draft.Apply((options, _, _, _) => store.Save(options)), draft.Error);
+        Assert.Equal("{folder} - tracks", store.Load().TrackListingName);
+        Assert.Equal("Disc", store.Load().CueSheetName);
+
+        draft.CueSheetName = "../outside";
+        Assert.False(draft.Apply((options, _, _, _) => store.Save(options)));
+        Assert.Equal("Disc", store.Load().CueSheetName);
+
+        draft.ResetOutputNamesCommand.Execute(null);
+        Assert.Equal("Example: Party Mix.txt", draft.TrackListingPreview);
+        Assert.Equal("Example: Party Mix.cue", draft.CueSheetPreview);
+    }
+
+    [Fact]
     public void UnsupportedSavedValuesUseDefaultsWithoutLosingOtherPreferences()
     {
         string path = Path.Combine(TestMediaFixture.NewFolder(), "settings.xmls");

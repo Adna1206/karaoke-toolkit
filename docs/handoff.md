@@ -4,7 +4,39 @@ Snapshot: 2026-11-11, Africa/Johannesburg. Verify Git/files before editing.
 
 ## Checkout and release
 
-- Branch `master`, base `42324c5`, shared version **2026.11.16**.
+- Branch `master`, base `baa2033`, shared version **2026.11.16**.
+- The 2026.11.16 changelog includes the settings layout, output naming and picker
+  changes. Full Release verification passed **704 tests** with the test command
+  below using `ArtifactBuildName=Cleanup`, `--no-build`, and
+  `-- xUnit.ParallelizeTestCollections=false` after intermittent failures in the
+  parallel runs. TRX: `artifacts/tests/results/almei_ANDRE_2026-11-11_22_05_03_net10.0.trx`.
+  Windows and Linux x64 local packaging follows the source push.
+- The desktop shares an 8 px radius for list boxes and their
+  items. `dotnet build KaraokeToolkit.App/KaraokeToolkit.App.csproj -c Release --no-restore -p:UsedAvaloniaProducts= -p:ArtifactBuildName=Cleanup -v minimal`
+  passed with zero warnings or errors. Next step is visual verification of
+  rounded list edges and selection highlights in Light and Dark.
+- General settings uses collapsible 8 px cards. Appearance and File processing
+  start expanded, and legacy features start collapsed. The same Release build
+  and `git diff --check` passed after this layout
+  change. Verify scrolling at the minimum window size during the visual check.
+- Windows Explorer moved to the first section in Settings → Integrations, above
+  CLI and MCP. It appears on Windows. The same Release build and diff checks
+  passed. Check the section visually with the other Settings changes.
+- Settings combines Audio and Video into one Encoding tab. The two collapsible
+  cards start expanded and share a scroll area. The Release build and diff
+  checks passed. Verify the combined tab at the minimum window size.
+- Output naming adds editable TXT and CUE templates in General → File processing,
+  with previews and reset. Standalone planning and generation, automatic conversion
+  and disc ripping share the resolver. Defaults use `{folder}` and saved runs
+  carry their options into recovery. Full Release suite passed **703 tests** using
+  the command below with `ArtifactBuildName=Cleanup` and `--no-restore`. TRX:
+  `artifacts/tests/results/almei_ANDRE_2026-11-11_21_50_35_net10.0.trx`.
+  The settings layout still needs a visual check.
+- The opt-in Remember last input folder preference restores the picker location
+  across restarts without selecting inputs. Disabling it clears the saved path.
+  The Release test command below with `ArtifactBuildName=Cleanup`, `--no-restore`
+  and `--filter 'FullyQualifiedName~Settings|FullyQualifiedName~GuiEndToEndTests'`
+  passed all 117 tests. Native picker behaviour remains to be checked visually.
 - The [changelog](changelogs/README.md) starts at 2026.11.15. The 2026.11.16 bump
   adds release-note guidance to [versioning](versioning.md). Relative links and
   `git diff --check` verified. Add the next entry at the next bump.

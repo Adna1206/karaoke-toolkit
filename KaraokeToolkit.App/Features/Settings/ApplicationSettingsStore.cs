@@ -21,7 +21,8 @@ public sealed class ApplicationSettingsStore(string path, bool persistRenameBins
     private static readonly string[] PreferenceKeys =
     [
         "Theme", "Backdrop", "TaggingPatterns", "LastTaggingPattern", "OperationSections",
-        "FavouriteOperations", "SettingsWindowWidth", "SettingsWindowHeight"
+        "FavouriteOperations", "SettingsWindowWidth", "SettingsWindowHeight",
+        "RememberInputFolder", "LastInputFolder"
     ];
     private static readonly HashSet<XName> SectionKeys = Enum.GetNames<OperationSection>().Select(name => XName.Get(name)).ToHashSet();
 
@@ -31,11 +32,19 @@ public sealed class ApplicationSettingsStore(string path, bool persistRenameBins
     public bool LoadIgnoreLeadingTheForFileOrganization() => processing.LoadIgnoreLeadingTheForFileOrganization();
     public AudioBitratePreferences LoadAudioBitrates(ConversionOptions options) => processing.LoadAudioBitrates(options);
 
+    internal (bool Remember, string? Folder) LoadInputFolderPreference()
+    {
+        var modern = File.Exists(filename) ? XDocument.Load(filename).Root?.Element("KaraokeToolkit") : null;
+        bool remember = bool.TryParse(modern?.Element("RememberInputFolder")?.Value, out bool enabled) && enabled;
+        return (remember, remember ? modern?.Element("LastInputFolder")?.Value : null);
+    }
+
     public void Save(ConversionOptions options, OverwritePolicy? overwritePolicy = null, ApplicationTheme? theme = null,
         bool? validateBeforeConversion = null, bool? ignoreLeadingTheForFileOrganization = null,
         AudioBitratePreferences? audioBitrates = null, IReadOnlyDictionary<string, bool>? operationSections = null,
         IReadOnlyList<string>? favouriteOperations = null, SettingsWindowSize? settingsWindowSize = null,
-        ApplicationBackdrop? backdrop = null, IReadOnlyList<string>? taggingPatterns = null, string? lastTaggingPattern = null)
+        ApplicationBackdrop? backdrop = null, IReadOnlyList<string>? taggingPatterns = null, string? lastTaggingPattern = null,
+        bool? rememberInputFolder = null, string? lastInputFolder = null)
     {
         if (settingsWindowSize is { IsValid: false }) throw new ArgumentOutOfRangeException(nameof(settingsWindowSize));
         if (theme.HasValue && !Enum.IsDefined(theme.Value)) throw new ArgumentOutOfRangeException(nameof(theme));
@@ -45,6 +54,9 @@ public sealed class ApplicationSettingsStore(string path, bool persistRenameBins
             {
                 if (theme.HasValue) modern.SetElementValue("Theme", theme.Value);
                 if (backdrop.HasValue) modern.SetElementValue("Backdrop", backdrop.Value);
+                if (rememberInputFolder.HasValue) modern.SetElementValue("RememberInputFolder", rememberInputFolder.Value);
+                if (rememberInputFolder == false) modern.Element("LastInputFolder")?.Remove();
+                else if (lastInputFolder != null) modern.SetElementValue("LastInputFolder", lastInputFolder);
                 if (taggingPatterns != null)
                 {
                     modern.Element("TaggingPatterns")?.Remove();

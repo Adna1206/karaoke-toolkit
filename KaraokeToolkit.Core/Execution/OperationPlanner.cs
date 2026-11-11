@@ -67,7 +67,7 @@ public sealed class OperationPlanner
                     OperationId.LosslessGToMp3G => [stem + ".mp3", string.IsNullOrEmpty(request.OutputFolder) ? source : stem + ".cdg"],
                     OperationId.ZipToAudioG => ZipOutputs(source, stem),
                     OperationId.KaraokeToVideo => [stem + VideoOptions.Extension(request.Options.VideoContainer)],
-                    OperationId.CreateCueAndTextFiles => MetadataOutputs(source),
+                    OperationId.CreateCueAndTextFiles => MetadataOutputs(source, request.Options),
                     _ => throw new NotSupportedException("No conversion plan is registered.")
                 };
                 string message = request.Options.DeleteOldFiles && request.OperationId != OperationId.KaraokeToVideo
@@ -97,11 +97,13 @@ public sealed class OperationPlanner
         return [stem + Path.GetExtension(audio[0].Key!).ToLowerInvariant(), stem + ".cdg"];
     }
 
-    private static string[] MetadataOutputs(string folder)
+    private static string[] MetadataOutputs(string folder, ConversionOptions options)
     {
         var extensions = Directory.GetFiles(folder).Select(p => Path.GetExtension(p).ToLowerInvariant()).ToArray();
-        string stem = Path.Combine(folder, new DirectoryInfo(folder).Name);
-        if (extensions.Contains(".bin")) return [stem + ".cue", stem + ".txt"];
-        return extensions.Any(e => e is ".cdg" or ".zip") ? [stem + ".txt"] : [];
+        if (!extensions.Any(e => e is ".bin" or ".cdg" or ".zip")) return [];
+        string name = MetadataFileNames.FolderName(folder);
+        string text = Path.Combine(folder, MetadataFileNames.Resolve(options.TrackListingName, name, ".txt"));
+        return extensions.Contains(".bin")
+            ? [Path.Combine(folder, MetadataFileNames.Resolve(options.CueSheetName, name, ".cue")), text] : [text];
     }
 }

@@ -14,6 +14,8 @@ public sealed record ConversionOptions
     public int AudioBitrate { get; init; } = DefaultAudioBitrate;
     public AudioEncoder AudioEncoder { get; init; } = AudioEncoder.MP3;
     public bool AutoCreateCueText { get; init; } = true;
+    public string TrackListingName { get; init; } = FileOperations.MetadataFileNames.DefaultTemplate;
+    public string CueSheetName { get; init; } = FileOperations.MetadataFileNames.DefaultTemplate;
     public bool AutoRenameZip { get; init; } = true;
     public bool DeleteOldFiles { get; init; } = true;
     public string LastDiscNumber { get; init; } = "";

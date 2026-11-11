@@ -11,13 +11,12 @@ namespace KaraokeToolkit.App.Features.Settings;
 
 public partial class OptionsWindow : Window
 {
-    private readonly Action<ConversionOptions, OverwritePolicy, ApplicationTheme, bool, bool, AudioBitratePreferences, ApplicationBackdrop>? save;
+    private readonly Action<ConversionOptions, OverwritePolicy, ApplicationTheme, bool, bool, AudioBitratePreferences, ApplicationBackdrop, bool>? save;
     public SettingsWindowSize LastNormalSize { get; private set; } = new();
     public int CurrentTabIndex => OptionsTabs.SelectedIndex;
     public OptionsWindow()
     {
         InitializeComponent();
-        RefreshExplorer();
         Resized += (_, resize) =>
         {
             if (WindowState == WindowState.Normal)
@@ -57,11 +56,12 @@ public partial class OptionsWindow : Window
     }
     public OptionsWindow(ConversionOptions options, OverwritePolicy policy, ApplicationTheme theme, bool validateBeforeConversion,
         bool ignoreLeadingTheForFileOrganization, AudioBitratePreferences audioBitrates,
-        Action<ConversionOptions, OverwritePolicy, ApplicationTheme, bool, bool, AudioBitratePreferences, ApplicationBackdrop> save,
-        ApplicationBackdrop backdrop = ApplicationBackdrop.Automatic) : this()
+        Action<ConversionOptions, OverwritePolicy, ApplicationTheme, bool, bool, AudioBitratePreferences, ApplicationBackdrop, bool> save,
+        ApplicationBackdrop backdrop, bool rememberInputFolder) : this()
     {
         var model = new OptionsViewModel(options, audioBitrates) { Overwrite = (int)policy, Theme = (int)theme, Backdrop = (int)backdrop,
-            ValidateBeforeConversion = validateBeforeConversion, IgnoreLeadingTheForFileOrganization = ignoreLeadingTheForFileOrganization };
+            ValidateBeforeConversion = validateBeforeConversion, IgnoreLeadingTheForFileOrganization = ignoreLeadingTheForFileOrganization,
+            RememberInputFolder = rememberInputFolder };
         model.MarkApplied();
         DataContext = model;
         this.save = save;
@@ -79,7 +79,8 @@ public partial class OptionsWindow : Window
         catch (Exception error) { model.Error = "Could not choose cdrdao: " + error.Message; }
     }
     private bool ApplyChanges() => DataContext is OptionsViewModel model &&
-        (!model.HasChanges || (save != null && model.Apply(save)));
+        (!model.HasChanges || (save != null && model.Apply((options, policy, theme, validate, ignoreThe, bitrates, backdrop) =>
+            save(options, policy, theme, validate, ignoreThe, bitrates, backdrop, model.RememberInputFolder))));
     private async void ResetDefaults_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not OptionsViewModel model) return;
@@ -126,33 +127,6 @@ public partial class OptionsWindow : Window
     }
     private void Apply_Click(object? sender, RoutedEventArgs e) => ApplyChanges();
     private void Cancel_Click(object? sender, RoutedEventArgs e) => Close();
-    private void RefreshExplorer()
-    {
-        ExplorerTab.IsEnabled = OperatingSystem.IsWindows();
-        try
-        {
-            ExplorerStatus.Text = new Services.ExplorerIntegration().IsInstalled() ? "Enabled for this application location." : "Not enabled for this application location.";
-        }
-        catch (Exception error) { ExplorerStatus.Text = error.Message; }
-    }
-    private void EnableExplorer_Click(object? sender, RoutedEventArgs e)
-    {
-        try
-        {
-            new Services.ExplorerIntegration().Install();
-            RefreshExplorer();
-        }
-        catch (Exception error) { ExplorerStatus.Text = "Could not enable Explorer integration: " + error.Message; }
-    }
-    private void RemoveExplorer_Click(object? sender, RoutedEventArgs e)
-    {
-        try
-        {
-            new Services.ExplorerIntegration().Remove();
-            RefreshExplorer();
-        }
-        catch (Exception error) { ExplorerStatus.Text = "Could not remove Explorer integration: " + error.Message; }
-    }
 }
 
 

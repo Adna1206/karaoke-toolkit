@@ -101,7 +101,7 @@ public sealed class DiscRipService(IDiscReader reader)
             string extension = request.Format switch { RipFormat.Bin => ".bin", RipFormat.Zip => ".zip", _ => ".cdg" };
             try
             {
-                var metadata = await ConversionService.WriteMetadataAsync(destination, policy, token, resolve, extension);
+                var metadata = await ConversionService.WriteMetadataAsync(destination, request.Options, policy, token, resolve, extension);
                 int first = results.FindIndex(r => r.Status == ConversionStatus.Succeeded);
                 results[first] = results[first] with { Outputs = results[first].Outputs.Concat(metadata.Outputs).ToArray() };
             }

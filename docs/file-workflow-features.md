@@ -141,6 +141,26 @@ reopening the app.
 Start is disabled while showing the completed/cancelled results screen. Use **Back**
 to choose the next operation; **Retry failed** remains an explicit results action.
 
+## Remember the last input folder
+
+Enable **Remember last input folder** under **Settings → General → File
+processing**. After you pick an input, Add Files and Add Folders suggest the
+selected folder or the first selected file's parent. The picker still asks you
+to choose inputs. Turning the option off clears the saved folder.
+
+## CUE and TXT output names
+
+Under **Settings → General → File processing → Output naming**, set names for
+TXT track listings and CUE sheets. Enter a fixed name or use `{folder}` to insert
+the output folder name. The default `{folder}` produces `Party Mix.txt` and
+`Party Mix.cue` in a folder named `Party Mix`. The fields preview each filename,
+and **Reset output names** restores both defaults. Apply or OK saves the changes.
+
+Standalone generation, automatic conversion listings and disc ripping use these
+names wherever they generate CUE/TXT. The app adds `.txt` or `.cue` and validates
+each resulting filename. Existing outputs follow the selected overwrite policy.
+Recovery uses the names saved with the run.
+
 ## Windows Explorer
 
 Windows Setup enables Explorer integration for a new user profile. Existing
@@ -148,7 +168,7 @@ preferences and the first Setup decision are kept outside the install directory,
 so a later Setup preserves the current registration, including a manual removal.
 Portable launches leave registration to the Settings buttons.
 
-Use **Settings → Explorer → Enable / update** to register **Open in Karaoke Toolkit**
+Use **Settings → Integrations → Windows Explorer → Enable / update** to register **Open in Karaoke Toolkit**
 for folders, folder backgrounds, ZIP/BIN/CDG and supported audio extensions. This is a
 per-user classic context-menu command, normally under **Show more options** on Windows
 11. It uses no administrator access and does not change default file associations.

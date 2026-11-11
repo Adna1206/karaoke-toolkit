@@ -10,7 +10,9 @@ using System;
 using System.ComponentModel;
 using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using KaraokeToolkit.Core;
+using KaraokeToolkit.Core.FileOperations;
 namespace KaraokeToolkit.App.Features.Settings;
 
 public partial class OptionsViewModel : ViewModelBase
@@ -20,9 +22,9 @@ public partial class OptionsViewModel : ViewModelBase
     private AudioBitratePreferences audioBitrates = new();
     private bool initializing;
     private sealed record Snapshot(ConversionOptions Options, int Overwrite, int Theme, bool Validate, bool IgnoreLeadingThe,
-        AudioBitratePreferences AudioBitrates, int Backdrop);
+        AudioBitratePreferences AudioBitrates, int Backdrop, bool RememberInputFolder);
     private Snapshot? applied;
-    private Snapshot Current => new(ToOptions(), Overwrite, Theme, ValidateBeforeConversion, IgnoreLeadingTheForFileOrganization, audioBitrates, Backdrop);
+    private Snapshot Current => new(ToOptions(), Overwrite, Theme, ValidateBeforeConversion, IgnoreLeadingTheForFileOrganization, audioBitrates, Backdrop, RememberInputFolder);
     public bool HasChanges => applied != null && Current != applied;
 
     public void MarkApplied()
@@ -77,6 +79,7 @@ public partial class OptionsViewModel : ViewModelBase
         get; set;
     }
     [ObservableProperty] public partial bool IgnoreLeadingTheForFileOrganization { get; set; }
+    [ObservableProperty] public partial bool RememberInputFolder { get; set; }
     [ObservableProperty] public partial bool ExperimentalDiscRipping { get; set; }
     [ObservableProperty] public partial string CdrdaoExecutablePath { get; set; } = "";
     public IReadOnlyList<string> Themes => Definitions.Theme.Choices;
@@ -130,6 +133,29 @@ public partial class OptionsViewModel : ViewModelBase
     public partial bool AutoCreateCueText
     {
         get; set;
+    }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TrackListingPreview))]
+    public partial string TrackListingName { get; set; } = MetadataFileNames.DefaultTemplate;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CueSheetPreview))]
+    public partial string CueSheetName { get; set; } = MetadataFileNames.DefaultTemplate;
+
+    public string TrackListingPreview => PreviewName(TrackListingName, ".txt");
+    public string CueSheetPreview => PreviewName(CueSheetName, ".cue");
+
+    private static string PreviewName(string? template, string extension)
+    {
+        try { return "Example: " + MetadataFileNames.Resolve(template, "Party Mix", extension); }
+        catch (ArgumentException error) { return error.Message; }
+    }
+
+    [RelayCommand]
+    private void ResetOutputNames()
+    {
+        TrackListingName = MetadataFileNames.DefaultTemplate;
+        CueSheetName = MetadataFileNames.DefaultTemplate;
     }
     [ObservableProperty]
     public partial bool AutoRenameZip
@@ -188,6 +214,7 @@ public partial class OptionsViewModel : ViewModelBase
         Overwrite = (int)OverwritePolicy.Ask;
         ValidateBeforeConversion = false;
         IgnoreLeadingTheForFileOrganization = false;
+        RememberInputFolder = false;
         Error = "";
         OnPropertyChanged(nameof(HasChanges));
     }
@@ -201,6 +228,8 @@ public partial class OptionsViewModel : ViewModelBase
         RecurseFolders = options.RecurseFolders;
         DeleteOriginals = options.DeleteOldFiles;
         AutoCreateCueText = options.AutoCreateCueText;
+        TrackListingName = options.TrackListingName;
+        CueSheetName = options.CueSheetName;
         AutoRenameZip = options.AutoRenameZip;
         RenameBins = options.RenameBins;
         NamingFormat = options.NamingFormat;
@@ -224,6 +253,8 @@ public partial class OptionsViewModel : ViewModelBase
         RecurseFolders = RecurseFolders,
         DeleteOldFiles = DeleteOriginals,
         AutoCreateCueText = AutoCreateCueText,
+        TrackListingName = TrackListingName?.Trim() ?? "",
+        CueSheetName = CueSheetName?.Trim() ?? "",
         AutoRenameZip = AutoRenameZip,
         RenameBins = RenameBins,
         NamingFormat = NamingFormat,

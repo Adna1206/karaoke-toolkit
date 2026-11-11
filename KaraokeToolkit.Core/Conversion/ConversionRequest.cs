@@ -2,6 +2,7 @@ using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.Video;
 using KaraokeToolkit.Core.Audio;
 using KaraokeToolkit.Core.Archives;
+using KaraokeToolkit.Core.FileOperations;
 namespace KaraokeToolkit.Core.Conversion;
 
 /// <summary>A conversion engine request. Action is persisted by name, independently of enum ordering.</summary>
@@ -24,6 +25,8 @@ public sealed record ConversionRequest(
             throw new NotSupportedException("This operation is not handled by the conversion engine.");
         if (string.IsNullOrWhiteSpace(Folder))
             throw new ArgumentException("A source folder is required.", nameof(Folder));
+        MetadataFileNames.Resolve(Options.TrackListingName, "Example folder", ".txt");
+        MetadataFileNames.Resolve(Options.CueSheetName, "Example folder", ".cue");
         if (!string.IsNullOrEmpty(OutputFolder))
         {
             if (Action is OperationId.CleanUpFilenames or OperationId.CreateCueAndTextFiles)

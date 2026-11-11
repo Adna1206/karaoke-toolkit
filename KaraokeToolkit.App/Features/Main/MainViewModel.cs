@@ -60,6 +60,10 @@ public partial class MainViewModel : ViewModelBase
     public bool CanRetry => !IsBusy && retryRequests.Count > 0;
     public IReadOnlyList<string> SelectedInputs => selectedInputs;
     public string[] CurrentInputs => selectedInputs.Length > 0 ? selectedInputs : [FolderPath];
+    public bool RememberInputFolder { get; private set; }
+    private string? lastInputFolder;
+    internal string? InputPickerStartFolder => RememberInputFolder && Path.IsPathFullyQualified(lastInputFolder ?? "") &&
+        Directory.Exists(lastInputFolder) ? lastInputFolder : null;
     public bool CanValidate => !IsBusy && !string.IsNullOrWhiteSpace(FolderPath);
 
     public void SetInputs(IEnumerable<string> paths, bool suggestOperation = true)
@@ -106,6 +110,26 @@ public partial class MainViewModel : ViewModelBase
     public void AddInputs(IEnumerable<string> paths)
         // The home workflow chooses an operation first; adding inputs must not replace that choice.
         => SetInputs(string.IsNullOrWhiteSpace(FolderPath) ? paths : CurrentInputs.Concat(paths), suggestOperation: false);
+
+    internal void AddPickedInputs(string[] paths)
+    {
+        if (IsBusy || paths.Length == 0) return;
+        AddInputs(paths);
+        if (!RememberInputFolder) return;
+
+        string first = Path.GetFullPath(paths[0]);
+        string folder = Directory.Exists(first) ? first : Path.GetDirectoryName(first)!;
+        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        if (string.Equals(folder, lastInputFolder, comparison)) return;
+
+        try
+        {
+            store.Save(Options, lastInputFolder: folder);
+            lastInputFolder = folder;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or System.Xml.XmlException)
+        { Status = "Could not remember the input folder: " + error.Message; }
+    }
 
     [RelayCommand(CanExecute = nameof(CanClearInputs))]
     private void ClearInputs()
@@ -282,6 +306,7 @@ public partial class MainViewModel : ViewModelBase
         try
         {
             Options = store.Load();
+            (RememberInputFolder, lastInputFolder) = store.LoadInputFolderPreference();
             AudioBitrates = store.LoadAudioBitrates(Options);
             OptionsWindowSize = store.LoadSettingsWindowSize();
             OverwritePolicy = store.LoadOverwritePolicy();
@@ -344,8 +369,15 @@ public partial class MainViewModel : ViewModelBase
 
     public void SaveOptions(ConversionOptions options, OverwritePolicy policy, ApplicationTheme theme, bool validateBeforeConversion,
         bool ignoreLeadingTheForFileOrganization, AudioBitratePreferences audioBitrates, ApplicationBackdrop backdrop)
+        => SaveOptions(options, policy, theme, validateBeforeConversion, ignoreLeadingTheForFileOrganization, audioBitrates, backdrop, RememberInputFolder);
+
+    internal void SaveOptions(ConversionOptions options, OverwritePolicy policy, ApplicationTheme theme, bool validateBeforeConversion,
+        bool ignoreLeadingTheForFileOrganization, AudioBitratePreferences audioBitrates, ApplicationBackdrop backdrop, bool rememberInputFolder)
     {
-        store.Save(options, policy, theme, validateBeforeConversion, ignoreLeadingTheForFileOrganization, audioBitrates, backdrop: backdrop);
+        store.Save(options, policy, theme, validateBeforeConversion, ignoreLeadingTheForFileOrganization, audioBitrates,
+            backdrop: backdrop, rememberInputFolder: rememberInputFolder);
+        RememberInputFolder = rememberInputFolder;
+        if (!rememberInputFolder) lastInputFolder = null;
         Options = options;
         OverwritePolicy = policy;
         Theme = theme;
