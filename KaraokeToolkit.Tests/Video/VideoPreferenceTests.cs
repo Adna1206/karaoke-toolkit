@@ -48,7 +48,7 @@ public class VideoPreferenceTests
     }
 
     [Fact]
-    public void InvalidSmoothingCannotOverwriteSavedPreferences()
+    public void InvalidSmoothingIsRejectedOnSaveAndDefaultsOnLoad()
     {
         string path = Path.Combine(TestMediaFixture.NewFolder(), "settings.xml");
         var store = new SettingsStore(path);
@@ -59,7 +59,7 @@ public class VideoPreferenceTests
         var xml = XDocument.Load(path);
         xml.Root!.Element("KaraokeToolkit")!.SetElementValue("VideoGraphicsSmoothing", "Unsupported");
         xml.Save(path);
-        Assert.Throws<InvalidDataException>(() => store.Load());
+        Assert.Equal(VideoGraphicsSmoothing.None, store.Load().VideoGraphicsSmoothing);
     }
 
 }

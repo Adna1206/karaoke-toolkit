@@ -4,18 +4,52 @@ Snapshot: 2026-11-11, Africa/Johannesburg. Verify Git/files before editing.
 
 ## Checkout and release
 
-- Branch `master`, base `a1c5c57`, shared version **2026.11.14**.
-- `./scripts/Publish.ps1` built both x64 targets under
-  `artifacts/releases/2026.11.13/20261106-143757-c73b7f`. Asset manifest paths and
-  SHA-256 checksums verified. Next step is manual installation and UI verification.
+- Branch `master`, release based on `f356dbc`, shared version **2026.11.15**.
+- `./scripts/Publish.ps1` built Windows and Linux x64 packages under
+  `artifacts/releases/2026.11.15/20261111-205712-694d9b`. Both asset manifests and
+  SHA-256 checksums verified. Actual install and Linux runtime checks remain open.
+- Full Release suite passed all 700 tests with `ArtifactBuildName=Cleanup` and
+  `--no-restore` using the command below.
+  TRX: `artifacts/tests/results/almei_ANDRE_2026-11-11_20_56_50_net10.0.trx`.
+
+## Windows user data
+
+- Settings, favourites, recipes and recovery indexes move to
+  `%LOCALAPPDATA%\KaraokeToolkitData`. The migration copies surviving files into
+  missing destinations. Desktop, CLI and MCP share the default recovery index.
+- Launch the 2026.11.15 portable build once before replacing an older installation.
+  See [updates](updates.md).
+- All 174 settings and recovery tests passed using the Release command below
+  with `ArtifactBuildName=Cleanup` and `--filter 'FullyQualifiedName~Settings|FullyQualifiedName~Recovery'`.
+  Next step is a portable-to-Setup upgrade check with saved preferences.
+- Unknown settings keys are ignored. Unsupported saved values fall back per
+  setting so valid preferences and favourites still load. XML syntax errors
+  remain visible. The full Release suite passed all 698 tests using the command
+  below with `ArtifactBuildName=Cleanup`. TRX: `almei_ANDRE_2026-11-11_20_46_52_net10.0.trx`.
+- Desktop saves now remove unknown keys from `Options` and `KaraokeToolkit`
+  within the existing atomic XML write. Core-only saves preserve shared entries.
+  The Release command below with `ArtifactBuildName=Cleanup`, `--no-restore`
+  and `--filter 'FullyQualifiedName~Settings'` passed all 106 tests after cleanup.
+
+## Explorer integration
+
+- The Windows package requests Desktop and Start menu shortcuts.
+- The Windows Setup hook registers the existing per-user verbs for
+  new profiles. Existing settings or the persistent Setup marker preserve the
+  current registry state. The Settings buttons still apply changes immediately.
+- The Release command below with `ArtifactBuildName=Cleanup`, `--no-restore`
+  and `--filter 'FullyQualifiedName~ExplorerIntegrationTests|FullyQualifiedName~UserDataPathsTests'`
+  passed all 9 tests. Tests use isolated registry keys. Next step is a real Setup
+  check for a fresh profile and an upgrade after manual removal.
 
 ## Acrylic appearance
 
-- Desktop windows use Dark when Acrylic is active,
-  including Automatic's fallback. Other materials inherit the application theme.
+- Automatic tries Mica, Acrylic and Solid in that order on Windows 11, and uses
+  Solid elsewhere. Acrylic uses Dark with System Default, and explicit Light
+  overrides it. Open windows refresh when the saved theme changes.
 - `dotnet build KaraokeToolkit.slnx -c Release -p:UsedAvaloniaProducts= -p:ArtifactBuildName=Cleanup -v minimal`
-  passed with zero warnings and errors. All 11 appearance tests passed using
-  the Release test command below with `ArtifactBuildName=Cleanup`, `--no-build`
+  passed with zero warnings and errors before the revised rules. All 14 appearance
+  tests passed for the revised rules using the Release test command below with `ArtifactBuildName=Cleanup`
   and `--filter 'FullyQualifiedName~AppearanceTests'`.
   `git diff --check` passed. Next step is visual verification with native Acrylic.
 

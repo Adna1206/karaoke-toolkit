@@ -96,7 +96,7 @@ try {
             '--packVersion', $version, '--packDir', $publish, '--mainExe', $mainExe,
             '--packTitle', $product, '--packAuthors', 'ADNA', '--runtime', $rid,
             '--icon', $icon, '--outputDir', $packages)
-        if ($isWindowsTarget) { $packArguments += @('--shortcuts', 'StartMenuRoot') }
+        if ($isWindowsTarget) { $packArguments += @('--shortcuts', 'Desktop,StartMenuRoot') }
         else { $packArguments += @('--categories', 'AudioVideo') }
         Invoke-DotNet $packArguments
         $expectedPattern = if ($isWindowsTarget) { '*-Setup.exe' } else { '*.AppImage' }

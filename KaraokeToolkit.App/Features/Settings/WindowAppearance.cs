@@ -12,6 +12,7 @@ namespace KaraokeToolkit.App.Features.Settings;
 internal static class WindowAppearance
 {
     private static ApplicationBackdrop current;
+    private static ApplicationTheme theme;
 
     public static void Initialize()
     {
@@ -30,10 +31,24 @@ internal static class WindowAppearance
             foreach (var window in desktop.Windows) Apply(window);
     }
 
-    internal static IReadOnlyList<WindowTransparencyLevel> Levels(ApplicationBackdrop backdrop, bool windows) =>
+    public static void SetTheme(ApplicationTheme preference)
+    {
+        theme = preference;
+        if (Application.Current is not { } app) return;
+        app.RequestedThemeVariant = preference switch
+        {
+            ApplicationTheme.Light => ThemeVariant.Light,
+            ApplicationTheme.Dark => ThemeVariant.Dark,
+            _ => ThemeVariant.Default
+        };
+        if (app.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            foreach (var window in desktop.Windows) UpdateMaterial(window);
+    }
+
+    internal static IReadOnlyList<WindowTransparencyLevel> Levels(ApplicationBackdrop backdrop, bool windows, bool windows11) =>
         !windows ? [WindowTransparencyLevel.None] : backdrop switch
         {
-            ApplicationBackdrop.Automatic => [WindowTransparencyLevel.Mica, WindowTransparencyLevel.AcrylicBlur, WindowTransparencyLevel.None],
+            ApplicationBackdrop.Automatic when windows11 => [WindowTransparencyLevel.Mica, WindowTransparencyLevel.AcrylicBlur, WindowTransparencyLevel.None],
             ApplicationBackdrop.Mica => [WindowTransparencyLevel.Mica, WindowTransparencyLevel.None],
             ApplicationBackdrop.Acrylic => [WindowTransparencyLevel.AcrylicBlur, WindowTransparencyLevel.None],
             _ => [WindowTransparencyLevel.None]
@@ -41,7 +56,7 @@ internal static class WindowAppearance
 
     private static void Apply(Window window)
     {
-        window.TransparencyLevelHint = Levels(current, OperatingSystem.IsWindows());
+        window.TransparencyLevelHint = Levels(current, OperatingSystem.IsWindows(), OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000));
         UpdateMaterial(window);
     }
 
@@ -54,12 +69,15 @@ internal static class WindowAppearance
     private static void UpdateMaterial(Window window)
     {
         // Follow the material the OS actually selected, including Automatic's Acrylic fallback.
-        if (window.ActualTransparencyLevel == WindowTransparencyLevel.AcrylicBlur)
+        if (UsesAcrylicDarkDefault(window.ActualTransparencyLevel, theme))
             window.RequestedThemeVariant = ThemeVariant.Dark;
         else
             window.ClearValue(Window.RequestedThemeVariantProperty);
         UpdateBackground(window);
     }
+
+    internal static bool UsesAcrylicDarkDefault(WindowTransparencyLevel material, ApplicationTheme preference) =>
+        material == WindowTransparencyLevel.AcrylicBlur && preference == ApplicationTheme.System;
 
     private static void UpdateBackground(Window window)
     {

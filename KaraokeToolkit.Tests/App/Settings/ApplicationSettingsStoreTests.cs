@@ -14,22 +14,28 @@ public class ApplicationSettingsStoreTests
         // Reproduce the schema written before presentation preferences moved to App.
         File.WriteAllText(path, """
             <profile><KaraokeToolkit>
-              <Theme>Dark</Theme><OperationSections><FileOrganization>false</FileOrganization></OperationSections>
+              <Theme>Dark</Theme><OperationSections><FilesAndFolders>false</FilesAndFolders><FutureSection>true</FutureSection></OperationSections>
               <FavouriteOperations><Operation>ZipToBin</Operation></FavouriteOperations>
               <SettingsWindowWidth>920.5</SettingsWindowWidth><SettingsWindowHeight>730.25</SettingsWindowHeight>
               <FuturePreference>keep</FuturePreference>
-            </KaraokeToolkit></profile>
+            </KaraokeToolkit><section name="Options"><entry name="FutureOption">keep</entry></section></profile>
             """);
         var core = new SettingsStore(path);
         core.Save(core.Load() with { AutoCreateCueText = false });
         var app = new ApplicationSettingsStore(path);
         Assert.Equal(ApplicationTheme.Dark, app.LoadTheme());
-        Assert.False(app.LoadOperationSections()["FileOrganization"]);
+        Assert.False(app.LoadOperationSections()["FilesAndFolders"]);
         Assert.Equal(["ZipToBin"], app.LoadFavouriteOperations());
         Assert.Equal(new SettingsWindowSize(920.5, 730.25), app.LoadSettingsWindowSize());
         Assert.False(app.Load().AutoCreateCueText);
-        app.Save(app.Load(), theme: ApplicationTheme.Light);
         Assert.Equal("keep", XDocument.Load(path).Root!.Element("KaraokeToolkit")!.Element("FuturePreference")!.Value);
+        app.Save(app.Load(), theme: ApplicationTheme.Light);
+        var root = XDocument.Load(path).Root!;
+        Assert.Null(root.Element("KaraokeToolkit")!.Element("FuturePreference"));
+        Assert.DoesNotContain(root.Element("section")!.Elements("entry"), entry => (string?)entry.Attribute("name") == "FutureOption");
+        Assert.False(app.LoadOperationSections().ContainsKey("FutureSection"));
+        Assert.False(app.LoadOperationSections()["FilesAndFolders"]);
+        Assert.Equal(["ZipToBin"], app.LoadFavouriteOperations());
         Assert.Equal(new SettingsWindowSize(920.5, 730.25), app.LoadSettingsWindowSize());
     }
 

@@ -268,14 +268,16 @@ public partial class MainViewModel : ViewModelBase
             (SelectedOperation.Definition.Inputs != OperationInputKind.Folders || CurrentInputs.All(Directory.Exists)) &&
             (SelectedOperation.Recipe == null || KaraokeToolkit.Core.Recipes.RecipeOperations.CanAcceptInputs(SelectedOperation.Recipe, CurrentInputs)));
     public bool CanCancel => IsBusy && !CancelRequested;
-    public MainViewModel() : this(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "KaraokeToolkit", "options.xmls")) { }
-    public MainViewModel(string settingsPath)
+    public MainViewModel() : this(UserDataPaths.DesktopSettingsPath(), new RecoveryStore()) { }
+    public MainViewModel(string settingsPath) : this(settingsPath, null) { }
+
+    private MainViewModel(string settingsPath, RecoveryStore? recoveryStore)
     {
         RecipeDirectory = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(settingsPath))!, "Recipes");
         store = new(settingsPath, persistRenameBins: true);
         OperationSections = OperationDefinitions.Sections.Select(group => new OperationSectionViewModel(this, group.Section, group.Header,
             Operations.Where(operation => operation.Available && operation.Section == group.Section).ToArray())).ToArray();
-        recovery = new(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(settingsPath))!, "Recovery"));
+        recovery = recoveryStore ?? new(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(settingsPath))!, "Recovery"));
         SelectedOperation = Operations.Single(operation => operation.Action == Action.AudioGToZip);
         try
         {

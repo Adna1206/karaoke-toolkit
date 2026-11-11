@@ -38,6 +38,7 @@ from a different platform or overwrite earlier packages:
 - Packages: `artifacts/releases/<version>/<run-id>/<rid>/`
 
 Windows produces a Setup EXE, portable ZIP, full update package and release metadata.
+Setup creates Desktop and Start menu shortcuts automatically.
 The Setup EXE has the evaluated app version appended before its extension, for
 example `KaraokeToolkit-win-Setup-2026.11.7.exe`. Checksums use the final filename.
 App, CLI and MCP outputs include `licenses/application/LICENSE` (GNU GPL v3)

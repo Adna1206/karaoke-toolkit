@@ -1,5 +1,6 @@
 using Avalonia;
 using System;
+using KaraokeToolkit.App.Services;
 using Velopack;
 
 namespace KaraokeToolkit.App;
@@ -11,7 +12,10 @@ sealed class Program
     [STAThread]
     public static void Main(string[] args)
     {
-        VelopackApp.Build().SetAutoApplyOnStartup(false).Run();
+        var lifecycle = VelopackApp.Build().SetAutoApplyOnStartup(false);
+        if (OperatingSystem.IsWindows())
+            lifecycle.OnAfterInstallFastCallback(_ => ExplorerIntegration.ConfigureAfterSetup());
+        lifecycle.Run();
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
 

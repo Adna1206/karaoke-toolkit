@@ -1,5 +1,6 @@
 using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.Conversion;
+using KaraokeToolkit.Core.Settings;
 using System.Text.Json;
 
 namespace KaraokeToolkit.Core.Recovery;
@@ -16,8 +17,7 @@ public sealed class RecoveryStore
     {
         get;
     }
-    public RecoveryStore(string? indexDirectory = null) => IndexDirectory = indexDirectory ?? Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "KaraokeToolkit", "Recovery");
+    public RecoveryStore(string? indexDirectory = null) => IndexDirectory = indexDirectory ?? UserDataPaths.RecoveryDirectory();
 
     /// <summary>Discovers unfinished jobs through the startup index or an explicitly supplied folder scope.</summary>
     /// <remarks>Excludes jobs whose leases are held and folds child conversions into their owning workflow.

@@ -65,16 +65,27 @@ public class AppearanceTests
     [InlineData(ApplicationBackdrop.Acrylic)]
     public void UnsupportedPlatformsAlwaysUseSolid(ApplicationBackdrop backdrop)
     {
-        Assert.Equal([WindowTransparencyLevel.None], WindowAppearance.Levels(backdrop, windows: false));
-        Assert.Equal(WindowTransparencyLevel.None, WindowAppearance.Levels(backdrop, windows: true).Last());
+        Assert.Equal([WindowTransparencyLevel.None], WindowAppearance.Levels(backdrop, windows: false, windows11: false));
+        Assert.Equal(WindowTransparencyLevel.None, WindowAppearance.Levels(backdrop, windows: true, windows11: true).Last());
     }
 
     [Fact]
     public void AutomaticPrioritizesMicaThenAcrylic()
     {
         Assert.Equal([WindowTransparencyLevel.Mica, WindowTransparencyLevel.AcrylicBlur, WindowTransparencyLevel.None],
-            WindowAppearance.Levels(ApplicationBackdrop.Automatic, windows: true));
+            WindowAppearance.Levels(ApplicationBackdrop.Automatic, windows: true, windows11: true));
+        Assert.Equal([WindowTransparencyLevel.None], WindowAppearance.Levels(ApplicationBackdrop.Automatic, windows: true, windows11: false));
         Assert.Equal([WindowTransparencyLevel.Mica, WindowTransparencyLevel.None],
-            WindowAppearance.Levels(ApplicationBackdrop.Mica, windows: true));
+            WindowAppearance.Levels(ApplicationBackdrop.Mica, windows: true, windows11: true));
+    }
+
+    [Theory]
+    [InlineData(ApplicationTheme.System, true)]
+    [InlineData(ApplicationTheme.Light, false)]
+    [InlineData(ApplicationTheme.Dark, false)]
+    public void AcrylicDefaultsToDarkOnlyForSystemTheme(ApplicationTheme preference, bool expected)
+    {
+        Assert.Equal(expected, WindowAppearance.UsesAcrylicDarkDefault(WindowTransparencyLevel.AcrylicBlur, preference));
+        Assert.False(WindowAppearance.UsesAcrylicDarkDefault(WindowTransparencyLevel.Mica, preference));
     }
 }

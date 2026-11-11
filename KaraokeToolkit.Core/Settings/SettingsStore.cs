@@ -19,7 +19,7 @@ public sealed class SettingsStore(string path, bool persistRenameBins = false)
             (persistRenameBins || p.Name != nameof(ConversionOptions.RenameBins))).ToArray();
 
     /// <summary>Loads known options, using original defaults for absent entries.</summary>
-    /// <remarks>Invalid XML or conversions propagate to the caller; the existing file is not repaired implicitly.</remarks>
+    /// <remarks>Unsupported values use their setting's default. Invalid XML propagates to the caller.</remarks>
     public ConversionOptions Load()
     {
         var options = new ConversionOptions();
@@ -32,84 +32,82 @@ public sealed class SettingsStore(string path, bool persistRenameBins = false)
             string? value = section?.Elements("entry").FirstOrDefault(e => (string?)e.Attribute("name") == property.Name)?.Value;
             if (string.IsNullOrEmpty(value))
                 continue; // Original GetValueAsString fallback.
-            object converted = property.PropertyType == typeof(bool) ? Conversions.ToBoolean(value)
-                : property.PropertyType == typeof(int) ? Conversions.ToInteger(value)
-                : property.PropertyType.IsEnum ? Enum.ToObject(property.PropertyType, Conversions.ToInteger(value)) : value;
+            object converted;
+            try
+            {
+                converted = property.PropertyType == typeof(bool) ? Conversions.ToBoolean(value)
+                    : property.PropertyType == typeof(int) ? Conversions.ToInteger(value)
+                    : property.PropertyType.IsEnum ? Enum.ToObject(property.PropertyType, Conversions.ToInteger(value)) : value;
+            }
+            catch (Exception error) when (error is InvalidCastException or FormatException or OverflowException) { continue; }
+            if (property.PropertyType.IsEnum && !Enum.IsDefined(property.PropertyType, converted)) continue;
+            if (property.Name == nameof(ConversionOptions.AudioBitrate) && (int)converted is <= 0 or > short.MaxValue) continue;
             property.SetValue(options, converted);
         }
         string? compression = doc.Root?.Element("KaraokeToolkit")?.Element("ZipCompression")?.Value;
-        if (compression != null)
+        try
         {
-            options = options with { ZipCompression = ZipCompressionMigration.FromSaved(compression) };
+            if (compression != null)
+                options = options with { ZipCompression = ZipCompressionMigration.FromSaved(compression) };
+            else
+            {
+                string? legacy = section?.Elements("entry").FirstOrDefault(e => (string?)e.Attribute("name") == "ZipCompressionLevel")?.Value;
+                if (!string.IsNullOrEmpty(legacy)) options = options with { ZipCompression = ZipCompressionMigration.FromLegacy(Conversions.ToInteger(legacy)) };
+            }
         }
-        else
-        {
-            string? legacy = section?.Elements("entry").FirstOrDefault(e => (string?)e.Attribute("name") == "ZipCompressionLevel")?.Value;
-            if (!string.IsNullOrEmpty(legacy)) options = options with { ZipCompression = ZipCompressionMigration.FromLegacy(Conversions.ToInteger(legacy)) };
-        }
+        catch (Exception error) when (error is InvalidDataException or ArgumentOutOfRangeException or InvalidCastException or FormatException or OverflowException) { }
         string? algorithm = doc.Root?.Element("KaraokeToolkit")?.Element("ZipAlgorithm")?.Value;
-        if (algorithm != null)
+        if (Enum.TryParse<ZipAlgorithm>(algorithm, out var parsedAlgorithm) && Enum.IsDefined(parsedAlgorithm))
         {
-            if (!Enum.TryParse<ZipAlgorithm>(algorithm, out var parsed) || !Enum.IsDefined(parsed))
-                throw new InvalidDataException("Invalid ZIP algorithm.");
-            options = options with { ZipAlgorithm = parsed };
+            options = options with { ZipAlgorithm = parsedAlgorithm };
         }
         string? experimental = doc.Root?.Element("KaraokeToolkit")?.Element("ExperimentalDiscRipping")?.Value;
-        if (experimental != null)
+        if (bool.TryParse(experimental, out bool enabled))
         {
-            if (!bool.TryParse(experimental, out bool enabled)) throw new InvalidDataException("Invalid experimental ripping preference.");
             options = options with { ExperimentalDiscRipping = enabled };
         }
         var video = doc.Root?.Element("KaraokeToolkit");
         options = options with { CdrdaoExecutablePath = video?.Element("CdrdaoExecutablePath")?.Value ?? "" };
-        if (video?.Element("VideoContainer")?.Value is { } container)
+        if (Enum.TryParse<VideoContainer>(video?.Element("VideoContainer")?.Value, out var container) && Enum.IsDefined(container))
         {
-            if (!Enum.TryParse<VideoContainer>(container, out var parsed) || !Enum.IsDefined(parsed))
-                throw new InvalidDataException("Invalid video container.");
-            options = options with { VideoContainer = parsed };
+            options = options with { VideoContainer = container };
         }
-        if (video?.Element("VideoResolution")?.Value is { } resolution)
+        if (Enum.TryParse<VideoResolution>(video?.Element("VideoResolution")?.Value, out var resolution) && Enum.IsDefined(resolution))
         {
-            if (!Enum.TryParse<VideoResolution>(resolution, out var parsed) || !Enum.IsDefined(parsed))
-                throw new InvalidDataException("Invalid video resolution.");
-            options = options with { VideoResolution = parsed };
+            options = options with { VideoResolution = resolution };
         }
-        if (video?.Element("VideoGraphicsSmoothing")?.Value is { } smoothing)
+        if (Enum.TryParse<VideoGraphicsSmoothing>(video?.Element("VideoGraphicsSmoothing")?.Value, out var smoothing) && Enum.IsDefined(smoothing))
         {
-            if (!Enum.TryParse<VideoGraphicsSmoothing>(smoothing, out var parsed) || !Enum.IsDefined(parsed))
-                throw new InvalidDataException("Invalid video graphics smoothing.");
-            options = options with { VideoGraphicsSmoothing = parsed };
+            options = options with { VideoGraphicsSmoothing = smoothing };
         }
-        int ReadVideoInt(string name, int fallback)
+        int ReadVideoInt(string name, int fallback, Func<int, bool> supported)
         {
             string? value = video?.Element(name)?.Value;
-            if (value == null) return fallback;
-            if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed))
-                throw new InvalidDataException("Invalid " + name + " in settings.");
-            return parsed;
+            return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) && supported(parsed)
+                ? parsed : fallback;
         }
         options = options with
         {
-            VideoFrameRate = ReadVideoInt("VideoFrameRate", options.VideoFrameRate),
-            VideoBitrateKbps = ReadVideoInt("VideoBitrateKbps", options.VideoBitrateKbps),
-            VideoAudioBitrateKbps = ReadVideoInt("VideoAudioBitrateKbps", options.VideoAudioBitrateKbps)
+            VideoFrameRate = ReadVideoInt("VideoFrameRate", options.VideoFrameRate, VideoOptions.SupportsFrameRate),
+            VideoBitrateKbps = ReadVideoInt("VideoBitrateKbps", options.VideoBitrateKbps, VideoOptions.SupportsVideoBitrate),
+            VideoAudioBitrateKbps = ReadVideoInt("VideoAudioBitrateKbps", options.VideoAudioBitrateKbps, VideoOptions.SupportsAudioBitrate)
         };
-        if (video?.Element("VideoAudioMatchSourceBitrate")?.Value is { } matchBitrate)
+        if (bool.TryParse(video?.Element("VideoAudioMatchSourceBitrate")?.Value, out bool matchBitrate))
         {
-            if (!bool.TryParse(matchBitrate, out bool parsed)) throw new InvalidDataException("Invalid video audio bitrate mode.");
-            options = options with { VideoAudioMatchSourceBitrate = parsed };
+            options = options with { VideoAudioMatchSourceBitrate = matchBitrate };
         }
         VideoOptions.Validate(options);
         return options;
     }
 
-    /// <summary>Updates known entries while retaining unknown XML entries and sections.</summary>
+    /// <summary>Updates known entries and optionally removes unknown keys from the two settings sections.</summary>
     /// <remarks>Serializes writers, flushes a same-directory temporary file, and atomically replaces the old XML.
     /// An optional extension updates additional XML entries within the same transaction. If it throws,
-    /// the existing file remains unchanged. Core does not interpret these caller-owned entries.</remarks>
+    /// the existing file remains unchanged. Supply the caller's known keys to opt into cleanup.</remarks>
     public void Save(ConversionOptions options, OverwritePolicy? overwritePolicy = null,
         bool? validateBeforeConversion = null, bool? ignoreLeadingTheForFileOrganization = null,
-        AudioBitratePreferences? audioBitrates = null, Action<XElement>? updateAdditionalPreferences = null)
+        AudioBitratePreferences? audioBitrates = null, Action<XElement>? updateAdditionalPreferences = null,
+        IReadOnlyCollection<string>? knownAdditionalKeysForCleanup = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         if (!Enum.IsDefined(options.ZipAlgorithm)) throw new ArgumentOutOfRangeException(nameof(options.ZipAlgorithm));
@@ -186,6 +184,8 @@ public sealed class SettingsStore(string path, bool persistRenameBins = false)
                     modern.SetElementValue("AacBitrate", audioBitrates.Aac);
                 }
                 updateAdditionalPreferences?.Invoke(modern);
+                if (knownAdditionalKeysForCleanup != null)
+                    RemoveUnknownKeys(section, modern, knownAdditionalKeysForCleanup);
             }
             string temporary = filename + "." + Guid.NewGuid().ToString("N") + ".tmp";
             try
@@ -204,51 +204,60 @@ public sealed class SettingsStore(string path, bool persistRenameBins = false)
         }
         finally { if (acquired) mutex.ReleaseMutex(); }
     }
+
+    private void RemoveUnknownKeys(XElement section, XElement modern, IReadOnlyCollection<string> additionalKeys)
+    {
+        var legacyKeys = Persisted.Select(property => property.Name).ToHashSet(StringComparer.Ordinal);
+        legacyKeys.Add(nameof(ConversionOptions.RenameBins));
+        legacyKeys.Add("ZipCompressionLevel");
+        section.Elements("entry").Where(entry => !legacyKeys.Contains((string?)entry.Attribute("name") ?? "")).Remove();
+
+        var modernKeys = new HashSet<XName>
+        {
+            "ExperimentalDiscRipping", "CdrdaoExecutablePath", "ZipAlgorithm", "ZipCompression",
+            "VideoContainer", "VideoResolution", "VideoGraphicsSmoothing", "VideoFrameRate",
+            "VideoBitrateKbps", "VideoAudioMatchSourceBitrate", "VideoAudioBitrateKbps", "OverwritePolicy",
+            "ValidateBeforeConversion", "IgnoreLeadingTheForFileOrganization",
+            "Mp3Bitrate", "OggBitrate", "WmaBitrate", "AacBitrate"
+        };
+        modernKeys.UnionWith(additionalKeys.Select(key => XName.Get(key)));
+        modern.Elements().Where(entry => !modernKeys.Contains(entry.Name)).Remove();
+    }
     /// <summary>Modern-only preference; absent legacy files default to asking before overwrites.</summary>
     public OverwritePolicy LoadOverwritePolicy()
     {
         if (!File.Exists(filename))
             return OverwritePolicy.Ask;
         string? value = XDocument.Load(filename).Root?.Element("KaraokeToolkit")?.Element("OverwritePolicy")?.Value;
-        if (value == null)
-            return OverwritePolicy.Ask;
-        if (!Enum.TryParse<OverwritePolicy>(value, out var policy) || !Enum.IsDefined(policy))
-            throw new InvalidDataException("Invalid overwrite policy in settings.");
-        return policy;
+        return Enum.TryParse<OverwritePolicy>(value, out var policy) && Enum.IsDefined(policy)
+            ? policy : OverwritePolicy.Ask;
     }
     public bool LoadValidateBeforeConversion()
     {
         if (!File.Exists(filename))
             return false;
         string? value = XDocument.Load(filename).Root?.Element("KaraokeToolkit")?.Element("ValidateBeforeConversion")?.Value;
-        if (value == null)
-            return false;
-        if (!bool.TryParse(value, out bool enabled))
-            throw new InvalidDataException("Invalid conversion validation preference.");
-        return enabled;
+        return bool.TryParse(value, out bool enabled) && enabled;
     }
     public bool LoadIgnoreLeadingTheForFileOrganization()
     {
         if (!File.Exists(filename)) return false;
         string? value = XDocument.Load(filename).Root?.Element("KaraokeToolkit")?.Element("IgnoreLeadingTheForFileOrganization")?.Value;
-        if (value == null) return false;
-        if (!bool.TryParse(value, out bool enabled))
-            throw new InvalidDataException("Invalid leading-The file organization preference.");
-        return enabled;
+        return bool.TryParse(value, out bool enabled) && enabled;
     }
     public AudioBitratePreferences LoadAudioBitrates(ConversionOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
-        var fallback = new AudioBitratePreferences().With(options.AudioEncoder, options.AudioBitrate);
+        var fallback = new AudioBitratePreferences();
+        if (AudioEncoderService.SupportedBitrates.Contains(options.AudioBitrate))
+            fallback = fallback.With(options.AudioEncoder, options.AudioBitrate);
         if (!File.Exists(filename)) return fallback;
         var modern = XDocument.Load(filename).Root?.Element("KaraokeToolkit");
         int Read(string name, int defaultValue)
         {
             string? value = modern?.Element(name)?.Value;
-            if (value == null) return defaultValue;
-            if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed))
-                throw new InvalidDataException("Invalid " + name + " in settings.");
-            return parsed;
+            return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) &&
+                AudioEncoderService.SupportedBitrates.Contains(parsed) ? parsed : defaultValue;
         }
         var result = new AudioBitratePreferences(Read("Mp3Bitrate", fallback.Mp3), Read("OggBitrate", fallback.Ogg),
             Read("WmaBitrate", fallback.Wma), Read("AacBitrate", fallback.Aac));

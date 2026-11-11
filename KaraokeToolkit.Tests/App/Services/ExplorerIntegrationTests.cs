@@ -16,6 +16,32 @@ namespace KaraokeToolkit.Tests.App.Services;
 
 public class ExplorerIntegrationTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SetupEnablesNewProfilesAndPreservesDisabledRegistrationOnRepeat(bool existingSettings)
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        string hive = @"Software\KaraokeToolkitTests\" + Guid.NewGuid().ToString("N");
+        string folder = TestMediaFixture.NewFolder();
+        string executable = Path.Combine(folder, "test.exe");
+        string settings = Path.Combine(folder, "options.xmls");
+        File.WriteAllText(executable, "not executed");
+        if (existingSettings) File.WriteAllText(settings, "<profile />");
+
+        try
+        {
+            var integration = new ExplorerIntegration(executable, hive);
+            integration.ApplySetupDefault(settings);
+            Assert.Equal(!existingSettings, integration.IsInstalled());
+
+            integration.Remove();
+            File.Delete(settings);
+            integration.ApplySetupDefault(settings);
+            Assert.False(integration.IsInstalled());
+        }
+        finally { Microsoft.Win32.Registry.CurrentUser.DeleteSubKeyTree(hive, false); }
+    }
 
     [Fact]
     public void ExplorerCommandsQuotePathsAndDoNotChangeDefaultAssociations()

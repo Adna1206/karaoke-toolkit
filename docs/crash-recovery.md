@@ -65,7 +65,7 @@ but its metadata folder is not presented as an unfinished job.
 The source root contains `.karaoke-job-run-<id>/run.json`, plus a lease file. Each
 publication uses `.karaoke-job-<id>/recovery.json` and a `backups` subdirectory.
 These directories are excluded from recursive media scanning. A small index under
-`%LOCALAPPDATA%\KaraokeToolkit\Recovery` lets startup find runs without scanning drives.
+`%LOCALAPPDATA%\KaraokeToolkitData\Recovery` on Windows lets startup find runs without scanning drives.
 Folder discovery also works if that index is missing. Keep the source folder at its
 original path until recovery is complete; unavailable drives must be reconnected.
 

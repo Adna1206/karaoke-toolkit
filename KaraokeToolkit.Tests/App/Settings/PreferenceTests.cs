@@ -13,6 +13,51 @@ namespace KaraokeToolkit.Tests.App.Settings;
 public class PreferenceTests
 {
     [Fact]
+    public void UnsupportedSavedValuesUseDefaultsWithoutLosingOtherPreferences()
+    {
+        string path = Path.Combine(TestMediaFixture.NewFolder(), "settings.xmls");
+        File.WriteAllText(path, """
+            <settings>
+              <section name="Options">
+                <entry name="AudioEncoder">999</entry>
+                <entry name="AutoCreateCueText">unknown</entry>
+                <entry name="RecurseFolders">False</entry>
+                <entry name="FutureOption">anything</entry>
+              </section>
+              <KaraokeToolkit>
+                <ZipCompression>future</ZipCompression>
+                <VideoResolution>future</VideoResolution>
+                <VideoFrameRate>120</VideoFrameRate>
+                <VideoBitrateKbps>6000</VideoBitrateKbps>
+                <Mp3Bitrate>999</Mp3Bitrate>
+                <OggBitrate>128</OggBitrate>
+                <OverwritePolicy>future</OverwritePolicy>
+                <Theme>future</Theme>
+                <Backdrop>Solid</Backdrop>
+                <FavouriteOperations><Operation>AudioGToZip</Operation></FavouriteOperations>
+              </KaraokeToolkit>
+            </settings>
+            """);
+
+        var model = new MainViewModel(path);
+        var defaults = new ConversionOptions();
+
+        Assert.Equal(defaults.AudioEncoder, model.Options.AudioEncoder);
+        Assert.Equal(defaults.AutoCreateCueText, model.Options.AutoCreateCueText);
+        Assert.False(model.Options.RecurseFolders);
+        Assert.Equal(defaults.ZipCompression, model.Options.ZipCompression);
+        Assert.Equal(defaults.VideoResolution, model.Options.VideoResolution);
+        Assert.Equal(defaults.VideoFrameRate, model.Options.VideoFrameRate);
+        Assert.Equal(6000, model.Options.VideoBitrateKbps);
+        Assert.Equal(ConversionOptions.DefaultAudioBitrate, model.AudioBitrates.Mp3);
+        Assert.Equal(128, model.AudioBitrates.Ogg);
+        Assert.Equal(OverwritePolicy.Ask, model.OverwritePolicy);
+        Assert.Equal(ApplicationTheme.System, model.Theme);
+        Assert.Equal(ApplicationBackdrop.Solid, model.Backdrop);
+        Assert.Contains(model.FavouriteOperations, choice => choice.Action == Action.AudioGToZip);
+    }
+
+    [Fact]
     public void VideoEncodingPreferencesRoundTripThroughOptionsAndSettings()
     {
         string path = Path.Combine(TestMediaFixture.NewFolder(), "settings.xmls");

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Globalization;
 using System.Xml.Linq;
+using KaraokeToolkit.App.Metadata;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Settings;
 using KaraokeToolkit.Core.Tagging;
@@ -17,6 +18,12 @@ public sealed class ApplicationSettingsStore(string path, bool persistRenameBins
 {
     private readonly string filename = Path.GetFullPath(path);
     private readonly SettingsStore processing = new(path, persistRenameBins);
+    private static readonly string[] PreferenceKeys =
+    [
+        "Theme", "Backdrop", "TaggingPatterns", "LastTaggingPattern", "OperationSections",
+        "FavouriteOperations", "SettingsWindowWidth", "SettingsWindowHeight"
+    ];
+    private static readonly HashSet<XName> SectionKeys = Enum.GetNames<OperationSection>().Select(name => XName.Get(name)).ToHashSet();
 
     public ConversionOptions Load() => processing.Load();
     public OverwritePolicy LoadOverwritePolicy() => processing.LoadOverwritePolicy();
@@ -61,7 +68,10 @@ public sealed class ApplicationSettingsStore(string path, bool persistRenameBins
                     modern.SetElementValue("SettingsWindowWidth", settingsWindowSize.Width.ToString("R", CultureInfo.InvariantCulture));
                     modern.SetElementValue("SettingsWindowHeight", settingsWindowSize.Height.ToString("R", CultureInfo.InvariantCulture));
                 }
-            });
+                modern.Element("OperationSections")?.Elements().Where(entry => !SectionKeys.Contains(entry.Name)).Remove();
+                modern.Element("FavouriteOperations")?.Elements().Where(entry => entry.Name != "Operation").Remove();
+                modern.Element("TaggingPatterns")?.Elements().Where(entry => entry.Name != "Pattern").Remove();
+            }, PreferenceKeys);
     }
 
     public IReadOnlyList<string> LoadTaggingPatterns()
@@ -83,10 +93,8 @@ public sealed class ApplicationSettingsStore(string path, bool persistRenameBins
     {
         if (!File.Exists(filename)) return ApplicationBackdrop.Automatic;
         string? value = XDocument.Load(filename).Root?.Element("KaraokeToolkit")?.Element("Backdrop")?.Value;
-        if (value == null) return ApplicationBackdrop.Automatic;
-        if (!Enum.TryParse<ApplicationBackdrop>(value, out var backdrop) || !Enum.IsDefined(backdrop))
-            throw new InvalidDataException("Invalid backdrop in settings.");
-        return backdrop;
+        return Enum.TryParse<ApplicationBackdrop>(value, out var backdrop) && Enum.IsDefined(backdrop)
+            ? backdrop : ApplicationBackdrop.Automatic;
     }
 
     public ApplicationTheme LoadTheme()
@@ -94,11 +102,8 @@ public sealed class ApplicationSettingsStore(string path, bool persistRenameBins
         if (!File.Exists(filename))
             return ApplicationTheme.System;
         string? value = XDocument.Load(filename).Root?.Element("KaraokeToolkit")?.Element("Theme")?.Value;
-        if (value == null)
-            return ApplicationTheme.System;
-        if (!Enum.TryParse<ApplicationTheme>(value, out var theme) || !Enum.IsDefined(theme))
-            throw new InvalidDataException("Invalid theme in settings.");
-        return theme;
+        return Enum.TryParse<ApplicationTheme>(value, out var theme) && Enum.IsDefined(theme)
+            ? theme : ApplicationTheme.System;
     }
 
     public IReadOnlyDictionary<string, bool> LoadOperationSections()
@@ -109,8 +114,8 @@ public sealed class ApplicationSettingsStore(string path, bool persistRenameBins
         if (sections == null) return result;
         foreach (var section in sections.Elements())
         {
-            if (!bool.TryParse(section.Value, out bool expanded)) throw new InvalidDataException("Invalid operation section preference.");
-            result[section.Name.LocalName] = expanded;
+            if (bool.TryParse(section.Value, out bool expanded))
+                result[section.Name.LocalName] = expanded;
         }
         return result;
     }

@@ -143,6 +143,11 @@ to choose the next operation; **Retry failed** remains an explicit results actio
 
 ## Windows Explorer
 
+Windows Setup enables Explorer integration for a new user profile. Existing
+preferences and the first Setup decision are kept outside the install directory,
+so a later Setup preserves the current registration, including a manual removal.
+Portable launches leave registration to the Settings buttons.
+
 Use **Settings → Explorer → Enable / update** to register **Open in Karaoke Toolkit**
 for folders, folder backgrounds, ZIP/BIN/CDG and supported audio extensions. This is a
 per-user classic context-menu command, normally under **Show more options** on Windows

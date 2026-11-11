@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using Microsoft.Win32;
 using KaraokeToolkit.Core;
+using KaraokeToolkit.Core.Settings;
 
 namespace KaraokeToolkit.App.Services;
 
@@ -24,6 +25,30 @@ public sealed class ExplorerIntegration
     public static string MenuLabel => "Open in " + ApplicationInfo.Name;
 
     public static string AppExecutable => Path.Combine(AppContext.BaseDirectory, "KaraokeToolkit.App.exe");
+
+    internal static void ConfigureAfterSetup()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        try
+        {
+            new ExplorerIntegration().ApplySetupDefault(UserDataPaths.DesktopSettingsPath());
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+        {
+            // Registration is optional. Setup can finish and the user can retry from Settings.
+            System.Diagnostics.Trace.TraceWarning("Could not enable Explorer integration during Setup: {0}", error.Message);
+        }
+    }
+
+    /// <summary>Applies the first Setup default and records it outside the installation directory.</summary>
+    internal void ApplySetupDefault(string settingsPath)
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        string marker = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(settingsPath))!, ".explorer-setup-completed");
+        if (Directory.Exists(marker)) return;
+        if (!File.Exists(settingsPath) && !File.Exists(settingsPath + ".bak")) Install();
+        Directory.CreateDirectory(marker);
+    }
 
     public static IReadOnlyList<ExplorerMenuEntry> Entries(string executable)
     {

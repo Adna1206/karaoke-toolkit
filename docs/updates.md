@@ -20,6 +20,18 @@ and ask before downloading/restarting. Applying updates must wait for file
 operations to finish. Keep settings, recipes and recovery data outside installed
 application files.
 
+On Windows, settings and favourites, saved recipes, and the recovery index now
+live in `%LOCALAPPDATA%\KaraokeToolkitData`. Startup copies surviving files from
+the old `%LOCALAPPDATA%\KaraokeToolkit` directory into missing destinations.
+The installed app and the CLI/MCP use the same recovery index location.
+
+Before upgrading from a version that stores data in the install directory,
+close the installed app and launch the new portable Windows build once. This
+copies the data while the old files are still available. Then close the portable
+build and run Setup. Setup can replace the old directory before the installed app
+starts. Files removed by an earlier installer require a backup. Other platforms
+continue using the existing local application data location.
+
 `scripts/Publish.ps1` restores the matching repository-local `vpk` tool and creates
 Windows x64 and Linux x64 packages. See [publishing](publishing.md) for commands and
 artifact locations. Release uploads, signing and installation/update testing remain

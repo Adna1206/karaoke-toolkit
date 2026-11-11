@@ -32,13 +32,17 @@ internal static class VideoOptions
         VideoGraphicsSmoothing.Lanczos => "lanczos",
         _ => throw new ArgumentOutOfRangeException(nameof(smoothing))
     };
+    internal static bool SupportsFrameRate(int value) => value is 25 or 30 or 60;
+    internal static bool SupportsVideoBitrate(int value) => value is 1000 or 2000 or 4000 or 6000;
+    internal static bool SupportsAudioBitrate(int value) => value is 128 or 192 or 256 or 320;
+
     internal static void Validate(ConversionOptions options)
     {
         _ = Extension(options.VideoContainer);
         _ = Size(options.VideoResolution);
         _ = ScalingAlgorithm(options.VideoGraphicsSmoothing);
-        if (options.VideoFrameRate is not (25 or 30 or 60)) throw new ArgumentOutOfRangeException(nameof(options.VideoFrameRate));
-        if (options.VideoBitrateKbps is not (1000 or 2000 or 4000 or 6000)) throw new ArgumentOutOfRangeException(nameof(options.VideoBitrateKbps));
-        if (options.VideoAudioBitrateKbps is not (128 or 192 or 256 or 320)) throw new ArgumentOutOfRangeException(nameof(options.VideoAudioBitrateKbps));
+        if (!SupportsFrameRate(options.VideoFrameRate)) throw new ArgumentOutOfRangeException(nameof(options.VideoFrameRate));
+        if (!SupportsVideoBitrate(options.VideoBitrateKbps)) throw new ArgumentOutOfRangeException(nameof(options.VideoBitrateKbps));
+        if (!SupportsAudioBitrate(options.VideoAudioBitrateKbps)) throw new ArgumentOutOfRangeException(nameof(options.VideoAudioBitrateKbps));
     }
 }
