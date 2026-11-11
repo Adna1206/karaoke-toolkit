@@ -18,7 +18,7 @@ public sealed class SettingsDefinitions
         SettingCategory.General, Array.AsReadOnly<string>(["System Default", "Light", "Dark"]));
     public ChoiceSettingDefinition<string> Backdrop { get; } = new(
         "Backdrop", "Window backdrop", "Effects depend on OS support; otherwise a solid background is used.",
-        "Automatic prefers Mica on Windows 11, then Acrylic on supported Windows versions. Solid disables effects. Mica and Acrylic fall back to Solid when unavailable. Other platforms use Solid. Light, Dark and System Default apply to every backdrop.",
+        "Automatic prefers Mica on Windows 11, then Acrylic on supported Windows versions. Acrylic always uses Dark. Solid disables effects. Mica and Acrylic fall back to Solid when unavailable. Other platforms use Solid.",
         SettingCategory.General, Array.AsReadOnly<string>(["Automatic", "Solid", "Mica", "Acrylic"]));
     public SettingDefinition RecurseFolders { get; } = new(
         "RecurseFolders", "Recurse folders", "Recurse folders",

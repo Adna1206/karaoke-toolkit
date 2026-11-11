@@ -1,13 +1,23 @@
 # Current handoff
 
-Snapshot: 2026-11-06, Africa/Johannesburg. Verify Git/files before editing.
+Snapshot: 2026-11-11, Africa/Johannesburg. Verify Git/files before editing.
 
 ## Checkout and release
 
-- Branch `master`, release based on `6969da4`; shared version **2026.11.13**.
+- Branch `master`, base `a1c5c57`, shared version **2026.11.14**.
 - `./scripts/Publish.ps1` built both x64 targets under
   `artifacts/releases/2026.11.13/20261106-143757-c73b7f`. Asset manifest paths and
   SHA-256 checksums verified. Next step is manual installation and UI verification.
+
+## Acrylic appearance
+
+- Desktop windows use Dark when Acrylic is active,
+  including Automatic's fallback. Other materials inherit the application theme.
+- `dotnet build KaraokeToolkit.slnx -c Release -p:UsedAvaloniaProducts= -p:ArtifactBuildName=Cleanup -v minimal`
+  passed with zero warnings and errors. All 11 appearance tests passed using
+  the Release test command below with `ArtifactBuildName=Cleanup`, `--no-build`
+  and `--filter 'FullyQualifiedName~AppearanceTests'`.
+  `git diff --check` passed. Next step is visual verification with native Acrylic.
 
 ## Packaging and resolution labels follow-up
 

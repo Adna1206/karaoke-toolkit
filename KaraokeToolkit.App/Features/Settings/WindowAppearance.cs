@@ -42,13 +42,23 @@ internal static class WindowAppearance
     private static void Apply(Window window)
     {
         window.TransparencyLevelHint = Levels(current, OperatingSystem.IsWindows());
-        UpdateBackground(window);
+        UpdateMaterial(window);
     }
 
     private static void OnWindowPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
     {
         if (sender is Window window && e.Property == TopLevel.ActualTransparencyLevelProperty)
-            UpdateBackground(window);
+            UpdateMaterial(window);
+    }
+
+    private static void UpdateMaterial(Window window)
+    {
+        // Follow the material the OS actually selected, including Automatic's Acrylic fallback.
+        if (window.ActualTransparencyLevel == WindowTransparencyLevel.AcrylicBlur)
+            window.RequestedThemeVariant = ThemeVariant.Dark;
+        else
+            window.ClearValue(Window.RequestedThemeVariantProperty);
+        UpdateBackground(window);
     }
 
     private static void UpdateBackground(Window window)

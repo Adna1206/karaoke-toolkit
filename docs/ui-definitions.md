@@ -37,7 +37,9 @@ compatibility with existing settings files. The catalogues do not introduce
 another copy of defaults.
 Colour theme (System/Light/Dark) and window backdrop (Automatic/Solid/Mica/Acrylic)
 are independent App preferences, saved together when Apply or OK is clicked.
-Automatic prefers Mica, then Acrylic on Windows. Explicit effects fall back to
+Automatic prefers Mica, then Acrylic on Windows. Windows using Acrylic display
+Dark, including when Automatic selects it. Other materials use the saved theme.
+Explicit effects fall back to
 Solid when unavailable; other platforms currently use Solid. All open and newly
 opened windows use the applied preference, including dialogs. The actual OS
 transparency level controls whether the background is transparent, with a themed
