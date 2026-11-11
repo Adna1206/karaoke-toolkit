@@ -10,6 +10,10 @@ BUILD counts releases within the month, not local compilations. For example:
 Before releasing, update the single `<Version>` value and rebuild/publish. Nothing
 automatically increments it. Keep BUILD below 65535 for Windows version metadata.
 
+When bumping the version for a release, add `docs/changelogs/<version>.md` and
+link it at the top of the [changelog index](changelogs/README.md). Summarize the
+changes users will notice and include any required upgrade steps.
+
 About, report headers and CUE/TXT headers read ApplicationInfo.Version from the
 compiled assembly. Windows file/assembly versions use the four-part equivalent
 (2026.9.1.0); the product version stays 2026.9.1. Vendor files are unaffected.

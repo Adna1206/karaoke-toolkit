@@ -21,6 +21,7 @@ the current checkout. [Planned work](todo.md) is a backlog, not implemented beha
 
 | Guide | Covers |
 | --- | --- |
+| [Changelog](changelogs/README.md) | Version history, user-visible changes and upgrade steps |
 | [App structure](app-structure.md) | Avalonia features, views/viewmodels and shared services |
 | [Core structure](core-structure.md) | Processing responsibilities and namespace organization |
 | [Operation contracts](operations.md) | Shared identities, capabilities, interface registrations and compatibility |

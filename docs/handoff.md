@@ -4,7 +4,10 @@ Snapshot: 2026-11-11, Africa/Johannesburg. Verify Git/files before editing.
 
 ## Checkout and release
 
-- Branch `master`, release based on `f356dbc`, shared version **2026.11.15**.
+- Branch `master`, base `42324c5`, shared version **2026.11.16**.
+- The [changelog](changelogs/README.md) starts at 2026.11.15. The 2026.11.16 bump
+  adds release-note guidance to [versioning](versioning.md). Relative links and
+  `git diff --check` verified. Add the next entry at the next bump.
 - `./scripts/Publish.ps1` built Windows and Linux x64 packages under
   `artifacts/releases/2026.11.15/20261111-205712-694d9b`. Both asset manifests and
   SHA-256 checksums verified. Actual install and Linux runtime checks remain open.
