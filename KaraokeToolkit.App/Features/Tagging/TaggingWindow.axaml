@@ -3,7 +3,7 @@
         x:DataType="vm:TaggingViewModel" Title="{x:Static shared:WindowTitles.Tagging}"
         Width="980" Height="730" MinWidth="760" MinHeight="560" WindowStartupLocation="CenterOwner">
   <Grid Margin="24" RowDefinitions="Auto,Auto,Auto,*,Auto,Auto" RowSpacing="14">
-    <TextBlock Text="Tag Karaoke Files" FontSize="24" FontWeight="SemiBold"/>
+    <TextBlock Text="Tag Karaoke Files" Classes="heading1"/>
     <Grid Grid.Row="1" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="8">
       <ComboBox ItemsSource="{Binding Patterns}" SelectedItem="{Binding SelectedPattern}" HorizontalAlignment="Stretch"
                 ToolTip.Tip="Previously used filename patterns. Edit the pattern below to create another combination."/>
@@ -11,34 +11,34 @@
       <Button Grid.Column="1" Grid.Row="1" Content="Preview" Command="{Binding PreviewCommand}" MinWidth="100"/>
     </Grid>
     <TextBlock Grid.Row="2" Text="%DISC% → Album · %TRACK% → numeric Track · %ARTIST% → Artist · %TITLE% → Title. Reorder fields and type any separators. ZIPs use the archive filename."
-               TextWrapping="Wrap" FontSize="12" Opacity="0.8"/>
+               TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.8"/>
     <ListBox Grid.Row="3" ItemsSource="{Binding Rows}" SelectionMode="Single">
       <ListBox.Styles><Style Selector="ListBoxItem"><Setter Property="HorizontalContentAlignment" Value="Stretch"/></Style></ListBox.Styles>
       <ListBox.ItemTemplate><DataTemplate x:DataType="vm:TaggingRow">
         <StackPanel Spacing="6" Margin="4,8">
           <CheckBox Content="{Binding Name}" IsChecked="{Binding Included}" IsEnabled="{Binding CanEdit}" ToolTip.Tip="{Binding Path}"/>
           <Grid ColumnDefinitions="*,70,*,*" RowDefinitions="Auto,Auto" RowSpacing="4" ColumnSpacing="8" IsEnabled="{Binding CanEdit}">
-            <TextBlock Text="Album / disc" FontSize="12" Opacity="0.7"/>
-            <TextBlock Grid.Column="1" Text="Track" FontSize="12" Opacity="0.7"/>
-            <TextBlock Grid.Column="2" Text="Artist" FontSize="12" Opacity="0.7"/>
-            <TextBlock Grid.Column="3" Text="Title" FontSize="12" Opacity="0.7"/>
+            <TextBlock Text="Album / disc" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
+            <TextBlock Grid.Column="1" Text="Track" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
+            <TextBlock Grid.Column="2" Text="Artist" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
+            <TextBlock Grid.Column="3" Text="Title" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
             <TextBox Grid.Row="1" Text="{Binding Album}" PlaceholderText="Album / disc" ToolTip.Tip="Album (karaoke disc identifier)"/>
             <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Track}" PlaceholderText="Track" ToolTip.Tip="Numeric track"/>
             <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding Artist}" PlaceholderText="Artist" ToolTip.Tip="Artist"/>
             <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding Title}" PlaceholderText="Title" ToolTip.Tip="Title"/>
           </Grid>
-          <TextBlock Text="{Binding Existing}" FontSize="12" Opacity="0.65" TextWrapping="Wrap"/>
+          <TextBlock Text="{Binding Existing}" FontSize="{DynamicResource SmallTextSize}" Opacity="0.65" TextWrapping="Wrap"/>
         </StackPanel>
       </DataTemplate></ListBox.ItemTemplate>
     </ListBox>
     <StackPanel Grid.Row="4" Spacing="5">
-      <TextBlock Text="{Binding RecoveryNotice}" TextWrapping="Wrap" FontSize="12"/>
+      <TextBlock Text="{Binding RecoveryNotice}" TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}"/>
       <CheckBox Content="Fill empty fields only" IsChecked="{Binding FillEmptyOnly}" ToolTip.Tip="Keep existing Album, Track, Artist and Title when they are already populated."/>
       <CheckBox Content="Clear existing comments" IsChecked="{Binding ClearComments}"/>
       <CheckBox Content="Clear other descriptive tags" IsChecked="{Binding ClearOtherDescriptiveTags}"
                 ToolTip.Tip="Remove old genre, year, lyrics, composer, sort fields, numeric disc and totals. Technical playback metadata and artwork are preserved where the container supports them."/>
       <TextBlock Text="Files are updated in place. Audio/video is not re-encoded; CDG is kept. ZIPs use your compression settings. Delete Originals does not apply."
-                 TextWrapping="Wrap" FontSize="12" Opacity="0.7"/>
+                 TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
     </StackPanel>
     <Grid Grid.Row="5" ColumnDefinitions="*,Auto" ColumnSpacing="16">
       <TextBlock Text="{Binding Status}" TextWrapping="Wrap" VerticalAlignment="Center"/>

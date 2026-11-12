@@ -2,7 +2,7 @@
  xmlns:vm="using:KaraokeToolkit.App.Features.DiscRipping" x:Class="KaraokeToolkit.App.Features.DiscRipping.DiscRipWindow" x:DataType="vm:DiscRipViewModel"
  Title="{x:Static shared:WindowTitles.DiscRipping}" Width="680" Height="660" MinWidth="600" MinHeight="600" WindowStartupLocation="CenterOwner">
  <Grid Margin="24" RowDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto" RowSpacing="12">
-  <TextBlock Text="CD+G ripping (experimental)" FontSize="24" FontWeight="SemiBold"/>
+  <TextBlock Text="CD+G ripping (experimental)" Classes="heading1"/>
   <TextBlock Grid.Row="1" Text="Uses cdrdao (bundled on Windows; install separately on Linux/macOS). Physical drive reading has not been hardware-tested. This requires a drive that supports CD+G subchannels. Interrupted reads must be restarted; completed tracks are retained." TextWrapping="Wrap"/>
   <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="8" IsEnabled="{Binding CanEdit}">
    <ComboBox ItemsSource="{Binding Drives}" SelectedItem="{Binding SelectedDrive}" HorizontalAlignment="Stretch"/>
@@ -18,7 +18,7 @@
     <TextBlock Text="Disc name:" VerticalAlignment="Center"/><TextBox Grid.Column="1" Text="{Binding DiscName}"/>
     <TextBlock Grid.Column="2" Text="Output:" VerticalAlignment="Center"/><ComboBox Grid.Column="3" ItemsSource="{Binding Formats}" SelectedIndex="{Binding Format}"/>
    </Grid>
-   <TextBlock Text="Audio encoding, ZIP compression and overwrite settings come from Options. Disc data is never deleted. CUE/TXT files can be created afterwards using File Tools." TextWrapping="Wrap" FontSize="12" Opacity="0.7"/>
+   <TextBlock Text="Audio encoding, ZIP compression and overwrite settings come from Settings. Disc data is never deleted. CUE/TXT files can be created afterwards using File Tools." TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
   </StackPanel>
   <StackPanel Grid.Row="5" Spacing="8"><ProgressBar Value="{Binding Progress}" Maximum="100"/><TextBlock Text="{Binding Status}" TextWrapping="Wrap"/></StackPanel>
   <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">

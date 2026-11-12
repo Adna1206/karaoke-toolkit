@@ -52,9 +52,13 @@ public class DefinitionTests
         foreach (var operation in model.Operations)
         {
             model.SelectedOperation = operation;
-            Assert.Equal(operation.Definition.Inputs != OperationInputKind.None, model.CanChooseSource);
+            Assert.Equal(operation.Definition.Inputs is OperationInputKind.FilesAndFolders or OperationInputKind.Folders, model.CanChooseSource);
             Assert.Equal(operation.Definition.Inputs == OperationInputKind.FilesAndFolders, model.CanChooseFiles);
+            Assert.Equal(operation.Definition.Operation is { } id && OperationCatalog.Get(id).RequiresFolders,
+                operation.Definition.Inputs == OperationInputKind.Folders);
         }
+        Assert.Equal(OperationInputKind.SingleDisc, model.Operations.Single(operation => operation.IsRip).Definition.Inputs);
+        Assert.Equal(OperationInputKind.SingleManifest, model.Operations.Single(operation => operation.IsRestore).Definition.Inputs);
     }
 
     [Fact]

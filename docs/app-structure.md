@@ -23,6 +23,11 @@ manifest stay at the project root. Code used by one feature belongs inside that
 feature; code used by several features belongs in an appropriate shared folder.
 Core continues to own processing and remains independent of App and Avalonia.
 
+`Shared/Typography.axaml` defines the `heading1`, `heading2`, and `heading3`
+classes for page, section, and subsection headings. It also defines the size
+for small text and the font family and size for Windows captions. Content
+inherits the app's Fluent/Inter typography.
+
 `Shared/ModalDialog` wraps modal windows and native file/folder pickers. It adds
 a translucent smoke layer to the blocked owner's Avalonia overlay layer and
 removes it in `finally`, including failed or cancelled opens. The layer tracks
@@ -36,6 +41,12 @@ The main window uses a conventional File / Tools / Help menu, compact branding,
 a category sidebar and one operation list. Favourite operations share the same
 instances as the normal categories. Selecting a category selects an operation
 within it; external input routing and recovery keep navigation synchronized.
+On Windows, the main window extends its client area into the title bar and
+places the menu beside the app icon and name. The Tools pane starts below the
+title bar. Avalonia supplies the caption buttons and the remaining space supports
+dragging. Other platforms keep the standard menu row and header.
+On Windows, secondary windows and dialogs share the transparent caption theme
+and inset their content below the Avalonia-drawn title bar.
 Add Folders, Add Files and drop actions accumulate sources without replacing the
 chosen operation. Clear resets the selection. Source-free operations display
 their own instructions. Status, reports and Start/Cancel remain in the footer.

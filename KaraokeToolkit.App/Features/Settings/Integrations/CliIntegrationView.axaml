@@ -11,7 +11,7 @@
                 <Button Grid.Column="1" Content="Copy Path" Click="CopyPath_Click"
                         ToolTip.Tip="Copy the full path to the CLI executable."/>
             </Grid>
-            <TextBlock Text="{Binding Availability}" IsVisible="{Binding IsMissing}" TextWrapping="Wrap" FontSize="12" Opacity="0.7"/>
+            <TextBlock Text="{Binding Availability}" IsVisible="{Binding IsMissing}" TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
 
             <TextBlock Text="Shell for copied commands" Margin="0,6,0,0"
                        ToolTip.Tip="Choose the syntax of examples and setup instructions. This does not change the terminal opened by Open Terminal Here."/>
@@ -28,7 +28,7 @@
                                 ToolTip.Tip="Copy this example without running it."/>
                     </Grid>
                     <TextBlock Text="Replace &lt;karaoke-folder&gt; with your folder path." IsVisible="{Binding ExampleNeedsFolder}"
-                               TextWrapping="Wrap" FontSize="12" Opacity="0.7"/>
+                               TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
                 </StackPanel>
             </Expander>
             <Expander Header="Shell setup" HorizontalAlignment="Stretch">
@@ -39,13 +39,13 @@
                              MaxHeight="140" FontFamily="Consolas, Menlo, monospace" AutomationProperties.Name="Shell setup commands"/>
                     <Button Content="Copy Setup Commands" Click="CopySetup_Click" HorizontalAlignment="Left"/>
                     <TextBlock Text="Review before running. Save the generated scripts in your shell profile for future sessions."
-                               TextWrapping="Wrap" FontSize="12" Opacity="0.7"
+                               TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"
                                ToolTip.Tip="Setup uses this installation's path. Update it after moving the app or switching a versioned installation. Copying does not apply the setup."/>
                 </StackPanel>
             </Expander>
-            <TextBlock Text="CLI commands use their own settings." TextWrapping="Wrap" FontSize="12" Opacity="0.7"
+            <TextBlock Text="CLI commands use their own settings." TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"
                        ToolTip.Tip="Use command arguments or an options file. Desktop encoding preferences are not passed to the CLI. Copy and terminal actions take effect immediately without Apply; no background service is enabled."/>
-            <TextBlock Text="{Binding Status}" IsVisible="{Binding HasStatus}" TextWrapping="Wrap" FontSize="12"
+            <TextBlock Text="{Binding Status}" IsVisible="{Binding HasStatus}" TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}"
                        AutomationProperties.Name="CLI integration status"/>
         </StackPanel>
 </UserControl>

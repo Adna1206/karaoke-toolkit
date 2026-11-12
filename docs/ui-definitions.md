@@ -11,6 +11,13 @@ format support and validation.
   categories and displayed choices. The Options layout binds to these definitions
   through `OptionsViewModel.Definitions`; it remains hand-authored XAML.
 
+Desktop input definitions distinguish a batch of files and folders, a batch of
+folders, a single disc, and a single quarantine manifest. Batch operations accept
+one or more sources through the home screen. Ripping and restoration select their
+single input after Start. Saved recipes use the first step's input rules.
+Conversion pickers and the conversion planner share the accepted file extensions.
+The home screen checks these extensions and path types before enabling Start.
+
 Built-in definitions take Core's `OperationId` and derive their existing saved
 string IDs through the shared catalogue. Presentation labels remain in App;
 dynamic saved recipes keep `Recipe:<GUID>` IDs. See [operation contracts](operations.md)

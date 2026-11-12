@@ -14,116 +14,116 @@ public sealed class SettingsDefinitions
     private SettingsDefinitions() { }
     public ChoiceSettingDefinition<string> Theme { get; } = new(
         "Theme", "Colour theme", "Colour theme",
-        "Choose Light, Dark or System Default. System Default follows your operating system appearance.",
+        "System Default follows your operating system's light or dark theme.",
         SettingCategory.General, Array.AsReadOnly<string>(["System Default", "Light", "Dark"]));
     public ChoiceSettingDefinition<string> Backdrop { get; } = new(
-        "Backdrop", "Window backdrop", "Effects depend on OS support; otherwise a solid background is used.",
-        "On Windows 11, Automatic tries Mica, then Acrylic, then Solid. Elsewhere it uses Solid. Acrylic uses Dark with System Default. Select Light to override it. Explicit effects fall back to Solid when unavailable.",
+        "Backdrop", "Window backdrop", "Unavailable effects fall back to Solid.",
+        "On Windows 11, Automatic tries Mica, Acrylic, then Solid. Elsewhere it uses Solid. Acrylic uses Dark with System Default. Choose Light to override it.",
         SettingCategory.General, Array.AsReadOnly<string>(["Automatic", "Solid", "Mica", "Acrylic"]));
     public SettingDefinition RecurseFolders { get; } = new(
         "RecurseFolders", "Recurse folders", "Recurse folders",
-        "Search subfolders for operations that use this setting. Folder organization and flattening follow the scope described by their operation.",
+        "Include subfolders where supported. Folder organization and flattening use their own scope.",
         SettingCategory.General);
     public SettingDefinition IgnoreLeadingTheForFileOrganization { get; } = new(
-        "IgnoreLeadingTheForFileOrganization", "Ignore leading 'The' when organizing files alphabetically", "Files only; names stay unchanged.",
-        "Off by default. For example, 'The Beatles.mp3' goes to B instead of T when enabled. Filenames stay unchanged; folder organization always uses the full folder name.",
+        "IgnoreLeadingTheForFileOrganization", "Ignore leading 'The' when organizing files alphabetically", "Sorts 'The Beatles' under B and keeps the filename.",
+        "Sort files such as 'The Beatles.mp3' under B. Folder sorting uses the full folder name.",
         SettingCategory.General);
     public SettingDefinition DeleteOriginals { get; } = new(
         "DeleteOldFiles", "Delete source files after successful conversion", "Delete source files after successful conversion",
-        "Delete source files only after successful conversion. ZIP repacking replaces the original ZIP when enabled. Video creation always keeps its sources.",
+        "Remove sources after a successful conversion. ZIP repacking replaces the original. Video creation keeps its sources.",
         SettingCategory.General);
     public SettingDefinition ValidateBeforeConversion { get; } = new(
-        "ValidateBeforeConversion", "Validate inputs before conversion", "Optional input checks. Outputs are checked automatically.",
-        "Check each input group before converting; report issues without converting that group. Off by default to follow the original workflow. Output checks already run automatically where applicable: encoded audio readability and duration, BIN structure, and ZIP payload integrity. These checks do not verify visual lyrics or audio quality.",
+        "ValidateBeforeConversion", "Validate inputs before conversion", "Skip problem inputs. Output checks run automatically.",
+        "Check each track before conversion and report any skipped inputs. Automatic output checks cover file integrity, audio readability and duration where applicable.",
         SettingCategory.General);
     public SettingDefinition AutoCreateCueText { get; } = new(
-        "AutoCreateCueText", "Automatically generate CUE/TXT after conversion or ripping", "Shared by conversions and ripping.",
-        "Generate CUE sheets for BIN tracks and TXT track listings after conversion or ripping. Turning this off does not disable the separate Create CUE/TXT Files operation.",
+        "AutoCreateCueText", "Automatically generate CUE/TXT after conversion or ripping", "Creates BIN cue sheets and TXT track lists.",
+        "Create track lists and BIN cue sheets after supported conversions or rips. Create CUE/TXT Files is also available on its own.",
         SettingCategory.General);
     public ChoiceSettingDefinition<string> Overwrite { get; } = new(
         "OverwritePolicy", "Existing output files (including CUE/TXT)", "Ask prompts before replacing existing files.",
-        "Choose how existing outputs are handled: keep and report a failure, skip, replace, or ask each time. This also applies to CUE/TXT files.",
+        "Keep and report a failure, skip, replace, or ask when an output already exists. Includes CUE and TXT files.",
         SettingCategory.General, Array.AsReadOnly<string>(["Fail — keep existing files", "Skip existing outputs", "Replace existing outputs", "Ask each time"]));
     public SettingDefinition AutoRenameZip { get; } = new(
         "AutoRenameZip", "Auto-rename ZIP files online", "Auto-rename ZIP files online",
-        "Unavailable: online renaming is deferred. Local conversions ignore this saved legacy preference.",
+        "Saved for older setups. Online ZIP renaming is unavailable.",
         SettingCategory.Legacy);
     public SettingDefinition RenameBins { get; } = new(
         "RenameBins", "Rename BIN files online", "Rename BIN files online",
-        "Unavailable: the original online database is no longer supported. Local conversions ignore this saved legacy preference.",
+        "Saved for older setups. The online BIN database has closed.",
         SettingCategory.Legacy);
     public SettingDefinition NamingFormat { get; } = new(
         "NamingFormat", "Legacy naming format", "Legacy naming format",
-        "Unavailable legacy naming template, retained for compatibility. It is not used by current local conversions.",
+        "Naming template saved for older setups.",
         SettingCategory.Legacy);
     public ChoiceSettingDefinition<string> Algorithm { get; } = new(
         "ZipAlgorithm", "ZIP algorithm:", "Deflate is recommended for legacy players.",
-        "Choose the ZIP compression algorithm. Deflate is recommended for legacy karaoke players; BZip2 and LZMA may be incompatible.",
+        "Choose how ZIPs are compressed. Use Deflate for the widest support on older karaoke players.",
         SettingCategory.Archives, Array.AsReadOnly<string>(["Deflate (recommended)", "BZip2", "LZMA"]));
     public ChoiceSettingDefinition<string> CompressionLevel { get; } = new(
         "ZipCompression", "Deflate compression level:", "Levels 0–9 apply to Deflate only.",
-        "Deflate only: 0 stores without compression, 5 balances speed and size, and 9 prioritizes smaller files. Other ZIP algorithms use their default settings.",
+        "For Deflate, 0 stores files as-is, 5 balances speed and size, and 9 prioritizes size. Other algorithms use their defaults.",
         SettingCategory.Archives, Array.AsReadOnly<string>(["0 - No compression", "1 - Fastest compression", "2", "3", "4", "5 - Balanced", "6", "7", "8", "9 - Smallest size"]));
     public ChoiceSettingDefinition<string> Encoder { get; } = new(
         "AudioEncoder", "Audio encoder:", "Audio encoder:",
-        "Choose the audio format used by applicable conversions and disc ripping. WAV and FLAC are lossless; MP3 offers broad karaoke player compatibility.",
+        "Choose the audio format for conversions and ripping. WAV and FLAC preserve audio quality. MP3 works with most players.",
         SettingCategory.Audio, Array.AsReadOnly<string>(["OGG Vorbis", "MP3", "WMA 2", "WAV (PCM)", "FLAC", "AAC (M4A)"]));
     public ChoiceSettingDefinition<int> Bitrate { get; } = new(
         "AudioBitrate", "Bitrate (kbps):", "Bitrates are remembered per encoder. WAV and FLAC are lossless.",
-        "Each MP3, OGG, WMA and AAC encoder remembers its own bitrate. WAV and FLAC are lossless and do not use this setting. MP3/Deflate ZIP has the broadest legacy karaoke compatibility.",
+        "MP3, OGG, WMA and AAC each remember their own bitrate. For older karaoke players, pair MP3 with Deflate ZIP compression.",
         SettingCategory.Audio, Array.AsReadOnly<int>([64, 96, 128, 160, 192, 224, 256, 320]));
     public SettingDefinition ExperimentalDiscRipping { get; } = new(
         "ExperimentalDiscRipping", "Enable experimental CD+G ripping", "Experimental; requires a compatible drive.",
-        "Show CD+G ripping in the operation panel and enable its settings. Requires cdrdao and a compatible optical drive; physical disc reading remains experimental.",
+        "Show CD+G ripping and its settings. Requires cdrdao and a compatible disc drive.",
         SettingCategory.DiscRipping);
     public SettingDefinition CdrdaoExecutablePath { get; } = new(
         "CdrdaoExecutablePath", "cdrdao executable (optional)", "Leave blank for automatic discovery.",
-        "Choose the executable file, not its folder. Leave blank to use the bundled copy, then system PATH. Useful for Homebrew installations that Finder cannot locate. A saved path takes priority over the environment override.",
+        "Select the cdrdao program file to override automatic discovery. Leave blank to use the bundled copy or a system installation.",
         SettingCategory.DiscRipping);
     public ChoiceSettingDefinition<string> VideoContainer { get; } = new(
-        "VideoContainer", "Output format", "Letterboxed graphics. Original files are kept.",
-        "Choose MP4, MKV or AVI for karaoke video output. MP4 is the default. The container determines the video and audio codecs. MP4 and MKV use H.264 video with AAC audio when available; AVI uses MPEG-4 video with MP3 audio. The graphics are letterboxed without stretching. Source karaoke files are kept.",
+        "VideoContainer", "Output format", "Keeps the original files and fits graphics without stretching.",
+        "MP4 and MKV use H.264 video with AAC audio when available. AVI uses MPEG-4 video with MP3 audio. Original karaoke files are kept.",
         SettingCategory.Video, Array.AsReadOnly<string>(["MP4 (default)", "MKV", "AVI"]));
     public ChoiceSettingDefinition<string> VideoResolution { get; } = new(
         "VideoResolution", "Resolution", "Resolution",
-        "Choose the output video dimensions. CD+G graphics are letterboxed without stretching; higher resolution does not add detail to the original graphics.",
+        "Set the video's width and height. The karaoke graphics keep their original proportions.",
         SettingCategory.Video, Array.AsReadOnly<string>(["640 × 480", "1280 × 720 (default)", "1920 × 1080", "2560 × 1440", "3840 × 2160"]));
     public ChoiceSettingDefinition<string> VideoGraphicsSmoothing { get; } = new(
-        "VideoGraphicsSmoothing", "Graphics smoothing", "Smooths pixel edges; does not recreate lyrics or add detail.",
-        "None (default) preserves the original CD+G pixel edges. Bilinear softens edges, Bicubic uses cubic interpolation, and Lanczos uses a sharper resampling filter that can produce edge ringing. Smoothing changes scaling only; lyrics, colours and timing are kept. It does not recreate graphics or recover missing detail.",
+        "VideoGraphicsSmoothing", "Graphics smoothing", "Changes how pixel edges look when enlarged.",
+        "None keeps crisp pixels. Bilinear softens edges, Bicubic smooths more gradually, and Lanczos gives sharper edges that can show halos.",
         SettingCategory.Video, Array.AsReadOnly<string>(["None (default)", "Bilinear", "Bicubic", "Lanczos"]));
     public ChoiceSettingDefinition<int> VideoFrameRate { get; } = new(
         "VideoFrameRate", "Frames per second", "Frames per second",
-        "Choose the output video frame rate. Higher rates create more frames; audio and CD+G graphics retain their original timeline.",
+        "Higher rates create more video frames. Audio and lyrics keep their original timing.",
         SettingCategory.Video, Array.AsReadOnly<int>([25, 30, 60]));
     public ChoiceSettingDefinition<int> VideoBitrateKbps { get; } = new(
         "VideoBitrateKbps", "Video bitrate (kbps)", "Video bitrate (kbps)",
-        "Set the video bitrate in kbps. Higher values generally produce larger files; they do not increase the detail in CD+G source graphics.",
+        "Higher bitrates generally make larger video files. The original graphics set the level of detail.",
         SettingCategory.Video, Array.AsReadOnly<int>([1000, 2000, 4000, 6000]));
     public SettingDefinition VideoAudioMatchSourceBitrate { get; } = new(
-        "VideoAudioMatchSourceBitrate", "Match compressed source audio bitrate when possible", "Matches source bitrate when available; otherwise uses the fallback.",
-        "Uses the source's average bitrate without rounding up, capped at 320 kbps. The fallback is used whenever the bitrate cannot be determined reliably, including lossless audio and missing metadata. Audio is re-encoded for the video container, so matching bitrate does not restore quality already lost.",
+        "VideoAudioMatchSourceBitrate", "Match compressed source audio bitrate when possible", "Uses the fallback when the source bitrate is unavailable.",
+        "Use the source's average bitrate up to 320 kbps. Lossless audio and files with missing bitrate information use the fallback.",
         SettingCategory.Video);
     public ChoiceSettingDefinition<int> VideoAudioBitrateKbps { get; } = new(
         "VideoAudioBitrateKbps", "Fallback audio bitrate (kbps)", "Fallback audio bitrate (kbps)",
-        "Audio bitrate for video when source matching is off or a reliable source bitrate is unavailable, including lossless audio and missing metadata.",
+        "Use this bitrate when source matching is off or the source has no usable bitrate.",
         SettingCategory.Video, Array.AsReadOnly<int>([128, 192, 256, 320]));
     public HelpDefinition OnlineRenaming { get; } = new(
-        "Online renaming is unavailable.", "Online renaming is deferred. Local conversions ignore these saved legacy preferences.");
+        "Online renaming is unavailable.", "These saved preferences are for older versions.");
     public HelpDefinition ExplorerOverview { get; } = new(
-        "Open karaoke files and folders from their right-click menu.", "Add a right-click command for folders and supported karaoke files, for your Windows account. It opens the selection without starting a conversion. Default file associations are unchanged.");
+        "Open karaoke files and folders from their right-click menu.", "Add a command to open selected files or folders in Karaoke Toolkit for your Windows account. You choose when to start processing.");
     public HelpDefinition ExplorerLocation { get; } = new(
-        "Windows 11: look under Show more options.", "On Windows 11, look under Show more options. The command uses this app's current location; enable it again after moving the app.");
+        "On Windows 11, look under Show more options.", "If you move the app, enable the command again to update its path.");
     public HelpDefinition EnableExplorer { get; } = new(
-        "Enable / update", "Register or update " + KaraokeToolkit.App.Services.ExplorerIntegration.MenuLabel + " for your Windows account at the current application location. Applies immediately.");
+        "Enable / update", "Add or update the Explorer command for your Windows account.");
     public HelpDefinition RemoveExplorer { get; } = new("Remove", "Remove the Windows Explorer command for your account. Applies immediately.");
     public HelpDefinition ExplorerImmediate { get; } = new(
-        "Applies immediately; no administrator access required.", "These buttons apply immediately and do not require administrator access.");
+        "Applies immediately for your Windows account.", "Changes take effect immediately and work with a standard Windows account.");
     public HelpDefinition BrowseCdrdao { get; } = new("Browse…", "Choose a local cdrdao executable file. Use Apply or OK to save the selected path.");
     public HelpDefinition RipSharedSettings { get; } = new(
-        "Uses General, Audio Encoding and ZIP Compression settings.", "CUE/TXT generation and existing-file handling are configured in General. Audio and ZIP compression settings also apply to ripped tracks.");
+        "Uses General, Encoding and ZIP Compression settings.", "General controls CUE/TXT and existing files. Encoding and ZIP Compression control track output.");
     public HelpDefinition ResetDefaults { get; } = new(
-        "Reset to Defaults…", "Ask for confirmation before resetting pending settings to defaults. Use Apply or OK to save the reset.");
+        "Reset to Defaults…", "Restore defaults after confirmation. Select Apply or OK to save them.");
     public HelpDefinition Save { get; } = new("OK", "Save pending settings and close this window.");
     public HelpDefinition Cancel { get; } = new("Cancel", "Close without saving pending changes. Settings already saved with Apply remain in effect.");
     public HelpDefinition Apply { get; } = new("Apply", "Save pending settings and keep this window open.");

@@ -41,7 +41,7 @@ public class OperationFlowTests
         model.SetInputs([Path.Combine(folder, "song.zip")]);
         model.SaveOptions(model.Options with
         {
-            DeleteOldFiles = true,
+            DeleteOldFiles = false,
             AutoCreateCueText = false
         });
         await model.StartCommand.ExecuteAsync(null);

@@ -20,6 +20,7 @@ public class PreferenceTests
         string file = Path.Combine(folder, "song.zip");
         File.WriteAllText(file, "picker fixture");
         var model = new MainViewModel(path);
+        model.SelectedOperation = model.Operations.Single(operation => operation.Action == Action.ZipToAudioG);
         model.AddPickedInputs([file]);
         Assert.Null(model.InputPickerStartFolder);
 

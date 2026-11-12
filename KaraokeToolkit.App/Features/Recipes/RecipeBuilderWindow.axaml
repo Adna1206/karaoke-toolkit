@@ -4,8 +4,8 @@
         Width="900" Height="620" MinWidth="750" MinHeight="480" WindowStartupLocation="CenterOwner">
  <Grid Margin="24" RowDefinitions="Auto,Auto,Auto,*,Auto,Auto" RowSpacing="14">
   <StackPanel Spacing="6">
-   <TextBlock Text="Recipe Builder (Experimental)" FontSize="25" FontWeight="SemiBold"/>
-   <TextBlock Text="Experimental: review each step's settings before running. Completed changes cannot be undone as a whole recipe, and interrupted recipes do not automatically resume." TextWrapping="Wrap" FontSize="12" Opacity="0.75"/>
+   <TextBlock Text="Recipe Builder (Experimental)" Classes="heading1"/>
+   <TextBlock Text="Experimental: review each step's settings before running. Completed changes cannot be undone as a whole recipe, and interrupted recipes do not automatically resume." TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.75"/>
   </StackPanel>
   <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8">
    <ComboBox ItemsSource="{Binding SavedRecipes}" SelectedItem="{Binding SelectedSavedRecipe}" PlaceholderText="Saved recipes" HorizontalAlignment="Stretch">
@@ -30,16 +30,16 @@
    </Grid>
    <ListBox Grid.Row="1" ItemsSource="{Binding Steps}" SelectedItem="{Binding SelectedStep}" AutomationProperties.Name="Recipe steps">
     <ListBox.ItemTemplate><DataTemplate x:DataType="vm:RecipeStepItem">
-     <StackPanel Margin="4,6" Spacing="3"><TextBlock Text="{Binding DisplayLabel}" FontWeight="SemiBold"/><TextBlock Text="{Binding Summary}" FontSize="12" Opacity="0.7"/></StackPanel>
+     <StackPanel Margin="4,6" Spacing="3"><TextBlock Text="{Binding DisplayLabel}" FontWeight="SemiBold"/><TextBlock Text="{Binding Summary}" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/></StackPanel>
     </DataTemplate></ListBox.ItemTemplate>
    </ListBox>
    <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" IsEnabled="{Binding HasSelectedStep}">
     <Button Content="Step Settings…" Click="Settings_Click"/><Button Content="Move Up" Command="{Binding MoveUpCommand}"/>
     <Button Content="Move Down" Command="{Binding MoveDownCommand}"/><Button Content="Remove" Command="{Binding RemoveStepCommand}"/>
    </StackPanel>
-   <TextBlock Grid.Row="3" Text="{Binding StepDescription}" TextWrapping="Wrap" MaxHeight="55" FontSize="12" Opacity="0.7"/>
+   <TextBlock Grid.Row="3" Text="{Binding StepDescription}" TextWrapping="Wrap" MaxHeight="55" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
   </Grid>
-  <TextBlock Grid.Row="4" Text="Save your recipe, then select it under Recipes (Experimental) on the home screen to choose inputs and run it. Each step uses its saved settings." TextWrapping="Wrap" FontSize="12" Opacity="0.7"/>
+  <TextBlock Grid.Row="4" Text="Save your recipe, then select it under Recipes (Experimental) on the home screen to choose inputs and run it. Each step uses its saved settings." TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
   <Grid Grid.Row="5" ColumnDefinitions="*,Auto" ColumnSpacing="12">
    <TextBlock Text="{Binding Error}" TextWrapping="Wrap" VerticalAlignment="Center"/>
    <Button Grid.Column="1" Content="Close" Click="Close_Click"/>

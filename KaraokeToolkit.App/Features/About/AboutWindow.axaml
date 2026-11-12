@@ -8,7 +8,7 @@
     <Grid ColumnDefinitions="88,*" ColumnSpacing="20">
       <Image Source="/Assets/karaoke-toolkit.png" Width="88" Height="88"/>
       <StackPanel Grid.Column="1" Spacing="5" VerticalAlignment="Center">
-        <TextBlock Text="{Binding AppName}" FontSize="30" FontWeight="SemiBold"/>
+        <TextBlock Text="{Binding AppName}" Classes="heading1"/>
         <TextBlock Text="{Binding Version}" FontSize="14" Opacity="0.7"/>
       </StackPanel>
     </Grid>
@@ -16,41 +16,41 @@
       <TabItem Header="About">
         <ScrollViewer HorizontalScrollBarVisibility="Disabled">
           <StackPanel Margin="0,20,0,0" Spacing="18">
-            <TextBlock Text="A modern toolkit for your karaoke collection." FontSize="19" FontWeight="SemiBold" TextWrapping="Wrap"/>
-            <TextBlock Text="Convert, tag, validate and organise karaoke files, create karaoke videos, and preserve CD+G discs. Inspired by MP3+G Toolz." TextWrapping="Wrap"/>
+            <TextBlock Text="Convert, validate and organise your karaoke collection." Classes="heading2" TextWrapping="Wrap"/>
+            <TextBlock Text="Inspired by MP3+G Toolz." TextWrapping="Wrap"/>
             <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,1,0,0" Padding="0,18,0,0">
               <StackPanel Spacing="5">
-                <TextBlock Text="Created by" Opacity="0.65" FontSize="12"/>
-                <TextBlock Text="André Almeida (ADNA)" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                <TextBlock Text="Copyright © 2026 · GPL-3.0-or-later" TextWrapping="Wrap" FontSize="12"/>
-                <TextBlock Text="Provided without warranty. See Application licence for terms." TextWrapping="Wrap" FontSize="12" Opacity="0.8"/>
+                <TextBlock Text="Created by" Opacity="0.65" FontSize="{DynamicResource SmallTextSize}"/>
+                <TextBlock Text="André Almeida (ADNA)" Classes="heading3" TextWrapping="Wrap"/>
+                <TextBlock Text="Copyright © 2026 · GPL-3.0-or-later" TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}"/>
+                <TextBlock Text="Provided without warranty. See Application licence for terms." TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.8"/>
               </StackPanel>
             </Border>
             <StackPanel Spacing="8">
               <TextBlock Text="Built with" FontWeight="SemiBold"/>
               <TextBlock Text="Avalonia · Community Toolkit · Inter&#10;FFMpegCore · SharpCompress · TagLibSharp · SkiaSharp · HarfBuzzSharp" TextWrapping="Wrap" Opacity="0.8"/>
-              <TextBlock Text="FFmpeg provides audio and video processing. cdrdao provides disc reading." TextWrapping="Wrap" FontSize="12" Opacity="0.8"/>
-              <TextBlock Text="Full licence texts and bundled component notices are available under Third-party notices." TextWrapping="Wrap" FontSize="12" Opacity="0.65"/>
+              <TextBlock Text="FFmpeg provides audio and video processing. cdrdao provides disc reading." TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.8"/>
+              <TextBlock Text="Full licence texts and bundled component notices are available under Third-party notices." TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.65"/>
             </StackPanel>
           </StackPanel>
         </ScrollViewer>
       </TabItem>
       <TabItem Header="Application licence">
         <TextBox Margin="0,16,0,0" Text="{Binding ApplicationLicenseText, Mode=OneWay}" IsReadOnly="True"
-                 AcceptsReturn="True" TextWrapping="Wrap" FontSize="12"
+                 AcceptsReturn="True" TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}"
                  ScrollViewer.VerticalScrollBarVisibility="Auto"/>
       </TabItem>
       <TabItem Header="Third-party notices">
         <Grid Margin="0,16,0,0" RowDefinitions="Auto,*" RowSpacing="12">
-          <TextBlock Text="Acknowledgements, licence texts and bundled tool notices" FontSize="12" Opacity="0.7" TextWrapping="Wrap"/>
+          <TextBlock Text="Acknowledgements, licence texts and bundled tool notices" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7" TextWrapping="Wrap"/>
           <Grid Grid.Row="1" ColumnDefinitions="235,*" ColumnSpacing="12">
             <ListBox ItemsSource="{Binding Notices}" SelectedItem="{Binding SelectedNotice}">
               <ListBox.ItemTemplate><DataTemplate x:DataType="vm:ThirdPartyNotice">
-                <TextBlock Text="{Binding Name}" TextWrapping="Wrap" FontSize="12" Margin="0,4"/>
+                <TextBlock Text="{Binding Name}" TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Margin="0,4"/>
               </DataTemplate></ListBox.ItemTemplate>
             </ListBox>
             <TextBox Grid.Column="1" Text="{Binding NoticeText, Mode=OneWay}" IsReadOnly="True"
-                     AcceptsReturn="True" TextWrapping="Wrap" FontSize="12"
+                     AcceptsReturn="True" TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}"
                      ScrollViewer.VerticalScrollBarVisibility="Auto"/>
           </Grid>
         </Grid>

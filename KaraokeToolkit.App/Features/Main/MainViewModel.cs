@@ -37,18 +37,22 @@ public partial class MainViewModel : ViewModelBase
     public partial OperationSectionViewModel? SelectedSection { get; set; }
     public IReadOnlyList<ActionChoice> VisibleOperations => SelectedSection?.Operations ?? [];
     public string SelectedSectionTitle => SelectedSection?.Header ?? "Choose an operation";
-    public bool NeedsSource => SelectedOperation?.Definition.Inputs != OperationInputKind.None;
+    public bool NeedsSource => SelectedOperation?.Definition.AllowsMultipleSources == true;
     public bool CanClearInputs => CanEdit && !string.IsNullOrWhiteSpace(FolderPath);
-    public string SourceInstruction => SelectedOperation?.IsRip == true
-        ? "Click Start to choose a drive, tracks and output folder."
-        : "Click Start to choose the Damaged batch manifest to restore.";
+    public string SourceInstruction => SelectedOperation?.Definition.Inputs switch
+    {
+        OperationInputKind.SingleDisc => "Click Start to choose a drive, tracks and output folder.",
+        OperationInputKind.SingleManifest => "Click Start to choose a damaged batch manifest to restore.",
+        _ => ""
+    };
     public IReadOnlyList<ActionChoice> FavouriteOperations => Operations.Concat(RecipeChoices).Where(operation => operation.Available && operation.IsFavourite &&
         (!operation.IsRip || Options.ExperimentalDiscRipping)).ToArray();
     private readonly RecoveryStore recovery;
     private string[] selectedInputs = [];
     private bool settingInputs;
     private IReadOnlyList<ConversionRetry> retryRequests = [];
-    [ObservableProperty] public partial string InputSummary { get; set; } = "Drop files or folders here, or use Add Folders / Add Files.";
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(SourceSummary))]
+    public partial string InputSummary { get; set; } = "Drop files or folders here, or use Add Folders / Add Files.";
     [ObservableProperty, NotifyPropertyChangedFor(nameof(HasReport)), NotifyPropertyChangedFor(nameof(CanViewReport))]
     public partial CompletionReport? LastReport
     {
@@ -78,12 +82,9 @@ public partial class MainViewModel : ViewModelBase
             : InputSelection.Normalize(paths);
         if (normalized.Length == 0 || normalized.Any(p => !File.Exists(p) && !Directory.Exists(p)))
             throw new ArgumentException("Select existing files or folders.");
-        if (SelectedOperation?.OrganizeMode == AlphabeticalOrganizeScope.Folders && normalized.Any(File.Exists))
-            throw new ArgumentException("Organize Folders Alphabetically requires folder selections.");
-        if (SelectedOperation?.IsFlatten == true && normalized.Any(File.Exists))
-            throw new ArgumentException("Folder flattening requires folder selections.");
-        if (SelectedOperation?.IsRecipe == true && SelectedOperation.Definition.Inputs == OperationInputKind.Folders && normalized.Any(File.Exists))
-            throw new ArgumentException("This recipe starts with an operation requiring folder selections.");
+        if ((!suggestOperation || SelectedOperation?.Definition.Inputs == OperationInputKind.Folders) &&
+            GetSourceError(normalized) is { } error)
+            throw new ArgumentException(error);
         settingInputs = true;
         try
         {
@@ -99,6 +100,8 @@ public partial class MainViewModel : ViewModelBase
                 SelectedOperation = Operations.First(x => x.Action == Action.ZipToAudioG);
             else if (extensions.All(e => e == ".bin"))
                 SelectedOperation = Operations.First(x => x.Action == Action.BinToAudioG);
+            else if (normalized.All(KaraokeToolkit.Core.Archives.ArchiveZipConverter.IsInput))
+                SelectedOperation = Operations.First(x => x.Action == Action.ArchiveToZip);
             else if (extensions.All(e => e is not (".zip" or ".bin")))
                 SelectedOperation = Operations.First(x => x.Action == Action.AudioGToZip);
         }
@@ -227,13 +230,36 @@ public partial class MainViewModel : ViewModelBase
     public ObservableCollection<ActivityEntry> Activity { get; } = new();
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(StartCommand))]
     public partial string FolderPath { get; set; } = "";
-    [ObservableProperty, NotifyPropertyChangedFor(nameof(ActionDescription)), NotifyPropertyChangedFor(nameof(CanChooseSource)), NotifyPropertyChangedFor(nameof(CanChooseFiles)), NotifyCanExecuteChangedFor(nameof(StartCommand))]
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(ActionDescription)), NotifyPropertyChangedFor(nameof(CanChooseSource)), NotifyPropertyChangedFor(nameof(CanChooseFiles)), NotifyPropertyChangedFor(nameof(SourceSummary)), NotifyCanExecuteChangedFor(nameof(StartCommand))]
     public partial ActionChoice? SelectedOperation
     {
         get; set;
     }
     public string ActionDescription => SelectedOperation?.Description ?? "Choose an action to continue.";
     public string SourceLabel => SelectedOperation?.Definition.Inputs == OperationInputKind.Folders ? "Source folders" : "Source files or folders";
+    public string SourceSummary => string.IsNullOrWhiteSpace(FolderPath)
+        ? SelectedOperation?.Definition.Inputs == OperationInputKind.Folders
+            ? "Select one or more folders, or type a folder path."
+            : "Select one or more files or folders, or type a path."
+        : GetSourceError(CurrentInputs) ?? InputSummary;
+
+    private string? GetSourceError(IEnumerable<string> inputs)
+    {
+        if (SelectedOperation is not { Definition.AllowsMultipleSources: true } operation)
+            return null;
+        var extensions = operation.SourceFileExtensions;
+        foreach (string path in inputs)
+        {
+            if (Directory.Exists(path)) continue;
+            if (extensions?.Count == 0)
+                return "This operation requires folders. Clear the selection or enter an existing folder path.";
+            if (!File.Exists(path))
+                return "Choose an existing file or folder.";
+            if (extensions != null && !extensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase))
+                return $"{Path.GetFileName(path)} is unsupported for this operation. Select {string.Join(", ", extensions)} files or folders.";
+        }
+        return null;
+    }
     [ObservableProperty, NotifyPropertyChangedFor(nameof(CanEdit)), NotifyCanExecuteChangedFor(nameof(StartCommand)), NotifyCanExecuteChangedFor(nameof(CancelCommand))]
     public partial bool IsBusy
     {
@@ -284,12 +310,12 @@ public partial class MainViewModel : ViewModelBase
     public bool CanEdit => !IsBusy;
     public Func<Task<ConversionResult?>>? RipDiscAsync { get; set; }
     public Func<Task>? RestoreQuarantinedFilesAsync { get; set; }
-    public bool CanChooseSource => CanEdit && SelectedOperation?.Definition.Inputs != OperationInputKind.None;
-    public bool CanChooseFiles => CanChooseSource && SelectedOperation?.Definition.Inputs != OperationInputKind.Folders;
+    public bool CanChooseSource => CanEdit && NeedsSource;
+    public bool CanChooseFiles => CanChooseSource && SelectedOperation?.Definition.Inputs == OperationInputKind.FilesAndFolders;
     public bool CanStart => !IsBusy && !ShowProgress && SelectedOperation?.Available == true &&
         (SelectedOperation.IsRip ? Options.ExperimentalDiscRipping :
             SelectedOperation.IsRestore || !string.IsNullOrWhiteSpace(FolderPath) &&
-            (SelectedOperation.Definition.Inputs != OperationInputKind.Folders || CurrentInputs.All(Directory.Exists)) &&
+            GetSourceError(CurrentInputs) == null &&
             (SelectedOperation.Recipe == null || KaraokeToolkit.Core.Recipes.RecipeOperations.CanAcceptInputs(SelectedOperation.Recipe, CurrentInputs)));
     public bool CanCancel => IsBusy && !CancelRequested;
     public MainViewModel() : this(UserDataPaths.DesktopSettingsPath(), new RecoveryStore()) { }

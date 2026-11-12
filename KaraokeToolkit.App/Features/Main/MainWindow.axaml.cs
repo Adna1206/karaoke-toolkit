@@ -1,20 +1,19 @@
 using KaraokeToolkit.App.Shared;
-using KaraokeToolkit.Core.Archives;
 using KaraokeToolkit.App.Features.Settings;
 using KaraokeToolkit.App.Features.Reports;
 using KaraokeToolkit.App.Features.DiscRipping;
 using KaraokeToolkit.App.Features.About;
 using KaraokeToolkit.App.Features.Recipes;
 using KaraokeToolkit.App.Features.Tagging;
-using KaraokeToolkit.Core.Tagging;
 using KaraokeToolkit.Core.Conversion;
-using KaraokeToolkit.Core.Recipes;
 using KaraokeToolkit.Core.FileOperations;
 using KaraokeToolkit.Core.Recovery;
 using System;
 using System.Linq;
 using Avalonia.Input;
 using Avalonia.Controls;
+using Avalonia.Controls.Chrome;
+using Avalonia.Media;
 using Avalonia.Threading;
 using KaraokeToolkit.Core;
 using System.Threading;
@@ -30,6 +29,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        if (OperatingSystem.IsWindows()) ConfigureWindowsTitleBar();
         CategoryList.AddHandler(KeyDownEvent, CategoryList_KeyDown, RoutingStrategies.Tunnel);
         OperationList.AddHandler(KeyDownEvent, OperationList_KeyDown, RoutingStrategies.Tunnel);
         progressLogAutoScroll = new(ActivityLog);
@@ -65,6 +65,27 @@ public partial class MainWindow : Window
         };
         Closing += (_, e) => { if (DataContext is MainViewModel { IsBusy: true }) e.Cancel = true; };
     }
+
+    private void ConfigureWindowsTitleBar()
+    {
+        const double titleBarHeight = 36;
+        WindowDecorationsTheme = (Avalonia.Styling.ControlTheme)Resources["MainWindowDecorations"]!;
+        ExtendClientAreaTitleBarHeightHint = titleBarHeight;
+        ExtendClientAreaToDecorationsHint = true;
+        MenuRow.Height = titleBarHeight;
+        Grid.SetColumnSpan(MainMenu, 1);
+        Grid.SetColumn(MainMenu, 1);
+        TitleBarIdentity.IsVisible = true;
+        MainHeader.IsVisible = false;
+        MainMenu.Classes.Add("titleBar");
+        MainMenu.VerticalAlignment = VerticalAlignment.Center;
+        MainMenu.Background = Brushes.Transparent;
+        WindowDecorationProperties.SetElementRole(MainMenu, WindowDecorationsElementRole.User);
+        WindowDecorationProperties.SetElementRole(TitleBarIdentity, WindowDecorationsElementRole.TitleBar);
+        WindowDecorationProperties.SetElementRole(TitleBarDragArea, WindowDecorationsElementRole.TitleBar);
+        TitleBarDragArea.IsVisible = true;
+    }
+
     private void Category_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (DataContext is MainViewModel { IsBusy: false } model &&
@@ -119,14 +140,16 @@ public partial class MainWindow : Window
 
     private async void BrowseFolder_Click(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not MainViewModel model || model.IsBusy)
+        if (DataContext is not MainViewModel { CanChooseSource: true } model)
             return;
         try
         {
             using var startFolder = await GetInputPickerStartFolderAsync(model);
             var folders = await ModalDialog.RunAsync(this, () => StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
-                Title = "Choose source folder", AllowMultiple = true, SuggestedStartLocation = startFolder
+                Title = "Choose source folders",
+                AllowMultiple = model.SelectedOperation?.Definition.AllowsMultipleSources == true,
+                SuggestedStartLocation = startFolder
             }));
             if (folders.Count > 0 && !model.IsBusy)
             {
@@ -136,7 +159,7 @@ public partial class MainWindow : Window
                     break;
             }
         }
-        catch (Exception error) { model.Status = "Could not open folder picker: " + error.Message; }
+        catch (Exception error) { model.Status = "Could not select folders: " + error.Message; }
     }
     private void OnDragOver(object? sender, DragEventArgs e)
     {
@@ -168,20 +191,15 @@ public partial class MainWindow : Window
             return;
         try
         {
-            var recipeExtensions = model.SelectedOperation?.Recipe is { } recipe ? RecipeOperations.FileExtensions(recipe.Steps[0].OperationId) : null;
+            var extensions = model.SelectedOperation?.SourceFileExtensions;
             using var startFolder = await GetInputPickerStartFolderAsync(model);
             var files = await ModalDialog.RunAsync(this, () => StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                Title = model.SelectedOperation?.IsOrganizer == true ? "Choose files to organize" : "Choose karaoke files",
-                AllowMultiple = true,
+                Title = "Choose source files",
+                AllowMultiple = model.SelectedOperation?.Definition.AllowsMultipleSources == true,
                 SuggestedStartLocation = startFolder,
-                FileTypeFilter = model.SelectedOperation?.IsRecipe == true
-                    ? new[] { new FilePickerFileType("Recipe inputs") { Patterns = recipeExtensions?.Select(ext => "*" + ext).ToArray() ?? ["*"] } }
-                    : model.SelectedOperation?.IsTagging == true
-                    ? new[] { new FilePickerFileType("Taggable karaoke media") { Patterns = KaraokeTaggingService.InputExtensions.Select(ext => "*" + ext).ToArray() } }
-                    : model.SelectedOperation?.IsOrganizer == true
-                    ? new[] { new FilePickerFileType("All files") { Patterns = ["*"] } }
-                    : new[] { new FilePickerFileType("Karaoke files and archives") { Patterns = InputSelection.Extensions.Concat(ArchiveZipConverter.Extensions).Select(ext => "*" + ext).ToArray() } }
+                FileTypeFilter = [new FilePickerFileType(extensions == null ? "All files" : "Supported files")
+                    { Patterns = extensions?.Select(extension => "*" + extension).ToArray() ?? ["*"] }]
             }));
             if (files.Count > 0 && !model.IsBusy)
                 model.AddPickedInputs(files.Select(f => f.TryGetLocalPath()).OfType<string>().ToArray());

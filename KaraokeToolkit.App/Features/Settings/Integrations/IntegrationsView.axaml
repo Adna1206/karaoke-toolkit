@@ -7,7 +7,7 @@
         <StackPanel Margin="0,20,12,20" Spacing="16">
             <Expander Header="Windows Explorer" x:Name="ExplorerSection" IsExpanded="True" HorizontalAlignment="Stretch">
                 <StackPanel Spacing="14">
-                    <TextBlock Text="{x:Static services:ExplorerIntegration.MenuLabel}" FontSize="18" FontWeight="SemiBold"/>
+                    <TextBlock Text="{x:Static services:ExplorerIntegration.MenuLabel}" Classes="heading2"/>
                     <TextBlock Text="{Binding Definitions.ExplorerOverview.Label}" TextWrapping="Wrap" ToolTip.Tip="{Binding Definitions.ExplorerOverview.Description}"/>
                     <TextBlock Text="{Binding Definitions.ExplorerLocation.Label}" TextWrapping="Wrap" Opacity="0.75" ToolTip.Tip="{Binding Definitions.ExplorerLocation.Description}"/>
                     <TextBlock x:Name="ExplorerStatus" TextWrapping="Wrap"/>
@@ -15,7 +15,7 @@
                         <Button Content="{Binding Definitions.EnableExplorer.Label}" Click="EnableExplorer_Click" ToolTip.Tip="{Binding Definitions.EnableExplorer.Description}"/>
                         <Button Content="{Binding Definitions.RemoveExplorer.Label}" Click="RemoveExplorer_Click" ToolTip.Tip="{Binding Definitions.RemoveExplorer.Description}"/>
                     </StackPanel>
-                    <TextBlock Text="{Binding Definitions.ExplorerImmediate.Label}" TextWrapping="Wrap" FontSize="12" Opacity="0.7" ToolTip.Tip="{Binding Definitions.ExplorerImmediate.Description}"/>
+                    <TextBlock Text="{Binding Definitions.ExplorerImmediate.Label}" TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7" ToolTip.Tip="{Binding Definitions.ExplorerImmediate.Description}"/>
                 </StackPanel>
             </Expander>
             <Expander Header="Command Line Interface (CLI)" IsExpanded="True" HorizontalAlignment="Stretch">

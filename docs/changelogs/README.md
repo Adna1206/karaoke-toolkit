@@ -5,5 +5,5 @@ and any steps needed when upgrading.
 
 | Version | Date | Highlights |
 | --- | --- | --- |
-| [2026.11.16](2026.11.16.md) | 2026-11-11 | Settings layout, output naming, and remembered input folders |
+| [2026.11.16](2026.11.16.md) | 2026-11-11 | Settings layout, output naming, blended title bars, and operation input checks |
 | [2026.11.15](2026.11.15.md) | 2026-11-11 | Windows settings storage and compatibility, desktop shortcut and Explorer defaults |

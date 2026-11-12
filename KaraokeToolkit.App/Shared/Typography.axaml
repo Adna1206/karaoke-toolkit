@@ -1,0 +1,22 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Styles.Resources>
+        <x:Double x:Key="SmallTextSize">12</x:Double>
+        <FontFamily x:Key="CaptionFontFamily">Segoe UI</FontFamily>
+        <x:Double x:Key="CaptionFontSize">12</x:Double>
+        <x:Double x:Key="DropdownMenuFontSize">12</x:Double>
+    </Styles.Resources>
+
+    <Style Selector="TextBlock.heading1, TextBlock.heading2, TextBlock.heading3">
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <Style Selector="TextBlock.heading1">
+        <Setter Property="FontSize" Value="24"/>
+    </Style>
+    <Style Selector="TextBlock.heading2">
+        <Setter Property="FontSize" Value="20"/>
+    </Style>
+    <Style Selector="TextBlock.heading3">
+        <Setter Property="FontSize" Value="16"/>
+    </Style>
+</Styles>

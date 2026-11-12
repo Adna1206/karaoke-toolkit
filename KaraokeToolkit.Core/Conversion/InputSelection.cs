@@ -36,13 +36,26 @@ public static class InputSelection
 
     internal static bool IsExcludedFolder(string name) => name.StartsWith(".karaoke-job-", StringComparison.OrdinalIgnoreCase) || name.Equals("Damaged", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>Extensions accepted for explicit conversion file selections. An empty list means folders only.</summary>
+    public static IReadOnlyList<string> ConversionFileExtensions(OperationId action) => action switch
+    {
+        Action.ZipToBin or Action.ZipToAudioG or Action.RepackZip => [".zip"],
+        Action.BinToZip or Action.BinToAudioG => [".bin"],
+        Action.AudioGToBin or Action.AudioGToZip or Action.LosslessGToMp3G => [".cdg", .. KaraokeArchive.AudioExtensions],
+        Action.KaraokeToVideo => [".bin", ".zip", ".cdg", .. KaraokeArchive.AudioExtensions],
+        Action.ArchiveToZip => ArchiveZipConverter.Extensions,
+        Action.CleanUpFilenames or Action.CreateCueAndTextFiles => [],
+        _ => throw new ArgumentOutOfRangeException(nameof(action))
+    };
+
     /// <summary>Builds per-folder source groups for an operation, expanding folders within the requested scope.</summary>
     /// <remarks>Explicit audio/CDG selections map to their source group rather than selecting every sibling.
     /// Folder-only maintenance rejects individual file selections. Planning does not publish outputs.</remarks>
     public static IReadOnlyList<SelectionBatch> Plan(OperationId action, IEnumerable<string> paths, bool recurse)
     {
         string[] selected = Normalize(paths);
-        bool maintenance = action is Action.CleanUpFilenames or Action.CreateCueAndTextFiles;
+        var fileExtensions = ConversionFileExtensions(action);
+        bool maintenance = fileExtensions.Count == 0;
         if (maintenance && selected.Any(File.Exists))
             throw new ArgumentException("Filename cleanup and CUE/TXT creation work on whole folders. Select folders for this action.");
         string extension = action switch
@@ -68,13 +81,11 @@ public static class InputSelection
             }
             else
             {
+                if (!fileExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase))
+                    throw new ArgumentException($"This action requires {string.Join(", ", fileExtensions)} inputs: {path}");
                 string source = path;
                 if (extension == ".cdg" && (KaraokeArchive.AudioExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase) || LosslessAudioTranscoder.IsCandidate(path)))
                     source = Directory.GetFiles(Path.GetDirectoryName(path)!).FirstOrDefault(p => Path.GetExtension(p).Equals(".cdg", StringComparison.OrdinalIgnoreCase) && Path.GetFileNameWithoutExtension(p).Equals(Path.GetFileNameWithoutExtension(path), StringComparison.OrdinalIgnoreCase)) ?? Path.ChangeExtension(path, ".cdg");
-                else if (action == Action.KaraokeToVideo ? !ConversionService.IsVideoSource(path) :
-                    action == Action.ArchiveToZip ? !ArchiveZipConverter.IsInput(path) :
-                    !Path.GetExtension(path).Equals(extension, StringComparison.OrdinalIgnoreCase))
-                    throw new ArgumentException($"This action requires {extension} inputs: {path}");
                 sources.Add(source);
             }
         }

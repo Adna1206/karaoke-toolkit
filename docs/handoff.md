@@ -1,10 +1,23 @@
 # Current handoff
 
-Snapshot: 2026-11-11, Africa/Johannesburg. Verify Git/files before editing.
+Snapshot: 2026-11-12, Africa/Johannesburg. Verify Git/files before editing.
 
 ## Checkout and release
 
-- Branch `master`, base `baa2033`, shared version **2026.11.16**.
+- Branch `master`, base `38863fb` before the desktop follow-up commit, shared
+  version **2026.11.16**. See the [release notes](changelogs/2026.11.16.md).
+- The desktop follow-up covers blended Windows captions and icons, shared
+  typography, aligned compact lists, shorter tool and Settings copy, and
+  operation-specific input selection. About retains the MP3+G Toolz credit.
+- App and test Release builds passed with `--no-restore -p:UsedAvaloniaProducts= -p:ArtifactBuildName=Cleanup`.
+  The test build used `-m:1 -p:BuildInParallel=false`. VSTest timed out
+  connecting to testhost. Twelve compiled input, navigation, metadata, picker
+  and conversion regression cases passed when invoked directly from PowerShell.
+  The final App Release build and `git diff --check` passed.
+- Windows runtime checks confirmed transparent Main and About captions, About's
+  icon and content inset, the 12 px title-bar menu and 14 px dropdown, and
+  shared Settings typography. Next step is a visual check of layout, wrapping,
+  backdrop continuity, native file pickers, and caption dragging and maximize.
 - The 2026.11.16 changelog includes the settings layout, output naming and picker
   changes. Full Release verification passed **704 tests** with the test command
   below using `ArtifactBuildName=Cleanup`, `--no-build`, and

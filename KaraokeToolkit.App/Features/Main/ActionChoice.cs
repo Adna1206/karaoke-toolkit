@@ -4,6 +4,11 @@ using CommunityToolkit.Mvvm.Input;
 using KaraokeToolkit.App.Metadata;
 using KaraokeToolkit.Core.FileOperations;
 using KaraokeToolkit.Core.Recipes;
+using KaraokeToolkit.Core.Archives;
+using KaraokeToolkit.Core.Conversion;
+using KaraokeToolkit.Core.Tagging;
+using System.Collections.Generic;
+using System.Linq;
 using Action = KaraokeToolkit.Core.Execution.OperationId;
 
 namespace KaraokeToolkit.App.Features.Main;
@@ -35,5 +40,13 @@ public partial class ActionChoice(OperationDefinition definition, RecipeDefiniti
     public FolderFlattenScope? FlattenScope => Definition.FlattenScope;
     public bool IsFlatten => FlattenScope.HasValue;
     public bool IsValidation => Definition.IsValidation;
+    // Null means arbitrary files, and an empty list means no files in the source picker.
+    public IReadOnlyList<string>? SourceFileExtensions =>
+        Definition.Inputs != OperationInputKind.FilesAndFolders ? [] :
+        Recipe is { } recipe ? RecipeOperations.FileExtensions(recipe.Steps[0].OperationId) :
+        IsOrganizer ? null :
+        IsTagging ? KaraokeTaggingService.InputExtensions :
+        Action is { } action && OperationCapabilities.IsConversion(action) ? InputSelection.ConversionFileExtensions(action) :
+        InputSelection.Extensions.Concat(ArchiveZipConverter.Extensions).ToArray();
     public OperationSection Section => Definition.Section;
 }

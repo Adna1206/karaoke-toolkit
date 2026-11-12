@@ -1,10 +1,19 @@
 <Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:core="using:KaraokeToolkit.Core"
- xmlns:vm="using:KaraokeToolkit.App.Features.Main" x:Class="KaraokeToolkit.App.Features.Main.MainWindow" x:DataType="vm:MainViewModel"
- Icon="/Assets/karaoke-toolkit.ico" Title="{x:Static core:ApplicationInfo.Name}" Width="1000" Height="700" MinWidth="900" MinHeight="620">
+ xmlns:vm="using:KaraokeToolkit.App.Features.Main" xmlns:chrome="using:Avalonia.Controls.Chrome"
+ x:Class="KaraokeToolkit.App.Features.Main.MainWindow" x:DataType="vm:MainViewModel"
+ Classes="mainWindow" Icon="/Assets/karaoke-toolkit.ico" Title="{x:Static core:ApplicationInfo.Name}" Width="1000" Height="700" MinWidth="900" MinHeight="620">
  <Window.Styles>
-  <Style Selector="TextBlock.toolHeading">
-   <Setter Property="FontSize" Value="20"/>
-   <Setter Property="FontWeight" Value="SemiBold"/>
+  <Style Selector="Menu#MainMenu MenuItem">
+   <Setter Property="Margin" Value="2,4"/>
+   <Setter Property="CornerRadius" Value="4"/>
+  </Style>
+  <Style Selector="Menu#MainMenu.titleBar > MenuItem">
+   <Setter Property="FontFamily" Value="{DynamicResource CaptionFontFamily}"/>
+   <Setter Property="FontSize" Value="{DynamicResource CaptionFontSize}"/>
+   <Setter Property="FontWeight" Value="Normal"/>
+  </Style>
+  <Style Selector="Menu#MainMenu MenuItem MenuItem">
+   <Setter Property="FontSize" Value="{DynamicResource DropdownMenuFontSize}"/>
   </Style>
   <Style Selector="Border.status.success">
    <Setter Property="Background" Value="#262FA855"/>
@@ -26,8 +35,14 @@
   </Style>
  </Window.Styles>
  <Window.Resources>
+  <ControlTheme x:Key="MainWindowDecorations" TargetType="chrome:WindowDrawnDecorations"
+                BasedOn="{StaticResource BlendedWindowDecorations}">
+   <Style Selector="^:not(:fullscreen) /template/ Panel#PART_TitleTextPanel">
+    <Setter Property="IsVisible" Value="False"/>
+   </Style>
+  </ControlTheme>
   <DataTemplate x:Key="OperationTemplate" x:DataType="vm:ActionChoice">
-   <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="6,7">
+   <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="6,4">
     <TextBlock Text="{Binding Label}" TextWrapping="Wrap" VerticalAlignment="Center" Background="Transparent"
                ToolTip.Tip="{Binding Description}" />
     <Button Grid.Column="1" Command="{Binding ToggleFavouriteCommand}"
@@ -49,52 +64,60 @@
   </DataTemplate>
  </Window.Resources>
  <Grid RowDefinitions="Auto,Auto,*,Auto">
-  <Menu>
-   <MenuItem Header="_File">
-    <MenuItem Header="View Last Run _Report…" Click="Results_Click" IsEnabled="{Binding CanViewReport}"/>
-    <Separator/>
-    <MenuItem Header="E_xit" Click="Exit_Click" IsEnabled="{Binding CanEdit}"/>
-   </MenuItem>
-   <MenuItem Header="_Tools">
-    <MenuItem Header="_Recipe Builder (Experimental)…" Click="Recipes_Click" IsEnabled="{Binding CanEdit}"/>
-    <MenuItem Header="_Settings…" Click="Options_Click" IsEnabled="{Binding CanEdit}"/>
-   </MenuItem>
-   <MenuItem Header="_Help">
-    <MenuItem Header="_Help" Click="Help_Click"/>
-    <MenuItem Header="_About…" Click="About_Click"/>
-   </MenuItem>
-  </Menu>
-  <Border Grid.Row="1" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" Padding="24,14">
-   <Grid ColumnDefinitions="40,*" ColumnSpacing="12">
-    <Image Source="/Assets/karaoke-toolkit.png" Width="40" Height="40"/>
-    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-     <TextBlock Text="{x:Static core:ApplicationInfo.Name}" FontSize="23" FontWeight="SemiBold"/>
-     <TextBlock Text="Convert, validate and organise your karaoke collection." FontSize="12" Opacity="0.65"/>
+  <Grid x:Name="MenuRow" ColumnDefinitions="Auto,Auto,*">
+   <StackPanel x:Name="TitleBarIdentity" IsVisible="False" Orientation="Horizontal" Spacing="8"
+               Margin="24,0,12,0" Background="Transparent">
+    <Image Source="/Assets/karaoke-toolkit.png" Width="20" Height="20" VerticalAlignment="Center"/>
+    <TextBlock Text="{x:Static core:ApplicationInfo.Name}" VerticalAlignment="Center"
+               FontFamily="{DynamicResource CaptionFontFamily}" FontSize="{DynamicResource CaptionFontSize}" FontWeight="Normal"/>
+   </StackPanel>
+   <Menu x:Name="MainMenu" Grid.ColumnSpan="3">
+    <MenuItem Header="_File">
+     <MenuItem Header="View Last Run _Report…" Click="Results_Click" IsEnabled="{Binding CanViewReport}"/>
+     <Separator/>
+     <MenuItem Header="E_xit" Click="Exit_Click" IsEnabled="{Binding CanEdit}"/>
+    </MenuItem>
+    <MenuItem Header="_Tools">
+     <MenuItem Header="_Recipe Builder (Experimental)…" Click="Recipes_Click" IsEnabled="{Binding CanEdit}"/>
+     <MenuItem Header="_Settings…" Click="Options_Click" IsEnabled="{Binding CanEdit}"/>
+    </MenuItem>
+    <MenuItem Header="_Help">
+     <MenuItem Header="_Help" Click="Help_Click"/>
+     <MenuItem Header="_About…" Click="About_Click"/>
+    </MenuItem>
+   </Menu>
+   <Border x:Name="TitleBarDragArea" Grid.Column="2" Background="Transparent" IsVisible="False"/>
+  </Grid>
+  <Border x:Name="MainHeader" Grid.Row="1" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" Padding="24,14">
+   <DockPanel>
+    <Image DockPanel.Dock="Left" Source="/Assets/karaoke-toolkit.png" Width="40" Height="40" Margin="0,0,12,0"/>
+    <StackPanel VerticalAlignment="Center" Spacing="2">
+     <TextBlock Text="{x:Static core:ApplicationInfo.Name}" Classes="heading1"/>
+     <TextBlock Text="Convert, validate and organise your karaoke collection." FontSize="{DynamicResource SmallTextSize}" Opacity="0.65"/>
     </StackPanel>
-   </Grid>
+   </DockPanel>
   </Border>
-  <Grid Grid.Row="2" Margin="24,20" ColumnDefinitions="190,*" ColumnSpacing="24" IsVisible="{Binding !ShowProgress}">
-   <Grid RowDefinitions="Auto,*" RowSpacing="12">
-    <TextBlock Text="Tools" Classes="toolHeading" Margin="8,0"/>
-    <ListBox Grid.Row="1" x:Name="CategoryList" ItemsSource="{Binding VisibleSections}" SelectedItem="{Binding SelectedSection, Mode=OneWay}" SelectionChanged="Category_SelectionChanged"
-             IsEnabled="{Binding CanEdit}" AutomationProperties.Name="Operation categories">
-     <ListBox.ItemTemplate><DataTemplate x:DataType="vm:OperationSectionViewModel">
-      <TextBlock Text="{Binding Header}" TextWrapping="Wrap" Margin="4,9"/>
-     </DataTemplate></ListBox.ItemTemplate>
-    </ListBox>
-   </Grid>
-   <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto,Auto" RowSpacing="14">
-    <TextBlock Text="{Binding SelectedSectionTitle}" Classes="toolHeading"/>
-    <ListBox Grid.Row="1" x:Name="OperationList" Classes="operations" ItemsSource="{Binding VisibleOperations}"
+  <Grid Grid.Row="2" Margin="24,20" ColumnDefinitions="190,*" ColumnSpacing="24"
+        RowDefinitions="Auto,*" RowSpacing="12" IsVisible="{Binding !ShowProgress}">
+   <TextBlock Text="Tools" Classes="heading2" Margin="8,0"/>
+   <TextBlock Grid.Column="1" Text="{Binding SelectedSectionTitle}" Classes="heading2"/>
+   <ListBox Grid.Row="1" x:Name="CategoryList" ItemsSource="{Binding VisibleSections}" SelectedItem="{Binding SelectedSection, Mode=OneWay}" SelectionChanged="Category_SelectionChanged"
+            IsEnabled="{Binding CanEdit}" AutomationProperties.Name="Operation categories">
+    <ListBox.ItemTemplate><DataTemplate x:DataType="vm:OperationSectionViewModel">
+     <TextBlock Text="{Binding Header}" TextWrapping="Wrap" Margin="4,6"/>
+    </DataTemplate></ListBox.ItemTemplate>
+   </ListBox>
+   <Grid Grid.Row="1" Grid.Column="1" RowDefinitions="*,Auto,Auto" RowSpacing="14">
+    <ListBox x:Name="OperationList" Classes="operations" ItemsSource="{Binding VisibleOperations}"
              SelectedItem="{Binding SelectedOperation, Mode=OneWay}" SelectionChanged="Operation_SelectionChanged"
              ItemTemplate="{StaticResource OperationTemplate}" IsEnabled="{Binding CanEdit}"
              AutomationProperties.Name="Operations"/>
-    <Border Grid.Row="2" Padding="0,4,0,0">
+    <Border Grid.Row="1" Padding="0,4,0,0">
      <ScrollViewer MaxHeight="85" HorizontalScrollBarVisibility="Disabled">
-      <TextBlock Text="{Binding ActionDescription}" TextWrapping="Wrap" FontSize="12" Opacity="0.75"/>
+      <TextBlock Text="{Binding ActionDescription}" TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.75"/>
      </ScrollViewer>
     </Border>
-    <Border Grid.Row="3" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,1,0,0" Padding="0,14,0,0">
+    <Border Grid.Row="2" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,1,0,0" Padding="0,14,0,0">
      <Grid>
       <StackPanel Spacing="8" IsVisible="{Binding NeedsSource}">
        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
@@ -108,7 +131,7 @@
         <Button Content="Add Folders…" Click="BrowseFolder_Click" IsEnabled="{Binding CanChooseSource}"/>
         <Button Grid.Column="1" Content="Add Files…" Click="BrowseFiles_Click" IsEnabled="{Binding CanChooseFiles}"/>
        </Grid>
-       <TextBlock Text="{Binding InputSummary}" TextWrapping="Wrap" MaxHeight="36" FontSize="12" Opacity="0.65" ToolTip.Tip="{Binding InputSummary}"/>
+       <TextBlock Text="{Binding SourceSummary}" TextWrapping="Wrap" MaxHeight="36" FontSize="{DynamicResource SmallTextSize}" Opacity="0.65" ToolTip.Tip="{Binding SourceSummary}"/>
       </StackPanel>
       <TextBlock Text="{Binding SourceInstruction}" IsVisible="{Binding !NeedsSource}" TextWrapping="Wrap"/>
      </Grid>
@@ -116,12 +139,12 @@
    </Grid>
   </Grid>
   <Grid Grid.Row="2" Margin="24,16" IsVisible="{Binding ShowProgress}" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="14">
-   <TextBlock Text="{Binding RunTitle}" FontSize="24" FontWeight="SemiBold" />
+   <TextBlock Text="{Binding RunTitle}" Classes="heading1" />
    <TextBlock Grid.Row="1" Text="{Binding FolderPath}" TextTrimming="CharacterEllipsis" />
    <Grid Grid.Row="2" RowDefinitions="Auto,*" RowSpacing="6">
     <Grid ColumnDefinitions="90,*"><TextBlock Text="Time" FontWeight="SemiBold"/><TextBlock Grid.Column="1" Text="Event" FontWeight="SemiBold"/></Grid>
     <ListBox Grid.Row="1" x:Name="ActivityLog" ItemsSource="{Binding Activity}" AutomationProperties.Name="Progress event log"><ListBox.ItemTemplate><DataTemplate x:DataType="vm:ActivityEntry">
-     <Grid ColumnDefinitions="90,*" Margin="2,4"><TextBlock Text="{Binding Time}" Opacity="0.65"/><TextBlock Grid.Column="1" Text="{Binding Message}" TextWrapping="Wrap"/></Grid>
+     <Grid ColumnDefinitions="90,*" Margin="2,2"><TextBlock Text="{Binding Time}" Opacity="0.65"/><TextBlock Grid.Column="1" Text="{Binding Message}" TextWrapping="Wrap"/></Grid>
     </DataTemplate></ListBox.ItemTemplate></ListBox>
    </Grid>
    <StackPanel Grid.Row="3" Spacing="9">
@@ -140,7 +163,7 @@
     <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="12">
      <Border Classes="status" Classes.success="{Binding StatusSucceeded}" Classes.warning="{Binding StatusWarning}" Classes.failure="{Binding StatusFailed}"
              Padding="10,6" CornerRadius="4" BorderThickness="3,0,0,0" VerticalAlignment="Center">
-      <TextBlock Text="{Binding Status}" TextWrapping="Wrap" MaxHeight="42" FontSize="12"/>
+      <TextBlock Text="{Binding Status}" TextWrapping="Wrap" MaxHeight="42" FontSize="{DynamicResource SmallTextSize}"/>
      </Border>
      <Button Grid.Column="1" Content="View Last Run Report…" Click="Results_Click" IsEnabled="{Binding CanViewReport}"/>
      <Button Grid.Column="2" Content="Back" Click="Back_Click" IsVisible="{Binding ShowProgress}" IsEnabled="{Binding CanEdit}"/>

@@ -47,6 +47,51 @@ public class GuiWorkflowTests
         foreach(var choice in model.Operations){model.SelectedOperation=choice;Assert.Equal(choice.Available && !choice.IsRip,model.StartCommand.CanExecute(null));}
         model.IsBusy=true;Assert.False(model.StartCommand.CanExecute(null));
     }
+    [Theory]
+    [InlineData(Action.CreateCueAndTextFiles)]
+    [InlineData(Action.CleanUpFilenames)]
+    public void FolderMaintenanceRejectsFilesBeforeStarting(Action action)
+    {
+        string folder = TestMediaFixture.NewFolder();
+        string zip = Path.Combine(folder, "song.zip");
+        File.WriteAllBytes(zip, []);
+        var model = new MainViewModel(SettingsPath());
+        model.SetInputs([zip]);
+        model.SelectedOperation = model.Operations.Single(choice => choice.Action == action);
+
+        Assert.False(model.CanChooseFiles);
+        Assert.False(model.StartCommand.CanExecute(null));
+        Assert.Contains("requires folders", model.SourceSummary);
+        Assert.Equal(zip, Assert.Single(model.SelectedInputs));
+
+        model.ClearInputsCommand.Execute(null);
+        Assert.Throws<ArgumentException>(() => model.AddInputs([zip]));
+        model.AddInputs([folder]);
+        Assert.True(model.StartCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void ConversionsCheckExplicitFileTypesBeforeStarting()
+    {
+        string folder = TestMediaFixture.NewFolder();
+        string zip = Path.Combine(folder, "song.zip");
+        string bin = Path.Combine(folder, "song.bin");
+        File.WriteAllBytes(zip, []);
+        File.WriteAllBytes(bin, []);
+        var model = new MainViewModel(SettingsPath());
+        model.SetInputs([zip]);
+        model.SelectedOperation = model.Operations.Single(choice => choice.Action == Action.BinToZip);
+
+        Assert.Equal(new[] { ".bin" }, model.SelectedOperation.SourceFileExtensions);
+        Assert.False(model.StartCommand.CanExecute(null));
+        Assert.Contains("song.zip is unsupported", model.SourceSummary);
+        model.ClearInputsCommand.Execute(null);
+        Assert.Throws<ArgumentException>(() => model.AddInputs([zip]));
+        model.AddInputs([bin, folder]);
+        Assert.Equal(2, model.SelectedInputs.Count);
+        Assert.True(model.StartCommand.CanExecute(null));
+    }
+
     [Fact]
     public async Task WmaEncodingCanRunFromTheGui()
     {

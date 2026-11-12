@@ -14,7 +14,7 @@
         </Style>
     </Window.Styles>
     <Grid Margin="24" RowDefinitions="Auto,*,Auto,Auto" RowSpacing="16">
-        <TextBlock Text="Options" FontSize="25" FontWeight="SemiBold"/>
+        <TextBlock Text="Settings" Classes="heading1"/>
         <TabControl Grid.Row="1" x:Name="OptionsTabs">
             <TabItem Header="General">
                 <ScrollViewer HorizontalScrollBarVisibility="Disabled">
@@ -27,7 +27,7 @@
                                 <TextBlock Text="{Binding Definitions.Backdrop.Label}" ToolTip.Tip="{Binding Definitions.Backdrop.Description}"/>
                                 <ComboBox ItemsSource="{Binding Backdrops}" SelectedIndex="{Binding Backdrop}" Width="300"
                                           AutomationProperties.Name="{Binding Definitions.Backdrop.Label}" ToolTip.Tip="{Binding Definitions.Backdrop.Description}"/>
-                                <TextBlock Text="{Binding Definitions.Backdrop.ShortDescription}" TextWrapping="Wrap" FontSize="12" Opacity="0.7"
+                                <TextBlock Text="{Binding Definitions.Backdrop.ShortDescription}" TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"
                                            ToolTip.Tip="{Binding Definitions.Backdrop.Description}"/>
                             </StackPanel>
                         </Expander>
@@ -39,33 +39,33 @@
                                 <ToggleSwitch Content="{Binding Definitions.IgnoreLeadingTheForFileOrganization.Label}"
                                               IsChecked="{Binding IgnoreLeadingTheForFileOrganization}" ToolTip.Tip="{Binding Definitions.IgnoreLeadingTheForFileOrganization.Description}"/>
                                 <TextBlock Text="{Binding Definitions.IgnoreLeadingTheForFileOrganization.ShortDescription}"
-                                           TextWrapping="Wrap" FontSize="12" Opacity="0.7" ToolTip.Tip="{Binding Definitions.IgnoreLeadingTheForFileOrganization.Description}"/>
+                                           TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7" ToolTip.Tip="{Binding Definitions.IgnoreLeadingTheForFileOrganization.Description}"/>
                                 <CheckBox Content="{Binding Definitions.DeleteOriginals.Label}" IsChecked="{Binding DeleteOriginals}" ToolTip.Tip="{Binding Definitions.DeleteOriginals.Description}"/>
                                 <ToggleSwitch Content="{Binding Definitions.ValidateBeforeConversion.Label}" IsChecked="{Binding ValidateBeforeConversion}" ToolTip.Tip="{Binding Definitions.ValidateBeforeConversion.Description}"/>
-                                <TextBlock Text="{Binding Definitions.ValidateBeforeConversion.ShortDescription}" TextWrapping="Wrap" FontSize="12" Opacity="0.7" ToolTip.Tip="{Binding Definitions.ValidateBeforeConversion.Description}"/>
+                                <TextBlock Text="{Binding Definitions.ValidateBeforeConversion.ShortDescription}" TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7" ToolTip.Tip="{Binding Definitions.ValidateBeforeConversion.Description}"/>
                                 <ToggleSwitch Content="{Binding Definitions.AutoCreateCueText.Label}"
                                               IsChecked="{Binding AutoCreateCueText}" ToolTip.Tip="{Binding Definitions.AutoCreateCueText.Description}"/>
                                 <TextBlock Text="{Binding Definitions.AutoCreateCueText.ShortDescription}"
-                                           TextWrapping="Wrap" FontSize="12" Opacity="0.7" ToolTip.Tip="{Binding Definitions.AutoCreateCueText.Description}"/>
+                                           TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7" ToolTip.Tip="{Binding Definitions.AutoCreateCueText.Description}"/>
                                 <Separator/>
                                 <TextBlock Text="Output naming" FontWeight="SemiBold"/>
-                                <TextBlock Text="Use a fixed name or insert {folder} for the output folder name. The extension is added automatically."
-                                           TextWrapping="Wrap" FontSize="12" Opacity="0.7"/>
+                                <TextBlock Text="Enter a name or use {folder} for the folder name. The app adds the extension."
+                                           TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
                                 <TextBlock Text="TXT track listing"/>
                                 <TextBox Text="{Binding TrackListingName}" Width="300" HorizontalAlignment="Left"
                                          AutomationProperties.Name="TXT track listing name"/>
-                                <TextBlock Text="{Binding TrackListingPreview}" TextWrapping="Wrap" FontSize="12" Opacity="0.7"/>
+                                <TextBlock Text="{Binding TrackListingPreview}" TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
                                 <TextBlock Text="CUE sheet"/>
                                 <TextBox Text="{Binding CueSheetName}" Width="300" HorizontalAlignment="Left"
                                          AutomationProperties.Name="CUE sheet name"/>
-                                <TextBlock Text="{Binding CueSheetPreview}" TextWrapping="Wrap" FontSize="12" Opacity="0.7"/>
+                                <TextBlock Text="{Binding CueSheetPreview}" TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
                                 <Button Content="Reset output names" Command="{Binding ResetOutputNamesCommand}"/>
                                 <Separator/>
                                 <TextBlock Text="{Binding Definitions.Overwrite.Label}" FontWeight="SemiBold" ToolTip.Tip="{Binding Definitions.Overwrite.Description}"/>
                                 <ComboBox ItemsSource="{Binding OverwritePolicies}" SelectedIndex="{Binding Overwrite}" Width="300"
                                           AutomationProperties.Name="{Binding Definitions.Overwrite.Label}" ToolTip.Tip="{Binding Definitions.Overwrite.Description}"/>
                                 <TextBlock Text="{Binding Definitions.Overwrite.ShortDescription}"
-                                           TextWrapping="Wrap" FontSize="12" Opacity="0.7" ToolTip.Tip="{Binding Definitions.Overwrite.Description}"/>
+                                           TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7" ToolTip.Tip="{Binding Definitions.Overwrite.Description}"/>
                             </StackPanel>
                         </Expander>
                         <Expander Classes="settingsCard" Header="Unavailable legacy features">
@@ -73,7 +73,7 @@
                                 <CheckBox Content="{Binding Definitions.AutoRenameZip.Label}" IsEnabled="False" IsChecked="{Binding AutoRenameZip}" ToolTip.Tip="{Binding Definitions.AutoRenameZip.Description}"/>
                                 <CheckBox Content="{Binding Definitions.RenameBins.Label}" IsEnabled="False" IsChecked="{Binding RenameBins}" ToolTip.Tip="{Binding Definitions.RenameBins.Description}"/>
                                 <TextBlock Text="{Binding Definitions.OnlineRenaming.Label}"
-                                           TextWrapping="Wrap" FontSize="12" Opacity="0.7" ToolTip.Tip="{Binding Definitions.OnlineRenaming.Description}"/>
+                                           TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7" ToolTip.Tip="{Binding Definitions.OnlineRenaming.Description}"/>
                                 <TextBox Text="{Binding NamingFormat}" IsEnabled="False" ToolTip.Tip="{Binding Definitions.NamingFormat.Description}"/>
                             </StackPanel>
                         </Expander>
@@ -119,7 +119,7 @@
                                 <TextBlock Text="{Binding Definitions.VideoAudioBitrateKbps.Label}" FontWeight="SemiBold" ToolTip.Tip="{Binding Definitions.VideoAudioBitrateKbps.Description}"/>
                                 <ComboBox ItemsSource="{Binding VideoAudioBitrates}" SelectedItem="{Binding VideoAudioBitrateKbps}" Width="300" ToolTip.Tip="{Binding Definitions.VideoAudioBitrateKbps.Description}"/>
                                 <TextBlock Text="{Binding Definitions.VideoAudioMatchSourceBitrate.ShortDescription}"
-                                           TextWrapping="Wrap" FontSize="12" Opacity="0.7" ToolTip.Tip="{Binding Definitions.VideoAudioMatchSourceBitrate.Description}"/>
+                                           TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7" ToolTip.Tip="{Binding Definitions.VideoAudioMatchSourceBitrate.Description}"/>
                                 <TextBlock Text="{Binding Definitions.VideoContainer.ShortDescription}"
                                            TextWrapping="Wrap" Opacity="0.7" ToolTip.Tip="{Binding Definitions.VideoContainer.Description}"/>
                             </StackPanel>
@@ -146,9 +146,9 @@
                             <Button Grid.Column="1" Content="{Binding Definitions.BrowseCdrdao.Label}" Click="BrowseCdrdao_Click" ToolTip.Tip="{Binding Definitions.BrowseCdrdao.Description}"/>
                         </Grid>
                         <TextBlock Text="{Binding Definitions.CdrdaoExecutablePath.ShortDescription}"
-                                   TextWrapping="Wrap" FontSize="12" Opacity="0.7" ToolTip.Tip="{Binding Definitions.CdrdaoExecutablePath.Description}"/>
+                                   TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7" ToolTip.Tip="{Binding Definitions.CdrdaoExecutablePath.Description}"/>
                         <TextBlock Text="{Binding Definitions.RipSharedSettings.Label}"
-                                   TextWrapping="Wrap" FontSize="12" Opacity="0.7" ToolTip.Tip="{Binding Definitions.RipSharedSettings.Description}"/>
+                                   TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7" ToolTip.Tip="{Binding Definitions.RipSharedSettings.Description}"/>
                         </StackPanel>
                     </StackPanel>
                 </ScrollViewer>

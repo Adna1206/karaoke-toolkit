@@ -6,7 +6,7 @@ using Action = KaraokeToolkit.Core.Execution.OperationId;
 namespace KaraokeToolkit.App.Metadata;
 
 public enum OperationSection { KaraokeConversion, Archives, FilesAndFolders, ValidationAndReports, DiscRipping, Favourites, Recipes }
-public enum OperationInputKind { None, FilesAndFolders, Folders }
+public enum OperationInputKind { None, FilesAndFolders, Folders, SingleManifest, SingleDisc }
 
 /// <summary>Immutable UI metadata and routing for one operation. Core remains responsible for format validation.</summary>
 public sealed record OperationDefinition(string Id, Action? Action, string Label, string ShortDescription,
@@ -18,8 +18,9 @@ public sealed record OperationDefinition(string Id, Action? Action, string Label
 
     // Saved favourite IDs remain strings; dynamic saved recipes use Recipe:<GUID>.
     public OperationId? Operation => Section == OperationSection.Recipes ? null : OperationCatalog.Get(Id).Id;
-    public bool IsRip { get; init; }
-    public bool IsRestore { get; init; }
+    public bool AllowsMultipleSources => Inputs is OperationInputKind.FilesAndFolders or OperationInputKind.Folders;
+    public bool IsRip => Inputs == OperationInputKind.SingleDisc;
+    public bool IsRestore => Inputs == OperationInputKind.SingleManifest;
     public bool IsTagging { get; init; }
     // The Core allowlist is authoritative for both the builder and imported recipes.
     public bool CanUseInRecipes => KaraokeToolkit.Core.Recipes.RecipeOperations.Supports(Id);
