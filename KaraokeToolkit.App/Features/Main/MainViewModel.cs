@@ -208,6 +208,7 @@ public partial class MainViewModel : ViewModelBase
     }
     [ObservableProperty] public partial string RecoveryMessage { get; set; } = "";
     private string lastMessage = "";
+    private string? activityRoot;
     public OverwritePolicy OverwritePolicy { get; private set; } = OverwritePolicy.Ask;
     public ApplicationTheme Theme { get; private set; } = ApplicationTheme.System;
     public ApplicationBackdrop Backdrop { get; private set; } = ApplicationBackdrop.Automatic;
@@ -534,6 +535,9 @@ public partial class MainViewModel : ViewModelBase
             RunTitle = title;
             Activity.Clear();
             lastMessage = "";
+            activityRoot = string.IsNullOrWhiteSpace(FolderPath) ? null
+                : Directory.Exists(FolderPath) ? Path.GetFullPath(FolderPath)
+                : Path.GetDirectoryName(Path.GetFullPath(FolderPath));
             LastReport = null;
             ValidationFindings = [];
             retryRequests = [];
@@ -641,14 +645,7 @@ public partial class MainViewModel : ViewModelBase
             }
             Status = $"{(result.Cancelled ? "Cancelled" : "Processing finished")}: {result.Succeeded} succeeded, {result.Skipped} skipped, {result.Failed} failed.";
             StatusOutcome = RunStatusSummary.From(result);
-            // Keep outcomes that did not reach the live log, including queued progress suppressed at completion.
-            var loggedMessages = Activity.Select(entry => entry.Message).ToHashSet(StringComparer.Ordinal);
-            foreach (var file in result.Files)
-            {
-                string message = $"{file.Status}: {file.Source} — {file.Message}";
-                if (loggedMessages.Add(message))
-                    Activity.Add(new(Elapsed, message));
-            }
+            AppendActivityIssues(result.Files);
             Activity.Add(new(Elapsed, Status));
         }
         catch (OperationCanceledException) { Status = "Cancelled. Unpublished changes were discarded."; Activity.Add(new(Elapsed, Status)); }
@@ -699,8 +696,7 @@ public partial class MainViewModel : ViewModelBase
             if (!result.Cancelled) Progress = TotalProgress = 100;
             Status = $"{(result.Cancelled ? "Cancelled" : "File operation finished")}: {result.Succeeded} completed, {result.Skipped} skipped, {result.Failed} failed.";
             StatusOutcome = RunStatusSummary.From(result);
-            foreach (var item in result.Files)
-                Activity.Add(new(Elapsed, $"{item.Status}: {item.Source} — {item.Message}"));
+            AppendActivityIssues(result.Files);
             Activity.Add(new(Elapsed, Status));
         }
         catch (OperationCanceledException) { Status = "File operation cancelled."; }
@@ -749,11 +745,53 @@ public partial class MainViewModel : ViewModelBase
         TotalProgress = report.TotalPercent;
         FoundFiles = report.Found;
         Elapsed = report.Elapsed;
-        Status = report.Message;
+        if (!report.ShowInActivity || IsRoutineSkip(report.ActivityLabel, report.ActivityDetail)) return;
+        Status = report is { ActivityLabel: { } label, ActivitySource: { } source }
+            ? FormatActivityMessage(label, source, report.ActivityDetail) : report.Message;
         if (lastMessage != Status)
         {
             Activity.Add(new(Elapsed, Status));
             lastMessage = Status;
+        }
+    }
+
+    private static bool IsRoutineSkip(string? label, string? detail)
+        => label == nameof(ConversionStatus.Skipped) && detail == "Names already clean.";
+
+    private string FormatActivityMessage(string label, string source, string? detail)
+    {
+        string path = RelativeActivityPath(source, activityRoot);
+        string? reason = detail?.Split(['\r', '\n'], 2)[0].Trim();
+        return string.IsNullOrWhiteSpace(reason) ? $"{label}: {path}" : $"{label}: {path} — {reason}";
+    }
+
+    internal static string RelativeActivityPath(string source, string? root)
+    {
+        if (root == null || !Path.IsPathFullyQualified(source)) return source;
+        string relative = Path.GetRelativePath(root, source);
+        if (relative == ".")
+        {
+            string folder = Path.GetFileName(Path.TrimEndingDirectorySeparator(root));
+            return folder.Length == 0 ? root : folder;
+        }
+        if (Path.IsPathRooted(relative) || relative == ".." ||
+            relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+            return source;
+        return relative.Replace(Path.DirectorySeparatorChar, '/');
+    }
+
+    // Completion can suppress progress callbacks still waiting on the UI dispatcher.
+    private void AppendActivityIssues(IEnumerable<ConversionFileResult> files, string prefix = "")
+    {
+        var logged = Activity.Select(entry => entry.Message).ToHashSet(StringComparer.Ordinal);
+        foreach (var file in files)
+        {
+            string label = file.Status.ToString();
+            if (file.Status is not (ConversionStatus.Skipped or ConversionStatus.Failed) || IsRoutineSkip(label, file.Message))
+                continue;
+            string message = FormatActivityMessage(prefix + label, file.Source, file.Message);
+            if (logged.Add(message))
+                Activity.Add(new(Elapsed, message));
         }
     }
     [RelayCommand(CanExecute = nameof(CanCancel))]

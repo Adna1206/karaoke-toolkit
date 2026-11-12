@@ -130,10 +130,12 @@ public sealed class RecipeRunner(IRecipeStepExecutor? executor = null, RecoveryS
                         throw new IOException("Recover interrupted work before running a recipe in: " + folder);
                 }
                 int stepIndex = index;
+                string prefix = $"Step {stepIndex + 1}/{recipe.Steps.Count} ({operationLabel?.Invoke(step.OperationId) ?? step.OperationId}): ";
                 var reporter = new InlineProgress(p => progress?.Report(p with
                 {
                     TotalPercent = (stepIndex * 100 + p.TotalPercent) / recipe.Steps.Count,
-                    Message = $"Step {stepIndex + 1}/{recipe.Steps.Count} ({operationLabel?.Invoke(step.OperationId) ?? step.OperationId}): {p.Message}"
+                    Message = prefix + p.Message,
+                    ActivityLabel = p.ActivityLabel == null ? null : prefix + p.ActivityLabel
                 }));
                 var result = await executor.ExecuteAsync(step, current, reporter, token);
                 results.Add(new(index + 1, step.OperationId, result));

@@ -30,12 +30,22 @@
   <Style Selector="ListBox.operations ListBoxItem">
    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
   </Style>
+  <Style Selector="ListBox#ActivityLog ListBoxItem">
+   <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+   <Setter Property="Padding" Value="0"/>
+   <Setter Property="Margin" Value="0"/>
+  </Style>
+  <Style Selector="ProgressBar.runProgress">
+   <Setter Property="Height" Value="14"/>
+   <Setter Property="VerticalAlignment" Value="Center"/>
+  </Style>
   <Style Selector="Button.favourite">
    <Setter Property="Foreground" Value="#D69B23"/>
   </Style>
  </Window.Styles>
  <Window.Resources>
   <Thickness x:Key="ToolLabelMargin">4,6</Thickness>
+  <Thickness x:Key="ActivityCellPadding">12,6</Thickness>
   <ControlTheme x:Key="MainWindowDecorations" TargetType="chrome:WindowDrawnDecorations"
                 BasedOn="{StaticResource BlendedWindowDecorations}">
    <Style Selector="^:not(:fullscreen) /template/ Panel#PART_TitleTextPanel">
@@ -143,16 +153,37 @@
   <Grid Grid.Row="2" Margin="24,16" IsVisible="{Binding ShowProgress}" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="14">
    <TextBlock Text="{Binding RunTitle}" Classes="heading1" />
    <TextBlock Grid.Row="1" Text="{Binding FolderPath}" TextTrimming="CharacterEllipsis" />
-   <Grid Grid.Row="2" RowDefinitions="Auto,*" RowSpacing="6">
-    <Grid ColumnDefinitions="90,*"><TextBlock Text="Time" FontWeight="SemiBold"/><TextBlock Grid.Column="1" Text="Event" FontWeight="SemiBold"/></Grid>
-    <ListBox Grid.Row="1" x:Name="ActivityLog" ItemsSource="{Binding Activity}" AutomationProperties.Name="Progress event log"><ListBox.ItemTemplate><DataTemplate x:DataType="vm:ActivityEntry">
-     <Grid ColumnDefinitions="90,*" Margin="2,2"><TextBlock Text="{Binding Time}" Opacity="0.65"/><TextBlock Grid.Column="1" Text="{Binding Message}" TextWrapping="Wrap"/></Grid>
-    </DataTemplate></ListBox.ItemTemplate></ListBox>
-   </Grid>
+   <Border Grid.Row="2" CornerRadius="8" ClipToBounds="True" BorderThickness="1"
+           BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+    <Grid RowDefinitions="Auto,*">
+     <Border Padding="{StaticResource ActivityCellPadding}" BorderThickness="0,0,0,1"
+             BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+             Background="{DynamicResource SystemControlForegroundBaseLowBrush}">
+      <Grid ColumnDefinitions="90,*">
+       <TextBlock Text="Time" FontWeight="SemiBold"/>
+       <TextBlock Grid.Column="1" Text="Event" FontWeight="SemiBold"/>
+      </Grid>
+     </Border>
+     <ListBox Grid.Row="1" x:Name="ActivityLog" ItemsSource="{Binding Activity}"
+              CornerRadius="0" BorderThickness="0" Padding="0" AutomationProperties.Name="Progress event log">
+      <ListBox.ItemTemplate>
+       <DataTemplate x:DataType="vm:ActivityEntry">
+        <Border Padding="{StaticResource ActivityCellPadding}" BorderThickness="0,0,0,1"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+         <Grid ColumnDefinitions="90,*">
+          <TextBlock Text="{Binding Time}" Opacity="0.65"/>
+          <TextBlock Grid.Column="1" Text="{Binding Message}" TextWrapping="Wrap"/>
+         </Grid>
+        </Border>
+       </DataTemplate>
+      </ListBox.ItemTemplate>
+     </ListBox>
+    </Grid>
+   </Border>
    <StackPanel Grid.Row="3" Spacing="9">
     <TextBlock Text="Current Progress" FontWeight="SemiBold" />
-    <Grid ColumnDefinitions="110,*,45" ColumnSpacing="10"><TextBlock Text="Item Progress:"/><ProgressBar Grid.Column="1" Value="{Binding Progress}" Maximum="100"/><TextBlock Grid.Column="2" Text="{Binding Progress, StringFormat='{}{0}%'}"/></Grid>
-    <Grid ColumnDefinitions="110,*,45" ColumnSpacing="10"><TextBlock Text="Total Progress:"/><ProgressBar Grid.Column="1" Value="{Binding TotalProgress}" Maximum="100"/><TextBlock Grid.Column="2" Text="{Binding TotalProgress, StringFormat='{}{0}%'}"/></Grid>
+    <Grid ColumnDefinitions="110,*,45" ColumnSpacing="10"><TextBlock Text="Item Progress:"/><ProgressBar Grid.Column="1" Classes="runProgress" Value="{Binding Progress}" Maximum="100"/><TextBlock Grid.Column="2" Text="{Binding Progress, StringFormat='{}{0}%'}"/></Grid>
+    <Grid ColumnDefinitions="110,*,45" ColumnSpacing="10"><TextBlock Text="Total Progress:"/><ProgressBar Grid.Column="1" Classes="runProgress" Value="{Binding TotalProgress}" Maximum="100"/><TextBlock Grid.Column="2" Text="{Binding TotalProgress, StringFormat='{}{0}%'}"/></Grid>
     <Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Elapsed, StringFormat='Elapsed Time: {0}'}"/><TextBlock Grid.Column="1" Text="{Binding FoundFiles, StringFormat='Files found: {0}'}"/></Grid>
    </StackPanel>
   </Grid>

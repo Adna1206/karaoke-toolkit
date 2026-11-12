@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Specialized;
 using System.Linq;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 
@@ -23,6 +26,7 @@ internal sealed class ProgressLogAutoScroll : IDisposable
         list.TemplateApplied += OnTemplateApplied;
         list.Loaded += OnLoaded;
         list.DataContextChanged += OnDataContextChanged;
+        list.AddHandler(InputElement.PointerWheelChangedEvent, OnPointerWheelChanged, RoutingStrategies.Tunnel);
         BindModel();
     }
 
@@ -61,7 +65,12 @@ internal sealed class ProgressLogAutoScroll : IDisposable
         // Do not interpret that growing gap as a request to stop following.
         bool layoutChanged = e.ExtentDelta.Y != 0 || e.ViewportDelta.Y != 0;
         state.Observe(viewer.Offset.Y, MaximumOffset, layoutChanged);
-        if (layoutChanged) ScheduleScroll();
+        if (layoutChanged && model?.IsBusy == true) ScheduleScroll();
+    }
+
+    private void OnPointerWheelChanged(object? sender, PointerWheelEventArgs e)
+    {
+        if (e.Delta.Y > 0) state.Pause();
     }
 
     private double MaximumOffset => viewer == null ? 0 : Math.Max(0, viewer.Extent.Height - viewer.Viewport.Height);
@@ -75,7 +84,9 @@ internal sealed class ProgressLogAutoScroll : IDisposable
         {
             queued = false;
             if (disposed || !state.Following || viewer == null) return;
-            if (MaximumOffset - viewer.Offset.Y > LogScrollState.BottomTolerance) viewer.ScrollToEnd();
+            double bottom = MaximumOffset;
+            if (bottom - viewer.Offset.Y > LogScrollState.BottomTolerance)
+                viewer.SetCurrentValue(ScrollViewer.OffsetProperty, new Vector(viewer.Offset.X, bottom));
         }, DispatcherPriority.Background);
     }
 
@@ -85,6 +96,7 @@ internal sealed class ProgressLogAutoScroll : IDisposable
         list.TemplateApplied -= OnTemplateApplied;
         list.Loaded -= OnLoaded;
         list.DataContextChanged -= OnDataContextChanged;
+        list.RemoveHandler(InputElement.PointerWheelChangedEvent, OnPointerWheelChanged);
         if (model != null) model.Activity.CollectionChanged -= OnEntriesChanged;
         if (viewer != null) viewer.ScrollChanged -= OnScrolled;
     }
@@ -96,6 +108,7 @@ internal sealed class LogScrollState
     internal const double BottomTolerance = 2;
     internal bool Following { get; private set; } = true;
     internal void Reset() => Following = true;
+    internal void Pause() => Following = false;
     internal void Observe(double offset, double maximumOffset, bool layoutChanged)
     {
         if (!layoutChanged) Following = maximumOffset - offset <= BottomTolerance;

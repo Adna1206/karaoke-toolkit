@@ -25,6 +25,19 @@ public class ProgressLogScrollTests
     }
 
     [Fact]
+    public void UpwardWheelIntentPausesFollowingBeforeLayoutChanges()
+    {
+        var state = new LogScrollState();
+        state.Pause();
+
+        state.Observe(100, 140, layoutChanged: true);
+        Assert.False(state.Following);
+
+        state.Observe(140, 140, layoutChanged: false);
+        Assert.True(state.Following);
+    }
+
+    [Fact]
     public void NewRunResumesFollowingAfterReadingEarlierEntries()
     {
         var state = new LogScrollState();

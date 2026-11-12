@@ -88,7 +88,8 @@ public partial class MainViewModel
             Status = result.Cancelled ? "Recipe cancelled. Completed changes remain."
                 : result.StopReason.Length > 0 ? result.StopReason : $"Recipe finished: {result.Steps.Count} steps completed.";
             if (!result.Cancelled && result.StopReason.Length == 0) Progress = TotalProgress = 100;
-            foreach (var entry in LastReport.Entries) Activity.Add(new(Elapsed, entry.Message));
+            foreach (var step in result.Steps)
+                AppendActivityIssues(step.Result.Files, $"Step {step.Number}/{recipe.Steps.Count} ({Label(step.OperationId)}): ");
             Activity.Add(new(Elapsed, Status));
         }
         catch (Exception error)

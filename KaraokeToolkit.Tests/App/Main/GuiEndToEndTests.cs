@@ -44,6 +44,24 @@ public class GuiEndToEndTests
         await model.StartCommand.ExecuteAsync(null).WaitAsync(TimeSpan.FromSeconds(30));Assert.True(File.Exists(Path.Combine(model.FolderPath,"song.bin")));
     }
     [Fact]
+    public async Task ActivityShowsRelativeSkipReasonAndReportRetainsFullPath()
+    {
+        string folder = TestMediaFixture.NewFolder();
+        string child = Path.Combine(folder, "ABBA");
+        TestMediaFixture.Seed(child, Action.AudioGToBin, "overwrite");
+        var model = Model(folder, Action.AudioGToBin);
+        model.SaveOptions(model.Options with { RecurseFolders = true }, OverwritePolicy.Skip);
+
+        await model.StartCommand.ExecuteAsync(null);
+
+        Assert.Single(model.Activity, entry => entry.Message == "Skipped: ABBA/song.cdg — Existing output retained.");
+        Assert.DoesNotContain(model.Activity, entry => entry.Message.StartsWith("Succeeded:"));
+        var reportEntry = Assert.Single(model.LastReport!.Entries);
+        Assert.Equal(Path.Combine(child, "song.cdg"), reportEntry.Source);
+        Assert.Equal("Existing output retained.", reportEntry.Message);
+    }
+
+    [Fact]
     public async Task FailedItemsCanBeRetriedWithoutLosingTheSavedRetryScope()
     {
         string folder = TestMediaFixture.NewFolder();

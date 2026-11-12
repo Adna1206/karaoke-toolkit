@@ -4,8 +4,25 @@ Snapshot: 2026-11-12, Africa/Johannesburg. Verify Git/files before editing.
 
 ## Checkout and release
 
-- Branch `master`, base `f13398b`, shared
+- Branch `master`, base `f225d5b`, shared
   version **2026.11.16**. See the [release notes](changelogs/2026.11.16.md).
+- Item and Total progress bars are 14 px tall and centered beside their labels.
+  The App Release build passed with zero warnings or errors. Visual inspection
+  remains open.
+- Desktop conversion activity uses source-relative paths and shows skipped or
+  failed items with their reasons. Routine clean-name skips appear in the totals
+  and report. The CUE and TXT writers emit distinct progress events for
+  conversion, standalone generation and ripping. App and test Release builds
+  passed with zero warnings or errors. The CUE/TXT event and relative skip
+  regression methods passed directly from PowerShell with the test output
+  directory set as the app base directory for FFmpeg.
+- The activity log has aligned columns, a shaded header and row
+  separators. Upward wheel input pauses following, and layout changes stop
+  triggering follow after processing ends. A Windows runtime probe with 150
+  entries measured matching Event header and cell positions and confirmed a
+  wheel event moved the completed log 50 px up from the bottom. The Release
+  test project build passed with the serialized command below, and all six
+  scroll-state cases passed when invoked directly from PowerShell.
 - The Tools and subtool labels share 4 px horizontal and 6 px
   vertical spacing. The favourite button sits alongside the padded label.
   A Windows runtime check measured both first rows at 50 px. The App Release

@@ -85,7 +85,12 @@ public sealed class ConversionService
         var results = run.Data.Results.Values.Concat(run.Data.MetadataResults.Values.Where(r => r.Status is ConversionStatus.Failed or ConversionStatus.Skipped)).ToList();
         var watch = Stopwatch.StartNew();
         bool cancelled = false;
-        void Report(int percent, string message) => progress?.Report(new(percent, sources.Length == 0 ? 100 : Math.Min(100, results.Count * 100 / sources.Length), sources.Length, results.Count, message, watch.Elapsed.ToString(@"hh\:mm\:ss")));
+        void Report(int percent, string message, string? source = null, string? label = null, string? detail = null, bool show = true)
+            => progress?.Report(new(percent, sources.Length == 0 ? 100 : Math.Min(100, results.Count * 100 / sources.Length),
+                sources.Length, results.Count, message, watch.Elapsed.ToString(@"hh\:mm\:ss"))
+                { ActivitySource = source, ActivityLabel = label, ActivityDetail = detail, ShowInActivity = show });
+        void ReportWriting(int percent, string folder, string label)
+            => Report(percent, $"{label}: {folder}", folder, label);
         Report(0, $"Found {sources.Length} source group(s).");
         foreach (string source in sources)
         {
@@ -99,10 +104,10 @@ public sealed class ConversionService
             try
             {
                 run.Begin(source);
-                Report(0, "Processing: " + source);
+                Report(0, "Processing: " + source, source, "Processing");
                 if (validateBeforeConversion && !maintenance && request.Action is not (Action.ArchiveToZip or Action.RepackZip))
                 {
-                    Report(0, "Validating input: " + source);
+                    Report(0, "Validating input: " + source, show: false);
                     var validation = await new ValidationService().ScanAsync([source], false, token: token);
                     token.ThrowIfCancellationRequested();
                     var issue = validation.Findings.FirstOrDefault(f => f.Status != ValidationStatus.Valid);
@@ -115,12 +120,15 @@ public sealed class ConversionService
                 if (request.Action is Action.CleanUpFilenames)
                     result = await FilenameCleanup.RunAsync(source, token);
                 else if (request.Action == Action.CreateCueAndTextFiles)
-                    result = await WriteMetadataAsync(source, request.Options, overwrite, token, resolveConflict);
+                    result = await WriteMetadataAsync(source, request.Options, overwrite, token, resolveConflict,
+                        writing: label => ReportWriting(0, source, label));
                 else
-                    result = await ConvertOneAsync(source, request, overwrite, token, Report, resolveConflict);
+                    result = await ConvertOneAsync(source, request, overwrite, token,
+                        (percent, message) => Report(percent, message, show: false), resolveConflict);
                 run.Complete(result);
                 results.Add(result);
-                Report(100, result.Status + ": " + source + " — " + result.Message);
+                Report(100, result.Status + ": " + source + " — " + result.Message, source, result.Status.ToString(), result.Message,
+                    show: result.Status != ConversionStatus.Succeeded);
             }
             catch (OperationCanceledException)
             {
@@ -128,14 +136,14 @@ public sealed class ConversionService
                 cancelled = true;
                 break;
             }
-            catch (OutputSkippedException) { var result = new ConversionFileResult(source, ConversionStatus.Skipped, [], "Existing output retained."); run.Complete(result); results.Add(result); Report(100, "Skipped: " + source); }
+            catch (OutputSkippedException) { var result = new ConversionFileResult(source, ConversionStatus.Skipped, [], "Existing output retained."); run.Complete(result); results.Add(result); Report(100, "Skipped: " + source, source, "Skipped", result.Message); }
             catch (Exception error)
             {
                 run.ThrowIfUnresolved();
                 var result = new ConversionFileResult(source, ConversionStatus.Failed, [], error.Message);
                 run.Complete(result);
                 results.Add(result);
-                Report(100, "Failed: " + source + " — " + error.Message);
+                Report(100, "Failed: " + source + " — " + error.Message, source, "Failed", error.Message);
             }
         }
         if (!maintenance && request.Action is not (Action.ArchiveToZip or Action.RepackZip or Action.KaraokeToVideo) && request.Options.AutoCreateCueText && !cancelled)
@@ -153,7 +161,8 @@ public sealed class ConversionService
                 run.Begin(folder, metadata: true);
                 try
                 {
-                    var metadata = await WriteMetadataAsync(folder, request.Options, overwrite, token, resolveConflict, listingExtension);
+                    var metadata = await WriteMetadataAsync(folder, request.Options, overwrite, token, resolveConflict, listingExtension,
+                        label => ReportWriting(100, folder, label));
                     run.Complete(metadata);
                 }
                 catch (OperationCanceledException) { cancelled = true; break; }
@@ -199,10 +208,11 @@ public sealed class ConversionService
     }
     internal static bool IsVideoSource(string path) => Path.GetExtension(path).ToLowerInvariant() is ".bin" or ".zip" or ".cdg";
     internal static async Task<ConversionFileResult> WriteMetadataAsync(string folder, ConversionOptions options, OverwritePolicy overwrite, CancellationToken token,
-        Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolveConflict, string? extension = null)
+        Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolveConflict, string? extension = null,
+        System.Action<string>? writing = null)
     {
         using var transaction = new FileTransaction(folder);
-        var outputs = CueTextService.Write(folder, transaction.Workspace, options, extension);
+        var outputs = CueTextService.Write(folder, transaction.Workspace, options, extension, writing);
         if (outputs.Count == 0)
             return new(folder, ConversionStatus.Skipped, [], "No tracks for CUE/text output.");
         transaction.ObserveTargets(outputs);

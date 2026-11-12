@@ -48,7 +48,7 @@ public partial class MainViewModel
             if (!result.Cancelled) Progress = TotalProgress = 100;
             Status = $"Tagging {(result.Cancelled ? "cancelled" : "finished")}: {result.Succeeded} updated, {result.Skipped} skipped, {result.Failed} failed.";
             StatusOutcome = RunStatusSummary.From(result);
-            foreach (var file in result.Files) Activity.Add(new(Elapsed, $"{file.Status}: {file.Source} — {file.Message}"));
+            AppendActivityIssues(result.Files);
             Activity.Add(new(Elapsed, Status));
         }
         catch (Exception error)

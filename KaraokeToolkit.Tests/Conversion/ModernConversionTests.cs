@@ -216,8 +216,13 @@ public class ModernConversionTests
     [Fact] public async Task AutomaticCueOutputIsGeneratedAfterBinConversion()
     {
         string folder=TestMediaFixture.NewFolder();TestMediaFixture.Seed(folder,Action.AudioGToBin,"keep");
-        var result=await new ConversionService().RunAsync(new(Action.AudioGToBin,folder,Options() with{AutoCreateCueText=true}));
+        var progress = new List<ConversionProgress>();
+        var service = new ConversionService(new RecoveryStore(Path.Combine(folder, "Recovery")));
+        var result=await service.RunAsync(new(Action.AudioGToBin,folder,Options() with{AutoCreateCueText=true}),
+            progress: new SynchronousProgress<ConversionProgress>(progress.Add));
         Assert.Equal(0,result.Failed);Assert.Single(Directory.GetFiles(folder,"*.cue"));Assert.Single(Directory.GetFiles(folder,"*.txt"));
+        Assert.Equal(new[] { $"Writing Cue File: {folder}", $"Writing Text File: {folder}" },
+            progress.Where(entry => entry.ActivitySource == folder).Select(entry => entry.Message));
     }
     [Fact] public async Task RecursionCanBeDisabledAndRecoveryDirectoriesAreExcluded()
     {

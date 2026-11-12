@@ -32,6 +32,12 @@ public sealed record ConversionResult(IReadOnlyList<ConversionFileResult> Files,
     public int Skipped => Files.Count(x => x.Status == ConversionStatus.Skipped);
 }
 /// <summary>Percentages are bounded 0..100; Completed counts attempted source groups.</summary>
-public sealed record ConversionProgress(int FilePercent, int TotalPercent, int Found, int Completed, string Message, string Elapsed);
+public sealed record ConversionProgress(int FilePercent, int TotalPercent, int Found, int Completed, string Message, string Elapsed)
+{
+    public string? ActivitySource { get; init; }
+    public string? ActivityLabel { get; init; }
+    public string? ActivityDetail { get; init; }
+    public bool ShowInActivity { get; init; } = true;
+}
 
 
