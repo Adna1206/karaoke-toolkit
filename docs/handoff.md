@@ -4,8 +4,12 @@ Snapshot: 2026-11-12, Africa/Johannesburg. Verify Git/files before editing.
 
 ## Checkout and release
 
-- Branch `master`, base `38863fb` before the desktop follow-up commit, shared
+- Branch `master`, base `f13398b`, shared
   version **2026.11.16**. See the [release notes](changelogs/2026.11.16.md).
+- The Tools and subtool labels share 4 px horizontal and 6 px
+  vertical spacing. The favourite button sits alongside the padded label.
+  A Windows runtime check measured both first rows at 50 px. The App Release
+  build passed with zero warnings or errors.
 - The desktop follow-up covers blended Windows captions and icons, shared
   typography, aligned compact lists, shorter tool and Settings copy, and
   operation-specific input selection. About retains the MP3+G Toolz credit.

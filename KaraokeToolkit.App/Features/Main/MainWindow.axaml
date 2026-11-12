@@ -35,6 +35,7 @@
   </Style>
  </Window.Styles>
  <Window.Resources>
+  <Thickness x:Key="ToolLabelMargin">4,6</Thickness>
   <ControlTheme x:Key="MainWindowDecorations" TargetType="chrome:WindowDrawnDecorations"
                 BasedOn="{StaticResource BlendedWindowDecorations}">
    <Style Selector="^:not(:fullscreen) /template/ Panel#PART_TitleTextPanel">
@@ -42,13 +43,14 @@
    </Style>
   </ControlTheme>
   <DataTemplate x:Key="OperationTemplate" x:DataType="vm:ActionChoice">
-   <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="6,4">
+   <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
     <TextBlock Text="{Binding Label}" TextWrapping="Wrap" VerticalAlignment="Center" Background="Transparent"
+               Margin="{StaticResource ToolLabelMargin}"
                ToolTip.Tip="{Binding Description}" />
     <Button Grid.Column="1" Command="{Binding ToggleFavouriteCommand}"
             Classes.favourite="{Binding IsFavourite}" ToolTip.Tip="{Binding FavouriteHint}"
             AutomationProperties.Name="{Binding FavouriteAccessibleName}"
-            Width="32" Height="28" Padding="0" Background="Transparent" BorderThickness="0"
+            Width="32" Height="28" Margin="0,0,4,0" Padding="0" Background="Transparent" BorderThickness="0"
             HorizontalContentAlignment="Center" VerticalContentAlignment="Center" VerticalAlignment="Center">
      <Grid Width="18" Height="18">
       <Path Data="M12,2 L15,8.5 L22,9.5 L17,14.5 L18,22 L12,18.5 L6,22 L7,14.5 L2,9.5 L9,8.5 Z"
@@ -104,7 +106,7 @@
    <ListBox Grid.Row="1" x:Name="CategoryList" ItemsSource="{Binding VisibleSections}" SelectedItem="{Binding SelectedSection, Mode=OneWay}" SelectionChanged="Category_SelectionChanged"
             IsEnabled="{Binding CanEdit}" AutomationProperties.Name="Operation categories">
     <ListBox.ItemTemplate><DataTemplate x:DataType="vm:OperationSectionViewModel">
-     <TextBlock Text="{Binding Header}" TextWrapping="Wrap" Margin="4,6"/>
+     <TextBlock Text="{Binding Header}" TextWrapping="Wrap" Margin="{StaticResource ToolLabelMargin}"/>
     </DataTemplate></ListBox.ItemTemplate>
    </ListBox>
    <Grid Grid.Row="1" Grid.Column="1" RowDefinitions="*,Auto,Auto" RowSpacing="14">
