@@ -2,7 +2,7 @@
 
 `KaraokeToolkit.Mcp` is a .NET 10 console project using the official MCP C# SDK
 ([official C# SDK](https://github.com/modelcontextprotocol/csharp-sdk),
-`ModelContextProtocol` 2.3.1). It references Core directly; it never runs CLI
+`ModelContextProtocol` 2.4.0). It references Core directly; it never runs CLI
 commands, starts the GUI, listens on a port or installs a background service.
 An MCP client launches `karaoke-toolkit-mcp` when needed and exchanges JSON-RPC
 messages through stdin/stdout. Diagnostic logs go to stderr only.
@@ -147,7 +147,7 @@ results do not establish Linux/macOS verification.
 
 `scripts/Publish.ps1` publishes App, CLI and MCP into the same per-RID payload and
 checks MCP files/notices before packaging. Shared logging/DI abstractions are aligned
-at 10.0.13 to prevent incompatible DLL copies in that combined folder. MCP has no
+at 11.0.0 to prevent incompatible DLL copies in that combined folder. MCP has no
 Avalonia/Velopack/CLI project dependency and adds no SDK dependency to App startup.
 See [publishing](publishing.md), [operations](operations.md) and
 [licence inventory](../licenses/README.md).

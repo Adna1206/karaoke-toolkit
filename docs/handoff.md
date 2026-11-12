@@ -1,284 +1,74 @@
 # Current handoff
 
-Snapshot: 2026-11-12, Africa/Johannesburg. Verify Git/files before editing.
+Snapshot: 2026-11-12, Africa/Johannesburg.
 
-## Checkout and release
+## Checkout and verification
 
-- Branch `master`, base `5ee8885`, shared
-  version **2026.11.16**. See the [release notes](changelogs/2026.11.16.md).
-- Archive changes pin SharpCompress to 0.50.8 and migrate archive
-  conversion, karaoke ZIP creation and verification, validation, dry-run
-  planning and ZIP tagging to async I/O. The existing CRC, ZIP64 and publication
-  checks are retained. The package MIT text matches upstream.
-- Full Windows Release suite passed all 709 tests. The test command below used
-  `ArtifactBuildName=Cleanup`, `--no-restore`, `-m:1 -p:BuildInParallel=false`
-  and `-- xUnit.ParallelizeTestCollections=false`. Updated the missing-folder
-  desktop test to verify the existing input validation and Start behavior.
+- Branch `master`, local base `da06388`, shared version **2026.11.16**.
+  The base was one commit ahead of `origin/master` when checked. The working
+  tree has documentation edits, including the filename cleanup and Tag to Name
+  backlog entries. See the [changelog](changelogs/2026.11.16.md).
+- The full Windows Release suite passed **709 tests** after the async
+  SharpCompress migration, before the subsequent Avalonia, MCP SDK,
+  Microsoft.Extensions and test tooling upgrades.
   TRX: `artifacts/tests/results/almei_ANDRE_2026-11-12_11_31_46_net10.0.trx`.
-- About credits Velopack below FFmpeg and cdrdao. The App Release build
-  passed with zero warnings or errors.
-- The native notice audit adds the exact libvorbis 1.3.7 BSD notice
-  for all FFmpeg targets and cdrdao, cdparanoia and libiconv attribution for
-  Windows. Ran `scripts/ffmpeg/Prepare.ps1` for all four RIDs and
-  `scripts/cdrdao/Prepare.ps1` for win-x64 against the pinned archives. Compared
-  the generated notice files to their source files by SHA-256. Other FFmpeg
-  library notices, exact source inputs and macOS provenance remain open.
-  See [distribution licensing](distribution-licensing.md).
-- Added upstream LAME, libass, GNU libiconv, libbluray and TwoLAME licence
-  texts to the FFmpeg notice inventory. The manifest controls which texts
-  ship for each RID, and Publish checks them. Ran FFmpeg preparation for all
-  four RIDs and verified the selected files against their source copies by
-  SHA-256, including the separate Apple Silicon libiconv 1.17 text. Exact
-  build inputs and transitive notices remain open.
-- Refreshed the existing Debug, Release and Cleanup Windows app output folders
-  with `scripts/ffmpeg/Prepare.ps1 -RuntimeIdentifier win-x64`. Verified all
-  seven library notice copies and nine FFmpeg entries in Debug About.
-- Item and Total progress bars are 14 px tall and centered beside their labels.
-  The App Release build passed with zero warnings or errors. Visual inspection
-  remains open.
-- Desktop conversion activity uses source-relative paths and shows skipped or
-  failed items with their reasons. Routine clean-name skips appear in the totals
-  and report. The CUE and TXT writers emit distinct progress events for
-  conversion, standalone generation and ripping. App and test Release builds
-  passed with zero warnings or errors. The CUE/TXT event and relative skip
-  regression methods passed directly from PowerShell with the test output
-  directory set as the app base directory for FFmpeg.
-- The activity log has aligned columns, a shaded header and row
-  separators. Upward wheel input pauses following, and layout changes stop
-  triggering follow after processing ends. A Windows runtime probe with 150
-  entries measured matching Event header and cell positions and confirmed a
-  wheel event moved the completed log 50 px up from the bottom. The Release
-  test project build passed with the serialized command below, and all six
-  scroll-state cases passed when invoked directly from PowerShell.
-- The Tools and subtool labels share 4 px horizontal and 6 px
-  vertical spacing. The favourite button sits alongside the padded label.
-  A Windows runtime check measured both first rows at 50 px. The App Release
-  build passed with zero warnings or errors.
-- The desktop follow-up covers blended Windows captions and icons, shared
-  typography, aligned compact lists, shorter tool and Settings copy, and
-  operation-specific input selection. About retains the MP3+G Toolz credit.
-- App and test Release builds passed with `--no-restore -p:UsedAvaloniaProducts= -p:ArtifactBuildName=Cleanup`.
-  The test build used `-m:1 -p:BuildInParallel=false`. VSTest timed out
-  connecting to testhost. Twelve compiled input, navigation, metadata, picker
-  and conversion regression cases passed when invoked directly from PowerShell.
-  The final App Release build and `git diff --check` passed.
-- Windows runtime checks confirmed transparent Main and About captions, About's
-  icon and content inset, the 12 px title-bar menu and 14 px dropdown, and
-  shared Settings typography. Next step is a visual check of layout, wrapping,
-  backdrop continuity, native file pickers, and caption dragging and maximize.
-- The 2026.11.16 changelog includes the settings layout, output naming and picker
-  changes. Full Release verification passed **704 tests** with the test command
-  below using `ArtifactBuildName=Cleanup`, `--no-build`, and
-  `-- xUnit.ParallelizeTestCollections=false` after intermittent failures in the
-  parallel runs. TRX: `artifacts/tests/results/almei_ANDRE_2026-11-11_22_05_03_net10.0.trx`.
-  Windows and Linux x64 local packaging follows the source push.
-- The desktop shares an 8 px radius for list boxes and their
-  items. `dotnet build KaraokeToolkit.App/KaraokeToolkit.App.csproj -c Release --no-restore -p:UsedAvaloniaProducts= -p:ArtifactBuildName=Cleanup -v minimal`
-  passed with zero warnings or errors. Next step is visual verification of
-  rounded list edges and selection highlights in Light and Dark.
-- General settings uses collapsible 8 px cards. Appearance and File processing
-  start expanded, and legacy features start collapsed. The same Release build
-  and `git diff --check` passed after this layout
-  change. Verify scrolling at the minimum window size during the visual check.
-- Windows Explorer moved to the first section in Settings → Integrations, above
-  CLI and MCP. It appears on Windows. The same Release build and diff checks
-  passed. Check the section visually with the other Settings changes.
-- Settings combines Audio and Video into one Encoding tab. The two collapsible
-  cards start expanded and share a scroll area. The Release build and diff
-  checks passed. Verify the combined tab at the minimum window size.
-- Output naming adds editable TXT and CUE templates in General → File processing,
-  with previews and reset. Standalone planning and generation, automatic conversion
-  and disc ripping share the resolver. Defaults use `{folder}` and saved runs
-  carry their options into recovery. Full Release suite passed **703 tests** using
-  the command below with `ArtifactBuildName=Cleanup` and `--no-restore`. TRX:
-  `artifacts/tests/results/almei_ANDRE_2026-11-11_21_50_35_net10.0.trx`.
-  The settings layout still needs a visual check.
-- The opt-in Remember last input folder preference restores the picker location
-  across restarts without selecting inputs. Disabling it clears the saved path.
-  The Release test command below with `ArtifactBuildName=Cleanup`, `--no-restore`
-  and `--filter 'FullyQualifiedName~Settings|FullyQualifiedName~GuiEndToEndTests'`
-  passed all 117 tests. Native picker behaviour remains to be checked visually.
-- The [changelog](changelogs/README.md) starts at 2026.11.15. The 2026.11.16 bump
-  adds release-note guidance to [versioning](versioning.md). Relative links and
-  `git diff --check` verified. Add the next entry at the next bump.
-- `./scripts/Publish.ps1` built Windows and Linux x64 packages under
-  `artifacts/releases/2026.11.15/20261111-205712-694d9b`. Both asset manifests and
-  SHA-256 checksums verified. Actual install and Linux runtime checks remain open.
-- Full Release suite passed all 700 tests with `ArtifactBuildName=Cleanup` and
-  `--no-restore` using the command below.
-  TRX: `artifacts/tests/results/almei_ANDRE_2026-11-11_20_56_50_net10.0.trx`.
-
-## Windows user data
-
-- Settings, favourites, recipes and recovery indexes move to
-  `%LOCALAPPDATA%\KaraokeToolkitData`. The migration copies surviving files into
-  missing destinations. Desktop, CLI and MCP share the default recovery index.
-- Launch the 2026.11.15 portable build once before replacing an older installation.
-  See [updates](updates.md).
-- All 174 settings and recovery tests passed using the Release command below
-  with `ArtifactBuildName=Cleanup` and `--filter 'FullyQualifiedName~Settings|FullyQualifiedName~Recovery'`.
-  Next step is a portable-to-Setup upgrade check with saved preferences.
-- Unknown settings keys are ignored. Unsupported saved values fall back per
-  setting so valid preferences and favourites still load. XML syntax errors
-  remain visible. The full Release suite passed all 698 tests using the command
-  below with `ArtifactBuildName=Cleanup`. TRX: `almei_ANDRE_2026-11-11_20_46_52_net10.0.trx`.
-- Desktop saves now remove unknown keys from `Options` and `KaraokeToolkit`
-  within the existing atomic XML write. Core-only saves preserve shared entries.
-  The Release command below with `ArtifactBuildName=Cleanup`, `--no-restore`
-  and `--filter 'FullyQualifiedName~Settings'` passed all 106 tests after cleanup.
-
-## Explorer integration
-
-- The Windows package requests Desktop and Start menu shortcuts.
-- The Windows Setup hook registers the existing per-user verbs for
-  new profiles. Existing settings or the persistent Setup marker preserve the
-  current registry state. The Settings buttons still apply changes immediately.
-- The Release command below with `ArtifactBuildName=Cleanup`, `--no-restore`
-  and `--filter 'FullyQualifiedName~ExplorerIntegrationTests|FullyQualifiedName~UserDataPathsTests'`
-  passed all 9 tests. Tests use isolated registry keys. Next step is a real Setup
-  check for a fresh profile and an upgrade after manual removal.
-
-## Acrylic appearance
-
-- Automatic tries Mica, Acrylic and Solid in that order on Windows 11, and uses
-  Solid elsewhere. Acrylic uses Dark with System Default, and explicit Light
-  overrides it. Open windows refresh when the saved theme changes.
-- `dotnet build KaraokeToolkit.slnx -c Release -p:UsedAvaloniaProducts= -p:ArtifactBuildName=Cleanup -v minimal`
-  passed with zero warnings and errors before the revised rules. All 14 appearance
-  tests passed for the revised rules using the Release test command below with `ArtifactBuildName=Cleanup`
-  and `--filter 'FullyQualifiedName~AppearanceTests'`.
-  `git diff --check` passed. Next step is visual verification with native Acrylic.
-
-## Packaging and resolution labels follow-up
-
-- Restored the `1280 × 720 (default)` label. Other choices show dimensions only.
-- The publish script versions the Linux AppImage filename and updates both
-  platforms' asset manifests before hashing.
-- Desktop resolution choices now show width × height. Saved values and default
-  selection are unchanged. The Release test command below with
-  `ArtifactBuildName=Cleanup` and `--filter 'FullyQualifiedName~Settings'` passed
-  all 99 tests at 2026.11.13. Linux runtime, installation and manual UI checks remain open.
-
-## Conversion activity log
-
-- At batch completion, append only result lines absent from the current activity log.
-  Keep outcomes missed by live progress, the batch totals and the full report.
-- Verified `git diff --check` and 12 passing tests with
-  `dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj -c Release --no-restore -p:UsedAvaloniaProducts= -p:ArtifactBuildName=Cleanup --filter 'FullyQualifiedName~GuiEndToEndTests|FullyQualifiedName~ProcessingRunTests' -v minimal`.
-  Full Release suite at 2026.11.11: **691 passed, 0 failed, 0 skipped**, using
-  the command below with `ArtifactBuildName=Cleanup` and without `--no-build`.
-  TRX: `artifacts/tests/results/almei_ANDRE_2026-11-06_14_25_41_net10.0.trx`.
-  Manual desktop batch verification remains open.
-
-## Contract and test summaries
-
-- Added XML summaries/remarks to transaction publication, rollback, cleanup,
-  conversion/recipe/tagging execution and recovery, selection/planning, quarantine,
-  disc capture and main-screen processing lifetimes. Focus is side effects,
-  partial completion, ownership and non-obvious return/failure behaviour.
-- Added suite/helper and scenario summaries for recovery boundaries, process-crash
-  handshakes, cleanup locks, queued UI progress, MCP wire ordering and audio fidelity.
-  Simple tests/getters remain concise; no processing code or assertions changed.
-- Verification: comment-only C# diff and XML syntax checks; no runtime tests needed
-  for this documentation pass. The prior cleanup suite result below remains dated
-  evidence, not a new test run.
-
-## Workspace cleanup and naming backlog
-
-- Follow-up on `master` / `060c5d1`, version 2026.11.10, initially clean.
-  User asked why a `.karaoke-job-*` folder remains and requested an output-naming TODO.
-- Read-only inspection of the supplied OneDrive example found `backups/0`
-  (4,474,905 bytes), read-only/cloud reparse attributes, and no recovery/run/workflow
-  journal. No user files were modified or deleted.
-- Reproduced the exact failure with disposable ignored artifacts: Windows
-  `Directory.Delete(workspace, true)` removed recovery.json, then threw
-  UnauthorizedAccessException on the read-only backup, leaving it behind.
-  Previous disposal suppressed the exception; startup does not sweep these orphans.
-- Implemented shared transaction/completed-checkpoint cleanup: preflight links,
-  clear only disposable read-only attributes, bounded retries, delete journal last,
-  attempt restoration if final directory deletion fails, and report persistent errors.
-  Pending staging/publication cleanup retains its resumable owner checkpoint.
-  Committed recovery accepts missing cleaned backups but verifies published outputs.
-- Portable .NET deletion/retries; only Windows cloud-tag inspection uses guarded
-  native metadata APIs. No product shell utilities. Linux/macOS runtime unverified.
-  Historical orphans remain untouched; failed finished-checkpoint cleanup reports
-  its path but does not appear as an unfinished job. See crash-recovery documentation.
-- Full testing exposed transient shared recovery-index reader locks and silent
-  workflow-folder cleanup failure; index deletion and checkpoint cleanup now retry.
-- Added requested configurable generated-output names/templates TODO (TXT/CUE,
-  defaults, validation, conflicts and recovery). No unrelated backlog implemented.
-- Current verification: recovery/recipe/tagging subset **117 passed**; complete
-  Release suite **691 passed, 0 failed, 0 skipped**, using command below with
-  `ArtifactBuildName=Cleanup`. TRX:
-  `artifacts/tests/results/almei_ANDRE_2026-11-05_12_48_22_net10.0.trx`.
-  Coverage includes read-only staging/backups, blocked cleanup/resume, partial
-  committed cleanup, links/cloud tags and transient/persistent index locks.
-- Updated AGENTS: Windows remains the primary validated target; prefer portable
-  APIs, guard OS-specific code and distinguish compatibility goals from validation.
-- Next: package/installation and actual
-  OneDrive cleanup execution have not been verified. Supplied folder is unchanged.
-- Application licence: GPL-3.0-or-later, copyright © 2026 André Almeida (ADNA).
-  Runtime licence copies and About reads use `licenses/`; native notice names use
-  `Component.Document.txt`. See [distribution licensing](distribution-licensing.md).
-
-## Completed maintenance
-
-- Traced the flaky MCP progress-order assertion to pinned SDK 2.3.1 client dispatch:
-  message handlers yield and execute concurrently, so callback arrival order is not
-  wire order. SDK source was read at package commit
-  `61420937cbef3eab895cafc8a89418811fb71f54` (ignored investigation files under
-  `artifacts/checks/mcp-progress/`). No MCP production code or SDK version changed.
-- Kept the SDK-client structured-report/original-retention test and adapter
-  monotonic-progress coverage. Added a bounded raw-stdio protocol test that reads
-  progress in actual stdout order, checks the token, monotonicity and final 100
-  before the tool response, and reaps its child process. Removed only the invalid
-  SDK-callback-order assertion.
-- Expanded FileTransactionTests into readable setup/action/assertion blocks with
-  descriptive paths. Original scenarios and assertions preserved; Core unchanged.
-- Added App `ProcessingRun` to own cancellation, synchronization-context progress,
-  progress shutdown and disposal. MainViewModel begin/end methods reset common
-  screen state and release busy/recovery state. Conversion/retry/recovery,
-  validation, file operations, tagging and recipes use it. Reports, outcome text,
-  retry scope and recovery discovery remain workflow-specific.
-- Added deterministic queued-progress tests, cancellation-followed-by-next-run and
-  retry-scope coverage, plus cancelled/failed tagging-dialog cleanup checks. Modal
-  disc ripping/restoration and tagging configuration retain their separate busy
-  handling. Navigation/settings/favourites were not refactored.
-- Updated [App structure](app-structure.md) and [test structure](test-structure.md).
-
-## Verification
-
-Full Release suite outside the sandbox: **677 passed, 0 failed, 0 skipped**.
+- After those dependency upgrades, the Release solution build passed with
+  zero errors. NuGet could not reach the vulnerability feed (`NU1900`).
+  The full suite still needs a rerun on the updated dependencies.
+- Native notice preparation was checked for all four FFmpeg RIDs and Windows
+  x64 cdrdao. Prepared notice files were compared against their source copies
+  by SHA-256. About reads the prepared notices and credits Velopack.
 
 ```powershell
-dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj -c Release --no-restore -p:UsedAvaloniaProducts= -p:ArtifactBuildName=Maintenance -v minimal --logger trx --results-directory artifacts/tests/results
+dotnet build KaraokeToolkit.slnx -c Release -m:1 -p:UsedAvaloniaProducts= -p:ArtifactBuildName=Cleanup -v minimal
+dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj -c Release --no-restore -m:1 -p:BuildInParallel=false -p:UsedAvaloniaProducts= -p:ArtifactBuildName=Cleanup -v minimal --logger trx --results-directory artifacts/tests/results -- xUnit.ParallelizeTestCollections=false
 ```
 
-- Post-bump run initially passed 676/677: `StdioRecipeUsesSavedStepsAndSettings`
-  returned a tool error without diagnostic text in its assertion. Added the MCP
-  text content to that assertion; the isolated rerun passed, then the entire
-  built suite passed **677/677**. Underlying cause of the transient recipe error
-  was not captured; no MCP runtime behaviour was changed to suppress it.
-- Final post-bump rerun used the command above with `--no-build`; TRX:
-  `artifacts/tests/results/almei_ANDRE_2026-11-05_12_23_34_net10.0.trx`.
-  CLI and MCP `--version` both reported **2026.11.10**. Fetched origin; master
-  had no remote commits missing locally before this release commit/push.
-- Staged checks passed: MCP 19; recovery + new lifetime tests 44; conversion/main
-  subsets 19 then 46; recipe/tagging/recovery 56; final boundary subset 17.
-- Diff checks passed. No visual GUI, package, install/upgrade, Linux runtime or
-  physical optical-drive verification. Tests verify Windows runtime behaviour.
+## Next work
 
-## Open work and preserved decisions
+- Recovered and checksum-pinned seven source snapshots at the exact revisions
+  specified by the October BtbN recipe. Added the Mac recipe candidate, whose
+  pinned versions agree with the vendor report. Its x264 download follows a
+  moving branch. Obtain the exact Mac build inputs from the builder, or build
+  a replacement with pinned inputs. For BtbN, recover LAME SVN r7113 and
+  reconcile the remaining enabled dependencies, submodules and notices.
+  The evidence bundle remains incomplete for publication.
 
-- Recover exact FFmpeg external-library sources/notices/build inputs or choose a
-  source-complete replacement with media regression checks. Recorded BtbN release
-  and recipe tag returned 404. Public source access remains unconfigured; local
-  source evidence is not full distribution clearance. Full newlib notices remain
-  conservatively retained without proving applicability of every section.
-- Fresh-checkout CI LFS setup remains a review concern. The prior MCP test failure
-  is resolved by checking the correct ordering boundary, as recorded above.
-- Settings Escape/central licence layout are in the committed baseline. Broader
-  Settings redesign stays deferred. Update feed/checks and pending update application
-  stay disabled. No player. Linux is cross-built; macOS packaging and physical disc
-  validation remain outstanding. See [AGENTS](../AGENTS.md), [TODO](todo.md),
-  [publishing](publishing.md) and the [licence inventory](../licenses/README.md).
+- The offline distribution-source script now supports `-CdrdaoOnly` and both
+  modes assembled successfully from cached archives. Both outputs include
+  cdrdao provenance and notices; the full bundle also includes the TagLibSharp
+  licence. Added the notice file from the restored Microsoft.Extensions 11.0.0
+  packages and verified App inclusion using `dotnet msbuild -getItem:None`.
+  These script, notice and documentation changes are uncommitted.
+- Windows and Linux now pin the retained October 31 BtbN 8.1 LGPL shared
+  release, verified against the upstream checksums. The old archives are
+  under `artifacts/checks/ffmpeg-review/september-29/`. Both new archives
+  passed preparation on Windows; Windows FFmpeg and FFprobe reported the new
+  version. Linux execution still needs native verification. The offline source
+  bundle now includes the new FFmpeg source
+  and exact BtbN recipe commit. Matching external-library sources and notices
+  are still pending.
+- Apple Silicon now uses Martin Riedl's 9.0.2 ZIPs. Both archive checksums
+  match upstream, both executables have ARM64 Mach-O headers, and
+  `scripts/ffmpeg/Prepare.ps1 -RuntimeIdentifier osx-arm64` passed on Windows.
+  The old OSXExperts files are in `artifacts/checks/ffmpeg-review/osx-arm64-osxexperts/`.
+  Retired the Intel runtime and CI leg. The Evermeet files are under
+  `artifacts/checks/ffmpeg-review/osx-x64-evermeet/`. After cleanup,
+  `scripts/ffmpeg/Prepare.ps1` passed on Windows for all three retained RIDs,
+  and `git diff --check` passed. Native Apple Silicon execution and signing
+  checks, the exact recipe revision and complete corresponding source remain open.
+- Windows Release audio/video regression tests passed **54/54** with the
+  October build. The first sandboxed run built successfully but timed out
+  connecting to testhost. The rerun used
+  `dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj -c Release --no-build --no-restore -p:UsedAvaloniaProducts= -p:ArtifactBuildName=Cleanup --filter 'FullyQualifiedName~KaraokeToolkit.Tests.Audio|FullyQualifiedName~KaraokeToolkit.Tests.Video' --logger trx --results-directory artifacts/tests/results`.
+  TRX: `artifacts/tests/results/almei_ANDRE_2026-11-12_13_13_39_net10.0.trx`.
+
+- Before public distribution, resolve corresponding source for downloadable
+  FFmpeg builds and arrange source access for other bundled copyleft
+  components. See [distribution licensing](distribution-licensing.md).
+- Run the full suite on the current dependencies and smoke-test any packages
+  selected for release. Linux packages are cross-built; macOS packaging and
+  physical disc-ripping verification remain open.
+- See [TODO](todo.md) for the FFMpegCore migration and other planned features.
+  The backlog now includes native vendoring investigation and Velopack update UI.
+  See [updates](updates.md) for the disabled update checks and unconfigured feed.

@@ -18,9 +18,8 @@ distribution to `output/ffmpeg`. It never downloads binaries, during either buil
 or app startup. The complete distribution includes shared libraries and notices.
 The build fails if the selected RID has no archive or its checksum differs.
 
-`win-x64` and `linux-x64` use pinned BtbN LGPL shared builds. The macOS targets
-use separate static FFmpeg/FFprobe ZIPs: Evermeet for Intel (`osx-x64`) and
-OSXExperts for Apple Silicon (`osx-arm64`). They contain GPL code. The paired
+`win-x64` and `linux-x64` use pinned BtbN LGPL shared builds. The macOS target
+uses separate Martin Riedl FFmpeg/FFprobe ZIPs for Apple Silicon. They contain GPL code. The paired
 ZIPs are assembled into `bin/` with the applicable GPL text and provider notice.
 Linux/macOS build hosts need PowerShell 7 (`pwsh`); tar is needed for tar archives.
 Build preparation sets executable permissions on macOS when run there. Cross-

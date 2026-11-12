@@ -226,8 +226,8 @@ moving the installation or switching a versioned Velopack payload directory.
 ## Platform verification
 
 The local test suite runs on Windows. `.github/workflows/cli-platforms.yml` is a
-read-only-permission, manually runnable/PR workflow for Windows, Linux, macOS ARM64
-and macOS Intel. It runs CLI/shared-contract tests and native FFmpeg video fixtures,
+read-only-permission, manually runnable/PR workflow for Windows, Linux and macOS ARM64.
+It runs CLI/shared-contract tests and native FFmpeg video fixtures,
 smoke-tests the built CLI executable, and retains TRX reports. App and CLI continue
 to be published together by the existing publish script. Non-Windows jobs also check completion script syntax where shells exist.
 The workflow must run on those hosts before claiming Linux/macOS verification;

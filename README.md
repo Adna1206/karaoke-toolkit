@@ -34,7 +34,7 @@ fixtures and explicit format/workflow expectations.
 - Crash recovery at startup or when revisiting an interrupted source folder, including complete recipe continuation and saved tagging batches.
 - Drag-and-drop and multi-file/folder selection without converting neighbouring files.
 - Completion reports, failed-item retry, output-folder opening and TXT/JSON report export.
-- Optional per-user Windows Explorer context-menu integration under Settings → Explorer.
+- Optional per-user Windows Explorer context-menu integration under Settings → Integrations.
 - Read-only karaoke validation and explicit, reversible moves to `Damaged`.
 
 Open **Settings → General** for appearance, automatic CUE/TXT generation and existing
@@ -43,7 +43,7 @@ media or CUE/TXT destination already exists. Disabling automatic generation does
 disable the standalone Create Cue/Text action. Settings changes apply on OK or Apply; Cancel
 discards changes made since the last Apply.
 
-Settings are stored at `%LOCALAPPDATA%\KaraokeToolkit\options.xmls`. Saves replace the
+On Windows, settings are stored at `%LOCALAPPDATA%\KaraokeToolkitData\options.xmls`. Saves replace the
 file atomically and retain the previous version as `options.xmls.bak`.
 
 ## Development

@@ -4,6 +4,13 @@
   Update FFprobe calls and FFmpeg process handling for the new APIs. Test audio
   conversion, MP4 encoding, cancellation and cleanup of partial output.
 
+- [ ] **Improve Clean Up Filenames** — let users choose which cleanup rules
+  to apply and how characters are replaced. For example, allow underscores
+  (`_`) to become spaces or apostrophes (`'`).
+
+- [ ] **Tag to Name** — rename karaoke files using their existing metadata
+  tags, such as artist and title.
+
 - [ ] **Revamp the entire Settings menu** — revisit navigation/categories, grouping,
   labels, spacing and help across every tab as one coherent design. Reduce persistent
   explanatory text, use progressive disclosure for advanced features, and keep
@@ -14,8 +21,18 @@
   existing preferences and processing behaviour. Current Settings work is stopped;
   resume this redesign only when requested.
 
+- [ ] **Investigate the vendoring system** — evaluate how to acquire, pin, and
+  retain native binaries, their exact source and build inputs, and notices.
+  Compare upstream release archives with builds we control and account for Git
+  LFS history before public distribution. See [distribution licensing](distribution-licensing.md).
+
+- [ ] **Add Velopack update functionality** — configure the hosted release feed
+  and connect in-app update checks, downloads and apply/restart prompts. Verify
+  that applying updates waits for file operations and preserves user data.
+  See [updates](updates.md).
+
 - [ ] **macOS packaging via GitHub Actions** — consider macOS runners to publish
-  Intel and Apple Silicon builds and run Velopack's macOS packaging tools, with
+  Apple Silicon builds and run Velopack's macOS packaging tools, with
   downloadable workflow artifacts. Review native dependency availability and
   redistribution requirements, test on macOS, and plan signing/notarization before
   public distribution. Local Windows development should not require a physical Mac.
@@ -29,11 +46,6 @@
   release hosting (including a separate releases-only repo), protect signing/upload
   credentials, and review runner/LFS costs. Keep in-app update checks disabled until
   the feed and update UI are ready.
-
-- [ ] **Velopack credit in About** — add a concise visible credit such as
-  "Installation and updates powered by Velopack" alongside the existing technology
-  credits. Keep the full MIT notice in Third-party notices; describe updates as
-  enabled only once the release feed and update UI are connected.
 
 - [ ] **Windows MSI installer** — extend `scripts/Publish.ps1` to generate an MSI
   through Velopack's WiX integration (`vpk pack --msi`) alongside the existing

@@ -1,11 +1,9 @@
-FFmpeg and FFprobe for macOS Apple Silicon, supplied by OSXExperts.NET.
-The binaries report GPL version 2 or later and include libmp3lame and libvorbis.
-See COPYING.GPLv2 for the GPL text and manifest.json for archive checksums.
+FFmpeg and FFprobe 9.0.2 for macOS Apple Silicon, built by Martin Riedl.
+This build enables GPL code and version 3 licensing. See COPYING.GPLv3.
 
-Upstream download and build notes: https://www.osxexperts.net/
-FFmpeg source: https://ffmpeg.org/download.html
+Source release: https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz
+Build script repository: https://git.martin-riedl.de/ffmpeg/build-script
+Build configuration and dependency versions: https://ffmpeg.martin-riedl.de/download/macos/arm64/1789931890_9.0.2/versions.txt
 
-OSXExperts.NET labels its downloads "for educational purposes only" and does
-not provide a matching corresponding-source bundle on the download page.
-These archives are available for local development; public redistribution
-requires a review of provenance and GPL source obligations.
+The exact build-script revision, external-library sources and complete notices
+still need to be verified before public redistribution.

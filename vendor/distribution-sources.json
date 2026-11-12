@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "completeForPublicDistribution": false,
   "limitations": [
-    "FFmpeg external libraries, build recipe and patches are not yet fully matched.",
+    "The BtbN dependency archives are a partial set. The enabled dependencies, submodules, generated inputs and notices still need review against both binaries.",
     "TagLibSharp archive is the upstream release source; NuGet does not record a source commit, so binary reproducibility is not established.",
-    "macOS FFmpeg source and redistribution provenance remain unresolved."
+    "The Mac recipe candidate matches the version report where pinned, but the build commit is unconfirmed and x264 was fetched from a moving branch. The corresponding dependency sources and notices remain incomplete."
   ],
   "sources": [
     {
@@ -27,9 +27,27 @@
     },
     {
       "component": "FFmpeg-core-only",
-      "archive": "ffmpeg-ff48edd8b29406ec2614db1137e972e77b15a10b.tar.gz",
-      "origin": "https://codeload.github.com/FFmpeg/FFmpeg/tar.gz/ff48edd8b29406ec2614db1137e972e77b15a10b",
-      "sha256": "2fcd84e0b69fff94d4c56f1fd79b7096e677e06d823fa56266fdc09ee390a16d"
+      "archive": "ffmpeg-8dca1586f468bfcbb78ae3ed618af1361d9f140a.tar.gz",
+      "origin": "https://codeload.github.com/FFmpeg/FFmpeg/tar.gz/8dca1586f468bfcbb78ae3ed618af1361d9f140a",
+      "sha256": "5ce832c43ca0a336c747db9dcd448655c64c25e33cb9868e1cc5b24abb04dbaa"
+    },
+    {
+      "component": "BtbN-build-recipe",
+      "archive": "recipe-5031c6f1082414e53688d39e521849905071070d.tar.gz",
+      "origin": "https://codeload.github.com/FFmpeg-Builds/FFmpeg-Builds/tar.gz/5031c6f1082414e53688d39e521849905071070d",
+      "sha256": "3d82bbb1dd436116034bb4d945245e5550dff0d89db0094e9af90382527c2c17"
+    },
+    {
+      "component": "FFmpeg-macOS-release-source",
+      "archive": "ffmpeg-9.0.2.tar.xz",
+      "origin": "https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz",
+      "sha256": "8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e"
+    },
+    {
+      "component": "Riedl-Apple-Silicon-build-metadata",
+      "archive": "ffmpeg-9.0.2-riedl-arm64-versions.txt",
+      "origin": "https://ffmpeg.martin-riedl.de/download/macos/arm64/1789931890_9.0.2/versions.txt",
+      "sha256": "fc92572e752e09b20e7ff28d64fb7096f7bc1a0d589b2e40f17ac91b7fd0ca61"
     },
     {
       "component": "TagLibSharp",
@@ -42,6 +60,54 @@
       "archive": "cdrdao-1.2.6.tar.gz",
       "repositoryPath": "vendor/cdrdao/source/cdrdao-1.2.6.tar.gz",
       "sha256": "10d15b0dc78bd44a9a4a8d7d85498c734771036159d05aa940e17f18fc40d40f"
+    },
+    {
+      "component": "btbn-vorbis",
+      "archive": "btbn-vorbis-1b75110b.tar.gz",
+      "origin": "https://codeload.github.com/xiph/vorbis/tar.gz/1b75110b5a2754ba1931d82dd83cb822b266a21d",
+      "sha256": "bd0f08c8a63debdce27dd71de7d953f9c92e410d1cfe263220bcb49fff2ab749"
+    },
+    {
+      "component": "btbn-ogg",
+      "archive": "btbn-ogg-06a5e026.tar.gz",
+      "origin": "https://codeload.github.com/xiph/ogg/tar.gz/06a5e0262cdc28aa4ae6797627a783b5010440f0",
+      "sha256": "fd7ab06f9fe9ace6b75d4223cf9034c9648cbe9f16120a344ec82f27c605ca11"
+    },
+    {
+      "component": "btbn-libass",
+      "archive": "btbn-libass-f61db567.tar.gz",
+      "origin": "https://codeload.github.com/libass/libass/tar.gz/f61db567e6593df3470e91594bcd4ad2d0473aff",
+      "sha256": "edb3e866ca9394152484bc9a83b68a395f5c9052ae0dc502e4100035c250330b"
+    },
+    {
+      "component": "btbn-twolame",
+      "archive": "btbn-twolame-6fced852.tar.gz",
+      "origin": "https://codeload.github.com/njh/twolame/tar.gz/6fced852d4d5cfad58cf9dbe3ea619b08e87d398",
+      "sha256": "6fd32a3d16a57ceacd5a64c4b6c54d6118b213fe8c63bc2900045200e2012000"
+    },
+    {
+      "component": "btbn-libbluray",
+      "archive": "btbn-libbluray-f33a738f.tar.gz",
+      "origin": "https://code.videolan.org/videolan/libbluray/-/archive/f33a738fd7bb8b5e1148b0a5424778db7342450b/libbluray-f33a738fd7bb8b5e1148b0a5424778db7342450b.tar.gz",
+      "sha256": "2e47fcd0cc043e5c9b819503118e5dce5d24f1dc362b909d53bae61f5ac23d8c"
+    },
+    {
+      "component": "btbn-gnulib",
+      "archive": "btbn-gnulib-5df606bb.tar.gz",
+      "origin": "https://codeload.github.com/coreutils/gnulib/tar.gz/5df606bbd0ef54a8f150c3303c870b9381a661f0",
+      "sha256": "0c27d0d9459e131dcc143f0b074b0940f63cb394b2a281c608fc6fbdd515d3f6"
+    },
+    {
+      "component": "Riedl-Apple-Silicon-recipe-candidate",
+      "archive": "riedl-recipe-candidate-6a611e19870e197bc37c6e4c7fccddebd3715466.tar.gz",
+      "origin": "https://git.martin-riedl.de/ffmpeg/build-script/archive/6a611e19870e197bc37c6e4c7fccddebd3715466.tar.gz",
+      "sha256": "467803813ab9f090052b0913bd12f984dcee888b154eb3644f7b1cbf04b57887"
+    },
+    {
+      "component": "btbn-libiconv",
+      "archive": "btbn-libiconv-b5a1735e.tar.gz",
+      "origin": "https://git.savannah.gnu.org/gitweb/?p=libiconv.git;a=snapshot;h=b5a1735e02bf43ee6e490fcf9395e8abc8d32432;sf=tgz",
+      "sha256": "8399b003f3d3dd6f32b05e9bcdf1b31b07a6c66468f26fe952d519f04deb00a3"
     }
   ]
 }

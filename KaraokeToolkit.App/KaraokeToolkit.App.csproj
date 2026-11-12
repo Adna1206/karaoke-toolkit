@@ -33,7 +33,7 @@
     <None Include="..\licenses\README.md" Link="licenses\README.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="..\licenses\Velopack.txt" Link="licenses\Velopack.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="..\licenses\Avalonia.txt;..\licenses\Inter.OFL.txt;..\licenses\CommunityToolkit.Mvvm.txt;..\licenses\CommunityToolkit.Mvvm.ThirdPartyNotices.txt;..\licenses\SkiaSharp.txt;..\licenses\HarfBuzzSharp.txt" Link="licenses\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-    <None Include="..\licenses\Instances.txt;..\licenses\MicroCom.Runtime.txt;..\licenses\Microsoft.Extensions.txt;..\licenses\Microsoft.Extensions.ThirdPartyNotices.txt;..\licenses\Microsoft.IO.RecyclableMemoryStream.txt;..\licenses\Tmds.DBus.Protocol.txt" Link="licenses\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\licenses\Instances.txt;..\licenses\MicroCom.Runtime.txt;..\licenses\Microsoft.Extensions*.txt;..\licenses\Microsoft.IO.RecyclableMemoryStream.txt;..\licenses\Tmds.DBus.Protocol.txt" Link="licenses\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="..\licenses\ANGLE.txt" Link="licenses\ANGLE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Condition="$([MSBuild]::IsOSPlatform('Windows')) And ('$(RuntimeIdentifier)' == '' Or $(RuntimeIdentifier.StartsWith('win-')))" />
   </ItemGroup>
 </Project>
