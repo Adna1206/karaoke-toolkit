@@ -2,6 +2,20 @@
 
 Snapshot: 2026-11-12, Africa/Johannesburg.
 
+Local publish from `master` at `d2d0008` with the SoundTouch.Net TODO edit:
+`./scripts/Publish.ps1` produced unsigned Windows x64 Setup and portable
+packages and a Linux x64 AppImage for **2026.11.16** under
+`artifacts/releases/2026.11.16/20261112-144754-ed3e9a/`. Verified both package
+checksum lists and the published Windows CLI and FFmpeg version commands.
+NuGet audit reported NU1900. Installation, GUI launch and native Linux
+execution were not tested. Packages were produced locally.
+
+After the first Windows Setup reported access denied, reran
+`./scripts/Publish.ps1 -RuntimeIdentifier win-x64` outside the sandbox.
+The unsigned rebuild is under `artifacts/releases/2026.11.16/20261112-150335-f2d10c/win-x64/`.
+All package checksums matched and the published CLI reported 2026.11.16.
+The installer has yet to be run.
+
 ## Checkout and verification
 
 - Branch `master`, local base `da06388`, shared version **2026.11.16**.

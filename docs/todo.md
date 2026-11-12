@@ -4,6 +4,12 @@
   Update FFprobe calls and FFmpeg process handling for the new APIs. Test audio
   conversion, MP4 encoding, cancellation and cleanup of partial output.
 
+- [ ] **Karaoke key and tempo changes** — use [SoundTouch.Net](https://github.com/owoudenberg/soundtouch.net)
+  to shift pitch in semitones and adjust tempo independently. Process decoded
+  PCM through SoundTouch.Net, then encode the result with the existing audio
+  pipeline. Keep karaoke graphics in sync when tempo changes and review
+  LGPL-2.1-or-later distribution requirements.
+
 - [ ] **Improve Clean Up Filenames** — let users choose which cleanup rules
   to apply and how characters are replaced. For example, allow underscores
   (`_`) to become spaces or apostrophes (`'`).
