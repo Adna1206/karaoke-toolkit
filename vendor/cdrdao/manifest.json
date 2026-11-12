@@ -1,0 +1,19 @@
+{
+  "version": "1.2.6",
+  "release": "https://github.com/cdrdao/cdrdao/releases/tag/rel_1_2_6",
+  "license": "GPL-2.0",
+  "source": {
+    "archive": "source/cdrdao-1.2.6.tar.gz",
+    "sha256": "10d15b0dc78bd44a9a4a8d7d85498c734771036159d05aa940e17f18fc40d40f",
+    "origin": "https://github.com/cdrdao/cdrdao/releases/download/rel_1_2_6/cdrdao-1.2.6.tar.gz"
+  },
+  "platforms": {
+    "win-x64": {
+      "archive": "windows/cdrdao126.zip",
+      "sha256": "653e56c49f94771f87cd9f4ceefc255329714ba5066bd78e30edaa464c322a3a",
+      "origin": "https://github.com/cdrdao/cdrdao/releases/download/rel_1_2_6/cdrdao126.zip",
+      "binary": "cdrdao.exe",
+      "bundledRuntime": ["msys-2.0.dll", "msys-gcc_s-seh-1.dll", "msys-iconv-2.dll", "msys-stdc++-6.dll"]
+    }
+  }
+}

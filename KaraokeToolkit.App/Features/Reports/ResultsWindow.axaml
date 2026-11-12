@@ -1,0 +1,32 @@
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:shared="using:KaraokeToolkit.App.Shared" xmlns:core="using:KaraokeToolkit.Core"
+ xmlns:vm="using:KaraokeToolkit.App.Features.Reports" x:Class="KaraokeToolkit.App.Features.Reports.ResultsWindow" x:DataType="vm:ResultsViewModel"
+ Title="{x:Static shared:WindowTitles.LastRunReport}" Width="980" Height="650" MinWidth="800" MinHeight="520" WindowStartupLocation="CenterOwner">
+ <Grid Margin="24" RowDefinitions="Auto,Auto,Auto,*,Auto,Auto" RowSpacing="12">
+  <TextBlock Text="{Binding Title}" FontSize="24" FontWeight="SemiBold"/>
+  <TextBlock Grid.Row="1" Text="{Binding HeaderSummary}" TextWrapping="Wrap"/>
+  <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="12">
+   <TextBlock Text="Show" VerticalAlignment="Center"/>
+   <ComboBox ItemsSource="{Binding Filters}" SelectedItem="{Binding Filter}" Width="210"/>
+   <Button Content="Retry Failed" Click="Retry_Click" IsEnabled="{Binding CanRetry}"/>
+   <Button Content="Open Output Folder" Click="Open_Click" IsEnabled="{Binding CanEdit}"/>
+   <Button Content="Save Report…" Click="Save_Click" IsEnabled="{Binding CanEdit}"/>
+  </StackPanel>
+  <ListBox Grid.Row="3" x:Name="ResultsList" ItemsSource="{Binding Rows}" SelectionMode="Multiple" IsEnabled="{Binding CanEdit}">
+   <ListBox.ItemTemplate><DataTemplate x:DataType="vm:ReportRow">
+    <Grid ColumnDefinitions="105,*" Margin="4,8" ColumnSpacing="12">
+     <TextBlock Text="{Binding Status}" FontWeight="SemiBold"/>
+     <StackPanel Grid.Column="1" Spacing="4">
+      <TextBlock Text="{Binding Source}" TextWrapping="Wrap" FontWeight="SemiBold"/>
+      <TextBlock Text="{Binding Message}" TextWrapping="Wrap"/>
+      <TextBlock Text="{Binding Outputs}" TextWrapping="Wrap" Opacity="0.65" FontSize="12"/>
+     </StackPanel>
+    </Grid>
+   </DataTemplate></ListBox.ItemTemplate>
+  </ListBox>
+  <TextBlock Grid.Row="4" Text="{Binding Message}" TextWrapping="Wrap"/>
+  <Grid Grid.Row="5" ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="10" IsEnabled="{Binding CanEdit}">
+   <Button Content="Move Selected to Damaged…" Click="Move_Click" IsVisible="{Binding IsValidation}"/>
+   <Button Grid.Column="3" Content="Close" Click="Close_Click" MinWidth="85"/>
+  </Grid>
+ </Grid>
+</Window>

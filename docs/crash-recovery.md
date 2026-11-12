@@ -1,0 +1,65 @@
+# Crash recovery
+
+The app offers **Recover and resume** or **Later** when it starts and finds an
+interrupted run. Selecting its source folder (or pressing Start with that folder
+typed in) also checks for recovery, including nested folders when recursion is enabled.
+The **Recover…** button returns to pending recovery. Nothing resumes automatically.
+
+During recovery the main window explicitly shows **Recovery mode** and prefixes the
+operation title with **Recovery**. The saved action, conversion options, overwrite
+policy and source list are used, even if current settings have since changed.
+Completed, failed and skipped source groups are not attempted again. The interrupted
+group and remaining groups continue; automatic CUE/TXT generation also has checkpoints.
+New files added after the original scan are left for a subsequent run.
+
+**Later** leaves files and journals untouched and does not start a fresh operation over
+the interrupted run. A normal Cancel still discards unpublished work and ends the run;
+this feature recovers unexpected termination and retained publication failures, rather
+than introducing pause/resume for ordinary cancellation.
+
+## File handling
+
+- Interrupted staging: originals have not moved; discard disposable staging and restart
+  that group.
+- Interrupted publication: verify all staged outputs, published outputs and numbered
+  backups against the journal's SHA256 hashes, then finish publishing the group.
+- Interrupted rollback: finish restoring the originals, then retry that group.
+- Publication already checkpointed: retain its outputs and finish removing staging.
+
+Changed, missing or unexpected files block recovery. The error is shown and recovery
+files are retained. Do not delete `.karaoke-job-*` folders while recovery is pending.
+Damaged run journals are shown as needing inspection and cannot be resumed from the
+dialog. Old journals from before this feature lack the necessary hashes and require
+manual inspection; they are never automatically applied. A folder with a retained
+transaction journal is protected against a fresh transaction.
+
+## Storage and guarantees
+
+The source root contains `.karaoke-job-run-<id>/run.json`, plus a lease file. Each
+publication uses `.karaoke-job-<id>/recovery.json` and a `backups` subdirectory.
+These directories are excluded from recursive media scanning. A small index under
+`%LOCALAPPDATA%\KaraokeToolkit\Recovery` lets startup find runs without scanning drives.
+Folder discovery also works if that index is missing. Keep the source folder at its
+original path until recovery is complete; unavailable drives must be reconnected.
+
+Journals use flushed temporary files and replacement; staged outputs are flushed before
+originals are moved. A completed-group checkpoint is saved before backups are deleted.
+Process leases prevent recovery of a still-running run and concurrent commits in a
+folder. Recovery rejects linked paths and paths outside the recorded root.
+
+This is process-crash recovery, not a guarantee of atomic multi-file updates during
+hardware failure or sudden power loss. Filesystem/storage durability and unrelated
+applications changing files concurrently remain outside the application's control.
+
+## Automated verification
+
+`RecoveryTests` covers every backup/output move boundary, repeated recovery, interrupted
+rollback, changed files, unsafe paths, checkpoint/cleanup interruption, staging,
+automatic metadata, saved plans, missing startup indexes, damaged journals, active
+leases and the viewmodel's Later/recovery-mode behaviour. A disposable test process also
+runs a real ZIP extraction, is killed before publication without cleanup, and is
+successfully resumed. Fixtures are generated; user karaoke media is not modified.
+
+The crash worker is an entry point in the existing test project, not a new project or
+application feature. Publication boundary tests reconstruct exact interrupted on-disk
+states; they do not claim to simulate physical power loss.

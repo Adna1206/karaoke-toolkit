@@ -1,0 +1,99 @@
+using KaraokeToolkit.Core.Recovery;
+namespace KaraokeToolkit.Core.Conversion;
+
+public sealed record ConversionRetry(OperationCatalog.defAction Action, string[] Inputs, ConversionOptions Options, OverwritePolicy Policy)
+{
+    public bool ValidateBeforeConversion
+    {
+        get; init;
+    }
+}
+
+/// <summary>Creates every folder checkpoint before starting a multi-folder selection.</summary>
+public sealed class SelectionConversionService(RecoveryStore? recovery = null)
+{
+    private readonly RecoveryStore recovery = recovery ?? new();
+
+    public async Task<ConversionResult> RunAsync(ConversionRetry request, IProgress<ConversionProgress>? progress = null,
+        CancellationToken token = default, Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolveConflict = null)
+    {
+        return await Task.Run(async () =>
+        {
+            var plans = InputSelection.Plan(request.Action, request.Inputs, request.Options.RecurseFolders);
+            var prepared = new List<RecoveryJob>();
+            try
+            {
+                foreach (var plan in plans)
+                {
+                    token.ThrowIfCancellationRequested();
+                    var operation = new OperationRequest(request.Action, plan.Folder, request.Options with
+                    {
+                        RecurseFolders = false
+                    });
+                    operation.Validate();
+                    if (OperationCapabilities.Describe(request.Action) != OperationSupport.Supported)
+                        throw new NotSupportedException("This operation is unavailable.");
+                    using var run = new RunSession(recovery, operation, request.Policy, plan.Sources.ToArray(), request.ValidateBeforeConversion);
+                    prepared.Add(new(run.Journal, plan.Folder, request.Action.ToString(), 0, plan.Sources.Count));
+                }
+            }
+            catch
+            {
+                foreach (var job in prepared)
+                {
+                    using var run = new RunSession(recovery, job.JournalPath);
+                    run.Finish();
+                }
+                throw;
+            }
+
+            var results = new List<ConversionFileResult>();
+            var retry = new List<ConversionRetry>();
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            int found = plans.Sum(p => p.Sources.Count), completed = 0;
+            bool cancelled = false;
+            for (int i = 0; i < prepared.Count; i++)
+            {
+                if (token.IsCancellationRequested)
+                {
+                    cancelled = true;
+                }
+                if (cancelled)
+                {
+                    using var pending = new RunSession(recovery, prepared[i].JournalPath);
+                    pending.Finish(); // Ordinary cancellation is not a crash.
+                    continue;
+                }
+                var reporter = new InlineProgress(p => progress?.Report(p with
+                {
+                    Found = found,
+                    Completed = completed + p.Completed,
+                    TotalPercent = found == 0 ? 100 : Math.Min(100, (completed + p.Completed) * 100 / found)
+                }));
+                ConversionResult result;
+                try
+                {
+                    result = await new ConversionService(recovery).ResumeAsync(prepared[i], reporter, token, resolveConflict);
+                }
+                catch (OperationCanceledException)
+                {
+                    using var pending = new RunSession(recovery, prepared[i].JournalPath);
+                    pending.ThrowIfUnresolved();
+                    pending.Finish();
+                    cancelled = true;
+                    continue;
+                }
+                results.AddRange(result.Files);
+                retry.AddRange(result.RetryRequests);
+                completed += result.Found;
+                cancelled = result.Cancelled;
+            }
+            return new ConversionResult(results, cancelled) { Found = found, Elapsed = watch.Elapsed, RetryRequests = retry };
+        }, CancellationToken.None);
+    }
+
+    internal sealed class InlineProgress(System.Action<ConversionProgress> action) : IProgress<ConversionProgress>
+    {
+        public void Report(ConversionProgress value) => action(value);
+    }
+}

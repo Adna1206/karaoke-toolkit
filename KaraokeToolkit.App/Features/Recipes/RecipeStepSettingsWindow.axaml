@@ -1,0 +1,47 @@
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:KaraokeToolkit.App.Features.Recipes"
+ x:Class="KaraokeToolkit.App.Features.Recipes.RecipeStepSettingsWindow" x:DataType="vm:RecipeStepOptionsViewModel"
+ Width="650" Height="620" MinWidth="550" MinHeight="450" WindowStartupLocation="CenterOwner">
+ <Grid Margin="24" RowDefinitions="Auto,*,Auto,Auto" RowSpacing="14">
+  <TextBlock Text="Step Settings" FontSize="25" FontWeight="SemiBold"/>
+  <TabControl Grid.Row="1">
+   <TabItem Header="Processing"><ScrollViewer><StackPanel Margin="0,14" Spacing="10">
+    <TextBlock Text="These settings belong to this step. General app settings are unchanged." TextWrapping="Wrap" FontSize="12"/>
+    <CheckBox Content="{Binding Definitions.RecurseFolders.Label}" IsChecked="{Binding RecurseFolders}" IsVisible="{Binding HasRecursionSettings}" ToolTip.Tip="{Binding Definitions.RecurseFolders.Description}"/>
+    <CheckBox Content="{Binding Definitions.DeleteOriginals.Label}" IsChecked="{Binding DeleteOriginals}" IsVisible="{Binding CanDeleteOriginals}" ToolTip.Tip="{Binding Definitions.DeleteOriginals.Description}"/>
+    <CheckBox Content="{Binding Definitions.AutoCreateCueText.Label}" IsChecked="{Binding AutoCreateCueText}" IsVisible="{Binding CanAutoCreateMetadata}" ToolTip.Tip="{Binding Definitions.AutoCreateCueText.Description}"/>
+    <CheckBox Content="{Binding Definitions.ValidateBeforeConversion.Label}" IsChecked="{Binding ValidateBeforeConversion}" IsVisible="{Binding CanValidateInputs}" ToolTip.Tip="{Binding Definitions.ValidateBeforeConversion.Description}"/>
+    <CheckBox Content="{Binding Definitions.IgnoreLeadingTheForFileOrganization.Label}" IsChecked="{Binding IgnoreLeadingTheForFileOrganization}" IsVisible="{Binding HasOrganizationSettings}" ToolTip.Tip="{Binding Definitions.IgnoreLeadingTheForFileOrganization.Description}"/>
+    <TextBlock Text="{Binding Definitions.Overwrite.Label}" FontWeight="SemiBold" IsVisible="{Binding HasOverwriteSettings}"/>
+    <ComboBox ItemsSource="{Binding OverwritePolicies}" SelectedIndex="{Binding Overwrite}" HorizontalAlignment="Stretch" IsVisible="{Binding HasOverwriteSettings}"/>
+    <TextBlock Text="{Binding Definitions.NamingFormat.Label}" FontWeight="SemiBold" IsVisible="{Binding HasMetadataSettings}"/>
+    <TextBox Text="{Binding NamingFormat}" IsVisible="{Binding HasMetadataSettings}" ToolTip.Tip="{Binding Definitions.NamingFormat.Description}"/>
+   </StackPanel></ScrollViewer></TabItem>
+   <TabItem Header="ZIP" IsVisible="{Binding HasZipSettings}"><ScrollViewer><StackPanel Margin="0,14" Spacing="10">
+    <TextBlock Text="{Binding Definitions.Algorithm.Label}" FontWeight="SemiBold"/>
+    <ComboBox ItemsSource="{Binding ZipAlgorithms}" SelectedIndex="{Binding Algorithm}" HorizontalAlignment="Stretch" ToolTip.Tip="{Binding Definitions.Algorithm.Description}"/>
+    <TextBlock Text="{Binding Definitions.CompressionLevel.Label}" FontWeight="SemiBold"/>
+    <ComboBox ItemsSource="{Binding CompressionLevels}" SelectedIndex="{Binding CompressionLevel}" HorizontalAlignment="Stretch" ToolTip.Tip="{Binding Definitions.CompressionLevel.Description}"/>
+    <TextBlock Text="Legacy karaoke software prefers Deflate." TextWrapping="Wrap" FontSize="12"/>
+   </StackPanel></ScrollViewer></TabItem>
+   <TabItem Header="Audio" IsVisible="{Binding HasAudioSettings}"><ScrollViewer><StackPanel Margin="0,14" Spacing="10">
+    <TextBlock Text="{Binding Definitions.Encoder.Label}" FontWeight="SemiBold"/>
+    <ComboBox ItemsSource="{Binding Encoders}" SelectedIndex="{Binding Encoder}" HorizontalAlignment="Stretch" IsEnabled="{Binding CanChooseEncoder}"/>
+    <TextBlock Text="{Binding Definitions.Bitrate.Label}" FontWeight="SemiBold"/>
+    <ComboBox ItemsSource="{Binding Bitrates}" SelectedItem="{Binding Bitrate}" IsEnabled="{Binding UsesAudioBitrate}" HorizontalAlignment="Stretch"/>
+   </StackPanel></ScrollViewer></TabItem>
+   <TabItem Header="Video" IsVisible="{Binding HasVideoSettings}"><ScrollViewer><StackPanel Margin="0,14" Spacing="10">
+    <TextBlock Text="{Binding Definitions.VideoContainer.Label}" FontWeight="SemiBold"/><ComboBox ItemsSource="{Binding VideoContainers}" SelectedIndex="{Binding VideoContainer}" HorizontalAlignment="Stretch"/>
+    <TextBlock Text="{Binding Definitions.VideoResolution.Label}" FontWeight="SemiBold"/><ComboBox ItemsSource="{Binding VideoResolutions}" SelectedIndex="{Binding VideoResolution}" HorizontalAlignment="Stretch"/>
+    <TextBlock Text="{Binding Definitions.VideoGraphicsSmoothing.Label}" FontWeight="SemiBold"/><ComboBox ItemsSource="{Binding VideoGraphicsSmoothingOptions}" SelectedIndex="{Binding VideoGraphicsSmoothing}" HorizontalAlignment="Stretch"/>
+    <TextBlock Text="{Binding Definitions.VideoFrameRate.Label}" FontWeight="SemiBold"/><ComboBox ItemsSource="{Binding VideoFrameRates}" SelectedItem="{Binding VideoFrameRate}" HorizontalAlignment="Stretch"/>
+    <TextBlock Text="{Binding Definitions.VideoBitrateKbps.Label}" FontWeight="SemiBold"/><ComboBox ItemsSource="{Binding VideoBitrates}" SelectedItem="{Binding VideoBitrateKbps}" HorizontalAlignment="Stretch"/>
+    <CheckBox Content="{Binding Definitions.VideoAudioMatchSourceBitrate.Label}" IsChecked="{Binding VideoAudioMatchSourceBitrate}"/>
+    <TextBlock Text="{Binding Definitions.VideoAudioBitrateKbps.Label}" FontWeight="SemiBold"/><ComboBox ItemsSource="{Binding VideoAudioBitrates}" SelectedItem="{Binding VideoAudioBitrateKbps}" HorizontalAlignment="Stretch"/>
+   </StackPanel></ScrollViewer></TabItem>
+  </TabControl>
+  <TextBlock Grid.Row="2" Text="{Binding Error}" TextWrapping="Wrap"/>
+  <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="12">
+   <Button Content="Cancel" Click="Cancel_Click"/><Button Content="OK" Click="Save_Click"/>
+  </StackPanel>
+ </Grid>
+</Window>
