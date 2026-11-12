@@ -291,7 +291,7 @@ public sealed class ConversionService
             string zip = Path.ChangeExtension(staged, ".zip");
             report(60, "Creating ZIP: " + source);
             await KaraokeZipWriter.CreateAsync(audio, graphics, zip, request.Options.ZipCompression, token, request.Options.ZipAlgorithm);
-            KaraokeArchive.VerifyCreated(zip, audio, graphics);
+            await KaraokeArchive.VerifyCreatedAsync(zip, audio, graphics, token);
             outputs.Add(zip);
         }
         if (request.Action == Action.ArchiveToZip)

@@ -62,7 +62,7 @@ internal static class AudioBenchmarks
                 await BinConverter.SplitAsync(bin, trackWav, trackCdg, token);
                 await AudioEncoderService.EncodeAsync(trackWav, mp3, AudioEncoder.MP3, 192, token);
                 await KaraokeZipWriter.CreateAsync(mp3, trackCdg, path, ZipCompression.Balanced, token);
-                KaraokeArchive.VerifyCreated(path, mp3, trackCdg);
+                await KaraokeArchive.VerifyCreatedAsync(path, mp3, trackCdg, token);
                 if (!File.ReadAllBytes(cdg).SequenceEqual(File.ReadAllBytes(trackCdg))) throw new InvalidDataException("CDG payload changed.");
             }, pcm: false));
         }

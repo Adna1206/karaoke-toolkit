@@ -1,0 +1,12 @@
+CDRDAO 1.2.6
+https://github.com/cdrdao/cdrdao/releases/tag/rel_1_2_6
+
+The upstream AUTHORS file credits Andreas Mueller (founder and initial
+implementation), Manuel Clos (gcdmaster), Denis Leroy (maintenance and
+gcdmaster GTK 2 port), and Jonathan Simpson (toc2cue updates).
+
+CDRDAO incorporates Monty's modified cdparanoia III alpha 9.8 extraction
+library. The bundled source identifies its copyright as Copyright (C) by
+Monty (xiphmont@mit.edu) and specifies the GNU General Public License,
+version 2. See cdrdao.GPLv2.txt and the accompanying CDRDAO source archive,
+including paranoia/README and paranoia/paranoia.c.

@@ -7,7 +7,8 @@
       "sha256": "1c9af2356443fec537fe1a64a5b33cb4c54fa212ad6590464423b3437e1aaa44",
       "origin": "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-09-29-13-10/ffmpeg-n8.1.3-6-gff48edd8b2-win64-lgpl-shared-8.1.zip",
       "source": "https://github.com/FFmpeg/FFmpeg/tree/ff48edd8b29406ec2614db1137e972e77b15a10b",
-      "buildRecipe": "https://github.com/BtbN/FFmpeg-Builds/tree/autobuild-2026-09-29-13-10"
+      "buildRecipe": "https://github.com/BtbN/FFmpeg-Builds/tree/autobuild-2026-09-29-13-10",
+      "libraryNotices": ["LAME.Attributions.txt", "LAME.LGPLv2.txt", "libass.ISC.txt", "libbluray.LGPLv2.1.txt", "libiconv.LGPLv2.1.txt", "libtwolame.LGPLv2.1.txt", "libvorbis.BSD-3-Clause.txt"]
     },
     "linux-x64": {
       "version": "n8.1.3-6-gff48edd8b2",
@@ -16,7 +17,8 @@
       "sha256": "10058038d7e05869a32bb7d8594dd1a0b4032b8a10f1387dbe7e5ce4f978b8c0",
       "origin": "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-09-29-13-10/ffmpeg-n8.1.3-6-gff48edd8b2-linux64-lgpl-shared-8.1.tar.xz",
       "source": "https://github.com/FFmpeg/FFmpeg/tree/ff48edd8b29406ec2614db1137e972e77b15a10b",
-      "buildRecipe": "https://github.com/BtbN/FFmpeg-Builds/tree/autobuild-2026-09-29-13-10"
+      "buildRecipe": "https://github.com/BtbN/FFmpeg-Builds/tree/autobuild-2026-09-29-13-10",
+      "libraryNotices": ["LAME.Attributions.txt", "LAME.LGPLv2.txt", "libass.ISC.txt", "libbluray.LGPLv2.1.txt", "libiconv.LGPLv2.1.txt", "libtwolame.LGPLv2.1.txt", "libvorbis.BSD-3-Clause.txt"]
     },
     "osx-x64": {
       "version": "9.0.2",
@@ -29,7 +31,8 @@
       "origin": "https://evermeet.cx/ffmpeg/ffmpeg-9.0.2.zip",
       "probeOrigin": "https://evermeet.cx/ffmpeg/ffprobe-9.0.2.zip",
       "source": "https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz",
-      "buildRecipe": "https://evermeet.cx/ffmpeg/"
+      "buildRecipe": "https://evermeet.cx/ffmpeg/",
+      "libraryNotices": ["LAME.Attributions.txt", "LAME.LGPLv2.txt", "libass.ISC.txt", "libbluray.LGPLv2.1.txt", "libiconv.LGPLv2.1.txt", "libtwolame.LGPLv2.1.txt", "libvorbis.BSD-3-Clause.txt"]
     },
     "osx-arm64": {
       "version": "9.0-osxexperts",
@@ -44,7 +47,8 @@
       "origin": "https://www.osxexperts.net/ffmpeg9arm.zip",
       "probeOrigin": "https://www.osxexperts.net/ffprobe9arm.zip",
       "source": "https://ffmpeg.org/download.html",
-      "buildRecipe": "https://www.osxexperts.net/"
+      "buildRecipe": "https://www.osxexperts.net/",
+      "libraryNotices": ["LAME.Attributions.txt", "LAME.LGPLv2.txt", "libass.ISC.txt", "libiconv.LGPLv2.1-1.17.txt", "libvorbis.BSD-3-Clause.txt"]
     }
   }
 }

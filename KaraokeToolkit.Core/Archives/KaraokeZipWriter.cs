@@ -9,17 +9,16 @@ internal static class KaraokeZipWriter
     {
         token.ThrowIfCancellationRequested();
         var options = CreateOptions(compression, algorithm);
-        await using var output = new FileStream(zip, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None);
-        using (var writer = new ZipWriter(output, options))
+        await using var output = new FileStream(zip, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 65536, useAsync: true);
+        await using (var writer = await ZipWriter.OpenAsyncWriter(output, options, token))
         {
             foreach (string path in new[] { audio, graphics })
             {
                 token.ThrowIfCancellationRequested();
-                await using var input = File.OpenRead(path);
+                await using var input = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 65536, useAsync: true);
                 if (input.Length <= 0 || input.Length >= uint.MaxValue)
                     throw new InvalidDataException("ZIP inputs must be nonempty and smaller than 4 GiB.");
-                using var entry = writer.WriteToStream(Path.GetFileName(path), new ZipWriterEntryOptions { ModificationDateTime = File.GetLastWriteTime(path) });
-                await input.CopyToAsync(entry, 65536, token);
+                await writer.WriteAsync(Path.GetFileName(path), input, File.GetLastWriteTime(path), token);
             }
         }
         await output.FlushAsync(token);

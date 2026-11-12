@@ -48,6 +48,7 @@ try {
     # overwrites of previous packages. Everything stays under ignored artifacts/.
     $runId = (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 6)
     $releaseRoot = Join-Path $repo "artifacts/releases/$version/$runId"
+    $ffmpegManifest = Get-Content -LiteralPath (Join-Path $repo 'vendor/ffmpeg/manifest.json') -Raw | ConvertFrom-Json
     foreach ($rid in ($RuntimeIdentifier | Select-Object -Unique)) {
         $publish = Join-Path $repo "artifacts/publish/$version/$runId/$rid"
         $packages = Join-Path $releaseRoot $rid
@@ -78,6 +79,11 @@ try {
             'licenses/application/LICENSE', 'licenses/application/NOTICE.txt', 'licenses/ffmpeg/FFmpeg.Notices.txt', 'licenses/ffmpeg/runtime-manifest.json',
             'licenses/README.md', 'licenses/Velopack.txt', 'licenses/TagLibSharp.txt')) {
             if (!(Test-Path -LiteralPath (Join-Path $publish $file) -PathType Leaf)) { throw "Published $rid build is missing $file" }
+        }
+        foreach ($notice in $ffmpegManifest.platforms.$rid.libraryNotices) {
+            if (!(Test-Path -LiteralPath (Join-Path $publish ('licenses/ffmpeg/' + $notice)) -PathType Leaf)) {
+                throw "Published $rid build is missing FFmpeg notice: $notice"
+            }
         }
         if ($isWindowsTarget -and !(Test-Path -LiteralPath (Join-Path $publish 'cdrdao/cdrdao.exe') -PathType Leaf)) {
             throw 'Published Windows build is missing cdrdao.'

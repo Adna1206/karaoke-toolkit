@@ -58,6 +58,11 @@ so updating the ZIP also requires reviewing this inventory.
 The full upstream newlib notice collection is retained conservatively; its
 individual sections have not all been proven applicable to this Windows binary.
 No legal text was removed as part of filename and presentation simplification.
+The pinned Windows ZIP contains four executables and four MSYS DLLs, with no
+standalone notices. Preparation packages only `cdrdao.exe` and the four DLLs.
+The output notices include CDRDAO and its incorporated cdparanoia attribution
+from the pinned CDRDAO source, plus GNU libiconv attribution from the matched
+1.18-1 package source.
 
 ### TagLibSharp
 
@@ -71,17 +76,44 @@ replacement/relinking rights must remain available in a public release.
 
 ## Remaining FFmpeg work
 
+The Windows and Linux BtbN archives each contain an LGPLv3 text. Preparation
+preserves it and adds GPLv3, whose terms LGPLv3 incorporates. The four macOS
+ZIPs contain binaries alone. Preparation supplies the recorded vendor notice
+and GPL text for each macOS target.
+
+The pinned binaries identify libvorbis 1.3.7 in the Windows and Linux
+`libavcodec` libraries and in both macOS `ffmpeg` and `ffprobe` pairs. The
+upstream BSD copyright notice now ships under `licenses/ffmpeg/` on all four
+targets. [libvorbis 1.3.7 COPYING](https://github.com/xiph/vorbis/blob/v1.3.7/COPYING)
+
 The pinned Windows binary reports commit
 `ff48edd8b29406ec2614db1137e972e77b15a10b`, and its source archive is now pinned
 as evidence. The Windows and Linux manifests identify that same FFmpeg commit.
-However, FFmpeg's configure line enables numerous external libraries, including
-LAME, libiconv, libass, libbluray and libtwolame. FFmpeg's own source does not
-contain all their corresponding sources or notices.
+The package preparation step copies the following upstream library licence
+texts according to the per-target lists in `vendor/ffmpeg/manifest.json`.
+
+| Library | Prepared targets | Upstream notice or licence |
+| --- | --- | --- |
+| LAME | All four | [Library GPL v2](https://github.com/lameproject/lame/blob/master/COPYING) and [attribution](https://github.com/lameproject/lame/blob/master/README) |
+| libass | All four | [ISC](https://github.com/libass/libass/blob/0.17.4/COPYING) |
+| GNU libiconv | All four | LGPL v2.1 text from [GNU libiconv](https://ftp.gnu.org/gnu/libiconv/) |
+| libbluray | Windows, Linux, macOS Intel | LGPL v2.1 text from [VideoLAN's libbluray 1.5.0 source archive](https://download.videolan.org/pub/videolan/libbluray/1.5.0/) |
+| TwoLAME | Windows, Linux, macOS Intel | [LGPL v2.1](https://github.com/njh/twolame/blob/0.4.0/COPYING) |
+
+The FFmpeg configure strings identify LAME, libass, libbluray and TwoLAME
+on the targets shown. The macOS binaries define GNU libiconv symbols and
+report version 1.19 on Intel and 1.17 on Apple Silicon. Preparation uses the
+corresponding GNU release's licence text for each. Both BtbN builds
+enable iconv and ship the GNU libiconv licence conservatively. Linux's
+dynamic symbols also show calls to glibc's iconv, so its exact GNU libiconv
+linkage needs confirmation.
 
 The recorded BtbN release and build-recipe tag returned HTTP 404 during review.
-The exact external-library revisions, build scripts and patches have not been
-recovered. A current build recipe is not evidence for an older binary. Do not
-mark the full bundle source-complete based on a matching FFmpeg commit alone.
+Most exact external-library revisions, build scripts and patches remain
+unverified. The upstream texts above cover the named libraries' base licences.
+Their release links identify the source of the licence text. Exact build
+revisions, transitive notices and complete corresponding source still need
+review against the pinned Windows, Linux and macOS binaries.
 
 Finish by recovering the exact build inputs and notices, or replacing the
 native distribution with a build whose complete inputs can be retained and

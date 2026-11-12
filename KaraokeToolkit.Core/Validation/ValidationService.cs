@@ -136,10 +136,11 @@ public sealed class ValidationService
 
     private static async Task<string?> CheckArchiveAsync(string path, CancellationToken token)
     {
-        using var zip = ZipArchive.OpenArchive(path);
+        await using var zip = await ZipArchive.OpenAsyncArchive(path, cancellationToken: token);
         string? warning = null;
-        var files = zip.Entries.Where(e => !e.IsDirectory).ToArray();
-        foreach (var entry in zip.Entries)
+        var entries = await zip.EntriesAsync.ToArrayAsync(token);
+        var files = entries.Where(e => !e.IsDirectory).ToArray();
+        foreach (var entry in entries)
         {
             string name = entry.Key!.Replace('\\', '/');
             if (name.StartsWith('/') || name.Contains(':') || name.Split('/').Contains(".."))

@@ -1,4 +1,3 @@
-using KaraokeToolkit.Core.Recovery;
 using SharpCompress.Archives;
 using SharpCompress.Archives.Zip;
 using System.Security.Cryptography;
@@ -16,16 +15,17 @@ internal static class KaraokeArchive
     }
     internal static async Task<(string Audio, string Graphics)> ExtractAsync(string zipPath, CancellationToken token)
     {
-        using var zip = ZipArchive.OpenArchive(zipPath);
-        foreach (var entry in zip.Entries)
+        await using var zip = await ZipArchive.OpenAsyncArchive(zipPath, cancellationToken: token);
+        var entries = await zip.EntriesAsync.ToArrayAsync(token);
+        foreach (var entry in entries)
         {
             string normalized = entry.Key!.Replace('\\', '/');
             if (normalized.StartsWith('/') || normalized.Contains(':') || normalized.Split('/').Contains(".."))
                 throw new InvalidDataException("Archive contains an unsafe entry path.");
         }
-        var graphics = zip.Entries.Where(e => Path.GetExtension(e.Key!).Equals(".cdg", StringComparison.OrdinalIgnoreCase)).ToArray();
-        var audio = zip.Entries.Where(e => AudioExtensions.Contains(Path.GetExtension(e.Key!), StringComparer.OrdinalIgnoreCase)).ToArray();
-        if (zip.Entries.Count(e => !e.IsDirectory) != 2 || graphics.Length != 1 || audio.Length != 1 ||
+        var graphics = entries.Where(e => Path.GetExtension(e.Key!).Equals(".cdg", StringComparison.OrdinalIgnoreCase)).ToArray();
+        var audio = entries.Where(e => AudioExtensions.Contains(Path.GetExtension(e.Key!), StringComparer.OrdinalIgnoreCase)).ToArray();
+        if (entries.Count(e => !e.IsDirectory) != 2 || graphics.Length != 1 || audio.Length != 1 ||
             !Path.GetFileNameWithoutExtension(graphics[0].Key!).Equals(Path.GetFileNameWithoutExtension(audio[0].Key!), StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("ZIP must contain exactly one matching audio/CDG pair.");
         // Flatten to the ZIP basename, matching the original public naming convention.
@@ -38,7 +38,7 @@ internal static class KaraokeArchive
     }
     private static async Task ExtractEntryAsync(IArchiveEntry entry, string output, CancellationToken token)
     {
-        await using var target = new FileStream(output, FileMode.CreateNew, FileAccess.Write);
+        await using var target = new FileStream(output, FileMode.CreateNew, FileAccess.Write, FileShare.None, 65536, useAsync: true);
         await ReadEntryAsync(entry, target, token);
     }
     internal static async Task ReadEntryAsync(IArchiveEntry entry, Stream target, CancellationToken token)
@@ -50,7 +50,7 @@ internal static class KaraokeArchive
         // its local header. Retain both so a corrupt central CRC cannot be hidden.
         long expectedSize = entry.Size;
         long expectedCrc = entry.Crc;
-        await using var input = entry.OpenEntryStream();
+        await using var input = await entry.OpenEntryStreamAsync(token);
         byte[] buffer = new byte[65536];
         long written = 0;
         uint crc = uint.MaxValue;
@@ -73,19 +73,26 @@ internal static class KaraokeArchive
         if (written != expectedSize)
             throw new InvalidDataException("Truncated archive member.");
     }
-    internal static void VerifyCreated(string zipPath, string audio, string graphics)
+    internal static async Task VerifyCreatedAsync(string zipPath, string audio, string graphics, CancellationToken token)
     {
-        using var zip = ZipArchive.OpenArchive(zipPath);
-        if (zip.Entries.Count() != 2)
+        await using var zip = await ZipArchive.OpenAsyncArchive(zipPath, cancellationToken: token);
+        var entries = await zip.EntriesAsync.ToArrayAsync(token);
+        if (entries.Length != 2)
             throw new InvalidDataException("Output ZIP does not contain exactly two files.");
         foreach (string input in new[] { audio, graphics })
         {
-            var entry = zip.Entries.SingleOrDefault(e => e.Key! == Path.GetFileName(input))
+            var entry = entries.SingleOrDefault(e => e.Key! == Path.GetFileName(input))
                 ?? throw new InvalidDataException("Output ZIP is missing " + Path.GetFileName(input));
-            using var stream = entry.OpenEntryStream();
-            if (Convert.ToHexString(SHA256.HashData(stream)) != FileTransaction.Hash(input))
+            await using var stream = await entry.OpenEntryStreamAsync(token);
+            if (Convert.ToHexString(await SHA256.HashDataAsync(stream, token)) != await HashFileAsync(input, token))
                 throw new InvalidDataException("Output ZIP payload differs from its source.");
         }
+    }
+
+    internal static async Task<string> HashFileAsync(string path, CancellationToken token)
+    {
+        await using var input = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 65536, useAsync: true);
+        return Convert.ToHexString(await SHA256.HashDataAsync(input, token));
     }
 }
 

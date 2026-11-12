@@ -36,12 +36,18 @@ public class GuiEndToEndTests
         Assert.True(new FileInfo(Path.Combine(second,output)).Length>0);Assert.False(model.IsBusy);Assert.False(model.StartCommand.CanExecute(null));
         model.ShowProgress=false; Assert.True(model.StartCommand.CanExecute(null));
     }
-    [Fact] public async Task MissingFolderFailureReturnsToEditableStateAndNextRunSucceeds()
+    [Fact] public async Task MissingFolderBlocksStartUntilAnExistingFolderIsSelected()
     {
         var model=Model(Path.Combine(TestMediaFixture.NewFolder(),"absent"),Action.AudioGToBin);
-        await model.StartCommand.ExecuteAsync(null);Assert.False(model.IsBusy);Assert.Contains("existing source folder",model.Status);
-        model.ShowProgress=false;model.FolderPath=TestMediaFixture.NewFolder();TestMediaFixture.Seed(model.FolderPath,Action.AudioGToBin,"keep");
-        await model.StartCommand.ExecuteAsync(null).WaitAsync(TimeSpan.FromSeconds(30));Assert.True(File.Exists(Path.Combine(model.FolderPath,"song.bin")));
+        Assert.False(model.StartCommand.CanExecute(null));
+        Assert.True(model.CanEdit);
+        Assert.Equal("Choose an existing file or folder.", model.SourceSummary);
+
+        model.FolderPath = TestMediaFixture.NewFolder();
+        TestMediaFixture.Seed(model.FolderPath, Action.AudioGToBin, "keep");
+        Assert.True(model.StartCommand.CanExecute(null));
+        await model.StartCommand.ExecuteAsync(null).WaitAsync(TimeSpan.FromSeconds(30));
+        Assert.True(File.Exists(Path.Combine(model.FolderPath, "song.bin")));
     }
     [Fact]
     public async Task ActivityShowsRelativeSkipReasonAndReportRetainsFullPath()

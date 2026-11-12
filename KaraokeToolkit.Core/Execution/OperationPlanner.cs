@@ -65,7 +65,7 @@ public sealed class OperationPlanner
                     OperationId.RepackZip => [request.Options.DeleteOldFiles ? source : stem + " (repacked).zip"],
                     OperationId.BinToAudioG => [stem + AudioEncoderService.Extension(request.Options.AudioEncoder), stem + ".cdg"],
                     OperationId.LosslessGToMp3G => [stem + ".mp3", string.IsNullOrEmpty(request.OutputFolder) ? source : stem + ".cdg"],
-                    OperationId.ZipToAudioG => ZipOutputs(source, stem),
+                    OperationId.ZipToAudioG => await ZipOutputsAsync(source, stem, token),
                     OperationId.KaraokeToVideo => [stem + VideoOptions.Extension(request.Options.VideoContainer)],
                     OperationId.CreateCueAndTextFiles => MetadataOutputs(source, request.Options),
                     _ => throw new NotSupportedException("No conversion plan is registered.")
@@ -89,10 +89,11 @@ public sealed class OperationPlanner
         return new(new(operation.Identifier, DateTimeOffset.Now, false, entries) { ReportType = "Dry Run Report" }, entries.Count, entries.Any(e => e.Status == "Blocked"));
     }
 
-    private static string[] ZipOutputs(string source, string stem)
+    private static async Task<string[]> ZipOutputsAsync(string source, string stem, CancellationToken token)
     {
-        using var archive = ZipArchive.OpenArchive(source);
-        var audio = archive.Entries.Where(e => !e.IsDirectory && KaraokeArchive.AudioExtensions.Contains(Path.GetExtension(e.Key!), StringComparer.OrdinalIgnoreCase)).ToArray();
+        await using var archive = await ZipArchive.OpenAsyncArchive(source, cancellationToken: token);
+        var audio = await archive.EntriesAsync.Where(e => !e.IsDirectory &&
+            KaraokeArchive.AudioExtensions.Contains(Path.GetExtension(e.Key!), StringComparer.OrdinalIgnoreCase)).ToArrayAsync(token);
         if (audio.Length != 1) throw new InvalidDataException("Expected one audio member in the ZIP.");
         return [stem + Path.GetExtension(audio[0].Key!).ToLowerInvariant(), stem + ".cdg"];
     }

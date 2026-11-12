@@ -66,7 +66,7 @@ public sealed class DiscRipService(IDiscReader reader)
                     {
                         string zip = Path.ChangeExtension(bin, ".zip");
                         await KaraokeZipWriter.CreateAsync(audio, cdg, zip, request.Options.ZipCompression, token, request.Options.ZipAlgorithm);
-                        KaraokeArchive.VerifyCreated(zip, audio, cdg);
+                        await KaraokeArchive.VerifyCreatedAsync(zip, audio, cdg, token);
                         outputs.Add(zip);
                     }
                 }

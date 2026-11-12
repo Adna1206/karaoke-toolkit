@@ -1,6 +1,7 @@
 using KaraokeToolkit.Core.Conversion;
 using System.Security.Cryptography;
 using SharpCompress.Archives;
+using SharpCompress.Archives.Zip;
 using SharpCompress.Common;
 using SharpCompress.Readers;
 using SharpCompress.Writers.Zip;
@@ -23,22 +24,23 @@ public static class ArchiveZipConverter
     {
         token.ThrowIfCancellationRequested();
         // Streams intentionally prevent auto-discovery of unselected archive volumes.
-        using var input = File.OpenRead(source);
-        using var archive = Path.GetExtension(source).Equals(".7z", StringComparison.OrdinalIgnoreCase)
-            ? ArchiveFactory.OpenArchive(input) : null;
+        await using var input = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read, 65536, useAsync: true);
+        await using var archive = Path.GetExtension(source).Equals(".7z", StringComparison.OrdinalIgnoreCase)
+            ? await ArchiveFactory.OpenAsyncArchive(input, cancellationToken: token) : null;
         // Read ZIP central metadata before opening each member: SharpCompress then
         // replaces it with local-header metadata, and both must agree with the payload.
-        using var sourceZip = repackZip ? SharpCompress.Archives.Zip.ZipArchive.OpenArchive(input) : null;
-        using var zipEntries = sourceZip?.Entries.GetEnumerator();
-        using var reader = repackZip ? null : archive != null ? archive.ExtractAllEntries() : ReaderFactory.OpenReader(input);
+        await using var sourceZip = repackZip ? await ZipArchive.OpenAsyncArchive(input, cancellationToken: token) : null;
+        await using var zipEntries = sourceZip?.EntriesAsync.GetAsyncEnumerator(token);
+        await using var reader = repackZip ? null : archive != null
+            ? await archive.ExtractAllEntriesAsync() : await ReaderFactory.OpenAsyncReader(input, cancellationToken: token);
         if (reader?.Type == ArchiveType.Zip) throw new NotSupportedException("Input is already a ZIP archive.");
         var expected = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
         var fileNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var directoryNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        using (var output = new FileStream(destination, FileMode.CreateNew, FileAccess.ReadWrite))
-        using (var writer = new ZipWriter(output, KaraokeZipWriter.CreateOptions(options.ZipCompression, options.ZipAlgorithm)))
+        await using (var output = new FileStream(destination, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 65536, useAsync: true))
+        await using (var writer = await ZipWriter.OpenAsyncWriter(output, KaraokeZipWriter.CreateOptions(options.ZipCompression, options.ZipAlgorithm), token))
         {
-            while (repackZip ? zipEntries!.MoveNext() : reader!.MoveToNextEntry())
+            while (repackZip ? await zipEntries!.MoveNextAsync() : await reader!.MoveToNextEntryAsync(token))
             {
                 token.ThrowIfCancellationRequested();
                 IEntry entry = repackZip ? zipEntries!.Current : reader!.Entry;
@@ -62,7 +64,7 @@ public static class ArchiveZipConverter
                 {
                     if (fileNames.Contains(canonical)) throw new InvalidDataException("Conflicting archive paths: " + name);
                     directoryNames.Add(canonical);
-                    writer.WriteDirectory(name, entry.LastModifiedTime);
+                    await writer.WriteDirectoryAsync(name, entry.LastModifiedTime, token);
                     continue;
                 }
                 if (directoryNames.Contains(canonical)) throw new InvalidDataException("Conflicting archive paths: " + name);
@@ -70,38 +72,23 @@ public static class ArchiveZipConverter
                 long advertisedSize = entry.Size;
                 long advertisedCrc = entry.Crc;
                 if (advertisedSize >= uint.MaxValue) throw new NotSupportedException("Archive members must be smaller than 4 GiB.");
-                using var member = repackZip ? zipEntries!.Current.OpenEntryStream() : reader!.OpenEntryStream();
-                using var target = writer.WriteToStream(name, new ZipWriterEntryOptions { ModificationDateTime = entry.LastModifiedTime });
+                await using var member = repackZip ? await zipEntries!.Current.OpenEntryStreamAsync(token) : await reader!.OpenEntryStreamAsync(token);
                 using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-                byte[] buffer = new byte[65536];
-                long size = 0;
-                uint crc = uint.MaxValue;
-                int count;
-                while ((count = await member.ReadAsync(buffer, token)) != 0)
-                {
-                    size += count;
-                    if (size >= uint.MaxValue || (advertisedSize > 0 && size > advertisedSize))
-                        throw new InvalidDataException("Archive member exceeds its supported size.");
-                    hash.AppendData(buffer, 0, count);
-                    for (int i = 0; i < count; i++)
-                    {
-                        crc ^= buffer[i];
-                        for (int bit = 0; bit < 8; bit++) crc = (crc >> 1) ^ ((crc & 1) != 0 ? 0xedb88320u : 0);
-                    }
-                    await target.WriteAsync(buffer.AsMemory(0, count), token);
-                }
-                if ((repackZip || advertisedSize > 0) && size != advertisedSize) throw new InvalidDataException("Truncated archive member.");
+                using var verified = new VerifyingMemberStream(member, advertisedSize, hash);
+                await writer.WriteAsync(name, verified, entry.LastModifiedTime, token);
+                if ((repackZip || advertisedSize > 0) && verified.BytesRead != advertisedSize) throw new InvalidDataException("Truncated archive member.");
                 // TAR has header checksums, not payload CRCs. Some formats omit a per-member CRC.
-                if (repackZip ? ~crc != advertisedCrc || ~crc != entry.Crc :
-                    reader!.Type is ArchiveType.Rar or ArchiveType.SevenZip && advertisedCrc != 0 && ~crc != advertisedCrc)
+                if (repackZip ? verified.Crc != advertisedCrc || verified.Crc != entry.Crc :
+                    reader!.Type is ArchiveType.Rar or ArchiveType.SevenZip && advertisedCrc != 0 && verified.Crc != advertisedCrc)
                     throw new InvalidDataException("Archive member CRC check failed.");
                 expected[name] = Convert.ToHexString(hash.GetHashAndReset());
             }
         }
         if (expected.Count == 0) throw new InvalidDataException("Archive contains no entries.");
-        using var zip = SharpCompress.Archives.Zip.ZipArchive.OpenArchive(destination);
-        if (zip.Entries.Count() != expected.Count) throw new InvalidDataException("ZIP entry count differs from the source.");
-        foreach (var entry in zip.Entries)
+        await using var zip = await ZipArchive.OpenAsyncArchive(destination, cancellationToken: token);
+        var entries = await zip.EntriesAsync.ToArrayAsync(token);
+        if (entries.Length != expected.Count) throw new InvalidDataException("ZIP entry count differs from the source.");
+        foreach (var entry in entries)
         {
             token.ThrowIfCancellationRequested();
             if (!expected.TryGetValue(entry.Key!, out string? hash)) throw new InvalidDataException("Unexpected ZIP member.");
@@ -110,10 +97,48 @@ public static class ArchiveZipConverter
                 if (!entry.IsDirectory) throw new InvalidDataException("ZIP directory was not preserved.");
                 continue;
             }
-            using var stream = entry.OpenEntryStream();
+            await using var stream = await entry.OpenEntryStreamAsync(token);
             if (Convert.ToHexString(await SHA256.HashDataAsync(stream, token)) != hash)
                 throw new InvalidDataException("ZIP payload differs from the source.");
         }
+    }
+
+    // The async writer pulls the payload. Verify the same bytes as they stream
+    // through to the staged ZIP, without buffering an entire archive member.
+    private sealed class VerifyingMemberStream(Stream source, long advertisedSize, IncrementalHash hash) : Stream
+    {
+        private uint crc = uint.MaxValue;
+        internal long BytesRead { get; private set; }
+        internal uint Crc => ~crc;
+
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            int count = await source.ReadAsync(buffer, cancellationToken);
+            BytesRead += count;
+            if (BytesRead >= uint.MaxValue || (advertisedSize > 0 && BytesRead > advertisedSize))
+                throw new InvalidDataException("Archive member exceeds its supported size.");
+            var bytes = buffer.Span[..count];
+            hash.AppendData(bytes);
+            foreach (byte value in bytes)
+            {
+                crc ^= value;
+                for (int bit = 0; bit < 8; bit++) crc = (crc >> 1) ^ ((crc & 1) != 0 ? 0xedb88320u : 0);
+            }
+            return count;
+        }
+
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+            => ReadAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        public override void Flush() => throw new NotSupportedException();
     }
 
     private static string SafeName(string name, bool directory)

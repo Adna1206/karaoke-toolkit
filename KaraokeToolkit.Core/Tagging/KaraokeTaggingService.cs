@@ -300,29 +300,33 @@ public sealed class KaraokeTaggingService(RecoveryStore? recovery = null)
         string folder = Path.GetDirectoryName(path)!;
         // Keep names and paths from the original archive; the external ZIP basename supplies the tags.
         string[] names;
-        using (var archive = ZipArchive.OpenArchive(path)) names = archive.Entries.Where(e => !e.IsDirectory).Select(e => e.Key!).ToArray();
+        await using (var archive = await ZipArchive.OpenAsyncArchive(path, cancellationToken: token))
+            names = await archive.EntriesAsync.Where(e => !e.IsDirectory).Select(e => e.Key!).ToArrayAsync(token);
         var pair = await KaraokeArchive.ExtractAsync(path, token);
-        string graphicsHash = FileTransaction.Hash(pair.Graphics);
+        string graphicsHash = await KaraokeArchive.HashFileAsync(pair.Graphics, token);
         await TagMediaAsync(pair.Audio, tags, options, token);
         string rebuilt = Path.Combine(folder, "tagged-" + Guid.NewGuid().ToString("N") + ".zip");
-        await using (var output = File.Create(rebuilt))
+        await using (var output = new FileStream(rebuilt, FileMode.Create, FileAccess.Write, FileShare.None, 65536, useAsync: true))
         {
-            using var writer = new ZipWriter(output, KaraokeZipWriter.CreateOptions(processing.ZipCompression, processing.ZipAlgorithm));
+            await using var writer = await ZipWriter.OpenAsyncWriter(output,
+                KaraokeZipWriter.CreateOptions(processing.ZipCompression, processing.ZipAlgorithm), token);
             foreach (string name in names)
             {
                 string source = Path.GetExtension(name).Equals(".cdg", StringComparison.OrdinalIgnoreCase) ? pair.Graphics : pair.Audio;
-                await using var input = File.OpenRead(source);
-                using var entry = writer.WriteToStream(name, new ZipWriterEntryOptions());
-                await input.CopyToAsync(entry, token);
+                await using var input = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read, 65536, useAsync: true);
+                await writer.WriteAsync(name, input, modificationTime: null, cancellationToken: token);
             }
         }
-        using (var archive = ZipArchive.OpenArchive(rebuilt))
-        foreach (var entry in archive.Entries.Where(e => !e.IsDirectory))
+        string audioHash = await KaraokeArchive.HashFileAsync(pair.Audio, token);
+        await using (var archive = await ZipArchive.OpenAsyncArchive(rebuilt, cancellationToken: token))
+        await foreach (var entry in archive.EntriesAsync.Where(e => !e.IsDirectory).WithCancellation(token))
         {
-            using var contents = entry.OpenEntryStream();
-            string expected = Path.GetExtension(entry.Key!).Equals(".cdg", StringComparison.OrdinalIgnoreCase) ? graphicsHash : FileTransaction.Hash(pair.Audio);
-            if (Convert.ToHexString(SHA256.HashData(contents)) != expected) throw new InvalidDataException("Tagged ZIP payload verification failed.");
+            await using var contents = await entry.OpenEntryStreamAsync(token);
+            string expected = Path.GetExtension(entry.Key!).Equals(".cdg", StringComparison.OrdinalIgnoreCase) ? graphicsHash : audioHash;
+            if (Convert.ToHexString(await SHA256.HashDataAsync(contents, token)) != expected)
+                throw new InvalidDataException("Tagged ZIP payload verification failed.");
         }
+        token.ThrowIfCancellationRequested();
         File.Move(rebuilt, path, true);
     }
 

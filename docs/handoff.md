@@ -4,8 +4,35 @@ Snapshot: 2026-11-12, Africa/Johannesburg. Verify Git/files before editing.
 
 ## Checkout and release
 
-- Branch `master`, base `f225d5b`, shared
+- Branch `master`, base `5ee8885`, shared
   version **2026.11.16**. See the [release notes](changelogs/2026.11.16.md).
+- Archive changes pin SharpCompress to 0.50.8 and migrate archive
+  conversion, karaoke ZIP creation and verification, validation, dry-run
+  planning and ZIP tagging to async I/O. The existing CRC, ZIP64 and publication
+  checks are retained. The package MIT text matches upstream.
+- Full Windows Release suite passed all 709 tests. The test command below used
+  `ArtifactBuildName=Cleanup`, `--no-restore`, `-m:1 -p:BuildInParallel=false`
+  and `-- xUnit.ParallelizeTestCollections=false`. Updated the missing-folder
+  desktop test to verify the existing input validation and Start behavior.
+  TRX: `artifacts/tests/results/almei_ANDRE_2026-11-12_11_31_46_net10.0.trx`.
+- About credits Velopack below FFmpeg and cdrdao. The App Release build
+  passed with zero warnings or errors.
+- The native notice audit adds the exact libvorbis 1.3.7 BSD notice
+  for all FFmpeg targets and cdrdao, cdparanoia and libiconv attribution for
+  Windows. Ran `scripts/ffmpeg/Prepare.ps1` for all four RIDs and
+  `scripts/cdrdao/Prepare.ps1` for win-x64 against the pinned archives. Compared
+  the generated notice files to their source files by SHA-256. Other FFmpeg
+  library notices, exact source inputs and macOS provenance remain open.
+  See [distribution licensing](distribution-licensing.md).
+- Added upstream LAME, libass, GNU libiconv, libbluray and TwoLAME licence
+  texts to the FFmpeg notice inventory. The manifest controls which texts
+  ship for each RID, and Publish checks them. Ran FFmpeg preparation for all
+  four RIDs and verified the selected files against their source copies by
+  SHA-256, including the separate Apple Silicon libiconv 1.17 text. Exact
+  build inputs and transitive notices remain open.
+- Refreshed the existing Debug, Release and Cleanup Windows app output folders
+  with `scripts/ffmpeg/Prepare.ps1 -RuntimeIdentifier win-x64`. Verified all
+  seven library notice copies and nine FFmpeg entries in Debug About.
 - Item and Total progress bars are 14 px tall and centered beside their labels.
   The App Release build passed with zero warnings or errors. Visual inspection
   remains open.

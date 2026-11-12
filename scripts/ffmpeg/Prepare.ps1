@@ -153,6 +153,11 @@ try {
         }
         Copy-Item -LiteralPath $notice.FullName -Destination $destination -Force
     }
+    foreach ($name in $platform.libraryNotices) {
+        if ([IO.Path]::GetFileName($name) -ne $name) { throw "Unsafe FFmpeg notice filename: $name" }
+        $notice = Join-Path $repo ('licenses/ffmpeg/' + $name)
+        Copy-Item -LiteralPath $notice -Destination $licenseDirectory -Force
+    }
     Copy-Item -LiteralPath $manifestPath -Destination (Join-Path $licenseDirectory 'runtime-manifest.json') -Force
     if ($paired -and $env:OS -ne 'Windows_NT') {
         & chmod +x (Join-Path $output 'bin/ffmpeg') (Join-Path $output 'bin/ffprobe')

@@ -30,6 +30,7 @@
               <TextBlock Text="Built with" FontWeight="SemiBold"/>
               <TextBlock Text="Avalonia · Community Toolkit · Inter&#10;FFMpegCore · SharpCompress · TagLibSharp · SkiaSharp · HarfBuzzSharp" TextWrapping="Wrap" Opacity="0.8"/>
               <TextBlock Text="FFmpeg provides audio and video processing. cdrdao provides disc reading." TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.8"/>
+              <TextBlock Text="Velopack provides installation and update support." TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.8"/>
               <TextBlock Text="Full licence texts and bundled component notices are available under Third-party notices." TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.65"/>
             </StackPanel>
           </StackPanel>

@@ -1,5 +1,9 @@
 # Planned features
 
+- [ ] **FFMpegCore migration** — upgrade the .NET wrapper from 5.5.0 to 6.0.0.
+  Update FFprobe calls and FFmpeg process handling for the new APIs. Test audio
+  conversion, MP4 encoding, cancellation and cleanup of partial output.
+
 - [ ] **Revamp the entire Settings menu** — revisit navigation/categories, grouping,
   labels, spacing and help across every tab as one coherent design. Reduce persistent
   explanatory text, use progressive disclosure for advanced features, and keep
