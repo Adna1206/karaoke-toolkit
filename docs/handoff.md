@@ -2,6 +2,24 @@
 
 Snapshot: 2026-11-12, Africa/Johannesburg.
 
+On `master` at `4866197`, added a manual Velopack Flow check under Help.
+Startup checking was deferred to TODO. Before deferring it, the Windows
+Release build and all four focused About/update tests passed with
+`dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj -c Release --no-restore -m:1 -p:UsedAvaloniaProducts= -p:ArtifactBuildName=FlowCheck --filter 'FullyQualifiedName~KaraokeToolkit.Tests.App.UpdateServiceTests|FullyQualifiedName~KaraokeToolkit.Tests.App.About' -v minimal --logger trx --results-directory artifacts/tests/results`.
+TRX: `artifacts/tests/results/almei_ANDRE_2026-11-12_16_01_26_net10.0.trx`.
+The changes are uncommitted. The next verification is to install a build with
+the check and query the same Flow channel after a newer release is available.
+
+Rebuilt local Windows Flow test packages with manual checks only using
+`./scripts/Publish.ps1 -RuntimeIdentifier win-x64` for baseline **2026.11.16**
+(`20261112-161427-1cb260`) and dummy **2026.11.17** (`20261112-161507-d04b0f`).
+Both are under `artifacts/releases/<version>/<run-id>/win-x64/`. Verified both
+checksum lists. The .17 build needed a forced `win-x64` restore after NETSDK1047.
+The shared source version is 2026.11.16. Flow created a .16 release record for
+the earlier build, but the connection reset and the retry was canceled.
+Flow then reported zero stored bytes and no latest release. The rebuilt
+packages are local; the user will run the upload.
+
 Local publish from `master` at `d2d0008` with the SoundTouch.Net TODO edit:
 `./scripts/Publish.ps1` produced unsigned Windows x64 Setup and portable
 packages and a Linux x64 AppImage for **2026.11.16** under
@@ -85,4 +103,4 @@ dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj -c Release --no-res
   physical disc-ripping verification remain open.
 - See [TODO](todo.md) for the FFMpegCore migration and other planned features.
   The backlog now includes native vendoring investigation and Velopack update UI.
-  See [updates](updates.md) for the disabled update checks and unconfigured feed.
+  See [updates](updates.md) for the manual Flow check and remaining update work.

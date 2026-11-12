@@ -1,16 +1,16 @@
 using KaraokeToolkit.App.Services;
+using Velopack;
 
 namespace KaraokeToolkit.Tests.App;
 
 public class UpdateServiceTests
 {
     [Fact]
-    public async Task ChecksRemainDisabledWithoutAReleaseFeedOrInstalledPackage()
+    public async Task DevelopmentBuildReportsThatItIsNotInstalled()
     {
-        Assert.False(UpdateService.ChecksEnabled);
-        Assert.Null(UpdateService.FeedUrl);
-        // The test process is not a Velopack installation. A disabled check must
-        // return without constructing an updater or trying to read a remote feed.
-        Assert.Null(await UpdateService.CheckForUpdatesAsync());
+        VelopackApp.Build().SetAutoApplyOnStartup(false).Run();
+        var (isInstalled, update) = await UpdateService.CheckForUpdatesAsync();
+        Assert.False(isInstalled);
+        Assert.Null(update);
     }
 }

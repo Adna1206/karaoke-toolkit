@@ -56,7 +56,7 @@ not bundled in the Linux package. Velopack's Windows cross-packaging tool recogn
 ELF executables, giving bundled Linux binaries executable permissions in the AppImage.
 After downloading an AppImage on Linux, mark the outer file executable if necessary.
 
-The script does not install packages, upload releases, enable update checks, sign
+The script does not install packages, upload releases, sign
 packages, change Explorer registrations or bump the app version. Packages are local
 unsigned build outputs. Signing, real install/upgrade/uninstall testing, Linux runtime
 testing and distribution/source obligations remain release-readiness work.

@@ -14,7 +14,7 @@ directories, and views share their feature namespace with their view models.
 | Features/Recipes | Recipe library, builder and per-step settings editor |
 | Features/Tagging | Filename-pattern configuration, editable tag preview and tag submission |
 | Metadata | Shared operation and setting definitions |
-| Services | Explorer integration, folder launching and the disabled update-check scaffold |
+| Services | Explorer integration, folder launching and Velopack Flow update checks |
 | Shared | View model base, view locator, window titles and modal dialog presentation |
 | Assets | Logos, icons and other bundled visuals |
 

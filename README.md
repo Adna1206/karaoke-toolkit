@@ -109,6 +109,6 @@ and Linux x64 AppImages with the repository-pinned Velopack tool. See
 [publishing packages](docs/publishing.md). Signing, uploads and real installation/
 upgrade testing remain pending.
 
-Velopack lifecycle integration is present in App, but update checks and automatic
-application of pending updates are disabled. No release feed is configured; see
+The App checks Velopack Flow on demand from the Help menu.
+Automatic application of pending updates remains disabled. See
 [update integration](docs/updates.md).

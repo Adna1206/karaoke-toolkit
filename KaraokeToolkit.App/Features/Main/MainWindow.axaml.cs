@@ -1,4 +1,5 @@
 using KaraokeToolkit.App.Shared;
+using KaraokeToolkit.App.Services;
 using KaraokeToolkit.App.Features.Settings;
 using KaraokeToolkit.App.Features.Reports;
 using KaraokeToolkit.App.Features.DiscRipping;
@@ -302,6 +303,39 @@ public partial class MainWindow : Window
     }
     private void Exit_Click(object? sender, RoutedEventArgs e) => Close();
     private async void About_Click(object? sender, RoutedEventArgs e) => await ModalDialog.ShowAsync(new AboutWindow(), this);
+    private async void CheckForUpdates_Click(object? sender, RoutedEventArgs e)
+    {
+        var menuItem = CheckForUpdatesMenuItem;
+        if (!menuItem.IsEnabled) return;
+        var header = menuItem.Header;
+        menuItem.IsEnabled = false;
+        menuItem.Header = "Checking for updates…";
+        string message;
+        try
+        {
+            var (isInstalled, update) = await UpdateService.CheckForUpdatesAsync();
+            message = (isInstalled, update) switch
+            {
+                (false, _) => "Install Karaoke Toolkit with Velopack to check for updates.",
+                (true, null) => "No newer version is available.",
+                (true, { } available) => $"Version {available.TargetFullRelease.Version} is available."
+            };
+        }
+        catch (Exception error)
+        {
+            System.Diagnostics.Trace.TraceWarning("Velopack Flow update check failed: {0}", error);
+            message = "Could not check for updates. Try again later.";
+        }
+        finally
+        {
+            menuItem.Header = header;
+            menuItem.IsEnabled = true;
+        }
+
+        if (IsVisible)
+            await ShowInfo("Check for updates", message);
+    }
+
     private async void Help_Click(object? sender, RoutedEventArgs e) => await ShowInfo("Help", "Choose a category and operation, add source files or folders, then click Start. Add buttons and drag-and-drop accumulate selections; Clear removes them. Star operations to find them in Favourites. Disc ripping and restoration ask for their inputs after Start.\n\nUse Tools → Settings to configure recursion, deletion, compression, encoding and existing-file handling. Output files are written beside source files unless the operation asks for a destination.\n\nCancel discards unpublished work; completed files remain. Review the event log and View Last Run Report when processing finishes.");
     private async System.Threading.Tasks.Task ShowInfo(string title, string text)
     {

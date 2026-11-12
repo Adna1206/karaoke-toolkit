@@ -30,7 +30,7 @@ the current checkout. [Planned work](todo.md) is a backlog, not implemented beha
 | [Audio runtime](audio-runtime.md) | FFmpeg preparation, format checks and opt-in benchmarks |
 | [Artifacts](artifacts.md) | Generated output locations and cleanup |
 | [Publishing](publishing.md) | Windows/Linux packages, prerequisites and release-readiness limits |
-| [Updates](updates.md) | Velopack lifecycle and disabled update-check scaffold |
+| [Updates](updates.md) | Velopack lifecycle and Flow update checks |
 | [Versioning](versioning.md) | Shared YEAR.MONTH.BUILD version |
 | [Commit conventions](commit-conventions.md) | Conventional Commit messages |
 

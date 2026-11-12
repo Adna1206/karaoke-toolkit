@@ -26,8 +26,8 @@ The Linux AppImage's normal entry point is the GUI. To use the bundled CLI,
 extract the AppImage (`--appimage-extract`) and run `karaoke-toolkit` from its
 extracted `usr/bin` directory. CLI ships with App rather than as a separate product.
 
-Close CLI operations before manually installing/updating the application. Packaging
-does not enable automatic update checks or imply native Linux runtime testing.
+Close CLI operations before manually installing/updating the application.
+The desktop app handles update checks. Linux packages require native runtime testing.
 
 ## Commands and settings
 

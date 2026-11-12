@@ -32,8 +32,12 @@
   Compare upstream release archives with builds we control and account for Git
   LFS history before public distribution. See [distribution licensing](distribution-licensing.md).
 
-- [ ] **Add Velopack update functionality** — configure the hosted release feed
-  and connect in-app update checks, downloads and apply/restart prompts. Verify
+- [ ] **Add a startup update check** — check Velopack Flow after recovery
+  handling and notify the user when a newer version is available.
+  See [updates](updates.md).
+
+- [ ] **Add Velopack update downloads and installation** — verify the manual
+  Flow check against a hosted release, then add download and apply/restart prompts. Verify
   that applying updates waits for file operations and preserves user data.
   See [updates](updates.md).
 
@@ -50,8 +54,7 @@
   pinned tools; validate shared versions, generate release notes/checksums, and
   optionally sign and upload installers/update feeds after checks pass. Decide on
   release hosting (including a separate releases-only repo), protect signing/upload
-  credentials, and review runner/LFS costs. Keep in-app update checks disabled until
-  the feed and update UI are ready.
+  credentials, and review runner/LFS costs.
 
 - [ ] **Windows MSI installer** — extend `scripts/Publish.ps1` to generate an MSI
   through Velopack's WiX integration (`vpk pack --msi`) alongside the existing

@@ -128,6 +128,6 @@ try {
         Write-Host "Packages: $packages"
     }
     Write-Host "Publish complete: $releaseRoot"
-    Write-Host 'No packages were installed or uploaded. Update checks remain disabled.'
+    Write-Host 'No packages were installed or uploaded.'
 }
 finally { Pop-Location }
