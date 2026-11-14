@@ -9,7 +9,7 @@ ignored by `.gitignore`. Normal builds still use each project's standard bin/obj
 - `artifacts/publish/<version>/<run-id>/<rid>/`: self-contained publish staging.
 - `artifacts/releases/<version>/<run-id>/<rid>/`: Velopack installers, portable
   packages, update metadata and SHA256 checksums. See [publishing](publishing.md).
-- `artifacts/runtime/`: reusable extracted native-tool cache.
+- `artifacts/runtime/`: reusable pinned downloads and extracted native runtimes.
 - `artifacts/benchmarks/`: measurement reports and generated benchmark media.
 
 Builds, publish staging and generated test/benchmark media can be regenerated and

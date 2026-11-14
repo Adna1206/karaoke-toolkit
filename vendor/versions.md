@@ -1,4 +1,7 @@
-# Vendored software versions
+# Pinned software versions
+
+Native archives are fetched on demand using the exact URLs and hashes in the
+platform manifests. See [runtime preparation](../docs/audio-runtime.md#runtime-preparation).
 
 This inventory records binaries stored under `vendor/`. Update it and the relevant checksum manifest when a binary changes. NuGet packages are versioned in the project files.
 

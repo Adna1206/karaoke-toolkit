@@ -40,6 +40,10 @@ $verified = @()
 foreach ($source in $sources) {
     if ([IO.Path]::GetFileName($source.archive) -ne $source.archive) { throw 'Unsafe source archive name.' }
     $path = if ($source.repositoryPath) { Join-Path $repo $source.repositoryPath } else { Join-Path $cache $source.archive }
+    $runtimeArchive = Join-Path $repo "artifacts/runtime/downloads/$($source.sha256)/$($source.archive)"
+    if (!(Test-Path -LiteralPath $path -PathType Leaf) -and (Test-Path -LiteralPath $runtimeArchive -PathType Leaf)) {
+        $path = $runtimeArchive
+    }
     if (!(Test-Path -LiteralPath $path -PathType Leaf)) {
         if (!$Download -or !$source.origin) { throw "Missing source archive: $path. Use -Download to fetch pinned upstream archives." }
         $partial = $path + '.' + [Guid]::NewGuid().ToString('N') + '.partial'

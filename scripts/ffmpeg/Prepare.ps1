@@ -4,32 +4,21 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 
-function Get-Sha256([string]$Path) {
-    $stream = [IO.File]::OpenRead($Path)
-    $sha = [Security.Cryptography.SHA256]::Create()
-    try { return ([BitConverter]::ToString($sha.ComputeHash($stream))).Replace('-', '').ToLowerInvariant() }
-    finally { $stream.Dispose(); $sha.Dispose() }
-}
 
 $repo = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $manifestPath = Join-Path $repo 'vendor/ffmpeg/manifest.json'
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 $platform = $manifest.platforms.PSObject.Properties[$RuntimeIdentifier]
 if (!$platform) {
-    throw "No vendored FFmpeg build is recorded for '$RuntimeIdentifier'. Add a reviewed archive under vendor/ffmpeg/$RuntimeIdentifier and record its checksum in vendor/ffmpeg/manifest.json."
+    throw "No pinned FFmpeg build is recorded for '$RuntimeIdentifier'."
 }
+. (Join-Path (Split-Path $PSScriptRoot -Parent) 'Get-PinnedRuntimeArchive.ps1')
 $platform = $platform.Value
-$archive = Join-Path (Join-Path $repo ('vendor/ffmpeg/' + $RuntimeIdentifier)) $platform.archive
-if (!(Test-Path -LiteralPath $archive -PathType Leaf)) {
-    throw "Vendored FFmpeg archive is missing: $archive. Build preparation never downloads it."
-}
-if ((Get-Sha256 $archive) -ne $platform.sha256) { throw "Vendored FFmpeg archive checksum mismatch: $archive" }
+$archive = Get-PinnedRuntimeArchive $repo $platform.archive $platform.sha256 $platform.origin
 $paired = [bool]$platform.probeArchive
 $verifiedHash = $platform.sha256
 if ($paired) {
-    $probeArchive = Join-Path (Join-Path $repo ('vendor/ffmpeg/' + $RuntimeIdentifier)) $platform.probeArchive
-    if (!(Test-Path -LiteralPath $probeArchive -PathType Leaf)) { throw "Vendored FFprobe archive is missing: $probeArchive" }
-    if ((Get-Sha256 $probeArchive) -ne $platform.probeSha256) { throw "Vendored FFprobe archive checksum mismatch: $probeArchive" }
+    $probeArchive = Get-PinnedRuntimeArchive $repo $platform.probeArchive $platform.probeSha256 $platform.probeOrigin
     $verifiedHash += ':' + $platform.probeSha256
 }
 

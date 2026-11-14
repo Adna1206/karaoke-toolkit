@@ -49,7 +49,7 @@ The source packages retain upstream code, MSYS2 patches and PKGBUILD recipes.
 The runtime package contains a bare Git repository; its recipe selects
 `cygwin-3.6.5` and applies the included patches. The GCC and libiconv packages
 contain their upstream release archives. cdrdao's own pinned source remains
-under `vendor/cdrdao/source/` and is already copied beside its executable.
+by SHA-256 in the runtime cache and is copied beside its executable.
 
 Runtime licence texts and notices are retained under `licenses/cdrdao/`
 and copied to the same subfolder in build/publish output. About reads only the

@@ -85,8 +85,7 @@ In the agent sandbox, the established test command is:
   process-crash workers. Prefer automated coverage over repeatedly driving the GUI;
   use targeted UI verification when the change needs it. Do not duplicate Core
   conversion tests in CLI/MCP adapters.
-- Native FFmpeg archives are pinned under `vendor/`; build targets verify and select
-  them by RID. Tests use self-contained fixtures and explicit expected outcomes.
+- Native runtime manifests under `vendor/` pin exact URLs and SHA-256 digests. Build targets fetch cache misses by RID and verify archives before extraction. Tests use self-contained fixtures and explicit expected outcomes.
 - Follow the shared desktop activity conventions in [UI definitions](docs/ui-definitions.md).
   Emit structured source and label fields for item rows. Keep count-only updates
   available to progress bars without repeating them in the activity table.

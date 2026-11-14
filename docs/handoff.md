@@ -1,5 +1,17 @@
 # Current handoff
 
+## Native runtime archive migration
+
+On 2026-11-15, version 2026.11.17, moved the native runtime archives from
+Git to a SHA-256-keyed download cache. All six exact upstream archives
+downloaded successfully into an empty cache. Verified runtime preparation
+for win-x64, linux-x64 and osx-arm64 on Windows, Windows PowerShell cold
+download and cache reuse, and both source evidence assembly paths.
+`pwsh -NoProfile -File scripts/Test.ps1` passed **735/735** on Windows.
+The cache and checksum-verified backup copies are in ignored
+`artifacts/runtime/downloads` and `artifacts/runtime-backup`.
+Native Linux/macOS execution and public distribution review remain open.
+
 ## 2026.11.17 release checkpoint
 
 Prepared on master from base `6237ae5`. See [release notes](changelogs/2026.11.17.md)

@@ -9,14 +9,18 @@ Tests assert deterministic PCM, graphics, duration and timing expectations.
 
 ## Runtime preparation
 
-Directory.Build.targets runs scripts/ffmpeg/Prepare.ps1 after App and Tests builds
-and includes its output in App publishing. The script reads only the archive or
-archive pair for the selected .NET Runtime Identifier from `vendor/ffmpeg/<rid>/`,
-verifies SHA256 against `vendor/ffmpeg/manifest.json`, extracts it into the ignored
-`artifacts/runtime/ffmpeg/<version>/<rid>` cache, and copies the complete
-distribution to `output/ffmpeg`. It never downloads binaries, during either build
-or app startup. The complete distribution includes shared libraries and notices.
-The build fails if the selected RID has no archive or its checksum differs.
+Directory.Build.targets runs native runtime preparation for the selected .NET
+Runtime Identifier. On a cache miss it downloads the exact archive or archive
+pair pinned in the vendor manifests and verifies SHA-256 before extraction.
+Downloads are cached in `artifacts/runtime/downloads/<sha256>/`. The extracted
+FFmpeg distribution goes into the output's `ffmpeg/` directory. Windows
+preparation also fetches cdrdao and its release source. A warm cache supports
+offline preparation. The application does not fetch binaries at startup.
+
+Use `./scripts/Prefetch-Runtimes.ps1 -RuntimeIdentifier win-x64,linux-x64,osx-arm64`
+to warm individual target caches ahead of time. If an upstream build disappears,
+restore a copy with the exact expected SHA-256 to its cache path. Builds fail
+with the URL and digest when a pin cannot be fetched and verified.
 
 `win-x64` and `linux-x64` use pinned BtbN LGPL shared builds. The macOS target
 uses separate Martin Riedl FFmpeg/FFprobe ZIPs for Apple Silicon. They contain GPL code. The paired
@@ -27,13 +31,11 @@ publishing from Windows does not verify macOS execution or signing. Media tests
 use the native runtime for their build target.
 
 `-p:SkipFFmpegPrepare=true` is for compilation-only checks; it does not produce a
-runnable package unless the runtime is already present. The retained Windows
-archive is a pinned BtbN build; its upstream daily release may expire, but normal
-builds now use the vendored copy. Store large archives with Git LFS.
+runnable package unless the runtime is already present.
 
 ## Licensing and distribution
 
-The vendored Windows and Linux FFmpeg builds are LGPL **version 3** (they enable
+The pinned Windows and Linux FFmpeg builds are LGPL **version 3** (they enable
 version3, without GPL or nonfree components). Their `LICENSE.txt`, the GPL v3
 text incorporated by LGPL v3, and `runtime-manifest.json` are included in the
 FFmpeg output folder and copied to `licenses/ffmpeg/`, which About reads.
@@ -49,9 +51,7 @@ bundle. See https://ffmpeg.org/legal.html for upstream guidance.
 
 The macOS builds are for local development until they have been run on their
 target architectures and their GPL corresponding-source obligations are met.
-OSXExperts labels its downloads "for educational purposes only"; its page does
-not identify a complete matching source bundle. Do not treat the macOS publish
-checks as clearance for public redistribution.
+See [distribution licensing](distribution-licensing.md) for the remaining macOS source and provenance checks.
 
 ## Behavior and tests
 

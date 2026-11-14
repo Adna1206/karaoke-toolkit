@@ -58,7 +58,6 @@
     {
       "component": "cdrdao",
       "archive": "cdrdao-1.2.6.tar.gz",
-      "repositoryPath": "vendor/cdrdao/source/cdrdao-1.2.6.tar.gz",
       "sha256": "10d15b0dc78bd44a9a4a8d7d85498c734771036159d05aa940e17f18fc40d40f"
     },
     {
