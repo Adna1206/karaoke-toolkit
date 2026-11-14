@@ -101,12 +101,27 @@ manifest pins FFmpeg commit `8dca1586f468bfcbb78ae3ed618af1361d9f140a` and
 BtbN recipe commit `5031c6f1082414e53688d39e521849905071070d`, including
 the recipe repository's patches.
 
-The source manifest also pins the exact revisions selected by that recipe for
-libvorbis, libogg, libass, TwoLAME, libbluray, GNU libiconv and gnulib. The libbluray snapshot
-contains its top-level source; its submodule and BD-J build inputs need separate
-verification. LAME SVN revision 7113 still needs an archive; the tested
-SourceForge snapshot URL returned 404. The remaining enabled components,
-their build inputs and their notices still need to be matched against each target.
+The source manifest pins exact recipe revisions for components including
+libvorbis, libogg, libass, TwoLAME, GNU libiconv, gnulib, zlib and libopus.
+For libbluray it includes the top-level commit, its libudfread submodule at
+`139a2194525f2745b98a98e4d8fa627d07440176`, and the separately configured
+BtbN libudfread dependency at `b0bc6957e7e07d5f35391f210596d9eb71cffdd9`.
+Which copy was used and the BD-J build inputs still need verification.
+
+The [LAME SVN tree at revision 7113](https://svn.code.sf.net/p/lame/svn/!svn/rvr/7113/trunk/lame/)
+was reachable and identified itself as that revision. The tested ZIP snapshot
+URL returned 404. Export the exact tree with Subversion to assemble a local archive:
+
+```text
+svn export -r 7113 https://svn.code.sf.net/p/lame/svn/trunk/lame@7113 lame-r7113
+```
+
+The Windows and Linux binaries carry distinct configure strings. For example,
+Linux enables OpenSSL, libxcb, PulseAudio and libdrm, while Windows enables
+SChannel and Windows hardware integrations. The recipe contains sources for
+other variants as well. Its complete script list cannot establish which inputs
+were used for either binary. Finish matching enabled and transitive components,
+their sources and their notices per target.
 The full evidence output includes the FFmpeg runtime manifest and the currently
 maintained FFmpeg notices alongside the source archives.
 The package preparation step copies the following upstream library licence
@@ -149,6 +164,8 @@ bundle includes the upstream FFmpeg release source and the vendor's version
 and configure report. The report identifies LAME, Vorbis and x264. The bundle
 also includes recipe candidate `6a611e19870e197bc37c6e4c7fccddebd3715466`.
 Its version files agree with the reported dependency versions where present.
+The bundle now includes the candidate's release archives for LAME 4.0,
+libass 0.17.5 and libvorbis 1.3.7. These versions match the vendor's report.
 Its x264 script fetches the moving `master` archive, and the report gives only
 `0.165.x`. The exact x264 revision and confirmation that the vendor used this
 recipe are pending. Complete dependency sources and notices, native

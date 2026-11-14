@@ -108,6 +108,120 @@
       "archive": "btbn-libiconv-b5a1735e.tar.gz",
       "origin": "https://git.savannah.gnu.org/gitweb/?p=libiconv.git;a=snapshot;h=b5a1735e02bf43ee6e490fcf9395e8abc8d32432;sf=tgz",
       "sha256": "8399b003f3d3dd6f32b05e9bcdf1b31b07a6c66468f26fe952d519f04deb00a3"
+    },
+    {
+      "component": "btbn-fribidi",
+      "archive": "btbn-fribidi-d2f3e1f4.tar.gz",
+      "origin": "https://codeload.github.com/fribidi/fribidi/tar.gz/d2f3e1f4946e7cef9789e1c3ebdb4a60d4314c7f",
+      "sha256": "0a666e0f5a42e9e938e38f6c2859fe39eda37ca9852e8afd1c2d226be163a529"
+    },
+    {
+      "component": "btbn-libaribb24",
+      "archive": "btbn-libaribb24-5e9be272.tar.gz",
+      "origin": "https://codeload.github.com/nkoriyama/aribb24/tar.gz/5e9be272f96e00f15a2f3c5f8ba7e124862aec38",
+      "sha256": "651e88af3c8189d4faed538bee3affde360eb4698a70505765fc7e5653f5eb23"
+    },
+    {
+      "component": "btbn-libaribcaption",
+      "archive": "btbn-libaribcaption-37dde0f3.tar.gz",
+      "origin": "https://codeload.github.com/xqq/libaribcaption/tar.gz/37dde0f32652c32aa98bf92278944d1cfb2e7354",
+      "sha256": "ace54ae69e1b38481917d36161a8960ed93f51f7fd343575fab36dfe3ea072f6"
+    },
+    {
+      "component": "btbn-libbluray-libudfread-gitlink",
+      "archive": "btbn-libbluray-libudfread-139a2194.tar.gz",
+      "origin": "https://code.videolan.org/videolan/libudfread/-/archive/139a2194525f2745b98a98e4d8fa627d07440176/libudfread-139a2194525f2745b98a98e4d8fa627d07440176.tar.gz",
+      "sha256": "aaccb7877139abe3c47a6bdb142dc3b1f1ab885a0e4b4e956e631d7a0445f960"
+    },
+    {
+      "component": "btbn-libopus",
+      "archive": "btbn-libopus-a8b2545e.tar.gz",
+      "origin": "https://codeload.github.com/xiph/opus/tar.gz/a8b2545eec71e0f53ecead2d583e7b6baa42684d",
+      "sha256": "ebbb3534c688d680c4e79f6bcdb72b4115c1ff565ed4f52a56a55ba87269baa6"
+    },
+    {
+      "component": "btbn-libtheora",
+      "archive": "btbn-libtheora-28fd5ec7.tar.gz",
+      "origin": "https://codeload.github.com/xiph/theora/tar.gz/28fd5ec77f0ad0e07a371cef1047828116f6bd8a",
+      "sha256": "b92c94380b3c86db5797e8f248373eecfc6230c8a0b374e64b4041645b0d2152"
+    },
+    {
+      "component": "btbn-libxml2",
+      "archive": "btbn-libxml2-c79c9612.tar.gz",
+      "origin": "https://codeload.github.com/GNOME/libxml2/tar.gz/c79c9612fcc77b06b0d16f35fd363d938bdbbf5e",
+      "sha256": "13bda7af58a59bddc052ddb34b3472eb1ee18fdc72465f626daa3e2dd530b269"
+    },
+    {
+      "component": "btbn-openh264",
+      "archive": "btbn-openh264-1bca6231.tar.gz",
+      "origin": "https://codeload.github.com/cisco/openh264/tar.gz/1bca62311e447fd9c39fc93de2c4b96cd5ce971c",
+      "sha256": "2238d3e5956ef0d288dd43842a0220015cf72c4327d98684e8bc47ffa7cf5308"
+    },
+    {
+      "component": "btbn-openjpeg",
+      "archive": "btbn-openjpeg-8314119b.tar.gz",
+      "origin": "https://codeload.github.com/uclouvain/openjpeg/tar.gz/8314119b067c0fc77834731168daaebd379fdb12",
+      "sha256": "e723e8babb2188e8743308842bb1bfc9809f0375cd964cfeac2fb17285094321"
+    },
+    {
+      "component": "btbn-snappy",
+      "archive": "btbn-snappy-94660645.tar.gz",
+      "origin": "https://codeload.github.com/google/snappy/tar.gz/946606459314e55d029c85f9a8c46f8809467f0f",
+      "sha256": "78767c8f8d9ac0eb26a7ab04ed33ed9b33b9de7f80434bc66d4792fb55c83cb8"
+    },
+    {
+      "component": "btbn-srt",
+      "archive": "btbn-srt-9f239023.tar.gz",
+      "origin": "https://codeload.github.com/Haivision/srt/tar.gz/9f2390232a8256ed4c72a5418c2b2777c49ad737",
+      "sha256": "4946189b19692b40d2872b16410f5b58b8023888e93275fc9e76415614ce941c"
+    },
+    {
+      "component": "btbn-vmaf",
+      "archive": "btbn-vmaf-f712fa75.tar.gz",
+      "origin": "https://codeload.github.com/Netflix/vmaf/tar.gz/f712fa7564fe49b12991d83920b83573af2ae063",
+      "sha256": "18e7e34c4165d4fd9781beb4aac11866c3b7d5ad4e1149b201417e7b7e379b54"
+    },
+    {
+      "component": "btbn-vvenc",
+      "archive": "btbn-vvenc-0e7508b8.tar.gz",
+      "origin": "https://codeload.github.com/fraunhoferhhi/vvenc/tar.gz/0e7508b811bbea3cd510956ddb3193f3a4c93684",
+      "sha256": "3771b472b4a491cb3979dc858e6a8bb23552b7dd864e0a3f68c7d0ca0e0394b7"
+    },
+    {
+      "component": "btbn-zimg",
+      "archive": "btbn-zimg-67e06032.tar.gz",
+      "origin": "https://codeload.github.com/sekrit-twc/zimg/tar.gz/67e0603271c080e22c8429856dd4a8a56587e61e",
+      "sha256": "539495d51fcd8c7ef9b89a611454e0c1173d18e8d4e743efdef67c4aa7e40d4f"
+    },
+    {
+      "component": "btbn-zlib",
+      "archive": "btbn-zlib-9d314c34.tar.gz",
+      "origin": "https://codeload.github.com/madler/zlib/tar.gz/9d314c341b2ce16e01ae44e27ec3dd2f32aa58fd",
+      "sha256": "bb27c6019ed72ea6d3ceb574cd8074083a7391afa08404ddf945bcd24f01742b"
+    },
+    {
+      "component": "riedl-lame",
+      "archive": "riedl-lame-4.0.tar.gz",
+      "origin": "https://unlimited.dl.sourceforge.net/project/lame/lame/4.0/lame-4.0.tar.gz",
+      "sha256": "3df5124d5ad3a98312ffd7ba6a9b36230e4f8a3e66d3ce0f425e336c32d216eb"
+    },
+    {
+      "component": "riedl-libass",
+      "archive": "riedl-libass-0.17.5.tar.gz",
+      "origin": "https://github.com/libass/libass/releases/download/0.17.5/libass-0.17.5.tar.gz",
+      "sha256": "caab4b993dd7be6187c55623b789ed75dddefea6e65938af134637c732fe094a"
+    },
+    {
+      "component": "riedl-libvorbis",
+      "archive": "riedl-libvorbis-1.3.7.tar.gz",
+      "origin": "https://ftp.osuosl.org/pub/xiph/releases/vorbis/libvorbis-1.3.7.tar.gz",
+      "sha256": "0e982409a9c3fc82ee06e08205b1355e5c6aa4c36bca58146ef399621b0ce5ab"
+    },
+    {
+      "component": "btbn-libudfread",
+      "archive": "btbn-libudfread-b0bc6957.tar.gz",
+      "origin": "https://code.videolan.org/videolan/libudfread/-/archive/b0bc6957e7e07d5f35391f210596d9eb71cffdd9/libudfread-b0bc6957e7e07d5f35391f210596d9eb71cffdd9.tar.gz",
+      "sha256": "c04bb96b72dd0760030d880ad6c9ea2ae80abbdd648de127adb1b2e8555186aa"
     }
   ]
 }

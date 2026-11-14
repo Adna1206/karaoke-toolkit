@@ -6,8 +6,10 @@ Prepared on master from base `6237ae5`. See [release notes](changelogs/2026.11.1
 for the feature scope. Full Windows Release verification via
 `pwsh -NoProfile -File scripts/Test.ps1` passed **735/735**. TRX:
 `artifacts/tests/results/20261115-010633-00f6d78c94cf46be829202e31bbc0805_net10.0_20261115010704.trx`.
-The distribution licensing guide and source manifest have separate uncommitted
-edits. Next release step is to build and smoke-test 2026.11.17 packages.
+The separate distribution evidence update verified all 36 pinned archives
+using `./scripts/Prepare-DistributionSources.ps1` without downloads. Output:
+`artifacts/distribution-sources/20261115-011143-f1f627`. Public distribution
+review remains open. Next release step is to build and smoke-test 2026.11.17 packages.
 
 ## Artifact retention
 
