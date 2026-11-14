@@ -117,7 +117,7 @@ public sealed class ValidationService
                     findings.Add(new(file, root, ValidationStatus.Unsupported, error.Message, []));
                 }
                 progress?.Report(new(100, media.Length == 0 ? 100 : Math.Min(100, visited.Count * 100 / media.Length), media.Length, findings.Count,
-                    "Checked: " + file, watch.Elapsed.ToString(@"hh\:mm\:ss")) { ActivitySource = file, ActivityLabel = "Checked" });
+                    "Processing: " + file, watch.Elapsed.ToString(@"hh\:mm\:ss")) { ActivitySource = file, ActivityLabel = "Processing" });
             }
             return new ValidationResult(findings, cancelled, watch.Elapsed);
         }, CancellationToken.None);

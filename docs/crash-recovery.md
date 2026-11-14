@@ -25,6 +25,32 @@ the interrupted run. A normal Cancel still discards unpublished work and ends th
 this feature recovers unexpected termination and retained publication failures, rather
 than introducing pause/resume for ordinary cancellation.
 
+Track grouping saves the source and destination paths and content hashes for
+each planned group in a workflow journal under the destination root. Copy
+stages and verifies a full group on the destination volume before publishing.
+Move uses a same-volume rename without replacement. Resume verifies a partial
+group and finishes publication using the saved paths. It does not rescan the
+input selection. Desktop, CLI and MCP can resume these jobs. Plan revalidation
+and source hashing happen before the first item is published. Standalone flattening and alphabetical organization also hash their move plans and save a recovery journal before moving items. Recipe steps save their plan in the recipe journal.
+
+## Verification settings
+
+**Settings → Recovery** controls new standalone Track Grouping, Alphabetical
+Organization and Flatten runs. Choose **SHA-256** (default), **xxHash128**,
+**Metadata only**, or **No verification**. Metadata checks compare file size
+and last-write time. Directory metadata checks also compare the paths in
+the tree. No verification keeps path and transaction checks.
+
+Turning off **Allow batch resume** leaves interrupted move records available
+for manual review. Metadata-only or unverified interrupted runs also require
+manual review. Recover lists these records and explains why automatic resume
+is unavailable. Successful runs clean up their records. Journal settings are
+saved per run. An older journal without a verification mode uses SHA-256.
+
+Conversion and tagging publication, recipe recovery, and quarantine retain
+their existing SHA-256 checks. The setting is separate from archive validation
+and does not change any recorded fingerprint.
+
 ## File handling
 
 - Interrupted staging: originals have not moved; discard disposable staging and restart

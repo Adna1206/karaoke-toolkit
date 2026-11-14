@@ -8,6 +8,7 @@ internal static class CliShellIntegration
         "--recurse", "--no-recurse", "--keep-originals", "--delete-originals", "--cue-text", "--no-cue-text", "--validate-inputs", "--ignore-leading-the", "--pattern",
         "--fill-empty-only", "--preserve-comments", "--preserve-other-tags", "--video-container", "--video-resolution", "--video-smoothing", "--video-frame-rate", "--video-bitrate", "--video-audio-bitrate", "--video-audio-fallback-only",
         "--device", "--tracks", "--disc-name", "--format", "--experimental", "--cdrdao" }
+        .Concat(CliArguments.GroupingFlags.Concat(CliArguments.GroupingValues).Select(name => "--" + name))
         .Concat(CliOperationCatalog.Exposed.Select(o => o.Name!)).Distinct().ToArray();
 
     internal static string Completion(string shell)

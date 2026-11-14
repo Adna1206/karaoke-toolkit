@@ -93,8 +93,8 @@ internal static class RecoveryCrashWorker
         {
             bool ready = mode switch
             {
-                "tagging" => value.Completed == 1 && value.Message.StartsWith("Tagging ", StringComparison.Ordinal),
-                "recipe-tagging" => value.Completed == 1 && value.Message.Contains("Tagging ", StringComparison.Ordinal),
+                "tagging" => value.Completed == 1 && value.ActivityLabel == "Processing",
+                "recipe-tagging" => value.Completed == 1 && value.ActivityLabel?.EndsWith("Processing", StringComparison.Ordinal) == true,
                 "between" => value.Message == "Completed step 1/2.",
                 "moving" => value.Message.Contains("planned items.", StringComparison.Ordinal),
                 _ => value.Message.Contains("Verified outputs:", StringComparison.Ordinal)

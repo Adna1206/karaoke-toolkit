@@ -6,6 +6,7 @@ internal sealed record RecoveryOutput(string Name, string Hash);
 internal sealed record RecoveryBackup(string Name, string Slot, string Hash);
 internal sealed class TransactionJournal
 {
+    public string VerificationMode { get; set; } = RecoveryFingerprint.Sha256;
     public int Version { get; set; } = 1;
     public string Phase { get; set; } = "Publishing";
     public RecoveryOutput[] Outputs { get; set; } = [];
@@ -44,13 +45,13 @@ internal static class FileTransactionRecovery
         foreach (var item in journal.Outputs)
         {
             Leaf(item.Name);
-            ValidateHash(item.Hash);
+            ValidateHash(item.Hash, journal.VerificationMode);
         }
         foreach (var item in journal.Backups)
         {
             Leaf(item.Name);
             Leaf(item.Slot);
-            ValidateHash(item.Hash);
+            ValidateHash(item.Hash, journal.VerificationMode);
         }
         if (journal.Outputs.Select(x => x.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count() != journal.Outputs.Length ||
             journal.Backups.Select(x => x.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count() != journal.Backups.Length ||
@@ -66,11 +67,11 @@ internal static class FileTransactionRecovery
             // Publication is durable. Cleanup may already have deleted some old
             // backups; do not require deleted originals or attempt publication again.
             foreach (var output in journal.Outputs)
-                RequireHash(Path.Combine(folder, output.Name), output.Hash);
+                RequireHash(Path.Combine(folder, output.Name), output.Hash, journal.VerificationMode);
             foreach (var backup in journal.Backups)
             {
                 string old = Path.Combine(workspace, "backups", backup.Slot);
-                if (Exists(old)) RequireHash(old, backup.Hash);
+                if (Exists(old)) RequireHash(old, backup.Hash, journal.VerificationMode);
             }
             return journal.Outputs.Select(output => Path.Combine(folder, output.Name)).ToArray();
         }
@@ -81,25 +82,25 @@ internal static class FileTransactionRecovery
             string backup = Path.Combine(workspace, "backups", old.Slot), original = Path.Combine(folder, old.Name);
             if (Exists(backup))
             {
-                RequireHash(backup, old.Hash);
+                RequireHash(backup, old.Hash, journal.VerificationMode);
                 if (Exists(original) && !journal.Outputs.Any(x => x.Name.Equals(old.Name, StringComparison.OrdinalIgnoreCase)))
                     throw new IOException("A source reappeared during recovery: " + original);
             }
             else
-                RequireHash(original, old.Hash);
+                RequireHash(original, old.Hash, journal.VerificationMode);
         }
         foreach (var output in journal.Outputs)
         {
             string staged = Path.Combine(workspace, output.Name), target = Path.Combine(folder, output.Name);
             if (Exists(staged))
             {
-                RequireHash(staged, output.Hash);
+                RequireHash(staged, output.Hash, journal.VerificationMode);
                 var old = journal.Backups.FirstOrDefault(x => x.Name.Equals(output.Name, StringComparison.OrdinalIgnoreCase));
                 if (Exists(target) && (old == null || Exists(Path.Combine(workspace, "backups", old.Slot))))
                     throw new IOException("A new file blocks recovery: " + target);
             }
             else
-                RequireHash(target, output.Hash);
+                RequireHash(target, output.Hash, journal.VerificationMode);
         }
         foreach (var old in journal.Backups)
         {
@@ -114,7 +115,7 @@ internal static class FileTransactionRecovery
             string staged = Path.Combine(workspace, output.Name), target = Path.Combine(folder, output.Name);
             if (File.Exists(staged))
                 File.Move(staged, target);
-            RequireHash(target, output.Hash);
+            RequireHash(target, output.Hash, journal.VerificationMode);
         }
         journal.Phase = "Committed";
         DurableJson.Write(path, journal);
@@ -131,7 +132,7 @@ internal static class FileTransactionRecovery
         foreach (var old in journal.Backups)
         {
             string backup = Path.Combine(workspace, "backups", old.Slot);
-            RequireHash(File.Exists(backup) ? backup : Path.Combine(folder, old.Name), old.Hash);
+            RequireHash(File.Exists(backup) ? backup : Path.Combine(folder, old.Name), old.Hash, journal.VerificationMode);
             if (File.Exists(backup) && Exists(Path.Combine(folder, old.Name)) && !journal.Outputs.Any(x => x.Name.Equals(old.Name, StringComparison.OrdinalIgnoreCase)))
                 throw new IOException("A source reappeared during rollback: " + old.Name);
         }
@@ -142,9 +143,9 @@ internal static class FileTransactionRecovery
                 continue;
             var old = journal.Backups.FirstOrDefault(x => x.Name.Equals(output.Name, StringComparison.OrdinalIgnoreCase));
             if (old != null && !File.Exists(Path.Combine(workspace, "backups", old.Slot)))
-                RequireHash(target, old.Hash);
+                RequireHash(target, old.Hash, journal.VerificationMode);
             else if (!File.Exists(staged))
-                RequireHash(target, output.Hash);
+                RequireHash(target, output.Hash, journal.VerificationMode);
             else
                 throw new IOException("An unexpected output blocks rollback: " + target);
         }
@@ -174,14 +175,14 @@ internal static class FileTransactionRecovery
             throw new IOException("A directory blocks recovery: " + path);
         return File.Exists(path);
     }
-    private static void RequireHash(string path, string hash)
+    private static void RequireHash(string path, string hash, string mode)
     {
-        if (!Exists(path) || FileTransaction.Hash(path) != hash)
+        if (!Exists(path) || RecoveryFingerprint.Hash(path, mode) != hash)
             throw new IOException("Recovery stopped: file missing or changed: " + path);
     }
-    private static void ValidateHash(string hash)
+    private static void ValidateHash(string hash, string mode)
     {
-        if (string.IsNullOrEmpty(hash) || hash.Length != 64 || hash.Any(c => !Uri.IsHexDigit(c)))
+        if (string.IsNullOrEmpty(hash) || hash.Length != RecoveryFingerprint.HexLength(mode) || hash.Any(c => !Uri.IsHexDigit(c)))
             throw new IOException("Invalid recovery hash.");
     }
 }

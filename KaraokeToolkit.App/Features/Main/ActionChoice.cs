@@ -35,6 +35,7 @@ public partial class ActionChoice(OperationDefinition definition, RecipeDefiniti
     public bool IsRip => Definition.IsRip;
     public bool IsRestore => Definition.IsRestore;
     public bool IsTagging => Definition.IsTagging;
+    public bool IsTrackGrouping => Definition.IsTrackGrouping;
     public AlphabeticalOrganizeScope? OrganizeMode => Definition.OrganizeMode;
     public bool IsOrganizer => OrganizeMode.HasValue;
     public FolderFlattenScope? FlattenScope => Definition.FlattenScope;
@@ -44,7 +45,7 @@ public partial class ActionChoice(OperationDefinition definition, RecipeDefiniti
     public IReadOnlyList<string>? SourceFileExtensions =>
         Definition.Inputs != OperationInputKind.FilesAndFolders ? [] :
         Recipe is { } recipe ? RecipeOperations.FileExtensions(recipe.Steps[0].OperationId) :
-        IsOrganizer ? null :
+        IsOrganizer || IsTrackGrouping ? null :
         IsTagging ? KaraokeTaggingService.InputExtensions :
         Action is { } action && OperationCapabilities.IsConversion(action) ? InputSelection.ConversionFileExtensions(action) :
         InputSelection.Extensions.Concat(ArchiveZipConverter.Extensions).ToArray();

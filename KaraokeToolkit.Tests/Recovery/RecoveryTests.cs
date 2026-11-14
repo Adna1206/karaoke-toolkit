@@ -13,6 +13,29 @@ namespace KaraokeToolkit.Tests.Recovery;
 /// Reconstructed states verify recovery contracts rather than simulating physical power loss.</remarks>
 public class RecoveryTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TransactionRecoveryReadsLegacySha256AndExplicitXxHash128(bool xxHash)
+    {
+        string root = TestMediaFixture.NewFolder();
+        string workspace = Directory.CreateDirectory(Path.Combine(root, ".karaoke-job-test")).FullName;
+        string staged = Path.Combine(workspace, "track.zip");
+        File.WriteAllText(staged, "recovery payload");
+        string mode = xxHash ? RecoveryFingerprint.XxHash128 : RecoveryFingerprint.Sha256;
+        string fingerprint = RecoveryFingerprint.Hash(staged, mode);
+        string json = System.Text.Json.JsonSerializer.Serialize(new TransactionJournal
+        {
+            VerificationMode = mode,
+            Outputs = [new("track.zip", fingerprint)]
+        });
+        if (!xxHash) json = json.Replace("\"VerificationMode\":\"Sha256\",", "");
+        File.WriteAllText(Path.Combine(workspace, "recovery.json"), json);
+
+        Assert.Single(FileTransactionRecovery.Recover(workspace)!);
+        Assert.Equal("recovery payload", File.ReadAllText(Path.Combine(root, "track.zip")));
+    }
+
     /// <summary>Kills a worker after staging with one prior failure recorded, then resumes only unfinished work.</summary>
     /// <remarks>The ready-file handshake establishes the crash boundary; active leases hide the job until exit.</remarks>
     [Fact]

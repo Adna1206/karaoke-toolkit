@@ -64,6 +64,8 @@ public partial class MainViewModel : ViewModelBase
     public bool CanRetry => !IsBusy && retryRequests.Count > 0;
     public IReadOnlyList<string> SelectedInputs => selectedInputs;
     public string[] CurrentInputs => selectedInputs.Length > 0 ? selectedInputs : [FolderPath];
+    internal RecoveryVerificationMode RecoveryVerification { get; private set; }
+    internal bool SaveResumableRun { get; private set; } = true;
     public bool RememberInputFolder { get; private set; }
     private string? lastInputFolder;
     internal string? InputPickerStartFolder => RememberInputFolder && Path.IsPathFullyQualified(lastInputFolder ?? "") &&
@@ -77,7 +79,7 @@ public partial class MainViewModel : ViewModelBase
         var normalized = SelectedOperation?.IsTagging == true ? KaraokeToolkit.Core.Tagging.KaraokeTaggingService.NormalizeInputs(paths)
             : SelectedOperation?.Recipe is { } recipe
             ? KaraokeToolkit.Core.Recipes.RecipeOperations.NormalizeInputs(recipe, paths)
-            : SelectedOperation is { IsOrganizer: true } or { IsFlatten: true }
+            : SelectedOperation is { IsOrganizer: true } or { IsFlatten: true } or { IsTrackGrouping: true }
             ? paths.Select(p => Path.TrimEndingDirectorySeparator(Path.GetFullPath(p))).Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal).ToArray()
             : InputSelection.Normalize(paths);
         if (normalized.Length == 0 || normalized.Any(p => !File.Exists(p) && !Directory.Exists(p)))
@@ -94,7 +96,7 @@ public partial class MainViewModel : ViewModelBase
         finally { settingInputs = false; }
         InputSummary = normalized.Length == 1 ? "Selected: " + normalized[0] : normalized.Length + " selected inputs: " + string.Join("; ", normalized.Select(Path.GetFileName));
         var extensions = normalized.Where(File.Exists).Select(p => Path.GetExtension(p).ToLowerInvariant()).Distinct().ToArray();
-        if (suggestOperation && SelectedOperation is not { IsOrganizer: true } and not { IsFlatten: true } and not { IsRecipe: true } and not { IsTagging: true } && normalized.All(File.Exists))
+        if (suggestOperation && SelectedOperation is not { IsOrganizer: true } and not { IsFlatten: true } and not { IsRecipe: true } and not { IsTagging: true } and not { IsTrackGrouping: true } && normalized.All(File.Exists))
         {
             if (extensions.All(e => e == ".zip") && SelectedOperation?.Action != Action.RepackZip)
                 SelectedOperation = Operations.First(x => x.Action == Action.ZipToAudioG);
@@ -333,6 +335,7 @@ public partial class MainViewModel : ViewModelBase
         try
         {
             Options = store.Load();
+            (RecoveryVerification, SaveResumableRun) = store.LoadRecoveryPreferences();
             (RememberInputFolder, lastInputFolder) = store.LoadInputFolderPreference();
             AudioBitrates = store.LoadAudioBitrates(Options);
             OptionsWindowSize = store.LoadSettingsWindowSize();
@@ -399,10 +402,12 @@ public partial class MainViewModel : ViewModelBase
         => SaveOptions(options, policy, theme, validateBeforeConversion, ignoreLeadingTheForFileOrganization, audioBitrates, backdrop, RememberInputFolder);
 
     internal void SaveOptions(ConversionOptions options, OverwritePolicy policy, ApplicationTheme theme, bool validateBeforeConversion,
-        bool ignoreLeadingTheForFileOrganization, AudioBitratePreferences audioBitrates, ApplicationBackdrop backdrop, bool rememberInputFolder)
+        bool ignoreLeadingTheForFileOrganization, AudioBitratePreferences audioBitrates, ApplicationBackdrop backdrop, bool rememberInputFolder, RecoveryVerificationMode? recoveryVerification = null, bool? saveResumableRun = null)
     {
         store.Save(options, policy, theme, validateBeforeConversion, ignoreLeadingTheForFileOrganization, audioBitrates,
-            backdrop: backdrop, rememberInputFolder: rememberInputFolder);
+            backdrop: backdrop, rememberInputFolder: rememberInputFolder, recoveryVerification: recoveryVerification, saveResumableRun: saveResumableRun);
+        RecoveryVerification = recoveryVerification ?? RecoveryVerification;
+        SaveResumableRun = saveResumableRun ?? SaveResumableRun;
         RememberInputFolder = rememberInputFolder;
         if (!rememberInputFolder) lastInputFolder = null;
         Options = options;
@@ -466,6 +471,11 @@ public partial class MainViewModel : ViewModelBase
             await RunTaggingAsync();
             return;
         }
+        if (SelectedOperation?.IsTrackGrouping == true)
+        {
+            await RunTrackGroupingAsync();
+            return;
+        }
         if (SelectedOperation?.IsValidation == true)
         {
             await ValidateAsync();
@@ -515,6 +525,8 @@ public partial class MainViewModel : ViewModelBase
         {
             if (resume.Kind == RecoveryKind.Recipe) await ResumeRecipeAsync(resume);
             else if (resume.Kind == RecoveryKind.Tagging) await RunTaggingAsync(resume);
+            else if (resume.Kind == RecoveryKind.FileMoves) await RunFileOperationAsync(resume);
+            else if (resume.Kind == RecoveryKind.TrackGrouping) await RunTrackGroupingAsync(resume);
             else await ExecuteAsync(resume);
         }
         catch (Exception error) { StatusOutcome = RunStatus.Failure; Status = "Recovery stopped: " + error.Message; }
@@ -673,9 +685,32 @@ public partial class MainViewModel : ViewModelBase
             await ExecuteAsync(null, retryRequests.ToArray());
     }
 
-    private async Task RunFileOperationAsync()
+    private async Task RunFileOperationAsync(RecoveryJob? job = null)
     {
-        var run = BeginRun(SelectedOperation?.Label ?? "File Operation", "Processing selected folders…");
+        var run = BeginRun(job == null ? SelectedOperation?.Label ?? "File Operation" : "Recovery — " + job.Action,
+            "Preparing file moves…");
+        IsRecoveryMode = job != null;
+        if (job != null)
+        {
+            try
+            {
+                var resumed = await new OperationExecutionService(recovery).ResumeAsync(job.JournalPath, run.Progress, run.Token);
+                run.StopProgress();
+                LastReport = resumed.Report;
+                FoundFiles = resumed.Found;
+                StatusOutcome = resumed.HasIssues ? RunStatus.Warning : resumed.Report.Cancelled ? RunStatus.Neutral : RunStatus.Success;
+                if (!resumed.Report.Cancelled) Progress = TotalProgress = 100;
+                Status = resumed.Report.Cancelled ? "File move recovery cancelled." : "File move recovery finished.";
+                Activity.Add(new(Elapsed, Status));
+            }
+            catch (Exception error)
+            {
+                Status = "File move recovery stopped: " + error.Message;
+                StatusOutcome = RunStatus.Failure;
+            }
+            finally { EndRun(run); RecoveryAvailable = recovery.Find().Count > 0; }
+            return;
+        }
         try
         {
             // Avoid moving an interrupted conversion's recovery data or its input folders.
@@ -686,9 +721,9 @@ public partial class MainViewModel : ViewModelBase
                     throw new IOException("Recover the interrupted conversion before moving files: " + folder);
             }
             var result = SelectedOperation!.IsFlatten
-                ? await new FlattenFolderLayer().RunAsync(CurrentInputs, run.Progress, run.Token, SelectedOperation.FlattenScope!.Value)
+                ? await new FlattenFolderLayer().RunAsync(CurrentInputs, run.Progress, run.Token, SelectedOperation.FlattenScope!.Value, RecoveryVerification, SaveResumableRun)
                 : await new AlphabeticalOrganizer().RunAsync(CurrentInputs, SelectedOperation.OrganizeMode!.Value, run.Progress, run.Token,
-                    IgnoreLeadingTheForFileOrganization);
+                    IgnoreLeadingTheForFileOrganization, RecoveryVerification, SaveResumableRun);
             run.StopProgress();
             LastReport = CompletionReport.FromConversion(RunTitle, result) with { ReportType = "File Organization Report" };
             FoundFiles = result.Found;
@@ -706,7 +741,11 @@ public partial class MainViewModel : ViewModelBase
             StatusOutcome = RunStatus.Failure;
             LastReport = new(RunTitle, DateTimeOffset.Now, false, [new ReportEntry(FolderPath, "Failed", error.Message, [])]);
         }
-        finally { EndRun(run); }
+        finally
+        {
+            EndRun(run);
+            RecoveryAvailable = recovery.Find().Count > 0;
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanValidate))]

@@ -15,7 +15,7 @@ public class AppearanceTests
     {
         string path = Path.Combine(TestMediaFixture.NewFolder(), "settings.xml");
         var main = new MainViewModel(path);
-        var draft = new OptionsViewModel(main.Options) { Backdrop = (int)backdrop, Theme = (int)ApplicationTheme.Dark };
+        var draft = new SettingsViewModel(main.Options) { Backdrop = (int)backdrop, Theme = (int)ApplicationTheme.Dark };
         ApplicationBackdrop? notified = null;
         main.BackdropChanged += value => notified = value;
         Assert.Null(notified);
@@ -34,7 +34,7 @@ public class AppearanceTests
     [Fact]
     public void ResetStagesAutomaticAndInvalidMaterialCannotBeSaved()
     {
-        var model = new OptionsViewModel(new()) { Backdrop = (int)ApplicationBackdrop.Solid };
+        var model = new SettingsViewModel(new()) { Backdrop = (int)ApplicationBackdrop.Solid };
         model.MarkApplied();
         model.ResetToDefaults();
         Assert.Equal((int)ApplicationBackdrop.Automatic, model.Backdrop);

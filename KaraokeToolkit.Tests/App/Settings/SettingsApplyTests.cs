@@ -9,7 +9,7 @@ using Xunit;
 
 namespace KaraokeToolkit.Tests.App.Settings;
 
-public class OptionsApplyTests
+public class SettingsApplyTests
 {
     [Fact]
     public void ResetDefaultsStagesAllEditablePreferencesUntilApplied()
@@ -25,7 +25,7 @@ public class OptionsApplyTests
             VideoAudioMatchSourceBitrate = false, VideoAudioBitrateKbps = 320,
             LastOutputFolder = "remembered folder", LastDiscNumber = "remembered disc"
         };
-        var model = new OptionsViewModel(original, new AudioBitratePreferences(320, 320, 320, 320))
+        var model = new SettingsViewModel(original, new AudioBitratePreferences(320, 320, 320, 320))
         {
             Theme = (int)ApplicationTheme.Dark, Overwrite = (int)OverwritePolicy.Replace,
             ValidateBeforeConversion = true, IgnoreLeadingTheForFileOrganization = true
@@ -39,7 +39,7 @@ public class OptionsApplyTests
         Assert.False(model.ValidateBeforeConversion);
         Assert.False(model.IgnoreLeadingTheForFileOrganization);
         // A new window still receives the unchanged saved preferences if reset is cancelled.
-        Assert.Equal(original, new OptionsViewModel(original, new AudioBitratePreferences(320, 320, 320, 320)).ToOptions());
+        Assert.Equal(original, new SettingsViewModel(original, new AudioBitratePreferences(320, 320, 320, 320)).ToOptions());
         Assert.True(model.Apply((options, policy, theme, validate, ignoreThe, bitrates) =>
         {
             Assert.Equal(new AudioBitratePreferences(), bitrates);
@@ -59,7 +59,7 @@ public class OptionsApplyTests
     {
         string path = System.IO.Path.Combine(TestMediaFixture.NewFolder(), "cdrdao executable");
         System.IO.File.WriteAllText(path, "fixture");
-        var model = new OptionsViewModel(new());
+        var model = new SettingsViewModel(new());
         model.CdrdaoExecutablePath = path;
         model.AutoCreateCueText = false;
         Assert.True(model.HasChanges);
@@ -80,7 +80,7 @@ public class OptionsApplyTests
     [Fact]
     public void ApplySavesAllPreferencesAndResetsDirtyState()
     {
-        var model = new OptionsViewModel(new());
+        var model = new SettingsViewModel(new());
         Assert.False(model.HasChanges);
         model.Theme = (int)ApplicationTheme.Dark;
         model.ValidateBeforeConversion = true;
@@ -108,7 +108,7 @@ public class OptionsApplyTests
     [Fact]
     public void FailedApplyKeepsEditsPendingAndSuccessfulRetryClearsError()
     {
-        var model = new OptionsViewModel(new());
+        var model = new SettingsViewModel(new());
         model.ValidateBeforeConversion = true;
         Assert.False(model.Apply((_, _, _, _) => throw new System.IO.IOException("Disk unavailable")));
         Assert.True(model.HasChanges);
@@ -121,7 +121,7 @@ public class OptionsApplyTests
     [Fact]
     public void LeadingTheToggleIsTrackedAndApplied()
     {
-        var model = new OptionsViewModel(new());
+        var model = new SettingsViewModel(new());
         Assert.False(model.IgnoreLeadingTheForFileOrganization);
         model.IgnoreLeadingTheForFileOrganization = true;
         Assert.True(model.HasChanges);

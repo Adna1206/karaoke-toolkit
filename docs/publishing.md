@@ -74,3 +74,5 @@ CI job can call this exact script after tests pass, then sign/upload packages.
 The app version is currently YEAR.MONTH.BUILD. Bump it in `Directory.Build.props`
 for a new release; the script passes the three-part value to Velopack. Keep the
 package identity `KaraokeToolkit` stable across future updates.
+
+After verification, the script removes successful staging. Failed staging stays available for diagnosis and can expire through [artifact cleanup](artifacts.md).

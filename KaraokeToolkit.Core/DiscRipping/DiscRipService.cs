@@ -46,7 +46,7 @@ public sealed class DiscRipService(IDiscReader reader)
                 token.ThrowIfCancellationRequested();
                 using var transaction = new FileTransaction(destination);
                 string bin = Path.Combine(transaction.Workspace, label + ".bin");
-                void Report(int percent) => progress?.Report(new(percent, results.Count * 100 / tracks.Length, tracks.Length, results.Count, "Ripping " + label, watch.Elapsed.ToString(@"hh\:mm\:ss")));
+                void Report(int percent) => progress?.Report(new(percent, results.Count * 100 / tracks.Length, tracks.Length, results.Count, "Processing: " + label, watch.Elapsed.ToString(@"hh\:mm\:ss")) { ActivitySource = label, ActivityLabel = "Processing" });
                 Report(0);
                 await reader.ReadTrackAsync(request.Disc, track, bin, new InlineProgress(Report), token);
                 token.ThrowIfCancellationRequested();

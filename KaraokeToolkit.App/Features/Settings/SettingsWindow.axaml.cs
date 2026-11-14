@@ -2,6 +2,7 @@ using KaraokeToolkit.App.Shared;
 using KaraokeToolkit.App.Services;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Settings;
+using KaraokeToolkit.Core.Recovery;
 using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -9,12 +10,12 @@ using Avalonia.Platform.Storage;
 using KaraokeToolkit.Core;
 namespace KaraokeToolkit.App.Features.Settings;
 
-public partial class OptionsWindow : Window
+public partial class SettingsWindow : Window
 {
-    private readonly Action<ConversionOptions, OverwritePolicy, ApplicationTheme, bool, bool, AudioBitratePreferences, ApplicationBackdrop, bool>? save;
+    private readonly Action<ConversionOptions, OverwritePolicy, ApplicationTheme, bool, bool, AudioBitratePreferences, ApplicationBackdrop, bool, RecoveryVerificationMode?, bool?>? save;
     public SettingsWindowSize LastNormalSize { get; private set; } = new();
     public int CurrentTabIndex => OptionsTabs.SelectedIndex;
-    public OptionsWindow()
+    public SettingsWindow()
     {
         InitializeComponent();
         Resized += (_, resize) =>
@@ -54,21 +55,21 @@ public partial class OptionsWindow : Window
                 (int)Math.Clamp(Position.Y, area.Y, Math.Max(area.Y, area.Bottom - Math.Ceiling(frame.Height * screen.Scaling))));
         };
     }
-    public OptionsWindow(ConversionOptions options, OverwritePolicy policy, ApplicationTheme theme, bool validateBeforeConversion,
+    public SettingsWindow(ConversionOptions options, OverwritePolicy policy, ApplicationTheme theme, bool validateBeforeConversion,
         bool ignoreLeadingTheForFileOrganization, AudioBitratePreferences audioBitrates,
-        Action<ConversionOptions, OverwritePolicy, ApplicationTheme, bool, bool, AudioBitratePreferences, ApplicationBackdrop, bool> save,
-        ApplicationBackdrop backdrop, bool rememberInputFolder) : this()
+        Action<ConversionOptions, OverwritePolicy, ApplicationTheme, bool, bool, AudioBitratePreferences, ApplicationBackdrop, bool, RecoveryVerificationMode?, bool?> save,
+        ApplicationBackdrop backdrop, bool rememberInputFolder, RecoveryVerificationMode recoveryVerification, bool saveResumableRun) : this()
     {
-        var model = new OptionsViewModel(options, audioBitrates) { Overwrite = (int)policy, Theme = (int)theme, Backdrop = (int)backdrop,
+        var model = new SettingsViewModel(options, audioBitrates) { Overwrite = (int)policy, Theme = (int)theme, Backdrop = (int)backdrop,
             ValidateBeforeConversion = validateBeforeConversion, IgnoreLeadingTheForFileOrganization = ignoreLeadingTheForFileOrganization,
-            RememberInputFolder = rememberInputFolder };
+            RememberInputFolder = rememberInputFolder, RecoveryVerification = (int)recoveryVerification, SaveResumableRun = saveResumableRun };
         model.MarkApplied();
         DataContext = model;
         this.save = save;
     }
     private async void BrowseCdrdao_Click(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not OptionsViewModel model) return;
+        if (DataContext is not SettingsViewModel model) return;
         try
         {
             var files = await ModalDialog.RunAsync(this, () => StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
@@ -78,12 +79,12 @@ public partial class OptionsWindow : Window
         }
         catch (Exception error) { model.Error = "Could not choose cdrdao: " + error.Message; }
     }
-    private bool ApplyChanges() => DataContext is OptionsViewModel model &&
+    private bool ApplyChanges() => DataContext is SettingsViewModel model &&
         (!model.HasChanges || (save != null && model.Apply((options, policy, theme, validate, ignoreThe, bitrates, backdrop) =>
-            save(options, policy, theme, validate, ignoreThe, bitrates, backdrop, model.RememberInputFolder))));
+            save(options, policy, theme, validate, ignoreThe, bitrates, backdrop, model.RememberInputFolder, (RecoveryVerificationMode)model.RecoveryVerification, model.SaveResumableRun))));
     private async void ResetDefaults_Click(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is not OptionsViewModel model) return;
+        if (DataContext is not SettingsViewModel model) return;
         var dialog = new Window
         {
             Title = WindowTitles.For("Reset Settings"), Width = 470, CanResize = false,

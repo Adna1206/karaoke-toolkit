@@ -13,7 +13,7 @@ public class GuiWorkflowTests
     static string SettingsPath()=>Path.Combine(TestMediaFixture.NewFolder(),"options.xmls");
     [Fact] public void OptionsDraftDoesNotChangeAppliedOptionsUntilSaved()
     {
-        var model=new MainViewModel(SettingsPath());var draft=new OptionsViewModel(model.Options);
+        var model=new MainViewModel(SettingsPath());var draft=new SettingsViewModel(model.Options);
         draft.DeleteOriginals=false;draft.CompressionLevel=5;
         Assert.True(model.Options.DeleteOldFiles);Assert.Equal(ZipCompression.Balanced,model.Options.ZipCompression);
         model.SaveOptions(draft.ToOptions());Assert.False(model.Options.DeleteOldFiles);Assert.Equal(ZipCompression.Balanced,model.Options.ZipCompression);
@@ -26,7 +26,7 @@ public class GuiWorkflowTests
             AudioBitrate=192,NamingFormat="ARTIST - TITLE",LastDiscNumber="TEST01",LastOutputFolder="output"};
         model.SaveOptions(expected);
         var reopened=new MainViewModel(path);Assert.Equal(expected,reopened.Options);
-        var discardedDraft=new OptionsViewModel(reopened.Options){RenameBins=true,Bitrate=320};
+        var discardedDraft=new SettingsViewModel(reopened.Options){RenameBins=true,Bitrate=320};
         Assert.Equal(expected,new MainViewModel(path).Options);
     }
     [Fact] public void LegacySettingsLoadAndUpgradeWithoutLosingOptions()

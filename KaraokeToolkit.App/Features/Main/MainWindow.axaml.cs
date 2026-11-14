@@ -6,6 +6,7 @@ using KaraokeToolkit.App.Features.DiscRipping;
 using KaraokeToolkit.App.Features.About;
 using KaraokeToolkit.App.Features.Recipes;
 using KaraokeToolkit.App.Features.Tagging;
+using KaraokeToolkit.App.Features.TrackGrouping;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.FileOperations;
 using KaraokeToolkit.Core.Recovery;
@@ -26,15 +27,10 @@ namespace KaraokeToolkit.App.Features.Main;
 
 public partial class MainWindow : Window
 {
-    private readonly ProgressLogAutoScroll progressLogAutoScroll;
     public MainWindow()
     {
         InitializeComponent();
         if (OperatingSystem.IsWindows()) ConfigureWindowsTitleBar();
-        CategoryList.AddHandler(KeyDownEvent, CategoryList_KeyDown, RoutingStrategies.Tunnel);
-        OperationList.AddHandler(KeyDownEvent, OperationList_KeyDown, RoutingStrategies.Tunnel);
-        progressLogAutoScroll = new(ActivityLog);
-        Closed += (_, _) => progressLogAutoScroll.Dispose();
         DragDrop.SetAllowDrop(this, true);
         AddHandler(DragDrop.DragOverEvent, OnDragOver, RoutingStrategies.Bubble, handledEventsToo: true);
         AddHandler(DragDrop.DropEvent, OnDrop, RoutingStrategies.Bubble, handledEventsToo: true);
@@ -52,6 +48,7 @@ public partial class MainWindow : Window
                 };
                 model.RestoreQuarantinedFilesAsync = RestoreQuarantinedFilesAsync;
                 model.ConfigureTaggingAsync = async viewModel => await ModalDialog.ShowAsync<TaggingRequest?>(new TaggingWindow { DataContext = viewModel }, this);
+                model.ConfigureTrackGroupingAsync = viewModel => ModalDialog.ShowAsync<TrackGroupingSubmission?>(new TrackGroupingWindow { DataContext = viewModel }, this);
                 model.ResolveConflictAsync = ResolveConflictAsync;
                 model.ConfirmRecoveryAsync = ConfirmRecoveryAsync;
                 await model.CheckForRecoveryAsync();
@@ -59,8 +56,7 @@ public partial class MainWindow : Window
                 if (!model.ShowProgress)
                 {
                     model.SelectedSection = model.VisibleSections.FirstOrDefault();
-                    CategoryList.SelectedIndex = 0;
-                    FocusSelection(CategoryList);
+                    OperationPicker.FocusFirstCategory();
                 }
             }
         };
@@ -85,58 +81,6 @@ public partial class MainWindow : Window
         WindowDecorationProperties.SetElementRole(TitleBarIdentity, WindowDecorationsElementRole.TitleBar);
         WindowDecorationProperties.SetElementRole(TitleBarDragArea, WindowDecorationsElementRole.TitleBar);
         TitleBarDragArea.IsVisible = true;
-    }
-
-    private void Category_SelectionChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        if (DataContext is MainViewModel { IsBusy: false } model &&
-            e.AddedItems.Count > 0 && e.AddedItems[0] is OperationSectionViewModel section)
-            model.SelectedSection = section;
-    }
-
-    private void CategoryList_KeyDown(object? sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Right && e.KeyModifiers == KeyModifiers.None)
-            e.Handled = FocusSelection(OperationList);
-    }
-
-    private void OperationList_KeyDown(object? sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Left && e.KeyModifiers == KeyModifiers.None)
-            e.Handled = FocusSelection(CategoryList);
-    }
-
-    private static bool FocusSelection(ListBox list)
-    {
-        list.UpdateLayout();
-        if (!list.IsEnabled || list.ItemCount == 0) return false;
-        if (list.SelectedIndex < 0) list.SelectedIndex = 0;
-        if (list.SelectedItem is not { } selectedItem) return false;
-        // A newly selected category may not have realised its operation rows yet.
-        // Select before focusing, then allow layout to materialise the chosen row.
-        list.UpdateLayout();
-        list.ScrollIntoView(selectedItem);
-        list.UpdateLayout();
-        if (list.ContainerFromIndex(list.SelectedIndex)?.Focus(NavigationMethod.Directional) != true)
-        {
-            // Focus can return false even when a container exists. Keep keyboard
-            // focus in the destination while waiting for its layout to complete.
-            list.Focus(NavigationMethod.Directional);
-            Dispatcher.UIThread.Post(() =>
-            {
-                if (list.IsEnabled && list.IsKeyboardFocusWithin)
-                    list.ContainerFromIndex(list.SelectedIndex)?.Focus(NavigationMethod.Directional);
-            }, DispatcherPriority.Loaded);
-        }
-        return true;
-    }
-
-    private void Operation_SelectionChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        // Clearing the other group's selection must not clear the shared operation.
-        if (DataContext is MainViewModel { IsBusy: false } model &&
-            e.AddedItems.Count > 0 && e.AddedItems[0] is ActionChoice choice)
-            model.SelectedOperation = choice;
     }
 
     private async void BrowseFolder_Click(object? sender, RoutedEventArgs e)
@@ -278,8 +222,8 @@ public partial class MainWindow : Window
     {
         if (DataContext is MainViewModel { IsBusy: false } model)
         {
-            var dialog = new OptionsWindow(model.Options, model.OverwritePolicy, model.Theme, model.ValidateBeforeConversion,
-                model.IgnoreLeadingTheForFileOrganization, model.AudioBitrates, model.SaveOptions, model.Backdrop, model.RememberInputFolder);
+            var dialog = new SettingsWindow(model.Options, model.OverwritePolicy, model.Theme, model.ValidateBeforeConversion,
+                model.IgnoreLeadingTheForFileOrganization, model.AudioBitrates, model.SaveOptions, model.Backdrop, model.RememberInputFolder, model.RecoveryVerification, model.SaveResumableRun);
             dialog.RestorePresentation(this, model.OptionsWindowSize, model.OptionsTabIndex);
             await ModalDialog.ShowAsync(dialog, this);
             model.RememberOptionsWindow(dialog.LastNormalSize, dialog.CurrentTabIndex);
@@ -364,6 +308,7 @@ public partial class MainWindow : Window
                 new TextBlock { Text = job.Problem ?? (job.Kind == RecoveryKind.Recipe
                     ? "Recovery uses the saved recipe snapshot, checks the interrupted step, and continues the remaining steps. Completed steps are kept, even if the recipe library has since changed."
                     : job.Kind == RecoveryKind.Tagging ? "Recovery checks the interrupted tag publication, then tags remaining files using the saved preview and options. Completed files are kept."
+                    : job.Kind is RecoveryKind.TrackGrouping or RecoveryKind.FileMoves ? "Recovery checks interrupted copies or moves, then resumes the saved file plan. Completed groups are kept."
                     : "Recovery checks any interrupted file publication, then resumes unfinished work with the saved action and settings. Completed groups are kept.") + " If files have changed, recovery stops and retains the recovery files. Later leaves everything as it is.", TextWrapping = Avalonia.Media.TextWrapping.Wrap },
                 new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 10, Children = { later, recover } }
             }

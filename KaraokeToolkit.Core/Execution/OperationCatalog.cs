@@ -42,6 +42,7 @@ public static class OperationCatalog
         OperationId.PreviewTags => Local(id, "Preview filename-derived and existing tags without writing"),
         OperationId.OrganizeFiles => Local(id, "Organize files recursively into A-Z/# folders"),
         OperationId.OrganizeFolders => Local(id, "Organize immediate child folders into A-Z/# folders", folders: true),
+        OperationId.GroupByTrackId => Local(id, "Organize karaoke files and folders into batches by track ID"),
         OperationId.FlattenOneLayer => Local(id, "Remove one layer of child folders", folders: true),
         OperationId.FlattenAllLayers => Local(id, "Move descendant files into selected roots", folders: true),
         OperationId.RestoreQuarantined => Local(id, "Restore a Damaged batch from its manifest"),

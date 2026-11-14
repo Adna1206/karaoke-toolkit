@@ -1,7 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:shared="using:KaraokeToolkit.App.Shared" xmlns:core="using:KaraokeToolkit.Core"
         xmlns:vm="using:KaraokeToolkit.App.Features.Settings"
         xmlns:integrations="using:KaraokeToolkit.App.Features.Settings.Integrations"
-        x:Class="KaraokeToolkit.App.Features.Settings.OptionsWindow" x:DataType="vm:OptionsViewModel"
+        x:Class="KaraokeToolkit.App.Features.Settings.SettingsWindow" x:DataType="vm:SettingsViewModel"
         Title="{x:Static shared:WindowTitles.Settings}" Width="700" Height="640" MinWidth="660" MinHeight="540"
         WindowStartupLocation="CenterOwner">
     <Window.Styles>
@@ -155,6 +155,20 @@
             </TabItem>
             <TabItem Header="Integrations">
                 <integrations:IntegrationsView/>
+            </TabItem>
+            <TabItem Header="Recovery">
+                <StackPanel Margin="16" Spacing="10">
+                    <TextBlock Text="File organization and grouping" Classes="heading3"/>
+                    <TextBlock Text="Verification"/>
+                    <ComboBox SelectedIndex="{Binding RecoveryVerification}" AutomationProperties.Name="Recovery verification">
+                        <ComboBoxItem Content="SHA-256"/>
+                        <ComboBoxItem Content="xxHash128"/>
+                        <ComboBoxItem Content="Metadata only"/>
+                        <ComboBoxItem Content="No verification"/>
+                    </ComboBox>
+                    <CheckBox IsChecked="{Binding SaveResumableRun}" Content="Allow batch resume"/>
+                    <TextBlock Text="SHA-256 and xxHash128 verify file contents. Metadata only checks file size and last modified time. With weaker verification or batch resume off, interrupted work is listed for manual review." TextWrapping="Wrap"/>
+                </StackPanel>
             </TabItem>
         </TabControl>
         <TextBlock Grid.Row="2" Text="{Binding Error}" TextWrapping="Wrap"/>

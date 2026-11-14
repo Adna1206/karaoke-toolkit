@@ -16,6 +16,8 @@ public sealed class OperationPlanner
     /// <remarks>Reads current inputs; it neither reserves paths nor guarantees that later execution will succeed.</remarks>
     public async Task<ExecutionResult> PlanAsync(OperationRequest request, CancellationToken token = default)
     {
+        if (request.OperationId == OperationId.GroupByTrackId)
+            return TrackGroupingExecution.Preview(request, token);
         var operation = OperationCatalog.Get(request.OperationId);
         if (!operation.CanRunUnattended) throw new NotSupportedException("This operation has no file plan.");
         if (request.Inputs.Count == 0) throw new ArgumentException("Select at least one input.");

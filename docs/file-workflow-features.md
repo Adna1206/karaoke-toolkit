@@ -92,9 +92,17 @@ split archives, corrupt members and members of 4 GiB or larger are rejected. Rep
 does not repair corrupt audio/CDG content or guarantee compatibility with every player.
 Cancellation, failed-item retry and crash recovery use the standard conversion workflow.
 
-## Flatten Folder Layer
+## Group files and folders
 
-Select one or more folders and choose **File & Folder Tools → Flatten Folder Layer**. For each
+**Group Files Alphabetically** moves selected files and files under selected
+folders into A–Z and `#` folders. **Group Folders Alphabetically** moves the
+immediate subfolders of each selection into those buckets as whole folders.
+See [Group by Track ID](track-grouping.md) for numeric ranges and trailing-digit
+grouping with a destination preview.
+
+## Flatten One Folder Level
+
+Select one or more folders and choose **File & Folder Tools → Flatten One Folder Level**. For each
 selected folder, the operation moves the immediate contents of its child folders into
 the selected folder, then removes child folders that became empty. A deeper folder is
 moved intact, so one run removes only one layer. Files already in the selected folder
@@ -105,7 +113,7 @@ its child folder, and the child is not removed. `Damaged`, recovery folders and 
 folders are left in place. The operation reports individual moves and skips. Cancelling
 keeps moves already completed and leaves the remaining source folders in place.
 
-**Flatten All Folder Layers** visits every descendant folder, moves its files directly
+**Flatten All Folder Levels** visits every descendant folder, moves its files directly
 into the selected root, and removes empty folders from the bottom up. Selecting `A/B`
 places files from `A/B/C/D` into `A/B`; it never moves them into `A`. Files already in
 the selected root remain in place. The same collision and protected-folder rules apply,

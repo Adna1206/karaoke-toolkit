@@ -1,17 +1,21 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using OperationIdValue = KaraokeToolkit.Core.Execution.OperationId;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Recipes;
 using KaraokeToolkit.Core.Tagging;
 
 namespace KaraokeToolkit.Core.Recovery;
 
-public enum RecoveryKind { Conversion, Recipe, Tagging }
+public enum RecoveryKind { Conversion, Recipe, Tagging, TrackGrouping, FileMoves }
 
 internal sealed class WorkflowData
 {
     public int Version { get; set; } = 2;
+    public bool SaveResumableRun { get; set; } = true;
+    public RecoveryVerificationMode VerificationMode { get; set; }
     public RecoveryKind Kind { get; set; }
     public string[] Roots { get; set; } = [];
     public string[] Inputs { get; set; } = [];
@@ -21,6 +25,9 @@ internal sealed class WorkflowData
     public bool StepStarted { get; set; }
     public Dictionary<string, string> Expected { get; set; } = new(InputSelection.Paths);
     public List<WorkflowConversion>? Conversions { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public OperationIdValue? OperationId { get; set; }
+    public bool CopyGrouping { get; set; }
     public List<WorkflowMoveGroup>? Moves { get; set; }
     public TaggingPreview[] TagFiles { get; set; } = [];
     public bool TagStepStarted { get; set; }
@@ -44,6 +51,7 @@ internal sealed record WorkflowMove(string Source, string? Target, string Hash, 
 internal sealed class WorkflowMoveGroup
 {
     public WorkflowMove[] Items { get; set; } = [];
+    public bool CopyPrepared { get; set; }
     public string? SkipReason { get; set; }
     public List<ConversionFileResult>? Results { get; set; }
 }
@@ -93,7 +101,7 @@ internal sealed class WorkflowSession : IDisposable
             throw new IOException("Invalid workflow journal location.");
         RunSession.CheckPlainPath(journal);
         var data = JsonSerializer.Deserialize<WorkflowData>(File.ReadAllText(journal), DurableJson.Settings) ?? throw new IOException("Empty workflow journal.");
-        if (data.Version != 2 || data.Kind is not (RecoveryKind.Recipe or RecoveryKind.Tagging) || data.Roots is not { Length: > 0 } ||
+        if (data.Version != 2 || !Enum.IsDefined(data.VerificationMode) || data.Kind is not (RecoveryKind.Recipe or RecoveryKind.Tagging or RecoveryKind.TrackGrouping or RecoveryKind.FileMoves) || data.Roots is not { Length: > 0 } ||
             data.Inputs == null || data.CurrentInputs == null || data.Steps == null || data.Expected == null || data.TagFiles == null || data.TagResults == null ||
             !InputSelection.Paths.Equals(Path.GetDirectoryName(directory), data.Roots[0])) throw new IOException("Invalid workflow checkpoint.");
         foreach (string root in data.Roots)
@@ -115,8 +123,8 @@ internal sealed class WorkflowSession : IDisposable
             foreach (var file in plan.Result?.Files ?? []) foreach (string output in file.Outputs) Check(output);
         }
         foreach (var group in data.Moves ?? [])
-        foreach (var move in group.Items) { Check(move.Source); if (move.Target != null) Check(move.Target); }
-        if (data.Expected.Values.Any(hash => hash != "directory" && (hash.Length != 64 || !hash.All(Uri.IsHexDigit)))) throw new IOException("Invalid workflow fingerprint.");
+        foreach (var move in group.Items) { if (group.SkipReason != null && move.Target == null) continue; Check(move.Source); if (move.Target != null) Check(move.Target); }
+        if (data.Expected.Values.Any(hash => hash != "directory" && !RecoveryFingerprint.IsValid(hash, data.VerificationMode))) throw new IOException("Invalid workflow fingerprint.");
         if (data.TagFiles.Select(f => f.Path).Distinct(InputSelection.Paths).Count() != data.TagFiles.Length ||
             data.TagResults.Keys.Any(p => !data.TagFiles.Any(f => InputSelection.Paths.Equals(f.Path, p))) ||
             data.TagCurrent != null && !data.TagFiles.Any(f => InputSelection.Paths.Equals(f.Path, data.TagCurrent))) throw new IOException("Invalid tagging checkpoint.");
@@ -126,6 +134,17 @@ internal sealed class WorkflowSession : IDisposable
             string name = Path.GetFileName(data.Workspace);
             if (!name.StartsWith(".karaoke-job-", StringComparison.Ordinal) || !Guid.TryParseExact(name[13..], "N", out _)) throw new IOException("Invalid workflow transaction workspace.");
         }
+        if (data.Kind == RecoveryKind.TrackGrouping && (data.OperationId != OperationIdValue.GroupByTrackId || data.Moves is not { Count: > 0 } ||
+            data.Moves.Any(g => g.Items.Length == 0 || g.Items.Any(m =>
+                m.Target == null || !IsWithin(data.Roots[0], m.Target) || InputSelection.Paths.Equals(m.Source, m.Target) ||
+                !RecoveryFingerprint.IsValid(m.Hash, data.VerificationMode)))))
+            throw new IOException("Invalid track grouping checkpoint.");
+        if (data.Kind == RecoveryKind.FileMoves && (data.OperationId is not (OperationIdValue.OrganizeFiles or
+            OperationIdValue.OrganizeFolders or OperationIdValue.FlattenOneLayer or OperationIdValue.FlattenAllLayers) ||
+            data.CopyGrouping || data.Moves is not { Count: > 0 } || data.Moves.Any(g => g.Items.Length == 0 || g.Items.Any(m =>
+                m.Target != null ? !RecoveryFingerprint.IsValid(m.Hash, data.VerificationMode) || InputSelection.Paths.Equals(m.Source, m.Target)
+                : g.SkipReason == null && (!m.Directory || m.Hash != "empty" || data.Roots.Contains(m.Source, InputSelection.Paths))))))
+            throw new IOException("Invalid standalone file move checkpoint.");
         if (data.Kind == RecoveryKind.Recipe)
         {
             RecipeOperations.Validate(data.Recipe!);
@@ -146,7 +165,7 @@ internal sealed class WorkflowSession : IDisposable
     internal void StartStep()
     {
         Data.StepStarted = true;
-        Data.Expected = Capture(Data.CurrentInputs);
+        Data.Expected = Capture(Data.CurrentInputs, Data.VerificationMode);
         Data.Conversions = null; Data.Moves = null;
         Data.TagStepStarted = false; Data.TagFiles = []; Data.TagResults.Clear(); Data.TagCurrent = null;
         Save();
@@ -156,7 +175,7 @@ internal sealed class WorkflowSession : IDisposable
         Data.Steps.Add(result); Data.CurrentInputs = next;
         Data.StepStarted = false; Data.Conversions = null; Data.Moves = null; Data.Workspace = null;
         Data.TagStepStarted = false; Data.TagFiles = []; Data.TagResults.Clear(); Data.TagCurrent = null;
-        Data.Expected = Capture(next);
+        Data.Expected = Capture(next, Data.VerificationMode);
         Save();
     }
     internal void VerifyExpected()
@@ -164,27 +183,27 @@ internal sealed class WorkflowSession : IDisposable
         foreach (var item in Data.Expected)
         {
             RunSession.CheckPlainPath(item.Key);
-            if (item.Value == "directory" ? !Directory.Exists(item.Key) : !File.Exists(item.Key) || FileTransaction.Hash(item.Key) != item.Value)
+            if (item.Value == "directory" ? !Directory.Exists(item.Key) : !File.Exists(item.Key) || RecoveryFingerprint.Hash(item.Key, Data.VerificationMode) != item.Value)
             {
                 bool pendingMove = Data.Moves?.Where(g => g.Results == null).SelectMany(g => g.Items).Any(m =>
                     m.Target == null ? InputSelection.Paths.Equals(m.Source, item.Key) && item.Value == "directory" && !Directory.Exists(m.Source)
-                        : IsWithin(m.Source, item.Key) && !WorkflowMoves.Exists(m.Source) && WorkflowMoves.Exists(m.Target) && WorkflowMoves.Hash(m.Target, m.Directory) == m.Hash) == true;
+                        : IsWithin(m.Source, item.Key) && !WorkflowMoves.Exists(m.Source) && WorkflowMoves.Exists(m.Target) && WorkflowMoves.Hash(m.Target, m.Directory, Data.VerificationMode) == m.Hash) == true;
                 if (!pendingMove) throw new IOException("Saved workflow input/output changed or disappeared: " + item.Key);
             }
         }
     }
-    internal static Dictionary<string, string> Capture(IEnumerable<string> paths)
+    internal static Dictionary<string, string> Capture(IEnumerable<string> paths, RecoveryVerificationMode mode = RecoveryVerificationMode.Sha256)
     {
         var result = new Dictionary<string, string>(InputSelection.Paths);
         foreach (string path in paths)
         {
             RunSession.CheckPlainPath(path);
-            if (File.Exists(path)) result[path] = FileTransaction.Hash(path);
+            if (File.Exists(path)) result[path] = RecoveryFingerprint.Hash(path, mode);
             else if (Directory.Exists(path))
                 foreach (string folder in ConversionService.EnumerateFolders(path, true))
                 {
                     result[folder] = "directory";
-                    foreach (string file in Directory.GetFiles(folder)) { RunSession.CheckPlainPath(file); result[file] = FileTransaction.Hash(file); }
+                    foreach (string file in Directory.GetFiles(folder)) { RunSession.CheckPlainPath(file); result[file] = RecoveryFingerprint.Hash(file, mode); }
                 }
             else throw new IOException("Workflow input/output is missing: " + path);
         }
@@ -195,7 +214,7 @@ internal sealed class WorkflowSession : IDisposable
     internal void Published(IReadOnlyList<string> outputs, IReadOnlyList<string> removed)
     {
         foreach (string path in removed) Data.Expected.Remove(path);
-        foreach (string path in outputs) Data.Expected[path] = FileTransaction.Hash(path);
+        foreach (string path in outputs) Data.Expected[path] = RecoveryFingerprint.Hash(path, Data.VerificationMode);
         if ((Data.Kind == RecoveryKind.Tagging || Data.TagStepStarted) && Data.TagCurrent != null)
             Data.TagResults[Data.TagCurrent] = new(Data.TagCurrent, ConversionStatus.Succeeded, outputs, "Tags verified and published.");
         Save();
@@ -226,7 +245,7 @@ internal sealed class WorkflowSession : IDisposable
     internal bool HasPendingPublication => Data.Workspace != null && Directory.Exists(Data.Workspace);
     internal void Finish()
     {
-        bool partialMove = Data.Moves?.Any(group => group.Results == null && group.SkipReason == null &&
+        bool partialMove = !Data.CopyGrouping && Data.Moves?.Any(group => group.Results == null && group.SkipReason == null &&
             group.Items.Any(move => !WorkflowMoves.Exists(move.Source))) == true;
         if (HasPendingPublication || partialMove || Data.Conversions?.Any(p => p.Journal != null && File.Exists(p.Journal) && !RunSession.Read(p.Journal).Finished) == true)
             throw new IOException("An interrupted publication remains. Use Recover to resume this workflow.");
@@ -239,19 +258,27 @@ internal sealed class WorkflowSession : IDisposable
         if (Data.Finished) RecoveryWorkspaceCleanup.Delete(Path.GetDirectoryName(Journal)!, "workflow.json");
     }
 
-    internal static string TreeHash(string directory)
+    internal static string TreeHash(string directory, RecoveryVerificationMode mode = RecoveryVerificationMode.Sha256)
     {
-        using var digest = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+
+        using var sha = mode == RecoveryVerificationMode.Sha256 ? IncrementalHash.CreateHash(HashAlgorithmName.SHA256) : null;
+        var xx = mode != RecoveryVerificationMode.Sha256 ? new System.IO.Hashing.XxHash128() : null;
+        void Append(byte[] bytes)
+        {
+            if (mode == RecoveryVerificationMode.None) return;
+            if (sha != null) sha.AppendData(bytes);
+            else xx!.Append(bytes);
+        }
         void Visit(string folder)
         {
             RunSession.CheckPlainPath(folder);
             foreach (string entry in Directory.GetFileSystemEntries(folder).Order(InputSelection.Paths))
             {
                 RunSession.CheckPlainPath(entry);
-                digest.AppendData(Encoding.UTF8.GetBytes(Path.GetRelativePath(directory, entry) + "\n"));
-                if (Directory.Exists(entry)) Visit(entry); else digest.AppendData(Encoding.UTF8.GetBytes(FileTransaction.Hash(entry)));
+                Append(Encoding.UTF8.GetBytes(Path.GetRelativePath(directory, entry) + "\n"));
+                if (Directory.Exists(entry)) Visit(entry); else Append(Encoding.UTF8.GetBytes(RecoveryFingerprint.Hash(entry, mode)));
             }
         }
-        Visit(directory); return Convert.ToHexString(digest.GetHashAndReset());
+        Visit(directory); return mode == RecoveryVerificationMode.None ? "unverified" : Convert.ToHexString(sha?.GetHashAndReset() ?? xx!.GetCurrentHash());
     }
 }

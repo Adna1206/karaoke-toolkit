@@ -1,0 +1,42 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" d:DesignWidth="620" d:DesignHeight="220"
+             xmlns:vm="using:KaraokeToolkit.App.Features.Main"
+             x:Class="KaraokeToolkit.App.Features.Main.ActivityLogView" x:DataType="vm:MainViewModel">
+ <UserControl.Styles>
+  <Style Selector="ListBox#ActivityLog ListBoxItem">
+   <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+   <Setter Property="Padding" Value="0"/>
+   <Setter Property="Margin" Value="0"/>
+  </Style>
+ </UserControl.Styles>
+ <UserControl.Resources>
+  <Thickness x:Key="ActivityCellPadding">12,6</Thickness>
+ </UserControl.Resources>
+ <Border CornerRadius="8" ClipToBounds="True" BorderThickness="1"
+         BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+  <Grid RowDefinitions="Auto,*">
+   <Border Padding="{StaticResource ActivityCellPadding}" BorderThickness="0,0,0,1"
+           BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+           Background="{DynamicResource SystemControlForegroundBaseLowBrush}">
+    <Grid ColumnDefinitions="90,*">
+     <TextBlock Text="Time" FontWeight="SemiBold"/>
+     <TextBlock Grid.Column="1" Text="Event" FontWeight="SemiBold"/>
+    </Grid>
+   </Border>
+   <ListBox Grid.Row="1" x:Name="ActivityLog" ItemsSource="{Binding Activity}"
+            CornerRadius="0" BorderThickness="0" Padding="0" AutomationProperties.Name="Progress event log">
+    <ListBox.ItemTemplate>
+     <DataTemplate x:DataType="vm:ActivityEntry">
+      <Border Padding="{StaticResource ActivityCellPadding}" BorderThickness="0,0,0,1"
+              BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+       <Grid ColumnDefinitions="90,*">
+        <TextBlock Text="{Binding Time}" Opacity="0.65"/>
+        <TextBlock Grid.Column="1" Text="{Binding Message}" TextWrapping="Wrap"/>
+       </Grid>
+      </Border>
+     </DataTemplate>
+    </ListBox.ItemTemplate>
+   </ListBox>
+  </Grid>
+ </Border>
+</UserControl>

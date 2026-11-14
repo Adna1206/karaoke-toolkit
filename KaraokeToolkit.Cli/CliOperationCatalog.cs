@@ -56,6 +56,7 @@ public static class CliOperationCatalog
         OperationId.PreviewTags => Include(id, "tag-preview"),
         OperationId.OrganizeFiles => Include(id, "organize-files"),
         OperationId.OrganizeFolders => Include(id, "organize-folders"),
+        OperationId.GroupByTrackId => Include(id, "group-by-track-id"),
         OperationId.FlattenOneLayer => Include(id, "flatten-one-layer"),
         OperationId.FlattenAllLayers => Include(id, "flatten-all-layers"),
         OperationId.RestoreQuarantined => Include(id, "restore-quarantined-files"),

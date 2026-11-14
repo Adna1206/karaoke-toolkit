@@ -150,7 +150,7 @@ public class ManagedZipTests
     {
         string folder = TestMediaFixture.NewFolder();
         var options = new ConversionOptions { ZipAlgorithm = algorithm, DeleteOldFiles = false, AutoRenameZip = false, AutoCreateCueText = false };
-        var vm = new KaraokeToolkit.App.Features.Settings.OptionsViewModel(options);
+        var vm = new KaraokeToolkit.App.Features.Settings.SettingsViewModel(options);
         Assert.Equal(algorithm == ZipAlgorithm.Deflate, vm.IsDeflate);
         Assert.Equal(options, vm.ToOptions());
         string settings = Path.Combine(folder, "settings.xmls");

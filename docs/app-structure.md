@@ -6,7 +6,7 @@ directories, and views share their feature namespace with their view models.
 | Folder | Responsibility |
 | --- | --- |
 | Features/Main | Main window, operation selection, favourites, progress and workflow coordination |
-| Features/Settings | Options window and view model, UI preferences, persistence and window layout |
+| Features/Settings | Settings window and view model, UI preferences, persistence and window layout |
 | Features/Settings/Integrations | Windows Explorer registration, CLI examples and terminal launching, and MCP executable and client configuration |
 | Features/About | About window, application credits and bundled licence notice presentation |
 | Features/Reports | Session report window and its view model |
@@ -37,6 +37,10 @@ share one layer until the last closes. Actual input blocking remains the dialog
 or native picker's responsibility. Templates without an overlay layer retain
 normal modality without dimming.
 
+OperationPickerView owns the category sidebar, operation list, descriptions
+and arrow-key navigation. MainWindow supplies the source panel and owns the
+file and folder picker dialogs.
+
 The main window uses a conventional File / Tools / Help menu, compact branding,
 a category sidebar and one operation list. Favourite operations share the same
 instances as the normal categories. Selecting a category selects an operation
@@ -58,6 +62,10 @@ workflow definitions, chaining constraints and execution; App coordinates runs
 through the existing main progress/report screen. See [recipes.md](recipes.md).
 The builder edits saved recipes only. Its library populates the home Recipes
 category and Favourites; input controls follow the selected recipe's first step.
+
+`OperationProgressView` hosts the active run title, source, activity table and progress indicators. `MainWindow` controls when it is visible.
+
+`ActivityLogView` owns the live table layout and attaches auto-scroll while loaded. Its entries come from `MainViewModel.Activity`. Completed reports use `ResultsWindow`.
 
 `ProcessingRun` owns cancellation and UI-dispatched progress for one processing
 run. Conversion/retry/recovery, validation, file operations, tagging and recipes

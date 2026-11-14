@@ -41,6 +41,14 @@ CLI registrations with generated names or automatically expose new Core operatio
 Tests also check registration completeness, unique command names, exclusion reasons,
 unattended capability compatibility and shared App/recipe identities.
 
+## Group by Track ID
+
+`GroupByTrackId` uses `OperationRequest.Grouping` and `OutputFolder`. Desktop,
+CLI and MCP share the planner. Desktop rechecks the approved plan before
+applying. CLI and MCP use the same options and require an explicit output path.
+The operation is directly available in all three interfaces. Recipe steps do
+not currently include it. See [Group by Track ID](track-grouping.md).
+
 ## Persistence and disc ripping
 
 Operation JSON uses names such as `ZipToAudioG`, including nested retry requests.

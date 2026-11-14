@@ -24,6 +24,8 @@ function Invoke-DotNet([string[]]$Arguments) {
     if ($LASTEXITCODE -ne 0) { throw "dotnet failed ($LASTEXITCODE): $($Arguments -join ' ')" }
 }
 
+$stagingRun = $null
+$completed = $false
 Push-Location $repo
 try {
     # Read evaluated MSBuild properties, including Directory.Build.props. Do not
@@ -47,10 +49,11 @@ try {
     # A new output directory per invocation avoids stale native files or accidental
     # overwrites of previous packages. Everything stays under ignored artifacts/.
     $runId = (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 6)
+    $stagingRun = Join-Path $repo "artifacts/publish/$version/$runId"
     $releaseRoot = Join-Path $repo "artifacts/releases/$version/$runId"
     $ffmpegManifest = Get-Content -LiteralPath (Join-Path $repo 'vendor/ffmpeg/manifest.json') -Raw | ConvertFrom-Json
     foreach ($rid in ($RuntimeIdentifier | Select-Object -Unique)) {
-        $publish = Join-Path $repo "artifacts/publish/$version/$runId/$rid"
+        $publish = Join-Path $stagingRun $rid
         $packages = Join-Path $releaseRoot $rid
         Write-Host "Publishing $product $version for $rid..."
         Invoke-DotNet @('publish', $project, '-c', 'Release', '-r', $rid, '--self-contained', 'true',
@@ -125,9 +128,24 @@ try {
         $hashes = Get-ChildItem -LiteralPath $packages -File | Get-FileHash -Algorithm SHA256 |
             ForEach-Object { $_.Hash.ToLowerInvariant() + '  ' + [IO.Path]::GetFileName($_.Path) }
         [IO.File]::WriteAllLines((Join-Path $packages 'SHA256SUMS.txt'), [string[]]$hashes)
+        foreach ($line in [IO.File]::ReadAllLines((Join-Path $packages 'SHA256SUMS.txt'))) {
+            $digest, $name = $line -split '  ', 2
+            if ((Get-FileHash -LiteralPath (Join-Path $packages $name) -Algorithm SHA256).Hash -ine $digest) {
+                throw "Package checksum verification failed: $name"
+            }
+        }
+        & (Join-Path $PSScriptRoot 'Remove-ArtifactRun.ps1') -Root $stagingRun -Path $publish
         Write-Host "Packages: $packages"
     }
+    if (Test-Path -LiteralPath $stagingRun) { Remove-Item -LiteralPath $stagingRun }
+    $completed = $true
     Write-Host "Publish complete: $releaseRoot"
     Write-Host 'No packages were installed or uploaded.'
 }
-finally { Pop-Location }
+finally {
+    if (!$completed -and $stagingRun -and (Test-Path -LiteralPath $stagingRun -PathType Container)) {
+        New-Item -Path (Join-Path $stagingRun '.cleanup-eligible') -ItemType File -Force | Out-Null
+        Write-Host "Retained publish staging: $stagingRun"
+    }
+    Pop-Location
+}

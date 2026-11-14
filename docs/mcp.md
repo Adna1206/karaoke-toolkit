@@ -63,7 +63,7 @@ protocol initialization/tool discovery and propagates cancellation notifications
 | `plan_operation` | Read-only scope, candidate outputs and detectable conflicts |
 | `run_operation` | Included conversions, tagging, file tools, quarantine/restoration |
 | `run_recipe` | Portable recipe object with saved per-step settings |
-| `list_recovery` | Available conversion/tagging/recipe journals, without resuming |
+| `list_recovery` | Available conversion, tagging, track grouping and recipe journals, without resuming |
 | `recover` | Resume saved processing and recipe snapshots after access checks |
 
 Results contain Core's completion report, found count, issue flag and optional tag
@@ -104,7 +104,7 @@ use names. ZIP levels accept current levels 0-9 (numbers/strings) or current enu
 names; `Balanced` means 5. Omitted deletion preferences **always keep originals**,
 even when an options object is supplied. Flags/options files from CLI are not used.
 
-Desktop preferences are never loaded. `outputFolder` supports Core's existing
+Desktop preferences are never loaded. For media conversions, `outputFolder` follows Core's
 separate-destination constraints: keep originals, destination outside selected
 input folders, collision protection, and `--no-cue-text`'s equivalent
 `autoCreateCueText: false` when multiple source folders share a listing destination.
@@ -117,6 +117,44 @@ preview. Recipe execution has no speculative whole-pipeline preview tool; later
 scopes depend on real preceding outputs. GUI/CLI workflows remain available for
 recipe planning. No shell/script execution, physical-disc capture, player, online
 lookup or enabled updater is exposed by MCP.
+
+### File move recovery settings
+
+For grouping, alphabetical organization, and flattening, set
+`recoveryVerification` on the operation request to `Sha256`, `XxHash128`,
+`MetadataOnly`, or `None`. Set `saveResumableRun` to `false` to require manual
+review if interrupted. Defaults and recovery behavior are documented in
+[Recovery verification](crash-recovery.md#verification-settings).
+
+### Group by Track ID
+
+Use `plan_operation` to inspect a grouping and `run_operation` to apply it. Both
+accept the same `request` payload. Applying a copy or move also requires
+`confirmFileChanges: true` on a process launched with `--allow-writes`.
+
+```json
+{
+  "request": {
+    "operationId": "GroupByTrackId",
+    "inputs": ["D:\\Incoming\\ABC-31xxx", "D:\\Incoming\\ABC-32xxx"],
+    "outputFolder": "D:\\Grouped",
+    "grouping": {
+      "wholeFolders": true,
+      "trailingDigits": 4,
+      "mask": "x"
+    }
+  }
+}
+```
+
+This copies each folder intact under `ABC-3xxxx`. Omit `wholeFolders` to scan
+selected folders for files. Set `recurse: true` to scan subfolders in file mode.
+Selected files can be used in either mode. For numeric ranges, set `rangeSize` and
+optionally `rangeStart` (default 1) or `rangeSeparator` (default `" - "`).
+Trailing-digit grouping is the default with two masked digits. Its optional
+`createParents`, `maxParentLevels` and `skipSingleChildParents` settings control
+automatic nesting. `idSeparator` defaults to a dash and accepts an empty string.
+Set `move: true` for a same-volume move. Conflicts block execution.
 
 ## Exposure and permissions
 

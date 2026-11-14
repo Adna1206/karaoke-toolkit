@@ -24,7 +24,9 @@ the current checkout. [Planned work](todo.md) is a backlog, not implemented beha
 | [Changelog](changelogs/README.md) | Version history, user-visible changes and upgrade steps |
 | [App structure](app-structure.md) | Avalonia features, views/viewmodels and shared services |
 | [Core structure](core-structure.md) | Processing responsibilities and namespace organization |
+| [Group by Track ID](track-grouping.md) | Numeric ranges, masked folders and automatic parents |
 | [Operation contracts](operations.md) | Shared identities, capabilities, interface registrations and compatibility |
+| [Activity table messages](activity-messages.md) | Item labels, progress and summaries |
 | [UI definitions](ui-definitions.md) | Operation/setting metadata and presentation preferences |
 | [Test structure](test-structure.md) | Shared suite, fixtures, coverage and commands |
 | [Audio runtime](audio-runtime.md) | FFmpeg preparation, format checks and opt-in benchmarks |

@@ -2,7 +2,7 @@
              xmlns:integrations="using:KaraokeToolkit.App.Features.Settings.Integrations"
              xmlns:vm="using:KaraokeToolkit.App.Features.Settings"
              xmlns:services="using:KaraokeToolkit.App.Services"
-             x:Class="KaraokeToolkit.App.Features.Settings.Integrations.IntegrationsView" x:DataType="vm:OptionsViewModel">
+             x:Class="KaraokeToolkit.App.Features.Settings.Integrations.IntegrationsView" x:DataType="vm:SettingsViewModel">
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="0,20,12,20" Spacing="16">
             <Expander Header="Windows Explorer" x:Name="ExplorerSection" IsExpanded="True" HorizontalAlignment="Stretch">

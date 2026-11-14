@@ -6,7 +6,9 @@ using KaraokeToolkit.Core.Archives;
 using KaraokeToolkit.Core.Audio;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Execution;
+using KaraokeToolkit.Core.FileOperations;
 using KaraokeToolkit.Core.Tagging;
+using KaraokeToolkit.Core.Recovery;
 using KaraokeToolkit.Core.Video;
 
 namespace KaraokeToolkit.Cli;
@@ -17,10 +19,13 @@ public sealed record CliArguments(string Command, OperationRequest? Request, str
 {
     public bool DryRun { get; init; }
     public string? HelpTopic { get; init; }
+    internal static readonly string[] GroupingFlags = ["whole-folders", "move", "create-parents", "keep-single-child-parents"];
+    internal static readonly string[] GroupingValues = ["trailing-digits", "range-size", "range-start", "id-separator",
+        "range-separator", "mask", "max-parent-levels"];
     private static readonly HashSet<string> Flags = ["json", "quiet", "recurse", "no-recurse", "delete-originals", "keep-originals", "cue-text", "no-cue-text",
-        "validate-inputs", "ignore-leading-the", "fill-empty-only", "preserve-comments", "preserve-other-tags", "video-audio-fallback-only", "dry-run"];
+        "validate-inputs", "ignore-leading-the", "fill-empty-only", "preserve-comments", "preserve-other-tags", "video-audio-fallback-only", "dry-run", "no-batch-resume"];
     private static readonly HashSet<string> Values = ["input", "options", "overwrite", "encoder", "bitrate", "zip-level", "zip-algorithm", "pattern", "report",
-        "video-container", "video-resolution", "video-smoothing", "video-frame-rate", "video-bitrate", "video-audio-bitrate", "output"];
+        "video-container", "video-resolution", "video-smoothing", "video-frame-rate", "video-bitrate", "video-audio-bitrate", "output", "recovery-verification"];
     public static CliArguments Parse(string[] args)
     {
         if (args.Length == 0 || args.TakeWhile(a => a != "--").Any(a => a is "--help" or "-h")) return new("help", null, [], null, false, false, null)
@@ -50,14 +55,17 @@ public sealed record CliArguments(string Command, OperationRequest? Request, str
             if (positional || !argument.StartsWith('-')) { inputs.Add(argument); continue; }
             if (!argument.StartsWith("--")) throw new CliUsageException("Unknown option: " + argument);
             string[] pair = argument[2..].Split('=', 2); string name = pair[0]; string? value = pair.Length == 2 ? pair[1] : null;
-            if (!Flags.Contains(name) && !Values.Contains(name)) throw new CliUsageException("Unknown option: --" + name);
-            if (Flags.Contains(name) && value != null) throw new CliUsageException("--" + name + " is a flag, not a value option.");
-            if (Values.Contains(name) && value == null)
+            bool isFlag = Flags.Contains(name) || GroupingFlags.Contains(name);
+            bool isValue = Values.Contains(name) || GroupingValues.Contains(name);
+            if (!isFlag && !isValue) throw new CliUsageException("Unknown option: --" + name);
+            if (isFlag && value != null) throw new CliUsageException("--" + name + " is a flag, not a value option.");
+            if (isValue && value == null)
             {
                 if (++i >= args.Length || args[i].StartsWith("--")) throw new CliUsageException("Missing value for --" + name);
                 value = args[i];
             }
-            if (Values.Contains(name) && string.IsNullOrWhiteSpace(value)) throw new CliUsageException("Empty value for --" + name);
+            if (isValue && name is not ("id-separator" or "range-separator") && string.IsNullOrWhiteSpace(value))
+                throw new CliUsageException("Empty value for --" + name);
             if (name == "input") { inputs.Add(value!); continue; }
             if (!options.TryAdd(name, value)) throw new CliUsageException("Option repeated: --" + name);
         }
@@ -82,6 +90,24 @@ public sealed record CliArguments(string Command, OperationRequest? Request, str
             return new(command, null, inputs.ToArray(), command == "recover" ? inputs[0] : null, json, quiet, report);
         }
         if (inputs.Count == 0) throw new CliUsageException("At least one input path is required. Use --input PATH or positional paths.");
+        bool saveResumableRun = !options.ContainsKey("no-batch-resume");
+        var recoveryVerification = options.GetValueOrDefault("recovery-verification") switch
+        {
+            null or "sha256" => RecoveryVerificationMode.Sha256,
+            "xxhash128" => RecoveryVerificationMode.XxHash128,
+            "metadata" => RecoveryVerificationMode.MetadataOnly,
+            "none" => RecoveryVerificationMode.None,
+            _ => throw new CliUsageException("--recovery-verification expects sha256, xxhash128, metadata or none.")
+        };
+        if ((options.ContainsKey("recovery-verification") || !saveResumableRun) &&
+            operation is not (OperationId.GroupByTrackId or OperationId.OrganizeFiles or OperationId.OrganizeFolders
+                or OperationId.FlattenOneLayer or OperationId.FlattenAllLayers))
+            throw new CliUsageException("Recovery options require grouping, alphabetical organization or flattening.");
+        if (operation == OperationId.GroupByTrackId)
+            return new(command, ParseGrouping(options, inputs) with { RecoveryVerification = recoveryVerification, SaveResumableRun = saveResumableRun }, inputs.ToArray(), null, json, quiet, report)
+            { DryRun = options.ContainsKey("dry-run") };
+        if (options.Keys.Any(k => GroupingFlags.Contains(k) || GroupingValues.Contains(k)))
+            throw new CliUsageException("Track grouping settings require run group-by-track-id.");
 
         var processing = LoadOptions(options.GetValueOrDefault("options"));
         if (options.ContainsKey("recurse")) processing = processing with { RecurseFolders = true };
@@ -119,11 +145,55 @@ public sealed record CliArguments(string Command, OperationRequest? Request, str
         new ConversionRequest(capability.IsConversion ? capability.Id : OperationId.AudioGToZip, ".", processing) { OutputFolder = outputFolder }.Validate();
         return new(command, new(operation.Value, inputs.ToArray())
         {
+            RecoveryVerification = recoveryVerification, SaveResumableRun = saveResumableRun,
             Options = processing, OverwritePolicy = overwrite, ValidateBeforeConversion = options.ContainsKey("validate-inputs"),
             OutputFolder = outputFolder,
             IgnoreLeadingThe = options.ContainsKey("ignore-leading-the"), TaggingPattern = pattern,
             Tagging = new(options.ContainsKey("fill-empty-only"), !options.ContainsKey("preserve-comments"), !options.ContainsKey("preserve-other-tags"))
         }, inputs.ToArray(), null, json, quiet, report) { DryRun = options.ContainsKey("dry-run") };
+    }
+
+    private static OperationRequest ParseGrouping(Dictionary<string, string?> options, List<string> inputs)
+    {
+        foreach (string name in options.Keys)
+            if (name is not ("json" or "quiet" or "report" or "dry-run" or "output" or "recurse" or "no-recurse" or "recovery-verification" or "no-batch-resume")
+                && !GroupingFlags.Contains(name) && !GroupingValues.Contains(name))
+                throw new CliUsageException($"--{name} is unavailable for group-by-track-id.");
+
+        var output = options.GetValueOrDefault("output") ?? throw new CliUsageException("group-by-track-id requires --output FOLDER.");
+        var defaults = new TrackGroupingOptions();
+        int Setting(string name, int fallback) => options.TryGetValue(name, out var value) ? Number(value!, name) : fallback;
+        int rangeSize = Setting("range-size", defaults.RangeSize);
+        if (options.ContainsKey("range-size") && rangeSize == 0)
+            throw new CliUsageException("--range-size must be positive.");
+        if (rangeSize > 0 && options.Keys.Any(k => k is "trailing-digits" or "mask" or "create-parents" or "max-parent-levels" or "keep-single-child-parents"))
+            throw new CliUsageException("Trailing-digit settings cannot be combined with --range-size.");
+        if (rangeSize == 0 && options.Keys.Any(k => k is "range-start" or "range-separator"))
+            throw new CliUsageException("--range-start and --range-separator require --range-size.");
+        if (!options.ContainsKey("create-parents") && options.Keys.Any(k => k is "max-parent-levels" or "keep-single-child-parents"))
+            throw new CliUsageException("Parent settings require --create-parents.");
+        if (options.ContainsKey("whole-folders") && options.ContainsKey("recurse"))
+            throw new CliUsageException("--recurse scans folder contents and cannot be combined with --whole-folders.");
+
+        return new(OperationId.GroupByTrackId, inputs.ToArray())
+        {
+            OutputFolder = Path.TrimEndingDirectorySeparator(Path.GetFullPath(output)),
+            Grouping = defaults with
+            {
+                WholeFolders = options.ContainsKey("whole-folders"),
+                Recurse = options.ContainsKey("recurse"),
+                Move = options.ContainsKey("move"),
+                CreateParents = options.ContainsKey("create-parents"),
+                SkipSingleChildParents = !options.ContainsKey("keep-single-child-parents"),
+                TrailingDigits = Setting("trailing-digits", defaults.TrailingDigits),
+                RangeSize = rangeSize,
+                RangeStart = Setting("range-start", defaults.RangeStart),
+                MaxParentLevels = Setting("max-parent-levels", defaults.MaxParentLevels),
+                IdSeparator = options.GetValueOrDefault("id-separator") ?? defaults.IdSeparator,
+                RangeSeparator = options.GetValueOrDefault("range-separator") ?? defaults.RangeSeparator,
+                Mask = options.GetValueOrDefault("mask") ?? defaults.Mask
+            }
+        };
     }
 
     private static int Number(string text, string name) => int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out int number)

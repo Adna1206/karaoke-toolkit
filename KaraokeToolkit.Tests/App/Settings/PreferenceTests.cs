@@ -42,7 +42,7 @@ public class PreferenceTests
     {
         string path = Path.Combine(TestMediaFixture.NewFolder(), "settings.xmls");
         var store = new ApplicationSettingsStore(path);
-        var draft = new OptionsViewModel(store.Load()) { TrackListingName = "{folder} - tracks", CueSheetName = "Disc" };
+        var draft = new SettingsViewModel(store.Load()) { TrackListingName = "{folder} - tracks", CueSheetName = "Disc" };
         Assert.Equal("Example: Party Mix - tracks.txt", draft.TrackListingPreview);
         Assert.Equal("Example: Disc.cue", draft.CueSheetPreview);
         Assert.True(draft.Apply((options, _, _, _) => store.Save(options)), draft.Error);
@@ -108,7 +108,7 @@ public class PreferenceTests
     {
         string path = Path.Combine(TestMediaFixture.NewFolder(), "settings.xmls");
         var main = new MainViewModel(path);
-        var draft = new OptionsViewModel(main.Options)
+        var draft = new SettingsViewModel(main.Options)
         {
             VideoContainer = (int)VideoContainer.MKV,
             VideoResolution = (int)VideoResolution.FullHD,
@@ -142,7 +142,7 @@ public class PreferenceTests
         var reopened=new MainViewModel(path);
         Assert.Equal(theme,reopened.Theme);Assert.Equal(theme,applied);
         Assert.False(reopened.Options.AutoCreateCueText);Assert.Equal(OverwritePolicy.Ask,reopened.OverwritePolicy);
-        var draft=new OptionsViewModel(reopened.Options){Theme=(int)ApplicationTheme.Dark,Overwrite=(int)OverwritePolicy.Replace,AutoCreateCueText=true};
+        var draft=new SettingsViewModel(reopened.Options){Theme=(int)ApplicationTheme.Dark,Overwrite=(int)OverwritePolicy.Replace,AutoCreateCueText=true};
         Assert.Equal(theme,new MainViewModel(path).Theme);Assert.False(new MainViewModel(path).Options.AutoCreateCueText);
     }
     [Fact] public void LegacySettingsDefaultToSystemThemeAndAsk()
@@ -160,7 +160,7 @@ public class PreferenceTests
     {
         string path=Path.Combine(TestMediaFixture.NewFolder(),"settings.xmls");
         var main=new MainViewModel(path);
-        var draft=new OptionsViewModel(main.Options,main.AudioBitrates);
+        var draft=new SettingsViewModel(main.Options,main.AudioBitrates);
         draft.Encoder=(int)AudioEncoder.MP3;draft.Bitrate=192;
         draft.Encoder=(int)AudioEncoder.OGG;draft.Bitrate=96;
         draft.Encoder=(int)AudioEncoder.WMA;draft.Bitrate=160;
@@ -176,7 +176,7 @@ public class PreferenceTests
 
         var reopened=new MainViewModel(path);
         Assert.Equal(new AudioBitratePreferences(192,96,160,224),reopened.AudioBitrates);
-        var next=new OptionsViewModel(reopened.Options,reopened.AudioBitrates);
+        var next=new SettingsViewModel(reopened.Options,reopened.AudioBitrates);
         next.Encoder=(int)AudioEncoder.MP3;Assert.Equal(192,next.Bitrate);
         next.Encoder=(int)AudioEncoder.OGG;Assert.Equal(96,next.Bitrate);
         next.Encoder=(int)AudioEncoder.WMA;Assert.Equal(160,next.Bitrate);

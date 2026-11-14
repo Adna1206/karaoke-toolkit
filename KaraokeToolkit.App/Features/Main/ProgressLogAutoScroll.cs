@@ -28,6 +28,7 @@ internal sealed class ProgressLogAutoScroll : IDisposable
         list.DataContextChanged += OnDataContextChanged;
         list.AddHandler(InputElement.PointerWheelChangedEvent, OnPointerWheelChanged, RoutingStrategies.Tunnel);
         BindModel();
+        AttachViewer();
     }
 
     private void OnTemplateApplied(object? sender, Avalonia.Controls.Primitives.TemplateAppliedEventArgs e) => AttachViewer();

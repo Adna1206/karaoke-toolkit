@@ -14,6 +14,37 @@ public class CliWorkflowTests
     private static Dictionary<string, string> Snapshot(string root) => Directory.GetFiles(root, "*", SearchOption.AllDirectories)
         .ToDictionary(p => Path.GetRelativePath(root, p), FileTransaction.Hash);
 
+    [Fact]
+    public async Task TrackGroupingPreviewsAndCopiesWholeBatches()
+    {
+        string source = TestMediaFixture.NewFolder(), destination = TestMediaFixture.NewFolder();
+        string batch = Directory.CreateDirectory(Path.Combine(source, "BKD-31xxx")).FullName;
+        File.WriteAllText(Path.Combine(batch, "BKD-31001.zip"), "original");
+        string[] args = ["run", "group-by-track-id", batch, "--output", destination, "--whole-folders", "--trailing-digits", "4", "--mask", "X"];
+        var cli = App();
+        var preview = new StringWriter();
+        Assert.Equal(0, await cli.RunAsync([.. args, "--dry-run"], preview, new StringWriter()));
+        Assert.Contains("BKD-3XXXX", preview.ToString());
+        Assert.Empty(Directory.EnumerateFileSystemEntries(destination));
+
+        Assert.Equal(0, await cli.RunAsync(args, new StringWriter(), new StringWriter()));
+        Assert.Equal("original", File.ReadAllText(Path.Combine(destination, "BKD-3XXXX", "BKD-31xxx", "BKD-31001.zip")));
+        Assert.True(Directory.Exists(batch));
+        Assert.Equal(1, await cli.RunAsync(args, new StringWriter(), new StringWriter()));
+    }
+
+    [Fact]
+    public void TrackGroupingAcceptsLiteralSeparatorsAndRejectsConflictingModes()
+    {
+        string[] args = ["run", "group-by-track-id", "BKD33601.zip", "--output", ".", "--range-size", "50", "--id-separator=", "--range-separator", " to "];
+        var options = CliArguments.Parse(args).Request!.Grouping;
+        Assert.Equal(50, options.RangeSize);
+        Assert.Equal("", options.IdSeparator);
+        Assert.Equal(" to ", options.RangeSeparator);
+        Assert.Throws<CliUsageException>(() => CliArguments.Parse([.. args, "--create-parents"]));
+        Assert.Throws<CliUsageException>(() => CliArguments.Parse([.. args, "--overwrite", "replace"]));
+    }
+
     [Theory]
     [InlineData("zip-to-audiog")]
     [InlineData("zip-to-bin")]

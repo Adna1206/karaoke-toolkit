@@ -11,6 +11,21 @@
 Repository files and Git are the source of truth. Treat handoff versions, commit
 IDs and test counts as dated evidence; verify them before relying on them.
 
+## Repository standards
+
+Use the guides relevant to the change. The [docs index](docs/README.md) lists
+the remaining feature and reference guides.
+
+| When changing | Standards to consult |
+| --- | --- |
+| Commits or release versions | [Commit conventions](docs/commit-conventions.md), [versioning](docs/versioning.md), [changelog](docs/changelogs/README.md) |
+| Project layout or tests | [App structure](docs/app-structure.md), [Core structure](docs/core-structure.md), [test structure](docs/test-structure.md) |
+| Operation IDs, requests, or interface exposure | [Operation contracts](docs/operations.md), [CLI](docs/cli.md), [MCP](docs/mcp.md), [recipes](docs/recipes.md) |
+| Desktop metadata, settings, or activity rows | [UI definitions](docs/ui-definitions.md), [activity table messages](docs/activity-messages.md) |
+| File publication, overwrite, or resume | [Crash recovery](docs/crash-recovery.md) |
+| Build outputs, native runtime, or release packaging | [Artifacts](docs/artifacts.md), [audio runtime](docs/audio-runtime.md), [publishing](docs/publishing.md), [updates](docs/updates.md) |
+| Dependencies, notices, or distribution obligations | [Licence inventory](licenses/README.md), [distribution licensing](docs/distribution-licensing.md), [vendor versions](vendor/versions.md) |
+
 ## Architecture and conventions
 
 - `KaraokeToolkit.Core`: GUI-independent processing engines, requests/options,
@@ -46,7 +61,9 @@ IDs and test counts as dated evidence; verify them before relying on them.
   `InternalsVisibleTo` when renaming projects.
 - Use [Conventional Commits](docs/commit-conventions.md). The shared release version
   lives in `Directory.Build.props`, with YEAR.MONTH.BUILD and BUILD starting at 1
-  for a new month. Bump versions when requested; see [versioning](docs/versioning.md).
+  for a new month. Bump versions when requested. With each bump, create or
+  update the release's changelog and link it at the top of the [changelog
+  index](docs/changelogs/README.md). Follow the [versioning guide](docs/versioning.md).
 
 ## Build, test and publish
 
@@ -61,7 +78,7 @@ dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj -c Release
 In the agent sandbox, the established test command is:
 
 ```powershell
-dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj -c Release -p:UsedAvaloniaProducts= -p:ArtifactBuildName=StandaloneTests -v minimal --logger trx --results-directory artifacts/tests/results
+.scriptsTest.ps1
 ```
 
 - Tests include deterministic media, native FFmpeg integration and disposable
@@ -70,6 +87,14 @@ dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj -c Release -p:UsedA
   conversion tests in CLI/MCP adapters.
 - Native FFmpeg archives are pinned under `vendor/`; build targets verify and select
   them by RID. Tests use self-contained fixtures and explicit expected outcomes.
+- Follow the shared desktop activity conventions in [UI definitions](docs/ui-definitions.md).
+  Emit structured source and label fields for item rows. Keep count-only updates
+  available to progress bars without repeating them in the activity table.
+- If the sandboxed Windows build succeeds and VSTest times out connecting to
+  testhost, retry with local test-host access using the same built output.
+  `DOTNET_CLI_TELEMETRY_OPTOUT=1` avoids a registry access failure in this sandbox.
+- Reuse the StandaloneTests build output for serial verification. Use separate
+  output names when concurrent runs or deliberate comparisons need isolation.
 - Custom outputs belong under ignored `artifacts/`; normal bin/obj are unchanged.
   Keep generated media, installers and test reports out of source control. See
   [artifact locations](docs/artifacts.md) and [audio runtime](docs/audio-runtime.md).
@@ -149,6 +174,7 @@ snapshot, not a transcript; link detailed documentation instead of copying it.
 Keep lasting rules here and backlog items in TODO. Clearly distinguish implemented,
 tested and merely planned behaviour. Never record credentials in handoff documents.
 
+Use fictional karaoke catalogue prefixes such as "ABC" in documentation examples.
 Documentation uses lowercase-kebab-case filenames, except conventional `README.md`
 entry points and this tool-discovered `AGENTS.md`. Use [the docs index](docs/README.md)
 for navigation. Describe current behaviour and planned work separately; avoid

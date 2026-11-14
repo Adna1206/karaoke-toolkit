@@ -192,7 +192,7 @@ public class DiscRipTests
         Assert.False(store.Load().ExperimentalDiscRipping);
         var main = new MainViewModel(path);
         Assert.False(main.OperationSections.Single(x => x.Section == OperationSection.DiscRipping).IsVisible);
-        var draft = new OptionsViewModel(main.Options) { ExperimentalDiscRipping = true };
+        var draft = new SettingsViewModel(main.Options) { ExperimentalDiscRipping = true };
         Assert.True(draft.HasChanges);
         main.SaveOptions(draft.ToOptions());
         Assert.True(store.Load().ExperimentalDiscRipping);

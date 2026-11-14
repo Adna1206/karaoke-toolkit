@@ -120,7 +120,7 @@ public sealed class CliApplication(IOperationExecutor? executor = null, IDiscRea
                 --report NEW.json|NEW.txt (never overwrites an existing file)
         Processing:
           --dry-run                    Read-only plan; not an encoding guarantee
-          --output EXISTING_FOLDER     Media conversions; keep originals required
+          --output FOLDER              Media conversions and Group by Track ID
           --options FILE.json          Typed ConversionOptions; flags override the file
           --overwrite fail|skip|replace (default fail; Ask is unsupported)
           --delete-originals | --keep-originals (default keep)
@@ -134,6 +134,9 @@ public sealed class CliApplication(IOperationExecutor? executor = null, IDiscRea
           Shared processing settings apply where supported by the chosen operation.
           Organize Files always recurses; Organize Folders groups immediate children.
           Flatten depth is chosen by the operation, independently of --no-recurse.
+          --recovery-verification sha256|xxhash128|metadata|none (file organization and grouping)
+          --no-batch-resume            Retain interrupted file move records for manual review
+          See help group-by-track-id for track grouping and folder naming options.
         Tagging:
           --pattern "%DISC%-%TRACK% - %ARTIST% - %TITLE%"
           --fill-empty-only --preserve-comments --preserve-other-tags

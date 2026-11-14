@@ -21,8 +21,11 @@ internal sealed class FileTransaction : IDisposable
     {
         get;
     }
-    internal FileTransaction(string folder)
+    private readonly string verificationMode;
+    internal FileTransaction(string folder, string verificationMode = RecoveryFingerprint.Sha256)
     {
+        _ = RecoveryFingerprint.HexLength(verificationMode);
+        this.verificationMode = verificationMode;
         this.folder = Path.GetFullPath(folder);
         RunSession.CheckPlainPath(this.folder);
         folderLease = AcquireLease(this.folder);
@@ -46,6 +49,8 @@ internal sealed class FileTransaction : IDisposable
         string lockName = Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(key))) + ".lock";
         return new FileStream(Path.Combine(lockDirectory, lockName), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     }
+    private string Fingerprint(string path) => RecoveryFingerprint.Hash(path, verificationMode);
+
     internal static string Hash(string path)
     {
         using var file = File.OpenRead(path);
@@ -61,8 +66,8 @@ internal sealed class FileTransaction : IDisposable
         await using (var input = File.OpenRead(path))
         await using (var output = new FileStream(destination, FileMode.CreateNew, FileAccess.Write))
             await input.CopyToAsync(output, token);
-        string hash = Hash(destination);
-        if (hash != Hash(path))
+        string hash = Fingerprint(destination);
+        if (hash != Fingerprint(path))
             throw new IOException("Input changed while being copied: " + path);
         fingerprints.Add(path, hash);
         return destination;
@@ -74,7 +79,7 @@ internal sealed class FileTransaction : IDisposable
         foreach (string output in outputs)
         {
             string target = Path.Combine(folder, Path.GetFileName(output));
-            observedTargets[target] = File.Exists(target) ? Hash(target) : null;
+            observedTargets[target] = File.Exists(target) ? Fingerprint(target) : null;
         }
     }
     /// <summary>Publishes staged outputs and removes selected sources as one recoverable file group.</summary>
@@ -97,11 +102,11 @@ internal sealed class FileTransaction : IDisposable
             if (!string.Equals(Path.GetDirectoryName(Path.GetFullPath(path)), folder, StringComparison.OrdinalIgnoreCase))
                 throw new IOException("A source selected for removal is outside the transaction folder.");
         foreach (var pair in fingerprints)
-            if (!File.Exists(pair.Key) || Hash(pair.Key) != pair.Value)
+            if (!File.Exists(pair.Key) || Fingerprint(pair.Key) != pair.Value)
                 throw new IOException("Source changed during conversion: " + pair.Key);
         foreach (var pair in observedTargets)
         {
-            string? current = File.Exists(pair.Key) ? Hash(pair.Key) : null;
+            string? current = File.Exists(pair.Key) ? Fingerprint(pair.Key) : null;
             if (current != pair.Value)
                 throw new IOException("Output changed while waiting for publication: " + pair.Key);
         }
@@ -119,8 +124,9 @@ internal sealed class FileTransaction : IDisposable
         var oldFiles = targets.Concat(removeSources).Distinct(StringComparer.OrdinalIgnoreCase).Where(File.Exists).ToArray();
         var journal = new TransactionJournal
         {
-            Outputs = outputs.Select(p => new RecoveryOutput(Path.GetFileName(p), Hash(p))).ToArray(),
-            Backups = oldFiles.Select((p, i) => new RecoveryBackup(Path.GetFileName(p), i.ToString(), Hash(p))).ToArray()
+            VerificationMode = verificationMode,
+            Outputs = outputs.Select(p => new RecoveryOutput(Path.GetFileName(p), Fingerprint(p))).ToArray(),
+            Backups = oldFiles.Select((p, i) => new RecoveryBackup(Path.GetFileName(p), i.ToString(), Fingerprint(p))).ToArray()
         };
         foreach (string output in outputs)
             using (var file = new FileStream(output, FileMode.Open, FileAccess.ReadWrite, FileShare.Read))
@@ -134,7 +140,7 @@ internal sealed class FileTransaction : IDisposable
             for (int i = 0; i < outputs.Count; i++)
             {
                 File.Move(outputs[i], targets[i]);
-                if (Hash(targets[i]) != journal.Outputs[i].Hash)
+                if (Fingerprint(targets[i]) != journal.Outputs[i].Hash)
                     throw new IOException("Published output failed verification: " + targets[i]);
             }
             journal.Phase = "Committed";

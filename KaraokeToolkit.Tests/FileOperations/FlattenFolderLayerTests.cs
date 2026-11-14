@@ -1,3 +1,5 @@
+using KaraokeToolkit.Core.Execution;
+using KaraokeToolkit.Core.Recovery;
 using KaraokeToolkit.Core.DiscRipping;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.App.Features.Main;
@@ -173,7 +175,7 @@ public class FlattenFolderLayerTests
         File.WriteAllText(Path.Combine(deep, "a.txt"), "a");
         File.WriteAllText(Path.Combine(deep, "b.txt"), "b");
         using var cancellation = new CancellationTokenSource();
-        var progress = new ImmediateProgress(_ => cancellation.Cancel());
+        var progress = new ImmediateProgress(value => { if (value.Completed == 1) cancellation.Cancel(); });
 
         var result = await new FlattenFolderLayer().RunAsync([root], progress, cancellation.Token, FolderFlattenScope.AllLayers);
 
@@ -181,6 +183,39 @@ public class FlattenFolderLayerTests
         Assert.True(File.Exists(Path.Combine(root, "a.txt")));
         Assert.True(File.Exists(Path.Combine(deep, "b.txt")));
         Assert.True(Directory.Exists(deep));
+    }
+
+    [Fact]
+    public async Task StandaloneRecoveryResumesAfterVerifiedMoveWithoutReceipt()
+    {
+        string root = TestMediaFixture.NewFolder();
+        string child = Directory.CreateDirectory(Path.Combine(root, "Album")).FullName;
+        string source = Path.Combine(child, "track.zip");
+        string target = Path.Combine(root, "track.zip");
+        File.WriteAllText(source, "track");
+        var store = new RecoveryStore(TestMediaFixture.NewFolder());
+        string journal;
+        using (var session = new WorkflowSession(store,
+            new WorkflowData
+            {
+                Kind = RecoveryKind.FileMoves,
+                OperationId = OperationId.FlattenOneLayer,
+                Roots = [root],
+                Moves = [new() { Items = [WorkflowMoves.Move(source, target)] },
+                    new() { Items = [new(child, null, "empty", true)] }]
+            }))
+        {
+            journal = session.Journal;
+            File.Move(source, target);
+        }
+
+        Assert.Single(store.Find());
+        var result = await new OperationExecutionService(store).ResumeAsync(journal);
+
+        Assert.False(result.HasIssues);
+        Assert.Equal("track", File.ReadAllText(target));
+        Assert.False(Directory.Exists(child));
+        Assert.Empty(store.Find());
     }
 
     private sealed class ImmediateProgress(System.Action<KaraokeToolkit.Core.Conversion.ConversionProgress> report)

@@ -20,7 +20,7 @@ public sealed class McpTools(McpOperationsService service, McpAccessPolicy polic
     };
 
     [McpServerTool(Name = "get_settings", ReadOnly = true, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Discover per-call defaults and encoding choices. Desktop preferences are never loaded. Use named enum values; ZIP levels are strings 0-9.")]
+    [Description("Discover per-call defaults, encoding choices and track grouping styles. Desktop preferences are never loaded. Use named enum values; ZIP levels are strings 0-9.")]
     public object GetSettings() => new
     {
         Defaults = new OperationRequest(OperationId.ValidateKaraoke, []),
@@ -32,7 +32,9 @@ public sealed class McpTools(McpOperationsService service, McpAccessPolicy polic
         VideoSmoothing = Enum.GetNames<KaraokeToolkit.Core.Video.VideoGraphicsSmoothing>(),
         AudioBitrates = new[] { 64, 96, 128, 160, 192, 224, 256, 320 },
         OverwritePolicies = new[] { "Fail", "Skip", "Replace" },
-        Notes = "Paths are local absolute paths. Originals are kept by default. OutputFolder requires keeping originals. Recipes use saved per-step settings; Ask is unsupported. Read-only mode is not an OS filesystem sandbox."
+        RecoveryVerificationModes = Enum.GetNames<KaraokeToolkit.Core.Recovery.RecoveryVerificationMode>(),
+        TrackGroupingMasks = new[] { "x", "X", "#", "s" },
+        Notes = "Paths are local absolute paths. Originals are kept by default. Media conversions with OutputFolder keep originals. GroupByTrackId requires OutputFolder and accepts Grouping settings. Recipes use saved per-step settings; Ask is unsupported. Read-only mode is not an OS filesystem sandbox."
     };
 
     [McpServerTool(Name = "validate_karaoke", ReadOnly = true, OpenWorld = false, UseStructuredContent = true)]
@@ -62,7 +64,7 @@ public sealed class McpTools(McpOperationsService service, McpAccessPolicy polic
         => service.RecipeAsync(recipe, inputs, confirmFileChanges, progress, cancellationToken);
 
     [McpServerTool(Name = "list_recovery", ReadOnly = true, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Discover pending local conversion, tagging or recipe journals. Optional folders limit discovery; omitted folders use the local recovery index. Does not resume anything.")]
+    [Description("Discover pending local conversion, tagging, track grouping or recipe journals. Optional folders limit discovery; omitted folders use the local recovery index. Does not resume anything.")]
     public object ListRecovery(string[]? folders = null) => service.ListRecovery(folders ?? []);
 
     [McpServerTool(Name = "recover", ReadOnly = false, Destructive = true, OpenWorld = false, UseStructuredContent = true)]

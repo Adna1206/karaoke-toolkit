@@ -13,7 +13,7 @@ public class SettingsWindowTests
         string path = Path.Combine(TestMediaFixture.NewFolder(), "settings.xml");
         var model = new MainViewModel(path);
         model.SaveOptions(model.Options with { AutoCreateCueText = false });
-        var draft = new OptionsViewModel(model.Options) { AutoCreateCueText = true };
+        var draft = new SettingsViewModel(model.Options) { AutoCreateCueText = true };
         var size = new SettingsWindowSize(920.5, 730.25);
         model.RememberOptionsWindow(size, 3);
         Assert.Equal(3, model.OptionsTabIndex);

@@ -22,11 +22,12 @@ public sealed record OperationDefinition(string Id, Action? Action, string Label
     public bool IsRip => Inputs == OperationInputKind.SingleDisc;
     public bool IsRestore => Inputs == OperationInputKind.SingleManifest;
     public bool IsTagging { get; init; }
+    public bool IsTrackGrouping => Operation == OperationId.GroupByTrackId;
     // The Core allowlist is authoritative for both the builder and imported recipes.
     public bool CanUseInRecipes => KaraokeToolkit.Core.Recipes.RecipeOperations.Supports(Id);
     public AlphabeticalOrganizeScope? OrganizeMode { get; init; }
     public FolderFlattenScope? FlattenScope { get; init; }
-    public bool IsValidation => Section != OperationSection.Recipes && Action == null && !IsRip && !IsRestore && !IsTagging && OrganizeMode == null && FlattenScope == null;
+    public bool IsValidation => Section != OperationSection.Recipes && Action == null && !IsRip && !IsRestore && !IsTagging && !IsTrackGrouping && OrganizeMode == null && FlattenScope == null;
 }
 
 public sealed record OperationSectionDefinition(OperationSection Section, string Header);

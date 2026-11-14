@@ -23,6 +23,7 @@ public enum OperationId
     PreviewTags,
     OrganizeFiles,
     OrganizeFolders,
+    GroupByTrackId,
     FlattenOneLayer,
     FlattenAllLayers,
     RestoreQuarantined,

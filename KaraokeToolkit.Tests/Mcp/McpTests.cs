@@ -80,6 +80,42 @@ public class McpTests
     private static JsonDocument Json(CallToolResult result) => JsonDocument.Parse(result.Content.OfType<TextContentBlock>().First().Text);
 
     [Fact]
+    public async Task StdioTrackGroupingPreviewsAndRequiresBothWritePermissions()
+    {
+        string root = TestMediaFixture.NewFolder(), destination = TestMediaFixture.NewFolder();
+        string source = Path.Combine(root, "BKD33601.zip");
+        File.WriteAllText(source, "source");
+        var arguments = new Dictionary<string, object?>
+        {
+            ["request"] = new
+            {
+                operationId = "GroupByTrackId",
+                inputs = new[] { source },
+                outputFolder = destination,
+                grouping = new { rangeSize = 50, rangeSeparator = " to " }
+            }
+        };
+        await using var readOnly = await Connect();
+        var preview = await readOnly.CallToolAsync("plan_operation", arguments);
+        Assert.NotEqual(true, preview.IsError);
+        using (var json = Json(preview))
+            Assert.Contains("BKD-33601 to BKD-33650", json.RootElement.GetRawText());
+        arguments["confirmFileChanges"] = true;
+        Assert.True((await readOnly.CallToolAsync("run_operation", arguments)).IsError);
+        Assert.Empty(Directory.EnumerateFileSystemEntries(destination));
+
+        var executor = new OperationExecutionService(new(TestMediaFixture.NewFolder()));
+        using var writable = new McpOperationsService(new(true), executor, executor);
+        var request = JsonSerializer.Deserialize<OperationRequest>(JsonSerializer.Serialize(arguments["request"]), Program.JsonOptions)!;
+        await Assert.ThrowsAsync<McpException>(() => writable.RunAsync(request, false, null, default));
+        Assert.Empty(Directory.EnumerateFileSystemEntries(destination));
+        var result = await writable.RunAsync(request, true, null, default);
+        Assert.False(result.HasIssues);
+        Assert.Equal("source", File.ReadAllText(Path.Combine(destination, "BKD-33601 to BKD-33650", "BKD33601.zip")));
+        Assert.True(File.Exists(source));
+    }
+
+    [Fact]
     public async Task StdioClientDiscoversSchemasAndReadOnlyModeCannotWrite()
     {
         await using var client = await Connect();

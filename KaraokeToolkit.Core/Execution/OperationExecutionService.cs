@@ -31,6 +31,11 @@ public sealed partial class OperationExecutionService(RecoveryStore? recovery = 
     /// per-item failures; invalid requests and blocked recovery can throw before execution begins.</remarks>
     public async Task<ExecutionResult> ExecuteAsync(OperationRequest request, IProgress<ConversionProgress>? progress = null, CancellationToken token = default)
     {
+        if (request.OperationId == Action.GroupByTrackId)
+            return await ExecuteGroupingAsync(request, null, progress, token);
+        if ((request.RecoveryVerification != RecoveryVerificationMode.Sha256 || !request.SaveResumableRun) &&
+            request.OperationId is not (Action.OrganizeFiles or Action.OrganizeFolders or Action.FlattenOneLayer or Action.FlattenAllLayers))
+            throw new ArgumentException("This operation does not support a recovery verification override.");
         var operation = OperationCatalog.Get(request.OperationId);
         if (!operation.CanRunUnattended) throw new NotSupportedException("This operation has no unattended execution contract: " + operation.Identifier);
         if (request.OverwritePolicy == OverwritePolicy.Ask || !Enum.IsDefined(request.OverwritePolicy))
@@ -89,10 +94,10 @@ public sealed partial class OperationExecutionService(RecoveryStore? recovery = 
         }
         else if (operation.Id is Action.OrganizeFiles or Action.OrganizeFolders)
             result = await new AlphabeticalOrganizer().RunAsync(inputs,
-                operation.Id == Action.OrganizeFiles ? AlphabeticalOrganizeScope.Files : AlphabeticalOrganizeScope.Folders, progress, token, request.IgnoreLeadingThe);
+                operation.Id == Action.OrganizeFiles ? AlphabeticalOrganizeScope.Files : AlphabeticalOrganizeScope.Folders, progress, token, request.IgnoreLeadingThe, request.RecoveryVerification, request.SaveResumableRun);
         else if (operation.Id is Action.FlattenOneLayer or Action.FlattenAllLayers)
             result = await new FlattenFolderLayer().RunAsync(inputs, progress, token,
-                operation.Id == Action.FlattenAllLayers ? FolderFlattenScope.AllLayers : FolderFlattenScope.OneLayer);
+                operation.Id == Action.FlattenAllLayers ? FolderFlattenScope.AllLayers : FolderFlattenScope.OneLayer, request.RecoveryVerification, request.SaveResumableRun);
         else if (operation.Id == Action.RestoreQuarantined)
         {
             var restored = new List<ConversionFileResult>();
@@ -126,6 +131,10 @@ public sealed partial class OperationExecutionService(RecoveryStore? recovery = 
         var job = recovery.Find(root).SingleOrDefault(j => InputSelection.Paths.Equals(j.JournalPath, full))
             ?? throw new ArgumentException("No available recovery job matches that journal. Use recovery-list first.");
         if (job.Problem != null) throw new IOException(job.Problem);
+        if (job.Kind == RecoveryKind.FileMoves)
+            return FromConversion("Recovery — " + job.Action, await Task.Run(() => WorkflowMoves.Resume(recovery, job, progress, token), token));
+        if (job.Kind == RecoveryKind.TrackGrouping)
+            return await Task.Run(() => TrackGroupingExecution.Resume(recovery, job, progress, token), token);
         if (job.Kind == RecoveryKind.Recipe)
         {
             var recipe = RecipeRunner.ReadRecoveryRecipe(job);

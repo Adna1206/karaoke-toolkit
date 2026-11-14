@@ -69,7 +69,10 @@ public sealed class RecoveryStore
                     {
                         var workflow = WorkflowSession.Read(path);
                         if (folder != null && !workflow.Roots.Any(root => WorkflowSession.IsWithin(root, Path.GetFullPath(folder)) || WorkflowSession.IsWithin(Path.GetFullPath(folder), root))) continue;
-                        if (!workflow.Finished)
+                        if (!workflow.Finished && workflow.Kind is RecoveryKind.TrackGrouping or RecoveryKind.FileMoves)
+                            jobs.Add(new(path, workflow.Roots[0], workflow.Kind == RecoveryKind.TrackGrouping ? "Group by Track ID" : workflow.OperationId!.Value.ToString(),
+                                workflow.Moves!.Count(g => g.Results != null), workflow.Moves!.Count, MoveRecoveryProblem(workflow)) { Kind = workflow.Kind });
+                        else if (!workflow.Finished)
                             jobs.Add(new(path, workflow.Roots[0], workflow.Kind == RecoveryKind.Recipe ? "Recipe — " + workflow.Recipe!.Name : "Tag Karaoke Files",
                                 workflow.Kind == RecoveryKind.Recipe ? workflow.Steps.Count : workflow.TagResults.Count,
                                 workflow.Kind == RecoveryKind.Recipe ? workflow.Recipe!.Steps.Count : workflow.TagFiles.Length) { Kind = workflow.Kind });
@@ -124,6 +127,14 @@ public sealed class RecoveryStore
     }
 
     internal string IndexPath(string journal) => Path.Combine(IndexDirectory, Path.GetFileName(Path.GetDirectoryName(journal)) + ".json");
+    private static string? MoveRecoveryProblem(WorkflowData workflow)
+    {
+        if (!workflow.SaveResumableRun) return "Batch resume was disabled for this run. Keep the journal for manual review.";
+        if (!RecoveryFingerprint.IsContentVerified(workflow.VerificationMode))
+            return "This run has no content fingerprints for automatic recovery. Keep the journal for manual review.";
+        return null;
+    }
+
     internal void Register(string journal)
     {
         Directory.CreateDirectory(IndexDirectory);

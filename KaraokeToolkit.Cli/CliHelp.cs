@@ -13,6 +13,18 @@ internal static class CliHelp
         {
             var operation = CliOperationCatalog.Resolve(topic);
             var description = OperationCatalog.Get(operation.OperationId);
+            if (operation.OperationId == OperationId.GroupByTrackId)
+                return """
+                    Usage: karaoke-toolkit run group-by-track-id PATH... --output FOLDER [options]
+                    Supply files and folders. --whole-folders groups selected folders as units.
+                    --recurse scans subfolders when grouping files inside folders.
+                    Copy is the default. --move requests a same-volume move. Conflicts block the run.
+                    Grouping: --trailing-digits N (default 2) --mask x|X|#|s (default x)
+                      or --range-size N --range-start N (default 1) --range-separator TEXT (default " - ").
+                    Both modes accept --id-separator TEXT (default "-"; use --id-separator= for none).
+                    Trailing digits: --create-parents [--max-parent-levels N (0 means all)] [--keep-single-child-parents].
+                    Common: --input PATH (repeatable), --dry-run, --json, --quiet, --report NEW.json|NEW.txt.
+                    """;
             string specific = operation.OperationId switch
             {
                 OperationId.TagKaraoke or OperationId.PreviewTags => "Tagging: --pattern, --fill-empty-only, --preserve-comments, --preserve-other-tags. Use tag-preview before applying metadata.",

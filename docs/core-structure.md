@@ -17,7 +17,7 @@ match folders; the app and test tools import those namespaces explicitly.
 | Tagging | Filename templates, tag previews, staged metadata writes and packet-payload verification |
 | FileOperations | Alphabetical organization, flattening, filename cleanup, CUE/TXT, quarantine and restoration |
 | Validation | Read-only integrity checks and findings |
-| Recovery | Conversion and recipe/tagging checkpoints, saved move plans and transactional file publication |
+| Recovery | Conversion, recipe, tagging and track grouping checkpoints, saved plans and transactional file publication |
 | Reporting | Run reports and shared report headers |
 | Recipes | Saved workflows, step settings, chaining constraints and execution adapters |
 | Settings | Processing preferences and atomic XML settings persistence |

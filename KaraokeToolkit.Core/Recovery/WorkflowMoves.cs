@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using KaraokeToolkit.Core.Conversion;
+using KaraokeToolkit.Core.Execution;
 
 namespace KaraokeToolkit.Core.Recovery;
 
@@ -7,8 +8,36 @@ namespace KaraokeToolkit.Core.Recovery;
 /// the new folder layout. A partially moved pair is completed only after both sides are verified.</summary>
 internal static class WorkflowMoves
 {
-    internal static WorkflowMove Move(string source, string target) => new(source, target,
-        Directory.Exists(source) ? WorkflowSession.TreeHash(source) : FileTransaction.Hash(source), Directory.Exists(source));
+    internal static WorkflowMove Move(string source, string target, RecoveryVerificationMode mode = RecoveryVerificationMode.Sha256) => new(source, target,
+        Hash(source, Directory.Exists(source), mode), Directory.Exists(source));
+
+    internal static ConversionResult RunStandaloneOrRecipe(RecoveryStore recovery, string[] roots, OperationId operation,
+        List<WorkflowMoveGroup> plan, RecoveryVerificationMode verificationMode, bool saveResumableRun, IProgress<ConversionProgress>? progress, CancellationToken token)
+    {
+        if (WorkflowSession.Current.Value is { } workflow) return Run(workflow, plan, progress, token);
+        if (plan.Count == 0 || token.IsCancellationRequested) return new([], token.IsCancellationRequested);
+        using var session = new WorkflowSession(recovery, new WorkflowData
+        {
+            Kind = RecoveryKind.FileMoves, Roots = roots, OperationId = operation, Moves = plan, VerificationMode = verificationMode, SaveResumableRun = saveResumableRun
+        });
+        return Complete(session, progress, token);
+    }
+
+    internal static ConversionResult Resume(RecoveryStore recovery, RecoveryJob job,
+        IProgress<ConversionProgress>? progress, CancellationToken token)
+    {
+        using var session = new WorkflowSession(recovery, job);
+        if (session.Data.Kind != RecoveryKind.FileMoves) throw new IOException("This recovery job is not a standalone file move.");
+        session.VerifyExpected();
+        return Complete(session, progress, token);
+    }
+
+    private static ConversionResult Complete(WorkflowSession session, IProgress<ConversionProgress>? progress, CancellationToken token)
+    {
+        var result = Run(session, null, progress, token);
+        session.Finish();
+        return result;
+    }
 
     internal static ConversionResult Run(WorkflowSession session, List<WorkflowMoveGroup>? plan,
         IProgress<ConversionProgress>? progress, CancellationToken token)
@@ -18,6 +47,8 @@ internal static class WorkflowMoves
         var groups = session.Data.Moves;
         var clock = Stopwatch.StartNew();
         int found = groups.Sum(g => g.Items.Length);
+        int completed = groups.Where(g => g.Results != null).Sum(g => g.Items.Length);
+        bool trackGrouping = session.Data.Kind == RecoveryKind.TrackGrouping;
         foreach (var group in groups)
         {
             if (group.Results != null) continue;
@@ -34,8 +65,8 @@ internal static class WorkflowMoves
                 {
                     RunSession.CheckPlainPath(move.Source); RunSession.CheckPlainPath(move.Target!);
                     bool source = Exists(move.Source), target = Exists(move.Target!);
-                    if (source && Hash(move.Source, move.Directory) != move.Hash) throw new IOException("Move source changed: " + move.Source);
-                    if (!source && (!target || Hash(move.Target!, move.Directory) != move.Hash)) throw new IOException("Interrupted move changed or disappeared: " + move.Source);
+                    if (source && Hash(move.Source, move.Directory, session.Data.VerificationMode) != move.Hash) throw new IOException("Move source changed: " + move.Source);
+                    if (!source && (!target || Hash(move.Target!, move.Directory, session.Data.VerificationMode) != move.Hash)) throw new IOException("Interrupted move changed or disappeared: " + move.Source);
                     if (source && target) collision = true;
                 }
                 if (collision)
@@ -48,7 +79,13 @@ internal static class WorkflowMoves
                 {
                     foreach (var move in group.Items)
                     {
-                        using var lease = FileTransaction.AcquireLease(Path.GetDirectoryName(move.Source)!);
+                        progress?.Report(new(0, completed * 100 / found, found, completed,
+                                "Processing: " + move.Source, clock.Elapsed.ToString(@"hh\:mm\:ss"))
+                                { ActivitySource = move.Source, ActivityLabel = "Processing" });
+                        string sourceParent = Path.GetDirectoryName(move.Source)!;
+                        using var lease = session.Data.Kind == RecoveryKind.TrackGrouping &&
+                            InputSelection.Paths.Equals(sourceParent, session.Data.Roots[0])
+                            ? null : FileTransaction.AcquireLease(sourceParent);
                         if (move.Target == null)
                         {
                             RunSession.CheckPlainPath(move.Source);
@@ -63,27 +100,28 @@ internal static class WorkflowMoves
                             Directory.CreateDirectory(Path.GetDirectoryName(move.Target)!);
                             if (Exists(move.Source))
                             {
-                                if (move.Directory) Directory.Move(move.Source, move.Target); else File.Move(move.Source, move.Target);
+                                if (session.Data.Kind is RecoveryKind.TrackGrouping or RecoveryKind.FileMoves) GroupingRename.Move(move.Source, move.Target);
+                                else if (move.Directory) Directory.Move(move.Source, move.Target); else File.Move(move.Source, move.Target);
                             }
-                            if (Hash(move.Target, move.Directory) != move.Hash) throw new IOException("Moved item verification failed: " + move.Target);
+                            if (Hash(move.Target, move.Directory, session.Data.VerificationMode) != move.Hash) throw new IOException("Moved item verification failed: " + move.Target);
                             foreach (string source in session.Data.Expected.Keys.Where(p => WorkflowSession.IsWithin(move.Source, p)).ToArray())
                             {
                                 string destination = InputSelection.Paths.Equals(source, move.Source) ? move.Target : Path.Combine(move.Target, Path.GetRelativePath(move.Source, source));
                                 session.Data.Expected[destination] = session.Data.Expected[source]; session.Data.Expected.Remove(source);
                             }
                             session.Data.Expected[Path.GetDirectoryName(move.Target)!] = "directory";
-                            results.Add(new(move.Source, ConversionStatus.Succeeded, [move.Target], "Moved using saved recipe plan."));
+                            results.Add(new(move.Source, ConversionStatus.Succeeded, [move.Target], "Moved and verified."));
                         }
                     }
                 }
             }
             group.Results = results; session.Save(); // Receipt precedes the next group and progress notification.
-            int completed = groups.Where(g => g.Results != null).Sum(g => g.Items.Length);
+            completed += group.Items.Length;
             progress?.Report(new(100, found == 0 ? 100 : completed * 100 / found, found, completed,
-                $"Processed {completed} of {found} planned items.", clock.Elapsed.ToString(@"hh\:mm\:ss")));
+                $"Processed {completed} of {found} planned items.", clock.Elapsed.ToString(@"hh\:mm\:ss")) { ShowInActivity = false });
         }
         return new(groups.Where(g => g.Results != null).SelectMany(g => g.Results!).ToArray(), token.IsCancellationRequested) { Found = found, Elapsed = clock.Elapsed };
     }
     internal static bool Exists(string path) => File.Exists(path) || Directory.Exists(path);
-    internal static string Hash(string path, bool directory) => directory ? WorkflowSession.TreeHash(path) : FileTransaction.Hash(path);
+    internal static string Hash(string path, bool directory, RecoveryVerificationMode mode) => directory ? WorkflowSession.TreeHash(path, mode) : RecoveryFingerprint.Hash(path, mode);
 }

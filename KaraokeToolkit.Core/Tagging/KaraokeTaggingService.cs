@@ -207,8 +207,8 @@ public sealed class KaraokeTaggingService(RecoveryStore? recovery = null)
                 }
                 session.Data.TagResults[item.Path] = results[^1]; session.Save();
                 progress?.Report(new(100, results.Count * 100 / Math.Max(1, preview.Length), preview.Length, results.Count,
-                    "Tagging " + Path.GetFileName(item.Path), clock.Elapsed.ToString(@"hh\:mm\:ss"))
-                    { ActivitySource = item.Path, ActivityLabel = "Tagging" });
+                    "Processing: " + item.Path, clock.Elapsed.ToString(@"hh\:mm\:ss"))
+                    { ActivitySource = item.Path, ActivityLabel = "Processing" });
             }
             if (finish) session.Finish();
             return new ConversionResult(results, token.IsCancellationRequested) { Found = preview.Length, Elapsed = clock.Elapsed };

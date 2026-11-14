@@ -25,11 +25,18 @@ dotnet build KaraokeToolkit.App/KaraokeToolkit.App.csproj -p:ArtifactBuildName=v
 dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj --logger trx
 ```
 
-KaraokeToolkit.runsettings sets the results location relative to the repository root.
-The test project selects it and sets VSTestResultsDirectory. Its assembly metadata
-passes the absolute artifacts root to TestArtifacts, which reserves unique fixture
-paths per test run. Fixtures are retained for inspection; automatic cleanup is not
-implemented. Production recovery folders and temporary file locks are unchanged.
+Use `.scriptsTest.ps1` for routine serial verification. It reuses the
+StandaloneTests build output, writes a TRX report, and deletes successful
+run fixtures. Failed fixtures are retained for 14 days by default.
+Use `-KeepFixtures` to preserve a run for longer investigation. Raw
+`dotnet test` uses isolated fixture paths and leaves them for inspection.
+
+Successful publish staging is removed after packages and checksums are
+verified. Failed staging is marked for retention. The test wrapper also runs
+`.scriptsClean-Artifacts.ps1` to remove marked runs older than 14 days.
+Run that command manually with `-WhatIf` to preview cleanup, or with
+`-RetentionDays` to choose the cutoff. Unmarked runs, release packages,
+test reports, runtime caches and source evidence are outside its scope.
 
 Explicit command-line output/results overrides can still override these defaults.
 Do not use a relative `-p:BaseOutputPath=artifacts/...`: MSBuild evaluates that against

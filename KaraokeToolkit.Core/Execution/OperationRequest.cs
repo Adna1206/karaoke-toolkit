@@ -1,5 +1,7 @@
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Tagging;
+using KaraokeToolkit.Core.FileOperations;
+using KaraokeToolkit.Core.Recovery;
 
 namespace KaraokeToolkit.Core.Execution;
 
@@ -13,5 +15,8 @@ public sealed record OperationRequest(OperationId OperationId, IReadOnlyList<str
     public bool IgnoreLeadingThe { get; init; }
     public string TaggingPattern { get; init; } = FilenameTagPattern.Default;
     public TaggingOptions Tagging { get; init; } = new();
+    public bool SaveResumableRun { get; init; } = true;
+    public RecoveryVerificationMode RecoveryVerification { get; init; }
+    public TrackGroupingOptions Grouping { get; init; } = new();
     public string OutputFolder { get; init; } = "";
 }

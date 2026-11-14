@@ -7,7 +7,7 @@ pattern requires a fresh preview. Folder recursion uses the existing preference.
 
 The default is `%DISC%-%TRACK% - %ARTIST% - %TITLE%`. Tokens can be reordered or
 omitted, and separators are literal text. For example `%DISC%. %ARTIST% - %TITLE%`
-reads `SF123. Artist - Title`. Accepted patterns are remembered uniquely in the
+reads `ABC123. Artist - Title`. Accepted patterns are remembered uniquely in the
 dropdown across restarts; the last accepted pattern is selected next time.
 Cancelled or merely previewed combinations are not added.
 

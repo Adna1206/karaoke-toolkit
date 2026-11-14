@@ -27,53 +27,14 @@
    <Setter Property="Background" Value="#26DC4545"/>
    <Setter Property="BorderBrush" Value="#DC4545"/>
   </Style>
-  <Style Selector="ListBox.operations ListBoxItem">
-   <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-  </Style>
-  <Style Selector="ListBox#ActivityLog ListBoxItem">
-   <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-   <Setter Property="Padding" Value="0"/>
-   <Setter Property="Margin" Value="0"/>
-  </Style>
-  <Style Selector="ProgressBar.runProgress">
-   <Setter Property="Height" Value="14"/>
-   <Setter Property="VerticalAlignment" Value="Center"/>
-  </Style>
-  <Style Selector="Button.favourite">
-   <Setter Property="Foreground" Value="#D69B23"/>
-  </Style>
  </Window.Styles>
  <Window.Resources>
-  <Thickness x:Key="ToolLabelMargin">4,6</Thickness>
-  <Thickness x:Key="ActivityCellPadding">12,6</Thickness>
   <ControlTheme x:Key="MainWindowDecorations" TargetType="chrome:WindowDrawnDecorations"
                 BasedOn="{StaticResource BlendedWindowDecorations}">
    <Style Selector="^:not(:fullscreen) /template/ Panel#PART_TitleTextPanel">
     <Setter Property="IsVisible" Value="False"/>
    </Style>
   </ControlTheme>
-  <DataTemplate x:Key="OperationTemplate" x:DataType="vm:ActionChoice">
-   <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
-    <TextBlock Text="{Binding Label}" TextWrapping="Wrap" VerticalAlignment="Center" Background="Transparent"
-               Margin="{StaticResource ToolLabelMargin}"
-               ToolTip.Tip="{Binding Description}" />
-    <Button Grid.Column="1" Command="{Binding ToggleFavouriteCommand}"
-            Classes.favourite="{Binding IsFavourite}" ToolTip.Tip="{Binding FavouriteHint}"
-            AutomationProperties.Name="{Binding FavouriteAccessibleName}"
-            Width="32" Height="28" Margin="0,0,4,0" Padding="0" Background="Transparent" BorderThickness="0"
-            HorizontalContentAlignment="Center" VerticalContentAlignment="Center" VerticalAlignment="Center">
-     <Grid Width="18" Height="18">
-      <Path Data="M12,2 L15,8.5 L22,9.5 L17,14.5 L18,22 L12,18.5 L6,22 L7,14.5 L2,9.5 L9,8.5 Z"
-            Stretch="Uniform" StrokeThickness="1.5" Fill="Transparent"
-            Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
-      <Path Data="M12,2 L15,8.5 L22,9.5 L17,14.5 L18,22 L12,18.5 L6,22 L7,14.5 L2,9.5 L9,8.5 Z"
-            Stretch="Uniform" StrokeThickness="1.5" IsVisible="{Binding IsFavourite}"
-            Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-            Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
-     </Grid>
-    </Button>
-   </Grid>
-  </DataTemplate>
  </Window.Resources>
  <Grid RowDefinitions="Auto,Auto,*,Auto">
   <Grid x:Name="MenuRow" ColumnDefinitions="Auto,Auto,*">
@@ -110,27 +71,10 @@
     </StackPanel>
    </DockPanel>
   </Border>
-  <Grid Grid.Row="2" Margin="24,20" ColumnDefinitions="190,*" ColumnSpacing="24"
-        RowDefinitions="Auto,*" RowSpacing="12" IsVisible="{Binding !ShowProgress}">
-   <TextBlock Text="Tools" Classes="heading2" Margin="8,0"/>
-   <TextBlock Grid.Column="1" Text="{Binding SelectedSectionTitle}" Classes="heading2"/>
-   <ListBox Grid.Row="1" x:Name="CategoryList" ItemsSource="{Binding VisibleSections}" SelectedItem="{Binding SelectedSection, Mode=OneWay}" SelectionChanged="Category_SelectionChanged"
-            IsEnabled="{Binding CanEdit}" AutomationProperties.Name="Operation categories">
-    <ListBox.ItemTemplate><DataTemplate x:DataType="vm:OperationSectionViewModel">
-     <TextBlock Text="{Binding Header}" TextWrapping="Wrap" Margin="{StaticResource ToolLabelMargin}"/>
-    </DataTemplate></ListBox.ItemTemplate>
-   </ListBox>
-   <Grid Grid.Row="1" Grid.Column="1" RowDefinitions="*,Auto,Auto" RowSpacing="14">
-    <ListBox x:Name="OperationList" Classes="operations" ItemsSource="{Binding VisibleOperations}"
-             SelectedItem="{Binding SelectedOperation, Mode=OneWay}" SelectionChanged="Operation_SelectionChanged"
-             ItemTemplate="{StaticResource OperationTemplate}" IsEnabled="{Binding CanEdit}"
-             AutomationProperties.Name="Operations"/>
-    <Border Grid.Row="1" Padding="0,4,0,0">
-     <ScrollViewer MaxHeight="85" HorizontalScrollBarVisibility="Disabled">
-      <TextBlock Text="{Binding ActionDescription}" TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.75"/>
-     </ScrollViewer>
-    </Border>
-    <Border Grid.Row="2" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,1,0,0" Padding="0,14,0,0">
+  <vm:OperationPickerView Grid.Row="2" Margin="24,20" x:Name="OperationPicker"
+                          IsVisible="{Binding !ShowProgress, FallbackValue=True}">
+   <vm:OperationPickerView.SourcePanel>
+    <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,1,0,0" Padding="0,14,0,0">
      <Grid>
       <StackPanel Spacing="8" IsVisible="{Binding NeedsSource}">
        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
@@ -149,45 +93,9 @@
       <TextBlock Text="{Binding SourceInstruction}" IsVisible="{Binding !NeedsSource}" TextWrapping="Wrap"/>
      </Grid>
     </Border>
-   </Grid>
-  </Grid>
-  <Grid Grid.Row="2" Margin="24,16" IsVisible="{Binding ShowProgress}" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="14">
-   <TextBlock Text="{Binding RunTitle}" Classes="heading1" />
-   <TextBlock Grid.Row="1" Text="{Binding FolderPath}" TextTrimming="CharacterEllipsis" />
-   <Border Grid.Row="2" CornerRadius="8" ClipToBounds="True" BorderThickness="1"
-           BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
-    <Grid RowDefinitions="Auto,*">
-     <Border Padding="{StaticResource ActivityCellPadding}" BorderThickness="0,0,0,1"
-             BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
-             Background="{DynamicResource SystemControlForegroundBaseLowBrush}">
-      <Grid ColumnDefinitions="90,*">
-       <TextBlock Text="Time" FontWeight="SemiBold"/>
-       <TextBlock Grid.Column="1" Text="Event" FontWeight="SemiBold"/>
-      </Grid>
-     </Border>
-     <ListBox Grid.Row="1" x:Name="ActivityLog" ItemsSource="{Binding Activity}"
-              CornerRadius="0" BorderThickness="0" Padding="0" AutomationProperties.Name="Progress event log">
-      <ListBox.ItemTemplate>
-       <DataTemplate x:DataType="vm:ActivityEntry">
-        <Border Padding="{StaticResource ActivityCellPadding}" BorderThickness="0,0,0,1"
-                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
-         <Grid ColumnDefinitions="90,*">
-          <TextBlock Text="{Binding Time}" Opacity="0.65"/>
-          <TextBlock Grid.Column="1" Text="{Binding Message}" TextWrapping="Wrap"/>
-         </Grid>
-        </Border>
-       </DataTemplate>
-      </ListBox.ItemTemplate>
-     </ListBox>
-    </Grid>
-   </Border>
-   <StackPanel Grid.Row="3" Spacing="9">
-    <TextBlock Text="Current Progress" FontWeight="SemiBold" />
-    <Grid ColumnDefinitions="110,*,45" ColumnSpacing="10"><TextBlock Text="Item Progress:"/><ProgressBar Grid.Column="1" Classes="runProgress" Value="{Binding Progress}" Maximum="100"/><TextBlock Grid.Column="2" Text="{Binding Progress, StringFormat='{}{0}%'}"/></Grid>
-    <Grid ColumnDefinitions="110,*,45" ColumnSpacing="10"><TextBlock Text="Total Progress:"/><ProgressBar Grid.Column="1" Classes="runProgress" Value="{Binding TotalProgress}" Maximum="100"/><TextBlock Grid.Column="2" Text="{Binding TotalProgress, StringFormat='{}{0}%'}"/></Grid>
-    <Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Elapsed, StringFormat='Elapsed Time: {0}'}"/><TextBlock Grid.Column="1" Text="{Binding FoundFiles, StringFormat='Files found: {0}'}"/></Grid>
-   </StackPanel>
-  </Grid>
+   </vm:OperationPickerView.SourcePanel>
+  </vm:OperationPickerView>
+  <vm:OperationProgressView Grid.Row="2" Margin="24,16" IsVisible="{Binding ShowProgress, FallbackValue=False}"/>
   <Border Grid.Row="3" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" Padding="24,14">
    <StackPanel Spacing="12">
     <Grid IsVisible="{Binding RecoveryAvailable}" ColumnDefinitions="*,Auto" ColumnSpacing="12">
@@ -200,10 +108,10 @@
       <TextBlock Text="{Binding Status}" TextWrapping="Wrap" MaxHeight="42" FontSize="{DynamicResource SmallTextSize}"/>
      </Border>
      <Button Grid.Column="1" Content="View Last Run Report…" Click="Results_Click" IsEnabled="{Binding CanViewReport}"/>
-     <Button Grid.Column="2" Content="Back" Click="Back_Click" IsVisible="{Binding ShowProgress}" IsEnabled="{Binding CanEdit}"/>
+     <Button Grid.Column="2" Content="Back" Click="Back_Click" IsVisible="{Binding ShowProgress, FallbackValue=False}" IsEnabled="{Binding CanEdit}"/>
      <Grid Grid.Column="3">
-      <Button Content="Start" Command="{Binding StartCommand}" IsVisible="{Binding !IsBusy}" MinWidth="105" Classes="accent"/>
-      <Button Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}" MinWidth="105"/>
+      <Button Content="Start" Command="{Binding StartCommand}" IsVisible="{Binding !IsBusy, FallbackValue=True}" MinWidth="105" Classes="accent"/>
+      <Button Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy, FallbackValue=False}" MinWidth="105"/>
      </Grid>
     </Grid>
    </StackPanel>

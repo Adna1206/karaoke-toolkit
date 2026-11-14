@@ -41,6 +41,7 @@ public static class McpOperationCatalog
         OperationId.PreviewTags => Include(id, false),
         OperationId.OrganizeFiles => Include(id),
         OperationId.OrganizeFolders => Include(id),
+        OperationId.GroupByTrackId => Include(id),
         OperationId.FlattenOneLayer => Include(id),
         OperationId.FlattenAllLayers => Include(id),
         OperationId.RestoreQuarantined => Include(id),

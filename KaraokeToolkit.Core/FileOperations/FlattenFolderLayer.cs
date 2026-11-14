@@ -1,5 +1,5 @@
-using System.Diagnostics;
 using KaraokeToolkit.Core.Conversion;
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.Recovery;
 
 namespace KaraokeToolkit.Core.FileOperations;
@@ -15,14 +15,14 @@ public sealed class FlattenFolderLayer
 
     public Task<ConversionResult> RunAsync(IEnumerable<string> folders,
         IProgress<ConversionProgress>? progress = null, CancellationToken token = default,
-        FolderFlattenScope scope = FolderFlattenScope.OneLayer) =>
-        Task.Run(() => Run(folders, progress, token, scope), token);
+        FolderFlattenScope scope = FolderFlattenScope.OneLayer, RecoveryVerificationMode verificationMode = RecoveryVerificationMode.Sha256, bool saveResumableRun = true) =>
+        Task.Run(() => Run(folders, progress, token, scope, verificationMode: verificationMode, saveResumableRun: saveResumableRun), token);
 
     private static ConversionResult Run(IEnumerable<string> folders, IProgress<ConversionProgress>? progress, CancellationToken token,
-        FolderFlattenScope scope, bool preview = false)
+        FolderFlattenScope scope, bool preview = false, RecoveryVerificationMode verificationMode = RecoveryVerificationMode.Sha256, bool saveResumableRun = true)
     {
         if (!Enum.IsDefined(scope)) throw new ArgumentOutOfRangeException(nameof(scope));
-        var timer = Stopwatch.StartNew();
+
         string[] selected = folders.Select(path => Path.TrimEndingDirectorySeparator(Path.GetFullPath(path)))
             .Distinct(Paths).ToArray();
         if (selected.Length == 0) throw new ArgumentException("Select at least one folder.");
@@ -62,8 +62,10 @@ public sealed class FlattenFolderLayer
             return new(planned.Select(p => p.Outputs.Count > 0 && (File.Exists(p.Outputs[0]) || Directory.Exists(p.Outputs[0]) || duplicates.Contains(p.Outputs[0]))
                 ? p with { Status = ConversionStatus.Failed, Message = "Destination collision; move will be blocked." } : p).ToArray(), false) { Found = planned.Length };
         }
-        if (WorkflowSession.Current.Value is { } workflow)
+        if (token.IsCancellationRequested) return new([], true);
+        progress?.Report(new(0, 0, 0, 0, "Preparing recovery for file moves…", "00:00:00"));
         {
+            var mode = WorkflowSession.Current.Value?.Data.VerificationMode ?? verificationMode;
             var plan = new List<WorkflowMoveGroup>();
             foreach (var item in work)
                 if (item.Protected)
@@ -71,77 +73,11 @@ public sealed class FlattenFolderLayer
                 else
                 {
                     foreach (string entry in item.Entries)
-                        plan.Add(new() { Items = [WorkflowMoves.Move(entry, Path.Combine(item.Root, Path.GetFileName(entry)))] });
+                        plan.Add(new() { Items = [WorkflowMoves.Move(entry, Path.Combine(item.Root, Path.GetFileName(entry)), mode)] });
                     plan.Add(new() { Items = [new(item.Child, null, "empty", true)] });
                 }
-            return WorkflowMoves.Run(workflow, plan, progress, token);
+            return WorkflowMoves.RunStandaloneOrRecipe(recovery, roots, scope == FolderFlattenScope.OneLayer ? OperationId.FlattenOneLayer : OperationId.FlattenAllLayers, plan, mode, saveResumableRun, progress, token);
         }
-        int total = work.Sum(item => item.Entries.Length + 1), completed = 0;
-        var results = new List<ConversionFileResult>();
-        foreach (var rootGroup in work.GroupBy(item => item.Root, Paths))
-        {
-            if (token.IsCancellationRequested) break;
-            using var lease = FileTransaction.AcquireLease(rootGroup.Key);
-            foreach (var item in rootGroup)
-            {
-                if (token.IsCancellationRequested) break;
-                if (item.Protected || InputSelection.IsExcludedFolder(Path.GetFileName(item.Child)) || IsLinked(item.Child))
-                {
-                    foreach (string entry in item.Entries)
-                        results.Add(new(entry, ConversionStatus.Skipped, [], "Protected or linked child folder was left in place."));
-                    results.Add(new(item.Child, ConversionStatus.Skipped, [], "Protected or linked child folder was left in place."));
-                    completed += item.Entries.Length + 1;
-                    Report();
-                    continue;
-                }
-                foreach (string entry in item.Entries)
-                {
-                    if (token.IsCancellationRequested) break;
-                    string target = Path.Combine(item.Root, Path.GetFileName(entry));
-                    try
-                    {
-                        RunSession.CheckPlainPath(entry);
-                        if (File.Exists(target) || Directory.Exists(target))
-                            results.Add(new(entry, ConversionStatus.Skipped, [], "An item with the same name already exists in the selected folder."));
-                        else if (Directory.Exists(entry))
-                        {
-                            Directory.Move(entry, target);
-                            results.Add(new(entry, ConversionStatus.Succeeded, [target], "Moved folder up one level."));
-                        }
-                        else
-                        {
-                            File.Move(entry, target);
-                            results.Add(new(entry, ConversionStatus.Succeeded, [target], scope == FolderFlattenScope.AllLayers
-                                ? "Moved file into the selected root folder." : "Moved file up one level."));
-                        }
-                    }
-                    catch (Exception error) when (error is IOException or UnauthorizedAccessException)
-                    {
-                        results.Add(new(entry, ConversionStatus.Failed, [], error.Message));
-                    }
-                    completed++;
-                    Report();
-                }
-                if (token.IsCancellationRequested) break;
-                try
-                {
-                    if (Directory.EnumerateFileSystemEntries(item.Child).Any())
-                        results.Add(new(item.Child, ConversionStatus.Skipped, [], "Child folder still contains items that could not be moved."));
-                    else
-                    {
-                        Directory.Delete(item.Child);
-                        results.Add(new(item.Child, ConversionStatus.Succeeded, [], "Removed empty child folder."));
-                    }
-                }
-                catch (Exception error) when (error is IOException or UnauthorizedAccessException)
-                {
-                    results.Add(new(item.Child, ConversionStatus.Failed, [], error.Message));
-                }
-                completed++;
-                Report();
-            }
-        }
-        return new(results, token.IsCancellationRequested) { Found = total, Elapsed = timer.Elapsed };
 
         void Plan(string root, string child)
         {
@@ -165,8 +101,6 @@ public sealed class FlattenFolderLayer
                 work.Add((root, child, linked ? [] : Directory.GetFileSystemEntries(child).Order(Paths).ToArray(), isProtected));
         }
 
-        void Report() => progress?.Report(new(100, total == 0 ? 100 : completed * 100 / total, total, completed,
-            $"Processed {completed} of {total} items and folders.", timer.Elapsed.ToString(@"hh\:mm\:ss")));
     }
 
     private static bool IsLinked(string path) => (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;

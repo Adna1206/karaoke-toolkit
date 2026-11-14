@@ -1,6 +1,6 @@
 using KaraokeToolkit.Core.Archives;
-using System.Diagnostics;
 using KaraokeToolkit.Core.Conversion;
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.Recovery;
 
 namespace KaraokeToolkit.Core.FileOperations;
@@ -13,18 +13,18 @@ public sealed class AlphabeticalOrganizer
     private static readonly StringComparer Paths = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
 
     public Task<ConversionResult> RunAsync(IEnumerable<string> inputs, AlphabeticalOrganizeScope scope,
-        IProgress<ConversionProgress>? progress = null, CancellationToken token = default, bool ignoreLeadingThe = false)
-        => Task.Run(() => Run(inputs, scope, progress, token, ignoreLeadingThe), token);
+        IProgress<ConversionProgress>? progress = null, CancellationToken token = default, bool ignoreLeadingThe = false, RecoveryVerificationMode verificationMode = RecoveryVerificationMode.Sha256, bool saveResumableRun = true)
+        => Task.Run(() => Run(inputs, scope, progress, token, ignoreLeadingThe, verificationMode: verificationMode, saveResumableRun: saveResumableRun), token);
 
     public Task<ConversionResult> PreviewAsync(IEnumerable<string> inputs, AlphabeticalOrganizeScope scope,
         CancellationToken token = default, bool ignoreLeadingThe = false)
         => Task.Run(() => Run(inputs, scope, null, token, ignoreLeadingThe, true), token);
 
     private static ConversionResult Run(IEnumerable<string> inputs, AlphabeticalOrganizeScope scope, IProgress<ConversionProgress>? progress,
-        CancellationToken token, bool ignoreLeadingThe, bool preview = false)
+        CancellationToken token, bool ignoreLeadingThe, bool preview = false, RecoveryVerificationMode verificationMode = RecoveryVerificationMode.Sha256, bool saveResumableRun = true)
     {
         if (!Enum.IsDefined(scope)) throw new ArgumentOutOfRangeException(nameof(scope));
-        var timer = Stopwatch.StartNew();
+
         var selected = inputs.Select(p => Path.TrimEndingDirectorySeparator(Path.GetFullPath(p))).Distinct(Paths).ToArray();
         if (selected.Length == 0) throw new ArgumentException("Select at least one file or folder.");
         foreach (string path in selected)
@@ -37,7 +37,10 @@ public sealed class AlphabeticalOrganizer
 
         var roots = selected.Where(Directory.Exists).ToHashSet(Paths);
         if (scope == AlphabeticalOrganizeScope.Folders && selected.Any(File.Exists))
-            throw new ArgumentException("Organize Folders Alphabetically requires folder selections.");
+            throw new ArgumentException("Select folders to group their immediate subfolders alphabetically.");
+        if (scope == AlphabeticalOrganizeScope.Folders && roots.Any(root => roots.Any(parent =>
+            !Paths.Equals(parent, root) && WorkflowSession.IsWithin(parent, root))))
+            throw new ArgumentException("Select non-overlapping folders when organizing child folders.");
         var recovery = new RecoveryStore();
         foreach (string root in roots)
             if (recovery.Find(root, true).Count > 0)
@@ -79,81 +82,17 @@ public sealed class AlphabeticalOrganizer
             var conflicts = planned.GroupBy(p => p.Outputs[0], Paths).Where(g => g.Count() > 1).Select(g => g.Key).ToHashSet(Paths);
             return new(planned.Select(p => conflicts.Contains(p.Outputs[0]) ? p with { Status = ConversionStatus.Failed, Message = "Multiple inputs target the same path." } : p).ToArray(), false) { Found = planned.Length };
         }
-        if (WorkflowSession.Current.Value is { } workflow)
+        if (token.IsCancellationRequested) return new([], true);
+        progress?.Report(new(0, 0, 0, 0, "Preparing recovery for file moves…", "00:00:00"));
         {
+            var mode = WorkflowSession.Current.Value?.Data.VerificationMode ?? verificationMode;
             var plan = new List<WorkflowMoveGroup>();
             foreach (var (root, entries) in work.OrderBy(x => x.Key, Paths))
             foreach (var group in entries.Order(Paths).GroupBy(source => IsKaraokePairMember(source) ? Path.GetFileNameWithoutExtension(source) : source, Paths))
                 plan.Add(new() { Items = group.Select(source => WorkflowMoves.Move(source, Path.Combine(root,
-                    Bucket(Path.GetFileName(source), scope == AlphabeticalOrganizeScope.Files && ignoreLeadingThe), Path.GetFileName(source)))).ToArray() });
-            return WorkflowMoves.Run(workflow, plan, progress, token);
+                    Bucket(Path.GetFileName(source), scope == AlphabeticalOrganizeScope.Files && ignoreLeadingThe), Path.GetFileName(source)), mode)).ToArray() });
+            return WorkflowMoves.RunStandaloneOrRecipe(recovery, WorkflowSession.RootsFor(selected), scope == AlphabeticalOrganizeScope.Files ? OperationId.OrganizeFiles : OperationId.OrganizeFolders, plan, mode, saveResumableRun, progress, token);
         }
-        var results = new List<ConversionFileResult>();
-        int total = work.Values.Sum(x => x.Count), completed = 0;
-        foreach (var (root, entries) in work.OrderBy(x => x.Key, Paths))
-        {
-            if (token.IsCancellationRequested) break;
-            using var lease = FileTransaction.AcquireLease(root);
-            // Existing interrupted conversion data must be handled before moving any folder.
-            if (Directory.EnumerateDirectories(root, ".karaoke-job-*").Any(p => File.Exists(Path.Combine(p, "recovery.json"))))
-                throw new IOException("Recover the interrupted conversion before organizing: " + root);
-            var moves = entries.OrderBy(x => x, Paths).Select(source =>
-                (Source: source, Destination: Path.Combine(root,
-                    Bucket(Path.GetFileName(source), scope == AlphabeticalOrganizeScope.Files && ignoreLeadingThe), Path.GetFileName(source)))).ToArray();
-            foreach (var group in moves.GroupBy(move => IsKaraokePairMember(move.Source)
-                ? Path.GetFileNameWithoutExtension(move.Source) : move.Source, Paths))
-            {
-                if (token.IsCancellationRequested) break;
-                var batch = group.ToArray();
-                var committed = new List<(string Source, string Destination)>();
-                try
-                {
-                    foreach (var move in batch)
-                    {
-                        RunSession.CheckPlainPath(move.Source);
-                        RunSession.CheckPlainPath(Path.GetDirectoryName(move.Destination)!);
-                    }
-                    if (batch.Any(move => File.Exists(move.Destination) || Directory.Exists(move.Destination)))
-                    {
-                        foreach (var move in batch)
-                            results.Add(new(move.Source, ConversionStatus.Skipped, [], "Destination for this item or its matching track already exists; source was left in place."));
-                    }
-                    else
-                    {
-                        foreach (var move in batch)
-                        {
-                            Directory.CreateDirectory(Path.GetDirectoryName(move.Destination)!);
-                            if (Directory.Exists(move.Source)) Directory.Move(move.Source, move.Destination);
-                            else File.Move(move.Source, move.Destination);
-                            committed.Add(move);
-                        }
-                        foreach (var move in batch)
-                            results.Add(new(move.Source, ConversionStatus.Succeeded, [move.Destination], "Moved to " + Path.GetFileName(Path.GetDirectoryName(move.Destination)) + "."));
-                    }
-                }
-                catch (Exception e) when (e is IOException or UnauthorizedAccessException)
-                {
-                    foreach (var moved in committed.AsEnumerable().Reverse())
-                    {
-                        try
-                        {
-                            if (Directory.Exists(moved.Destination)) Directory.Move(moved.Destination, moved.Source);
-                            else File.Move(moved.Destination, moved.Source);
-                        }
-                        catch (Exception rollback) when (rollback is IOException or UnauthorizedAccessException)
-                        {
-                            throw new IOException("A move failed and rollback could not restore " + moved.Source + ". Files need manual review.", rollback);
-                        }
-                    }
-                    foreach (var move in batch)
-                        results.Add(new(move.Source, ConversionStatus.Failed, [], e.Message));
-                }
-                completed += batch.Length;
-                progress?.Report(new(100, total == 0 ? 100 : completed * 100 / total, total, completed,
-                    $"Organized {completed} of {total} items.", timer.Elapsed.ToString(@"hh\:mm\:ss")));
-            }
-        }
-        return new(results, token.IsCancellationRequested) { Found = total, Elapsed = timer.Elapsed };
 
         void Add(string root, string entry)
         {

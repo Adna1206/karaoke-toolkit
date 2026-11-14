@@ -30,7 +30,42 @@ public class OperationFlowTests
         Assert.True(model.CanChooseSource);
     }
 
+    [Fact]
+    public async Task TrackGroupingKeepsItsSelectionAndMovesToTheApprovedDestinationByDefault()
+    {
+        string folder = TestMediaFixture.NewFolder();
+        string source = Path.Combine(folder, "BKD33601 - Artist - Title.zip");
+        File.WriteAllText(source, "content");
+        string destination = folder;
+        var model = new MainViewModel(Settings());
+        var operation = model.Operations.Single(x => x.Definition.Operation == Action.GroupByTrackId);
+        model.SelectedOperation = operation;
+        model.AddInputs([folder]);
+        Assert.Same(operation, model.SelectedOperation);
+        Assert.True(model.CanChooseFiles);
+        Assert.True(model.CanStart);
+        model.ConfigureTrackGroupingAsync = async dialog =>
+        {
+            Assert.True(dialog.Move);
+            Assert.Equal("Move items", dialog.ApplyLabel);
+            dialog.GroupingMode = 1;
+            dialog.RangeSeparatorStyle = 1;
+            Assert.Equal(destination, dialog.OutputFolder);
+            await dialog.PreviewAsync();
+            Assert.False(dialog.HasIssues);
+            Assert.Contains("BKD33601 - Artist - Title.zip → BKD-33601 to BKD-33650", dialog.Example);
+            Assert.False(Directory.Exists(Path.Combine(destination, "BKD-33601 to BKD-33650")));
+            return dialog.GetSubmission();
+        };
 
+        await model.StartCommand.ExecuteAsync(null);
+
+        Assert.False(model.IsBusy);
+        Assert.Contains(model.Activity, row => row.Message == "Processing: BKD33601 - Artist - Title.zip");
+        Assert.Equal("Succeeded", Assert.Single(model.LastReport!.Entries).Status);
+        Assert.False(File.Exists(source));
+        Assert.Equal("content", File.ReadAllText(Path.Combine(destination, "BKD-33601 to BKD-33650", Path.GetFileName(source))));
+    }
 
     [Fact]
     public async Task SuccessfulRunDisablesStartUntilBackAndCannotRunTwice()

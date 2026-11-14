@@ -24,6 +24,7 @@ fixtures and explicit format/workflow expectations.
 - Local filename cleanup with paired-name and collision protection.
 - [Tag Karaoke Files](docs/tagging.md): preview and edit metadata from custom filename templates, with remembered patterns, ZIP-contained audio tagging and media-payload verification.
 - Organize files recursively or immediate child folders into A-Z and # folders, with an optional leading-"The" rule for files.
+- [Group files or whole folders by track ID](docs/track-grouping.md) with numeric ranges, masked digits, automatic parent folders and a destination preview.
 - Flatten one or all directory layers beneath selected folders, moving contents into each selected root while leaving name collisions in place.
 - Standalone CUE sheets for BIN tracks and TXT track listings.
 - Optional automatic CUE/TXT generation after conversion.

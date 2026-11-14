@@ -1,0 +1,21 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:KaraokeToolkit.App.Features.Main"
+             x:Class="KaraokeToolkit.App.Features.Main.OperationProgressView" x:DataType="vm:MainViewModel">
+ <UserControl.Styles>
+  <Style Selector="ProgressBar.runProgress">
+   <Setter Property="Height" Value="14"/>
+   <Setter Property="VerticalAlignment" Value="Center"/>
+  </Style>
+ </UserControl.Styles>
+ <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="14">
+  <TextBlock Text="{Binding RunTitle}" Classes="heading1" />
+  <TextBlock Grid.Row="1" Text="{Binding FolderPath}" TextTrimming="CharacterEllipsis" />
+  <vm:ActivityLogView Grid.Row="2"/>
+  <StackPanel Grid.Row="3" Spacing="9">
+   <TextBlock Text="Current Progress" FontWeight="SemiBold" />
+   <Grid ColumnDefinitions="110,*,45" ColumnSpacing="10"><TextBlock Text="Item Progress:"/><ProgressBar Grid.Column="1" Classes="runProgress" Value="{Binding Progress}" Maximum="100"/><TextBlock Grid.Column="2" Text="{Binding Progress, StringFormat='{}{0}%'}"/></Grid>
+   <Grid ColumnDefinitions="110,*,45" ColumnSpacing="10"><TextBlock Text="Total Progress:"/><ProgressBar Grid.Column="1" Classes="runProgress" Value="{Binding TotalProgress}" Maximum="100"/><TextBlock Grid.Column="2" Text="{Binding TotalProgress, StringFormat='{}{0}%'}"/></Grid>
+   <Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Elapsed, StringFormat='Elapsed Time: {0}'}"/><TextBlock Grid.Column="1" Text="{Binding FoundFiles, StringFormat='Files found: {0}'}"/></Grid>
+  </StackPanel>
+ </Grid>
+</UserControl>

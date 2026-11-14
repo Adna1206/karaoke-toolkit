@@ -65,7 +65,8 @@ ZIP compression level (0-9). `--option=value` and `--option value` both work.
 Only `--input` can repeat; contradictory flags such as `--recurse --no-recurse`
 are rejected.
 
-`--recurse` is the default. Organize Files always recurses; Organize Folders acts on
+`--recurse` is the default for conversions. Group by Track ID scans immediate files
+unless `--recurse` is supplied. Organize Files always recurses; Organize Folders acts on
 immediate child folders; flatten depth is selected by the operation. These folder
 operations keep their established scope regardless of the recursion preference.
 
@@ -111,8 +112,8 @@ for an existing destination outside selected input folders. This preserves origi
 `--delete-originals` is rejected with `--output`. Outputs are flattened into the
 destination, with conflicts checked before processing and again at publication.
 Multiple source folders sharing a destination require `--no-cue-text` for conversions
-that would generate listings; create a single listing there afterward. Folder maintenance,
-tagging and validation have no separate destination. Options files provide reusable
+that would generate listings; create a single listing there afterward. Among the folder
+tools, Group by Track ID takes a separate destination. Options files provide reusable
 conversion preferences without loading GUI settings.
 
 ## Output and exit codes
@@ -166,7 +167,7 @@ whole known pipeline before any processing. `recover JOURNAL` also resumes recip
 snapshots, interrupted steps and remaining steps through Core's existing recovery.
 No script runner or recipe editing UI is introduced.
 
-`--dry-run` plans file conversions, folder moves/renames, restoration and quarantine
+`--dry-run` plans file conversions, folder moves/renames, track grouping, restoration and quarantine
 without changing inputs or creating outputs/journals. Plans list candidate targets
 and detectable collisions, not guarantees that content will encode successfully.
 `tag --dry-run` uses tagging preview; `validate --dry-run` remains a read-only check.
@@ -181,6 +182,33 @@ moves only eligible failures into Damaged with restoration manifests. Valid file
 remain in place; unreadable/nonmovable findings are reported as issues. Use
 `--dry-run` first, and `run restore-quarantined-files MANIFEST` to restore a group.
 Quarantine is never an automatic side effect of `validate`.
+
+## File move recovery settings
+
+Grouping, alphabetical organization and flattening accept
+`--recovery-verification sha256|xxhash128|metadata|none` and
+`--no-batch-resume`. See [recovery verification](crash-recovery.md#verification-settings)
+for defaults and how interrupted runs are handled.
+
+## Group by Track ID
+
+`run group-by-track-id PATH... --output FOLDER` accepts files and folders.
+Supply the destination explicitly. It can be the folder being scanned. Copy is the default.
+`--move` requires sources and destination on the same volume. Conflicts block
+the run. Use `--dry-run` to inspect the paths and issues first.
+
+```powershell
+.\karaoke-toolkit.exe run group-by-track-id "D:\Incoming" --output "D:\Grouped" --recurse --range-size 50 --range-start 1 --range-separator " to " --dry-run
+.\karaoke-toolkit.exe run group-by-track-id "D:\Incoming\ABC-31xxx" "D:\Incoming\ABC-32xxx" --output "D:\Grouped" --whole-folders --trailing-digits 4 --dry-run
+```
+
+The first example uses names such as `ABC-33601 to ABC-33650`. The second groups
+existing batch folders intact under `ABC-3xxxx`. Trailing-digit grouping defaults to
+two digits, with `--mask x|X|#|s` to choose the name style. Use
+`--id-separator=` to omit the dash after the prefix. `--create-parents` builds
+broader trailing-digit groups automatically. `--max-parent-levels N` limits the
+depth (0 means all). `--keep-single-child-parents` preserves levels that would
+otherwise be collapsed.
 
 ## Disc commands
 

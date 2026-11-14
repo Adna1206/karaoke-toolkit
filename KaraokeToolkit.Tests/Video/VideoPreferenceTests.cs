@@ -18,7 +18,7 @@ public class VideoPreferenceTests
     {
         string path = Path.Combine(TestMediaFixture.NewFolder(), "settings.xml");
         var store = new ApplicationSettingsStore(path);
-        var draft = new OptionsViewModel(store.Load())
+        var draft = new SettingsViewModel(store.Load())
         {
             VideoGraphicsSmoothing = (int)smoothing, VideoResolution = (int)resolution
         };
@@ -41,7 +41,7 @@ public class VideoPreferenceTests
         var loaded = new SettingsStore(path).Load();
         Assert.Equal(VideoGraphicsSmoothing.None, loaded.VideoGraphicsSmoothing);
         Assert.Equal("neighbor", VideoOptions.ScalingAlgorithm(loaded.VideoGraphicsSmoothing));
-        var draft = new OptionsViewModel(loaded) { VideoGraphicsSmoothing = (int)VideoGraphicsSmoothing.Lanczos };
+        var draft = new SettingsViewModel(loaded) { VideoGraphicsSmoothing = (int)VideoGraphicsSmoothing.Lanczos };
         draft.ResetToDefaults();
         Assert.Equal(VideoGraphicsSmoothing.None, draft.ToOptions().VideoGraphicsSmoothing);
         Assert.Equal(VideoResolution.HD, draft.ToOptions().VideoResolution);

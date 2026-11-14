@@ -74,7 +74,7 @@ checks; normal output checks still apply without that flag.
 ```
 
 The pattern shown is the default. A filename such as
-`SF123-04 - Artist - Song.mp3` yields album `SF123`, track `4`, artist `Artist`
+`ABC123-04 - Artist - Song.mp3` yields album `ABC123`, track `4`, artist `Artist`
 and title `Song`. Track zero is allowed. Literal separators and token order can
 change, for example `--pattern "%DISC%. %ARTIST% - %TITLE%"`.
 

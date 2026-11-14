@@ -7,6 +7,7 @@ using System.Xml.Linq;
 using KaraokeToolkit.App.Metadata;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Settings;
+using KaraokeToolkit.Core.Recovery;
 using KaraokeToolkit.Core.Tagging;
 
 namespace KaraokeToolkit.App.Features.Settings;
@@ -22,7 +23,7 @@ public sealed class ApplicationSettingsStore(string path, bool persistRenameBins
     [
         "Theme", "Backdrop", "TaggingPatterns", "LastTaggingPattern", "OperationSections",
         "FavouriteOperations", "SettingsWindowWidth", "SettingsWindowHeight",
-        "RememberInputFolder", "LastInputFolder"
+        "RememberInputFolder", "LastInputFolder", "RecoveryVerification", "SaveResumableRun"
     ];
     private static readonly HashSet<XName> SectionKeys = Enum.GetNames<OperationSection>().Select(name => XName.Get(name)).ToHashSet();
 
@@ -39,12 +40,20 @@ public sealed class ApplicationSettingsStore(string path, bool persistRenameBins
         return (remember, remember ? modern?.Element("LastInputFolder")?.Value : null);
     }
 
+    internal (RecoveryVerificationMode Mode, bool Resume) LoadRecoveryPreferences()
+    {
+        var modern = File.Exists(filename) ? XDocument.Load(filename).Root?.Element("KaraokeToolkit") : null;
+        var mode = Enum.TryParse<RecoveryVerificationMode>(modern?.Element("RecoveryVerification")?.Value, out var parsed)
+            && Enum.IsDefined(parsed) ? parsed : RecoveryVerificationMode.Sha256;
+        return (mode, !bool.TryParse(modern?.Element("SaveResumableRun")?.Value, out bool resume) || resume);
+    }
+
     public void Save(ConversionOptions options, OverwritePolicy? overwritePolicy = null, ApplicationTheme? theme = null,
         bool? validateBeforeConversion = null, bool? ignoreLeadingTheForFileOrganization = null,
         AudioBitratePreferences? audioBitrates = null, IReadOnlyDictionary<string, bool>? operationSections = null,
         IReadOnlyList<string>? favouriteOperations = null, SettingsWindowSize? settingsWindowSize = null,
         ApplicationBackdrop? backdrop = null, IReadOnlyList<string>? taggingPatterns = null, string? lastTaggingPattern = null,
-        bool? rememberInputFolder = null, string? lastInputFolder = null)
+        bool? rememberInputFolder = null, string? lastInputFolder = null, RecoveryVerificationMode? recoveryVerification = null, bool? saveResumableRun = null)
     {
         if (settingsWindowSize is { IsValid: false }) throw new ArgumentOutOfRangeException(nameof(settingsWindowSize));
         if (theme.HasValue && !Enum.IsDefined(theme.Value)) throw new ArgumentOutOfRangeException(nameof(theme));
@@ -52,6 +61,8 @@ public sealed class ApplicationSettingsStore(string path, bool persistRenameBins
         processing.Save(options, overwritePolicy, validateBeforeConversion, ignoreLeadingTheForFileOrganization,
             audioBitrates, modern =>
             {
+                if (recoveryVerification.HasValue) modern.SetElementValue("RecoveryVerification", recoveryVerification.Value);
+                if (saveResumableRun.HasValue) modern.SetElementValue("SaveResumableRun", saveResumableRun.Value);
                 if (theme.HasValue) modern.SetElementValue("Theme", theme.Value);
                 if (backdrop.HasValue) modern.SetElementValue("Backdrop", backdrop.Value);
                 if (rememberInputFolder.HasValue) modern.SetElementValue("RememberInputFolder", rememberInputFolder.Value);

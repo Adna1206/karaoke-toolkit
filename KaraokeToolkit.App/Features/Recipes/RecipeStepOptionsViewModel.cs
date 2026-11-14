@@ -8,7 +8,7 @@ using Action = KaraokeToolkit.Core.Execution.OperationId;
 namespace KaraokeToolkit.App.Features.Recipes;
 
 /// <summary>Reuses the settings editor while exposing only preferences used by this operation.</summary>
-public sealed class RecipeStepOptionsViewModel : OptionsViewModel
+public sealed class RecipeStepOptionsViewModel : SettingsViewModel
 {
     public bool HasZipSettings { get; }
     public bool HasAudioSettings { get; }

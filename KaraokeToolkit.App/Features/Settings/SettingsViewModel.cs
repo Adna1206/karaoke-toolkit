@@ -15,16 +15,16 @@ using KaraokeToolkit.Core;
 using KaraokeToolkit.Core.FileOperations;
 namespace KaraokeToolkit.App.Features.Settings;
 
-public partial class OptionsViewModel : ViewModelBase
+public partial class SettingsViewModel : ViewModelBase
 {
     public SettingsDefinitions Definitions => SettingsDefinitions.Instance;
     private readonly ConversionOptions initial;
     private AudioBitratePreferences audioBitrates = new();
     private bool initializing;
     private sealed record Snapshot(ConversionOptions Options, int Overwrite, int Theme, bool Validate, bool IgnoreLeadingThe,
-        AudioBitratePreferences AudioBitrates, int Backdrop, bool RememberInputFolder);
+        AudioBitratePreferences AudioBitrates, int Backdrop, bool RememberInputFolder, int RecoveryVerification, bool SaveResumableRun);
     private Snapshot? applied;
-    private Snapshot Current => new(ToOptions(), Overwrite, Theme, ValidateBeforeConversion, IgnoreLeadingTheForFileOrganization, audioBitrates, Backdrop, RememberInputFolder);
+    private Snapshot Current => new(ToOptions(), Overwrite, Theme, ValidateBeforeConversion, IgnoreLeadingTheForFileOrganization, audioBitrates, Backdrop, RememberInputFolder, RecoveryVerification, SaveResumableRun);
     public bool HasChanges => applied != null && Current != applied;
 
     public void MarkApplied()
@@ -79,6 +79,8 @@ public partial class OptionsViewModel : ViewModelBase
         get; set;
     }
     [ObservableProperty] public partial bool IgnoreLeadingTheForFileOrganization { get; set; }
+    [ObservableProperty] public partial int RecoveryVerification { get; set; }
+    [ObservableProperty] public partial bool SaveResumableRun { get; set; } = true;
     [ObservableProperty] public partial bool RememberInputFolder { get; set; }
     [ObservableProperty] public partial bool ExperimentalDiscRipping { get; set; }
     [ObservableProperty] public partial string CdrdaoExecutablePath { get; set; } = "";
@@ -197,8 +199,8 @@ public partial class OptionsViewModel : ViewModelBase
             audioBitrates = audioBitrates.With((AudioEncoder)Encoder, value);
     }
     [ObservableProperty] public partial string Error { get; set; } = "";
-    public OptionsViewModel() : this(new()) { }
-    public OptionsViewModel(ConversionOptions options, AudioBitratePreferences? savedBitrates = null)
+    public SettingsViewModel() : this(new()) { }
+    public SettingsViewModel(ConversionOptions options, AudioBitratePreferences? savedBitrates = null)
     {
         initial = options;
         LoadEditablePreferences(options, savedBitrates ?? new AudioBitratePreferences().With(options.AudioEncoder, options.AudioBitrate));
@@ -214,6 +216,8 @@ public partial class OptionsViewModel : ViewModelBase
         Overwrite = (int)OverwritePolicy.Ask;
         ValidateBeforeConversion = false;
         IgnoreLeadingTheForFileOrganization = false;
+        RecoveryVerification = 0;
+        SaveResumableRun = true;
         RememberInputFolder = false;
         Error = "";
         OnPropertyChanged(nameof(HasChanges));

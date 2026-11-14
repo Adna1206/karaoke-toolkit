@@ -1,0 +1,60 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:KaraokeToolkit.App.Features.Main" x:Name="Picker"
+             x:Class="KaraokeToolkit.App.Features.Main.OperationPickerView" x:DataType="vm:MainViewModel">
+ <UserControl.Styles>
+  <Style Selector="ListBox.operations ListBoxItem">
+   <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+  </Style>
+  <Style Selector="Button.favourite">
+   <Setter Property="Foreground" Value="#D69B23"/>
+  </Style>
+ </UserControl.Styles>
+ <UserControl.Resources>
+  <Thickness x:Key="ToolLabelMargin">4,6</Thickness>
+  <DataTemplate x:Key="OperationTemplate" x:DataType="vm:ActionChoice">
+   <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
+    <TextBlock Text="{Binding Label}" TextWrapping="Wrap" VerticalAlignment="Center" Background="Transparent"
+               Margin="{StaticResource ToolLabelMargin}"
+               ToolTip.Tip="{Binding Description}" />
+    <Button Grid.Column="1" Command="{Binding ToggleFavouriteCommand}"
+            Classes.favourite="{Binding IsFavourite}" ToolTip.Tip="{Binding FavouriteHint}"
+            AutomationProperties.Name="{Binding FavouriteAccessibleName}"
+            Width="32" Height="28" Margin="0,0,4,0" Padding="0" Background="Transparent" BorderThickness="0"
+            HorizontalContentAlignment="Center" VerticalContentAlignment="Center" VerticalAlignment="Center">
+     <Grid Width="18" Height="18">
+      <Path Data="M12,2 L15,8.5 L22,9.5 L17,14.5 L18,22 L12,18.5 L6,22 L7,14.5 L2,9.5 L9,8.5 Z"
+            Stretch="Uniform" StrokeThickness="1.5" Fill="Transparent"
+            Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+      <Path Data="M12,2 L15,8.5 L22,9.5 L17,14.5 L18,22 L12,18.5 L6,22 L7,14.5 L2,9.5 L9,8.5 Z"
+            Stretch="Uniform" StrokeThickness="1.5" IsVisible="{Binding IsFavourite}"
+            Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+            Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+     </Grid>
+    </Button>
+   </Grid>
+  </DataTemplate>
+ </UserControl.Resources>
+ <Grid ColumnDefinitions="190,*" ColumnSpacing="24"
+       RowDefinitions="Auto,*" RowSpacing="12">
+  <TextBlock Text="Tools" Classes="heading2" Margin="8,0"/>
+  <TextBlock Grid.Column="1" Text="{Binding SelectedSectionTitle}" Classes="heading2"/>
+  <ListBox Grid.Row="1" x:Name="CategoryList" ItemsSource="{Binding VisibleSections}" SelectedItem="{Binding SelectedSection, Mode=OneWay}" SelectionChanged="Category_SelectionChanged"
+           IsEnabled="{Binding CanEdit}" AutomationProperties.Name="Operation categories">
+   <ListBox.ItemTemplate><DataTemplate x:DataType="vm:OperationSectionViewModel">
+    <TextBlock Text="{Binding Header}" TextWrapping="Wrap" Margin="{StaticResource ToolLabelMargin}"/>
+   </DataTemplate></ListBox.ItemTemplate>
+  </ListBox>
+  <Grid Grid.Row="1" Grid.Column="1" RowDefinitions="*,Auto,Auto" RowSpacing="14">
+   <ListBox x:Name="OperationList" Classes="operations" ItemsSource="{Binding VisibleOperations}"
+            SelectedItem="{Binding SelectedOperation, Mode=OneWay}" SelectionChanged="Operation_SelectionChanged"
+            ItemTemplate="{StaticResource OperationTemplate}" IsEnabled="{Binding CanEdit}"
+            AutomationProperties.Name="Operations"/>
+   <Border Grid.Row="1" Padding="0,4,0,0">
+    <ScrollViewer MaxHeight="85" HorizontalScrollBarVisibility="Disabled">
+     <TextBlock Text="{Binding ActionDescription}" TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.75"/>
+    </ScrollViewer>
+   </Border>
+   <ContentPresenter Grid.Row="2" Content="{Binding #Picker.SourcePanel}"/>
+  </Grid>
+ </Grid>
+</UserControl>
