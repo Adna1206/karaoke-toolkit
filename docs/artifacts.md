@@ -10,6 +10,8 @@ ignored by `.gitignore`. Normal builds still use each project's standard bin/obj
 - `artifacts/releases/<version>/<run-id>/<rid>/`: Velopack installers, portable
   packages, update metadata and SHA256 checksums. See [publishing](publishing.md).
 - `artifacts/runtime/`: reusable pinned downloads and extracted native runtimes.
+- `artifacts/distribution-sources/`: prepared third-party sources, optional ZIPs
+  and checksum sidecars; see [distribution licensing](distribution-licensing.md).
 - `artifacts/benchmarks/`: measurement reports and generated benchmark media.
 
 Builds, publish staging and generated test/benchmark media can be regenerated and

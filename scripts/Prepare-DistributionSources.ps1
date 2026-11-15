@@ -4,13 +4,15 @@ Assembles verified third-party source evidence. This is not release clearance.
 .DESCRIPTION
 Offline by default. -Download explicitly permits fetching missing pinned archives.
 -CdrdaoOnly assembles the Windows cdrdao and MSYS2 source evidence separately.
+-Archive also creates and verifies a ZIP with a SHA-256 sidecar.
 Incomplete FFmpeg provenance is recorded in the output; do not present this as a
 complete corresponding-source release until the manifest's limitations are closed.
 #>
 [CmdletBinding()]
 param(
     [switch]$Download,
-    [switch]$CdrdaoOnly
+    [switch]$CdrdaoOnly,
+    [switch]$Archive
 )
 
 $ErrorActionPreference = 'Stop'
@@ -87,6 +89,7 @@ $applicationLicenses = Join-Path $output 'licenses/application'
 New-Item -ItemType Directory -Path $applicationLicenses -Force | Out-Null
 foreach ($file in @('LICENSE', 'NOTICE.txt')) { Copy-Item -LiteralPath (Join-Path $repo $file) -Destination $applicationLicenses }
 Copy-Item -LiteralPath (Join-Path $repo 'docs/distribution-licensing.md') -Destination (Join-Path $output 'README.md')
+Copy-Item -LiteralPath (Join-Path $repo 'docs/source-availability.md') -Destination (Join-Path $output 'source-availability.md')
 $verified | ForEach-Object { $_.Hash + '  ' + $_.Archive } | Set-Content -LiteralPath (Join-Path $output 'SHA256SUMS.txt') -Encoding ascii
 if ($CdrdaoOnly) {
     Write-Warning 'This bundle covers only Windows cdrdao and its runtime DLLs. Review the manifest limitations before publication.'
@@ -94,3 +97,41 @@ if ($CdrdaoOnly) {
     Write-Warning 'Source evidence is incomplete for public distribution. Read README.md and the manifest limitations.'
 }
 Write-Output "Verified source evidence: $output"
+if ($Archive) {
+    # Archives are already compressed; store them without recompression.
+    # The sibling ZIP cannot accidentally include itself in the source tree.
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $version = ([xml](Get-Content -LiteralPath (Join-Path $repo 'Directory.Build.props') -Raw)).Project.PropertyGroup.Version |
+        Where-Object { $_ } | Select-Object -First 1
+    $scope = if ($CdrdaoOnly) { 'cdrdao' } else { 'third-party' }
+    $zipPath = "$output-$scope-sources-$version-incomplete.zip"
+    $partialZip = "$zipPath.partial"
+    try {
+        [IO.Compression.ZipFile]::CreateFromDirectory($output, $partialZip, [IO.Compression.CompressionLevel]::NoCompression, $false)
+        $zip = [IO.Compression.ZipFile]::OpenRead($partialZip)
+        try {
+            $files = @(Get-ChildItem -LiteralPath $output -File -Recurse)
+            if ($zip.Entries.Count -ne $files.Count) { throw 'Source ZIP entry count mismatch.' }
+            foreach ($file in $files) {
+                $relative = $file.FullName.Substring($output.Length + 1).Replace('\', '/')
+                $entry = $zip.GetEntry($relative)
+                if (!$entry -or $entry.Length -ne $file.Length) { throw "Source ZIP entry mismatch: $relative" }
+                $stream = $entry.Open()
+                $sha = [Security.Cryptography.SHA256]::Create()
+                try {
+                    $actual = [BitConverter]::ToString($sha.ComputeHash($stream)).Replace('-', '').ToLowerInvariant()
+                } finally { $sha.Dispose(); $stream.Dispose() }
+                if ($actual -ne (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()) {
+                    throw "Source ZIP checksum mismatch: $relative"
+                }
+            }
+        } finally { $zip.Dispose() }
+        Move-Item -LiteralPath $partialZip -Destination $zipPath
+        $hash = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
+        "$hash  $([IO.Path]::GetFileName($zipPath))" | Set-Content -LiteralPath "$zipPath.sha256" -Encoding ascii
+        Write-Output "Verified source ZIP ($($files.Count) files): $zipPath"
+        Write-Output "SHA256: $hash"
+    } finally {
+        if (Test-Path -LiteralPath $partialZip) { Remove-Item -LiteralPath $partialZip }
+    }
+}

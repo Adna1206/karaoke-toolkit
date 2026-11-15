@@ -32,9 +32,12 @@
   Compare upstream release archives with builds we control and account for Git
   LFS history before public distribution. See [distribution licensing](distribution-licensing.md).
 
-- [ ] **Add a startup update check** — check Velopack Flow after recovery
-  handling and notify the user when a newer version is available.
-  See [updates](updates.md).
+- [ ] **Smaller Windows FFmpeg bundle (optional)** — consider omitting unused
+  `ffplay.exe` (about 8.8 MB compressed in the 2026.11.17 full update package).
+  Verify the packaged `ffmpeg.exe`, `ffprobe.exe` and conversion workflows.
+  For further savings, consider a smaller LGPL build that keeps the required
+  codecs, filters and formats. Features compiled into shared DLLs, such as
+  Blu-ray support, require a rebuild to remove.
 
 - [ ] **Add Velopack update downloads and installation** — verify the manual
   Flow check against a hosted release, then add download and apply/restart prompts. Verify

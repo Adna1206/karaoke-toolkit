@@ -45,6 +45,7 @@ the current checkout. [Planned work](todo.md) is a backlog, not implemented beha
   meaningful stopping points rather than duplicating status in feature guides.
 - [Vendor versions](../vendor/versions.md): pinned native distributions and provenance.
 - [Licence inventory](../licenses/README.md): shipped notices and distribution obligations.
+- [Source availability](source-availability.md): component versions, source links and verification status for download pages.
 - [Distribution licensing](distribution-licensing.md): verified runtime source matches, source assembly and remaining release obligations.
 
 Keep this directory flat while the guides remain easy to navigate through this

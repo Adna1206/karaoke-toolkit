@@ -1,5 +1,56 @@
 # Current handoff
 
+## Windows FFmpeg source review
+
+On 2026-11-15, master at `9f9dc76`, version 2026.11.17, checked the
+pinned Windows FFmpeg DLL and evaluated the BtbN recipe for win64 LGPL 8.1.
+Identified embedded libbluray 1.5.1, the expected external libudfread pin,
+and LAME SVN r7113. Archived the 477-file LAME revision and 66 additional
+recipe inputs. The offline `Prepare-DistributionSources.ps1 -Archive`
+run verified 130 ZIP entries at
+`artifacts/distribution-sources/20261115-170305-8d4c56-third-party-sources-2026.11.17-incomplete.zip`.
+AMF, mingw-w64, opencore-amr and soxr archives, nested inputs and notice
+review remain open. The manifest and docs changes are uncommitted.
+
+## Third-party source archive
+
+On 2026-11-15, master at `9f9dc76`, version 2026.11.17, added `-Archive` to
+`scripts/Prepare-DistributionSources.ps1`. User selected a separate source asset
+for GitHub releases. The offline command
+`pwsh -NoProfile -File scripts/Prepare-DistributionSources.ps1 -Archive` passed:
+36 pinned source inputs, 63 ZIP files, all lengths and SHA-256 values checked.
+Output: `artifacts/distribution-sources/20261115-024105-4683b0-third-party-sources-2026.11.17-incomplete.zip`
+with a SHA-256 sidecar. Includes CDRDAO/runtime, TagLibSharp and current FFmpeg
+source evidence across platforms. Not uploaded; FFmpeg source gaps remain.
+Script/docs are uncommitted alongside the earlier startup-update work. Next:
+finish the FFmpeg source inventory before using this as a complete release asset.
+
+## Source availability register
+
+On 2026-11-15, master at `9f9dc76`, version 2026.11.17, added
+[source availability](source-availability.md) with component versions, upstream
+source links and explicit provenance gaps. Linked it from the docs index,
+licence inventory and distribution guide. This is documentation only; no source
+hosting, download page or packaging changes. Existing startup-update changes
+remain uncommitted. Checked local Markdown links and `git diff --check`; no
+runtime tests needed. Next: resolve source matches and public access arrangements
+before presenting the register as complete on a public download page.
+
+## Startup update preference
+
+On 2026-11-15, added the opt-in General setting for 2026.11.17. Startup checks
+run after the main window opens and recovery handling finishes. Only available
+updates produce a startup dialog. Windows Release passed **55/55** with
+`scripts/Test.ps1 -NoRestore -Filter 'FullyQualifiedName~App.Settings|FullyQualifiedName~UpdateService'`.
+An installed startup check against a newer Flow release remains to be verified.
+`pwsh -NoProfile -File scripts/Publish.ps1 -RuntimeIdentifier win-x64` produced
+unsigned Windows packages under `artifacts/releases/2026.11.17/20261115-020000-d06b95/win-x64`.
+Package checksums were verified. Installation has not been tested. Flow upload
+via `dotnet tool run vpk -- publish --outputDir <release-dir> --channel win --waitForLive`
+reset during transfer twice, then reset with just Setup and the full update package.
+Flow still reports draft `af66501c-5f76-4a15-cef5-08df40a0b8e1` as AwaitingUploads
+with zero bytes. No HTTP size-limit response was observed.
+
 ## Native runtime archive migration
 
 On 2026-11-15, version 2026.11.17, moved the native runtime archives from

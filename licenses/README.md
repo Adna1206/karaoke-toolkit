@@ -1,5 +1,8 @@
 # Third-party licenses and notices
 
+See the [source availability register](../docs/source-availability.md) for
+component versions, source links and unresolved matches to use on download pages.
+
 This directory keeps readable license texts for dependencies currently used or
 stored in KaraokeToolkit. Karaoke Toolkit's original code and assets use
 GPL-3.0-or-later; see [LICENSE](../LICENSE) and [NOTICE.txt](../NOTICE.txt).

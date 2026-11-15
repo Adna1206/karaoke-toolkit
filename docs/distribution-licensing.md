@@ -1,5 +1,9 @@
 # Distribution licensing
 
+The [source availability register](source-availability.md) collects versions,
+source links and outstanding matches for download-page preparation. This guide
+retains the detailed evidence and investigation notes.
+
 Karaoke Toolkit's original code and assets are licensed under **GPL-3.0-or-later**.
 Copyright © 2026 André Almeida (ADNA). See [LICENSE](../LICENSE)
 and [the application notice](../NOTICE.txt). Third-party components retain their
@@ -17,12 +21,20 @@ The source evidence can be assembled offline after those archives are cached:
 .\scripts\Prepare-DistributionSources.ps1 -CdrdaoOnly
 # Explicitly permit downloading missing pinned source archives:
 .\scripts\Prepare-DistributionSources.ps1 -Download
+# Also create a ZIP and SHA-256 sidecar, verifying every archived file:
+.\scripts\Prepare-DistributionSources.ps1 -Archive
 ```
 
 Output is a fresh directory under ignored `artifacts/distribution-sources/`,
 containing the archives, checksums, manifest and this document. It is deliberately
 labelled incomplete. Ordinary builds do not download these sources or add their
 size to installed packages. No public hosting or source offer is configured.
+`-Archive` writes a sibling ZIP named with the Toolkit version and `incomplete`,
+plus a `.sha256` sidecar. It includes the current full source inventory (including
+other platforms), notices and provenance documents. Combine with `-CdrdaoOnly`
+for that narrower scope, or `-Download` to fetch missing pinned inputs. ZIP
+creation checks entry counts, lengths and SHA-256 for every file before publishing
+the local archive. This verifies archive integrity, not source completeness.
 When the inventory is complete, arrange source access alongside the binaries
 under the applicable licence terms; generating local evidence is not publication.
 The cdrdao-only output includes its four source archives, licence texts, DLL
@@ -106,7 +118,21 @@ libvorbis, libogg, libass, TwoLAME, GNU libiconv, gnulib, zlib and libopus.
 For libbluray it includes the top-level commit, its libudfread submodule at
 `139a2194525f2745b98a98e4d8fa627d07440176`, and the separately configured
 BtbN libudfread dependency at `b0bc6957e7e07d5f35391f210596d9eb71cffdd9`.
-Which copy was used and the BD-J build inputs still need verification.
+For Windows, `avformat-62.dll` contains native libbluray source-path strings
+and identifies libbluray 1.5.1. The pinned recipe builds libbluray as a static
+library from `f33a738f` and installs libudfread `b0bc6957` before configuring
+libbluray. At that revision, libbluray's Meson build uses the external
+libudfread when available and falls back to its own submodule otherwise.
+This identifies the expected libudfread input from the recipe. No BD-J JAR
+was found in the extracted Windows archive.
+
+The Windows recipe also selects NVIDIA codec header revision `ced4f8eb`
+for FFmpeg 8.1, and pins LAME at SVN revision 7113. The remaining review
+includes source inputs fetched by nested build steps. Examples are
+Shaderc's pinned dependencies in its DEPS file, JPEG XL's Highway submodule,
+and dependency resolution for the Rust builds. A recipe pin establishes
+provenance for that stage, but does not establish that every stage was
+linked into the shipped binary.
 
 The [LAME SVN tree at revision 7113](https://svn.code.sf.net/p/lame/svn/!svn/rvr/7113/trunk/lame/)
 was reachable and identified itself as that revision. The tested ZIP snapshot
