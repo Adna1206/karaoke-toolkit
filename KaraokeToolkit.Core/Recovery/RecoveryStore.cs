@@ -25,32 +25,25 @@ public sealed class RecoveryStore
     public IReadOnlyList<RecoveryJob> Find(string? folder = null, bool recurse = true)
     {
         var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        if (folder == null)
+        if (folder != null && Directory.Exists(folder))
         {
-            if (Directory.Exists(IndexDirectory))
-                foreach (string index in Directory.GetFiles(IndexDirectory, "*.json"))
-                    try
-                    {
-                        paths.Add(JsonSerializer.Deserialize<string>(File.ReadAllText(index))!);
-                    }
-                    catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException) { }
-        }
-        else if (Directory.Exists(folder))
             foreach (string directory in ConversionService.EnumerateFolders(Path.GetFullPath(folder), recurse))
+            {
                 foreach (string run in Directory.GetDirectories(directory, ".karaoke-job-run-*"))
                     paths.Add(Path.Combine(run, "run.json"));
+                foreach (string workflow in Directory.GetDirectories(directory, ".karaoke-job-workflow-*"))
+                    paths.Add(Path.Combine(workflow, "workflow.json"));
+            }
+        }
         // Workflow indexes also cover selections spanning several source folders.
         if (Directory.Exists(IndexDirectory))
             foreach (string index in Directory.GetFiles(IndexDirectory, "*.json"))
                 try
                 {
                     string? path = JsonSerializer.Deserialize<string>(File.ReadAllText(index));
-                    if (path != null && Path.GetFileName(path) == "workflow.json") paths.Add(path);
+                    if (path != null && (folder == null || Path.GetFileName(path) == "workflow.json")) paths.Add(path);
                 }
                 catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException) { }
-        if (folder != null && Directory.Exists(folder))
-            foreach (string directory in ConversionService.EnumerateFolders(Path.GetFullPath(folder), recurse))
-            foreach (string workflow in Directory.GetDirectories(directory, ".karaoke-job-workflow-*")) paths.Add(Path.Combine(workflow, "workflow.json"));
         var jobs = new List<RecoveryJob>();
         foreach (string path in paths)
         {
@@ -325,11 +318,22 @@ internal sealed class RunSession : IDisposable
         (string.Equals(Path.GetFullPath(path), root, StringComparison.OrdinalIgnoreCase) ||
         Path.GetFullPath(path).StartsWith(root.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase));
 
-    internal static void CheckPlainPath(string path)
+    internal static FileAttributes? CheckPlainPath(string path)
     {
+        FileAttributes? leaf = null;
+        bool isLeaf = true;
         for (string? current = Path.GetFullPath(path); current != null; current = Path.GetDirectoryName(current))
-            if ((File.Exists(current) || Directory.Exists(current)) && (File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
+        {
+            FileAttributes? attributes;
+            try { attributes = File.GetAttributes(current); }
+            catch (FileNotFoundException) { attributes = null; }
+            catch (DirectoryNotFoundException) { attributes = null; }
+            if (attributes is { } found && (found & FileAttributes.ReparsePoint) != 0)
                 throw new IOException("Recovery cannot follow linked files or folders: " + current);
+            if (isLeaf) leaf = attributes;
+            isLeaf = false;
+        }
+        return leaf;
     }
 
     internal void Save()

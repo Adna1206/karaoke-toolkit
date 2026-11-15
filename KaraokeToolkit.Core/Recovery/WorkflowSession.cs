@@ -11,7 +11,7 @@ namespace KaraokeToolkit.Core.Recovery;
 
 public enum RecoveryKind { Conversion, Recipe, Tagging, TrackGrouping, FileMoves }
 
-internal sealed class WorkflowData
+internal sealed record WorkflowData
 {
     public int Version { get; set; } = 2;
     public bool SaveResumableRun { get; set; } = true;
@@ -61,7 +61,7 @@ internal sealed class WorkflowMoveGroup
 internal sealed class WorkflowSession : IDisposable
 {
     internal static readonly AsyncLocal<WorkflowSession?> Current = new();
-    internal WorkflowData Data { get; }
+    internal WorkflowData Data { get; private set; }
     internal string Journal { get; }
     internal RecoveryStore Store { get; }
     private readonly FileStream lease;
@@ -172,18 +172,31 @@ internal sealed class WorkflowSession : IDisposable
     }
     internal void CompleteStep(RecipeStepResult result, string[] next)
     {
-        Data.Steps.Add(result); Data.CurrentInputs = next;
-        Data.StepStarted = false; Data.Conversions = null; Data.Moves = null; Data.Workspace = null;
-        Data.TagStepStarted = false; Data.TagFiles = []; Data.TagResults.Clear(); Data.TagCurrent = null;
-        Data.Expected = Capture(next, Data.VerificationMode);
-        Save();
+        var checkpoint = Data with
+        {
+            Steps = [.. Data.Steps, result],
+            CurrentInputs = next,
+            StepStarted = false,
+            Conversions = null,
+            Moves = null,
+            Workspace = null,
+            TagStepStarted = false,
+            TagFiles = [],
+            TagResults = new(InputSelection.Paths),
+            TagCurrent = null,
+            Expected = Capture(next, Data.VerificationMode)
+        };
+        DurableJson.Write(Journal, checkpoint);
+        Data = checkpoint;
     }
     internal void VerifyExpected()
     {
         foreach (var item in Data.Expected)
         {
-            RunSession.CheckPlainPath(item.Key);
-            if (item.Value == "directory" ? !Directory.Exists(item.Key) : !File.Exists(item.Key) || RecoveryFingerprint.Hash(item.Key, Data.VerificationMode) != item.Value)
+            var attributes = RunSession.CheckPlainPath(item.Key);
+            bool isDirectory = attributes is { } found && (found & FileAttributes.Directory) != 0;
+            if (item.Value == "directory" ? !isDirectory : attributes == null || isDirectory ||
+                RecoveryFingerprint.Hash(item.Key, Data.VerificationMode) != item.Value)
             {
                 bool pendingMove = Data.Moves?.Where(g => g.Results == null).SelectMany(g => g.Items).Any(m =>
                     m.Target == null ? InputSelection.Paths.Equals(m.Source, item.Key) && item.Value == "directory" && !Directory.Exists(m.Source)
@@ -197,15 +210,15 @@ internal sealed class WorkflowSession : IDisposable
         var result = new Dictionary<string, string>(InputSelection.Paths);
         foreach (string path in paths)
         {
-            RunSession.CheckPlainPath(path);
-            if (File.Exists(path)) result[path] = RecoveryFingerprint.Hash(path, mode);
-            else if (Directory.Exists(path))
+            var attributes = RunSession.CheckPlainPath(path);
+            if (attributes == null) throw new IOException("Workflow input/output is missing: " + path);
+            if ((attributes.Value & FileAttributes.Directory) == 0) result[path] = RecoveryFingerprint.Hash(path, mode);
+            else
                 foreach (string folder in ConversionService.EnumerateFolders(path, true))
                 {
                     result[folder] = "directory";
                     foreach (string file in Directory.GetFiles(folder)) { RunSession.CheckPlainPath(file); result[file] = RecoveryFingerprint.Hash(file, mode); }
                 }
-            else throw new IOException("Workflow input/output is missing: " + path);
         }
         return result;
     }

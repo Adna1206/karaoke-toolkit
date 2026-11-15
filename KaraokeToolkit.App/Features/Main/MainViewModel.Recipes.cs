@@ -82,9 +82,10 @@ public partial class MainViewModel
             LastReport = result.ToReport(recipe.Name, Label);
             FoundFiles = result.Steps.Sum(step => step.Result.Found);
             Elapsed = result.Elapsed.ToString(@"hh\:mm\:ss");
-            var totals = new ConversionResult(result.Steps.SelectMany(step => step.Result.Files).ToArray(), result.Cancelled);
-            StatusOutcome = RunStatusSummary.From(totals);
-            if (!result.Cancelled && totals.Failed == 0 && result.StopReason.Length > 0) StatusOutcome = RunStatus.Warning;
+            int failed = result.Steps.Sum(step => step.Result.Failed);
+            StatusOutcome = RunStatusSummary.From(result.Cancelled,
+                result.Steps.Sum(step => step.Result.Succeeded), failed, result.Steps.Sum(step => step.Result.Skipped));
+            if (!result.Cancelled && failed == 0 && result.StopReason.Length > 0) StatusOutcome = RunStatus.Warning;
             Status = result.Cancelled ? "Recipe cancelled. Completed changes remain."
                 : result.StopReason.Length > 0 ? result.StopReason : $"Recipe finished: {result.Steps.Count} steps completed.";
             if (!result.Cancelled && result.StopReason.Length == 0) Progress = TotalProgress = 100;

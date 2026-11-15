@@ -136,6 +136,77 @@ public class RecipeTests
     }
 
     [Fact]
+    public async Task FailedCheckpointWriteKeepsPublishedMoveAndResumesWithoutMovingAgain()
+    {
+        string source = FileInput();
+        var store = new RecoveryStore(TestMediaFixture.NewFolder());
+        var actual = new RecipeStepExecutor(store);
+        string? blockedPath = null;
+        string? moved = null;
+        var executor = new DelegatingExecutor(async (step, inputs, progress, token) =>
+        {
+            var result = await actual.ExecuteAsync(step, inputs, progress, token);
+            moved = Assert.Single(Assert.Single(result.Files).Outputs);
+            blockedPath = WorkflowSession.Current.Value!.Journal + ".tmp";
+            Directory.CreateDirectory(blockedPath);
+            return result;
+        });
+        var recipe = Recipe(Step("OrganizeFiles"), Step("ValidateKaraoke"));
+        var error = await Assert.ThrowsAsync<IOException>(() => new RecipeRunner(executor, store).RunAsync(recipe, [source]));
+        Assert.Contains("Use Recover", error.Message);
+        Assert.False(File.Exists(source));
+        Assert.True(File.Exists(moved));
+        var job = Assert.Single(store.Find());
+        var saved = WorkflowSession.Read(job.JournalPath);
+        Assert.Empty(saved.Steps);
+        Assert.True(saved.StepStarted);
+        Assert.NotNull(Assert.Single(saved.Moves!).Results);
+        Directory.Delete(blockedPath!);
+
+        var resumed = new DelegatingExecutor((step, inputs, progress, token) =>
+        {
+            if (step.OperationId == "OrganizeFiles") return actual.ExecuteAsync(step, inputs, progress, token);
+            Assert.Equal(moved, Assert.Single(inputs));
+            return Task.FromResult(new ConversionResult([new(moved!, ConversionStatus.Succeeded, [], "verified")], false));
+        });
+        var outcome = await new RecipeRunner(resumed, store).ResumeAsync(job);
+        Assert.Empty(outcome.StopReason);
+        Assert.Equal(2, outcome.Steps.Count);
+        Assert.Equal("fixture", File.ReadAllText(moved!));
+        Assert.Empty(store.Find());
+    }
+
+    [Fact]
+    public async Task ResumingAfterCompletionNotificationFailsHonorsSavedStop()
+    {
+        string source = FileInput();
+        var store = new RecoveryStore(TestMediaFixture.NewFolder());
+        var executor = new FakeExecutor((_, _, _) => new([new(source, ConversionStatus.Failed, [], "failed")], false));
+        var runner = new RecipeRunner(executor, store);
+        var recipe = Recipe(Step("ValidateKaraoke"), Step("ValidateKaraoke"));
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            runner.RunAsync(recipe, [source], new FailingProgress()));
+
+        var outcome = await runner.ResumeAsync(Assert.Single(store.Find()));
+        Assert.Single(executor.Calls);
+        Assert.Single(outcome.Steps);
+        Assert.Contains("1 item(s) failed", outcome.StopReason);
+        Assert.Empty(store.Find());
+    }
+
+    private sealed class FailingProgress : IProgress<ConversionProgress>
+    {
+        public void Report(ConversionProgress value) => throw new InvalidOperationException("Report unavailable.");
+    }
+
+    private sealed class DelegatingExecutor(
+        Func<RecipeStep, IReadOnlyList<string>, IProgress<ConversionProgress>?, CancellationToken, Task<ConversionResult>> execute) : IRecipeStepExecutor
+    {
+        public Task<ConversionResult> ExecuteAsync(RecipeStep step, IReadOnlyList<string> inputs,
+            IProgress<ConversionProgress>? progress, CancellationToken token) => execute(step, inputs, progress, token);
+    }
+
+    [Fact]
     public async Task InvalidPipelineIsRejectedBeforeExecutorRuns()
     {
         var executor = new FakeExecutor((_, _, _) => throw new InvalidOperationException("Must not execute"));

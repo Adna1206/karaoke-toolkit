@@ -108,12 +108,13 @@ public sealed class RecipeRunner(IRecipeStepExecutor? executor = null, RecoveryS
         string[] current = session.Data.CurrentInputs;
         var watch = Stopwatch.StartNew();
         var results = session.Data.Steps.ToList();
-        bool cancelled = false;
-        string reason = "";
-        for (int index = results.Count; index < recipe.Steps.Count; index++)
+        bool cancelled = results.LastOrDefault()?.Result.Cancelled ?? false;
+        string reason = results.LastOrDefault() is { } last ? StepStopReason(last) : "";
+        for (int index = results.Count; index < recipe.Steps.Count && reason.Length == 0; index++)
         {
             var step = recipe.Steps[index];
             var operation = RecipeOperations.Get(step.OperationId);
+            ConversionResult result;
             try
             {
                 token.ThrowIfCancellationRequested();
@@ -125,7 +126,8 @@ public sealed class RecipeRunner(IRecipeStepExecutor? executor = null, RecoveryS
                 bool movesFiles = operation.Id is "OrganizeFiles" or "OrganizeFolders" or "FlattenOneLayer" or "FlattenAllLayers" or "CleanUpFilenames";
                 foreach (string folder in current.Select(path => Directory.Exists(path) ? path : Path.GetDirectoryName(path)!).Distinct(InputSelection.Paths))
                 {
-                    var interrupted = await Task.Run(() => new RecoveryStore().Find(folder, movesFiles || step.Options.RecurseFolders), token);
+                    token.ThrowIfCancellationRequested();
+                    var interrupted = recovery.Find(folder, movesFiles || step.Options.RecurseFolders);
                     if (interrupted.Count > 0)
                         throw new IOException("Recover interrupted work before running a recipe in: " + folder);
                 }
@@ -137,23 +139,7 @@ public sealed class RecipeRunner(IRecipeStepExecutor? executor = null, RecoveryS
                     Message = prefix + p.Message,
                     ActivityLabel = p.ActivityLabel == null ? null : prefix + p.ActivityLabel
                 }));
-                var result = await executor.ExecuteAsync(step, current, reporter, token);
-                results.Add(new(index + 1, step.OperationId, result));
-                if (operation.Outputs != RecipeInputKind.None)
-                    current = result.Files.Where(file => !file.IsMetadata && file.Status == ConversionStatus.Succeeded)
-                        .SelectMany(file => operation.Id == "LosslessGToMp3G" ? file.Outputs.Append(file.Source) : file.Outputs)
-                        .Where(IsPrimaryOutput).Distinct(InputSelection.Paths).ToArray();
-                else if (operation.Id == "OrganizeFiles")
-                    current = current.SelectMany(path => Directory.Exists(path) ? new[] { path }
-                        : result.Files.FirstOrDefault(file => InputSelection.Paths.Equals(file.Source, path)) is { Status: ConversionStatus.Succeeded } moved
-                            ? moved.Outputs : new[] { path })
-                        .Where(path => File.Exists(path) || Directory.Exists(path)).Distinct(InputSelection.Paths).ToArray();
-                session.CompleteStep(results[^1], current); // Save outputs and next-step scope before reporting completion.
-                progress?.Report(new(100, (index + 1) * 100 / recipe.Steps.Count, result.Found, result.Found,
-                    $"Completed step {index + 1}/{recipe.Steps.Count}.", watch.Elapsed.ToString(@"hh\:mm\:ss")));
-                if (result.Cancelled) { cancelled = true; reason = $"Cancelled during step {index + 1}."; break; }
-                if (result.Failed > 0) { reason = $"Stopped at step {index + 1}: {result.Failed} item(s) failed."; break; }
-                if (result.Files.Count == 0) { reason = $"Step {index + 1} found no matching items."; break; }
+                result = await executor.ExecuteAsync(step, current, reporter, token);
             }
             catch (OperationCanceledException) { cancelled = true; reason = $"Cancelled before completing step {index + 1}."; break; }
             catch (Exception error)
@@ -162,9 +148,48 @@ public sealed class RecipeRunner(IRecipeStepExecutor? executor = null, RecoveryS
                 reason = $"Stopped at step {index + 1}: {error.Message}";
                 break;
             }
+            var completed = new RecipeStepResult(index + 1, step.OperationId, result);
+            try
+            {
+                var next = SelectNextInputs(current, operation.Outputs, operation.Id, result);
+                session.CompleteStep(completed, next);
+                current = next;
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+            {
+                throw new IOException($"Could not save the checkpoint for recipe step {completed.Number}. Use Recover to resume this workflow. {error.Message}", error);
+            }
+            results.Add(completed);
+            cancelled = result.Cancelled;
+            reason = StepStopReason(completed);
+            progress?.Report(new(100, (index + 1) * 100 / recipe.Steps.Count, result.Found, result.Found,
+                $"Completed step {index + 1}/{recipe.Steps.Count}.", watch.Elapsed.ToString(@"hh\:mm\:ss")));
         }
         session.Finish(); // An explicit stop/cancel is not a crash; unresolved publications keep their checkpoints.
         return new(results, current, cancelled, reason, watch.Elapsed);
+    }
+
+    private static string StepStopReason(RecipeStepResult step) => step.Result switch
+    {
+        { Cancelled: true } => $"Cancelled during step {step.Number}.",
+        { Failed: > 0 } => $"Stopped at step {step.Number}: {step.Result.Failed} item(s) failed.",
+        { Files.Count: 0 } => $"Step {step.Number} found no matching items.",
+        _ => ""
+    };
+
+    internal static string[] SelectNextInputs(string[] current, RecipeInputKind outputs, string operationId, ConversionResult result)
+    {
+        if (outputs != RecipeInputKind.None)
+            return result.Files.Where(file => !file.IsMetadata && file.Status == ConversionStatus.Succeeded)
+                .SelectMany(file => operationId == "LosslessGToMp3G" ? file.Outputs.Append(file.Source) : file.Outputs)
+                .Where(IsPrimaryOutput).Distinct(InputSelection.Paths).ToArray();
+        if (operationId != "OrganizeFiles") return current;
+
+        var bySource = new Dictionary<string, ConversionFileResult>(InputSelection.Paths);
+        foreach (var file in result.Files) bySource.TryAdd(file.Source, file);
+        return current.SelectMany(path => !Directory.Exists(path) &&
+            bySource.GetValueOrDefault(path) is { Status: ConversionStatus.Succeeded } moved ? moved.Outputs : new[] { path })
+            .Where(path => File.Exists(path) || Directory.Exists(path)).Distinct(InputSelection.Paths).ToArray();
     }
 
     private static bool IsPrimaryOutput(string path) => File.Exists(path) &&

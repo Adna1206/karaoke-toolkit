@@ -13,6 +13,54 @@ namespace KaraokeToolkit.Tests.Recovery;
 /// Reconstructed states verify recovery contracts rather than simulating physical power loss.</remarks>
 public class RecoveryTests
 {
+    [Fact]
+    public void CaptureReadsFreshContentAndToleratesMissingPathsOnlyDuringSafetyCheck()
+    {
+        string folder = TestMediaFixture.NewFolder();
+        string path = Path.Combine(folder, "ABC-100.zip");
+        Assert.Null(RunSession.CheckPlainPath(path));
+        Assert.Throws<IOException>(() => WorkflowSession.Capture([path]));
+        File.WriteAllText(path, "first");
+        var before = WorkflowSession.Capture([path]);
+        var timestamp = File.GetLastWriteTimeUtc(path);
+        File.WriteAllText(path, "other");
+        File.SetLastWriteTimeUtc(path, timestamp);
+        Assert.NotEqual(before[path], WorkflowSession.Capture([path])[path]);
+    }
+
+    [Fact]
+    public void PathSafetyRejectsLinkedAncestorEvenForMissingLeaf()
+    {
+        string folder = TestMediaFixture.NewFolder();
+        string target = TestMediaFixture.NewFolder();
+        string link = Path.Combine(folder, "linked");
+        try { Directory.CreateSymbolicLink(link, target); }
+        catch (UnauthorizedAccessException) when (OperatingSystem.IsWindows()) { return; }
+        var error = Assert.Throws<IOException>(() => RunSession.CheckPlainPath(Path.Combine(link, "missing.zip")));
+        Assert.Contains(link, error.Message);
+    }
+
+    [Fact]
+    public void ScopedDiscoveryFindsBothUnindexedJournalKindsOnlyWhenRecursing()
+    {
+        string root = TestMediaFixture.NewFolder();
+        string child = Directory.CreateDirectory(Path.Combine(root, "nested")).FullName;
+        string run = Directory.CreateDirectory(Path.Combine(child, ".karaoke-job-run-test")).FullName;
+        string workflow = Directory.CreateDirectory(Path.Combine(child, ".karaoke-job-workflow-test")).FullName;
+        string runJournal = Path.Combine(run, "run.json");
+        string workflowJournal = Path.Combine(workflow, "workflow.json");
+        File.WriteAllText(runJournal, "{");
+        File.WriteAllText(workflowJournal, "{");
+        var store = new RecoveryStore(TestMediaFixture.NewFolder());
+
+        Assert.Empty(store.Find());
+        Assert.Empty(store.Find(root, recurse: false));
+        var jobs = store.Find(root);
+        Assert.Equal(2, jobs.Count);
+        Assert.Contains(jobs, job => job.JournalPath == runJournal && job.Kind == RecoveryKind.Conversion && job.Problem != null);
+        Assert.Contains(jobs, job => job.JournalPath == workflowJournal && job.Kind == RecoveryKind.Recipe && job.Problem != null);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -62,7 +110,14 @@ public class RecoveryTests
             child.Kill(entireProcessTree: true);
             await child.WaitForExitAsync(timeout.Token);
             var store = new RecoveryStore(index);
-            var job = Assert.Single(store.Find());
+            // Windows can signal process exit before releasing its file handles.
+            var jobs = store.Find();
+            while (jobs.Count == 0 && !timeout.IsCancellationRequested)
+            {
+                await Task.Delay(50);
+                jobs = store.Find();
+            }
+            var job = Assert.Single(jobs);
             Assert.Equal(1, job.Completed); // The failed first source was durably recorded.
             var result = await new ConversionService(store).ResumeAsync(job);
             Assert.Equal(1, result.Succeeded);
