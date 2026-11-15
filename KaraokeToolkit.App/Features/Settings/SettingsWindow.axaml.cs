@@ -12,7 +12,7 @@ namespace KaraokeToolkit.App.Features.Settings;
 
 public partial class SettingsWindow : Window
 {
-    private readonly Action<ConversionOptions, OverwritePolicy, ApplicationTheme, bool, bool, AudioBitratePreferences, ApplicationBackdrop, bool, RecoveryVerificationMode?, bool?>? save;
+    private readonly Action<ConversionOptions, OverwritePolicy, ApplicationTheme, bool, bool, AudioBitratePreferences, ApplicationBackdrop, bool, RecoveryVerificationMode?, bool?, bool?>? save;
     public SettingsWindowSize LastNormalSize { get; private set; } = new();
     public int CurrentTabIndex => OptionsTabs.SelectedIndex;
     public SettingsWindow()
@@ -57,12 +57,12 @@ public partial class SettingsWindow : Window
     }
     public SettingsWindow(ConversionOptions options, OverwritePolicy policy, ApplicationTheme theme, bool validateBeforeConversion,
         bool ignoreLeadingTheForFileOrganization, AudioBitratePreferences audioBitrates,
-        Action<ConversionOptions, OverwritePolicy, ApplicationTheme, bool, bool, AudioBitratePreferences, ApplicationBackdrop, bool, RecoveryVerificationMode?, bool?> save,
-        ApplicationBackdrop backdrop, bool rememberInputFolder, RecoveryVerificationMode recoveryVerification, bool saveResumableRun) : this()
+        Action<ConversionOptions, OverwritePolicy, ApplicationTheme, bool, bool, AudioBitratePreferences, ApplicationBackdrop, bool, RecoveryVerificationMode?, bool?, bool?> save,
+        ApplicationBackdrop backdrop, bool rememberInputFolder, RecoveryVerificationMode recoveryVerification, bool saveResumableRun, bool checkForUpdatesOnStartup) : this()
     {
         var model = new SettingsViewModel(options, audioBitrates) { Overwrite = (int)policy, Theme = (int)theme, Backdrop = (int)backdrop,
             ValidateBeforeConversion = validateBeforeConversion, IgnoreLeadingTheForFileOrganization = ignoreLeadingTheForFileOrganization,
-            RememberInputFolder = rememberInputFolder, RecoveryVerification = (int)recoveryVerification, SaveResumableRun = saveResumableRun };
+            RememberInputFolder = rememberInputFolder, RecoveryVerification = (int)recoveryVerification, SaveResumableRun = saveResumableRun, CheckForUpdatesOnStartup = checkForUpdatesOnStartup };
         model.MarkApplied();
         DataContext = model;
         this.save = save;
@@ -81,7 +81,7 @@ public partial class SettingsWindow : Window
     }
     private bool ApplyChanges() => DataContext is SettingsViewModel model &&
         (!model.HasChanges || (save != null && model.Apply((options, policy, theme, validate, ignoreThe, bitrates, backdrop) =>
-            save(options, policy, theme, validate, ignoreThe, bitrates, backdrop, model.RememberInputFolder, (RecoveryVerificationMode)model.RecoveryVerification, model.SaveResumableRun))));
+            save(options, policy, theme, validate, ignoreThe, bitrates, backdrop, model.RememberInputFolder, (RecoveryVerificationMode)model.RecoveryVerification, model.SaveResumableRun, model.CheckForUpdatesOnStartup))));
     private async void ResetDefaults_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not SettingsViewModel model) return;

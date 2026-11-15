@@ -108,8 +108,7 @@ In the agent sandbox, the established test command is:
 
 ## Decisions to preserve
 
-- Velopack checks stay disabled and the feed unconfigured until the user requests
-  the hosting/update UI work. Automatic application of pending updates is disabled.
+- Velopack Flow checks are available manually. Startup checks are opt-in. Automatic application of pending updates is disabled.
   See [updates](docs/updates.md).
 - No karaoke player/preview playback yet; it is deferred for discussion. A planned
   processing preview means outputs/conflicts/deletions, not media playback.

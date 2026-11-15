@@ -22,9 +22,9 @@ public partial class SettingsViewModel : ViewModelBase
     private AudioBitratePreferences audioBitrates = new();
     private bool initializing;
     private sealed record Snapshot(ConversionOptions Options, int Overwrite, int Theme, bool Validate, bool IgnoreLeadingThe,
-        AudioBitratePreferences AudioBitrates, int Backdrop, bool RememberInputFolder, int RecoveryVerification, bool SaveResumableRun);
+        AudioBitratePreferences AudioBitrates, int Backdrop, bool RememberInputFolder, int RecoveryVerification, bool SaveResumableRun, bool CheckForUpdatesOnStartup);
     private Snapshot? applied;
-    private Snapshot Current => new(ToOptions(), Overwrite, Theme, ValidateBeforeConversion, IgnoreLeadingTheForFileOrganization, audioBitrates, Backdrop, RememberInputFolder, RecoveryVerification, SaveResumableRun);
+    private Snapshot Current => new(ToOptions(), Overwrite, Theme, ValidateBeforeConversion, IgnoreLeadingTheForFileOrganization, audioBitrates, Backdrop, RememberInputFolder, RecoveryVerification, SaveResumableRun, CheckForUpdatesOnStartup);
     public bool HasChanges => applied != null && Current != applied;
 
     public void MarkApplied()
@@ -81,6 +81,7 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty] public partial bool IgnoreLeadingTheForFileOrganization { get; set; }
     [ObservableProperty] public partial int RecoveryVerification { get; set; }
     [ObservableProperty] public partial bool SaveResumableRun { get; set; } = true;
+    [ObservableProperty] public partial bool CheckForUpdatesOnStartup { get; set; }
     [ObservableProperty] public partial bool RememberInputFolder { get; set; }
     [ObservableProperty] public partial bool ExperimentalDiscRipping { get; set; }
     [ObservableProperty] public partial string CdrdaoExecutablePath { get; set; } = "";
@@ -218,6 +219,7 @@ public partial class SettingsViewModel : ViewModelBase
         IgnoreLeadingTheForFileOrganization = false;
         RecoveryVerification = 0;
         SaveResumableRun = true;
+        CheckForUpdatesOnStartup = false;
         RememberInputFolder = false;
         Error = "";
         OnPropertyChanged(nameof(HasChanges));

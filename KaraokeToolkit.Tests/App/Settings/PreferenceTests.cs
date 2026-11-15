@@ -13,6 +13,26 @@ namespace KaraokeToolkit.Tests.App.Settings;
 public class PreferenceTests
 {
     [Fact]
+    public void StartupUpdateCheckDefaultsOffAndPersistsThroughSettings()
+    {
+        string path = Path.Combine(TestMediaFixture.NewFolder(), "settings.xml");
+        var model = new MainViewModel(path);
+        Assert.False(model.CheckForUpdatesOnStartup);
+
+        model.SaveOptions(model.Options, model.OverwritePolicy, model.Theme, false, false,
+            model.AudioBitrates, model.Backdrop, false, checkForUpdatesOnStartup: true);
+        model.SaveOptions(model.Options);
+
+        var reopened = new MainViewModel(path);
+        Assert.True(reopened.CheckForUpdatesOnStartup);
+        var draft = new SettingsViewModel(reopened.Options) { CheckForUpdatesOnStartup = true };
+        draft.MarkApplied();
+        draft.ResetToDefaults();
+        Assert.False(draft.CheckForUpdatesOnStartup);
+        Assert.True(draft.HasChanges);
+    }
+
+    [Fact]
     public void PickerRemembersOnlyAcceptedInputsAndDisablingClearsTheSavedFolder()
     {
         string path = Path.Combine(TestMediaFixture.NewFolder(), "options.xmls");

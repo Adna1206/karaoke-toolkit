@@ -66,6 +66,7 @@ public partial class MainViewModel : ViewModelBase
     public string[] CurrentInputs => selectedInputs.Length > 0 ? selectedInputs : [FolderPath];
     internal RecoveryVerificationMode RecoveryVerification { get; private set; }
     internal bool SaveResumableRun { get; private set; } = true;
+    internal bool CheckForUpdatesOnStartup { get; private set; }
     public bool RememberInputFolder { get; private set; }
     private string? lastInputFolder;
     internal string? InputPickerStartFolder => RememberInputFolder && Path.IsPathFullyQualified(lastInputFolder ?? "") &&
@@ -336,6 +337,7 @@ public partial class MainViewModel : ViewModelBase
         {
             Options = store.Load();
             (RecoveryVerification, SaveResumableRun) = store.LoadRecoveryPreferences();
+            CheckForUpdatesOnStartup = store.LoadCheckForUpdatesOnStartup();
             (RememberInputFolder, lastInputFolder) = store.LoadInputFolderPreference();
             AudioBitrates = store.LoadAudioBitrates(Options);
             OptionsWindowSize = store.LoadSettingsWindowSize();
@@ -402,12 +404,13 @@ public partial class MainViewModel : ViewModelBase
         => SaveOptions(options, policy, theme, validateBeforeConversion, ignoreLeadingTheForFileOrganization, audioBitrates, backdrop, RememberInputFolder);
 
     internal void SaveOptions(ConversionOptions options, OverwritePolicy policy, ApplicationTheme theme, bool validateBeforeConversion,
-        bool ignoreLeadingTheForFileOrganization, AudioBitratePreferences audioBitrates, ApplicationBackdrop backdrop, bool rememberInputFolder, RecoveryVerificationMode? recoveryVerification = null, bool? saveResumableRun = null)
+        bool ignoreLeadingTheForFileOrganization, AudioBitratePreferences audioBitrates, ApplicationBackdrop backdrop, bool rememberInputFolder, RecoveryVerificationMode? recoveryVerification = null, bool? saveResumableRun = null, bool? checkForUpdatesOnStartup = null)
     {
         store.Save(options, policy, theme, validateBeforeConversion, ignoreLeadingTheForFileOrganization, audioBitrates,
-            backdrop: backdrop, rememberInputFolder: rememberInputFolder, recoveryVerification: recoveryVerification, saveResumableRun: saveResumableRun);
+            backdrop: backdrop, rememberInputFolder: rememberInputFolder, recoveryVerification: recoveryVerification, saveResumableRun: saveResumableRun, checkForUpdatesOnStartup: checkForUpdatesOnStartup);
         RecoveryVerification = recoveryVerification ?? RecoveryVerification;
         SaveResumableRun = saveResumableRun ?? SaveResumableRun;
+        CheckForUpdatesOnStartup = checkForUpdatesOnStartup ?? CheckForUpdatesOnStartup;
         RememberInputFolder = rememberInputFolder;
         if (!rememberInputFolder) lastInputFolder = null;
         Options = options;

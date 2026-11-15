@@ -23,7 +23,7 @@ public sealed class ApplicationSettingsStore(string path, bool persistRenameBins
     [
         "Theme", "Backdrop", "TaggingPatterns", "LastTaggingPattern", "OperationSections",
         "FavouriteOperations", "SettingsWindowWidth", "SettingsWindowHeight",
-        "RememberInputFolder", "LastInputFolder", "RecoveryVerification", "SaveResumableRun"
+        "RememberInputFolder", "LastInputFolder", "CheckForUpdatesOnStartup", "RecoveryVerification", "SaveResumableRun"
     ];
     private static readonly HashSet<XName> SectionKeys = Enum.GetNames<OperationSection>().Select(name => XName.Get(name)).ToHashSet();
 
@@ -40,6 +40,10 @@ public sealed class ApplicationSettingsStore(string path, bool persistRenameBins
         return (remember, remember ? modern?.Element("LastInputFolder")?.Value : null);
     }
 
+    internal bool LoadCheckForUpdatesOnStartup() => File.Exists(filename) &&
+        bool.TryParse(XDocument.Load(filename).Root?.Element("KaraokeToolkit")?
+            .Element("CheckForUpdatesOnStartup")?.Value, out bool enabled) && enabled;
+
     internal (RecoveryVerificationMode Mode, bool Resume) LoadRecoveryPreferences()
     {
         var modern = File.Exists(filename) ? XDocument.Load(filename).Root?.Element("KaraokeToolkit") : null;
@@ -53,7 +57,7 @@ public sealed class ApplicationSettingsStore(string path, bool persistRenameBins
         AudioBitratePreferences? audioBitrates = null, IReadOnlyDictionary<string, bool>? operationSections = null,
         IReadOnlyList<string>? favouriteOperations = null, SettingsWindowSize? settingsWindowSize = null,
         ApplicationBackdrop? backdrop = null, IReadOnlyList<string>? taggingPatterns = null, string? lastTaggingPattern = null,
-        bool? rememberInputFolder = null, string? lastInputFolder = null, RecoveryVerificationMode? recoveryVerification = null, bool? saveResumableRun = null)
+        bool? rememberInputFolder = null, string? lastInputFolder = null, RecoveryVerificationMode? recoveryVerification = null, bool? saveResumableRun = null, bool? checkForUpdatesOnStartup = null)
     {
         if (settingsWindowSize is { IsValid: false }) throw new ArgumentOutOfRangeException(nameof(settingsWindowSize));
         if (theme.HasValue && !Enum.IsDefined(theme.Value)) throw new ArgumentOutOfRangeException(nameof(theme));
@@ -63,6 +67,7 @@ public sealed class ApplicationSettingsStore(string path, bool persistRenameBins
             {
                 if (recoveryVerification.HasValue) modern.SetElementValue("RecoveryVerification", recoveryVerification.Value);
                 if (saveResumableRun.HasValue) modern.SetElementValue("SaveResumableRun", saveResumableRun.Value);
+                if (checkForUpdatesOnStartup.HasValue) modern.SetElementValue("CheckForUpdatesOnStartup", checkForUpdatesOnStartup.Value);
                 if (theme.HasValue) modern.SetElementValue("Theme", theme.Value);
                 if (backdrop.HasValue) modern.SetElementValue("Backdrop", backdrop.Value);
                 if (rememberInputFolder.HasValue) modern.SetElementValue("RememberInputFolder", rememberInputFolder.Value);

@@ -6,7 +6,10 @@ creating Avalonia UI, so install/update hook invocations can exit without openin
 the application. Automatic application of downloaded updates on startup is disabled.
 
 Select **Help → Check for updates** to check Velopack Flow and see the result.
-Startup checks are planned. The app uses
+Enable **Tools → Settings → General → Check for Updates on Startup** to check
+after the main window opens and startup recovery handling finishes. The setting
+defaults to off. The check runs asynchronously and only shows a dialog when a
+newer version is available. The app uses
 the installed package ID and channel. Windows packages currently use
 `KaraokeToolkit` and `win`. No feed URL or publishing credentials are required
 in the app. Unpackaged development builds report that an installation is needed.

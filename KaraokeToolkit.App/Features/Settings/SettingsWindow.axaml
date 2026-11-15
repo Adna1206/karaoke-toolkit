@@ -31,6 +31,9 @@
                                            ToolTip.Tip="{Binding Definitions.Backdrop.Description}"/>
                             </StackPanel>
                         </Expander>
+                        <Expander Classes="settingsCard" Header="Updates" IsExpanded="True">
+                            <CheckBox Content="Check for Updates on Startup" IsChecked="{Binding CheckForUpdatesOnStartup}"/>
+                        </Expander>
                         <Expander Classes="settingsCard" Header="File processing" IsExpanded="True">
                             <StackPanel Spacing="10">
                                 <CheckBox Content="{Binding Definitions.RecurseFolders.Label}" IsChecked="{Binding RecurseFolders}" ToolTip.Tip="{Binding Definitions.RecurseFolders.Description}"/>

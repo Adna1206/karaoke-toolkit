@@ -58,6 +58,11 @@ public partial class MainWindow : Window
                     model.SelectedSection = model.VisibleSections.FirstOrDefault();
                     OperationPicker.FocusFirstCategory();
                 }
+                if (model.CheckForUpdatesOnStartup)
+                {
+                    await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+                    if (IsVisible) await CheckForUpdatesAsync(manual: false);
+                }
             }
         };
         Closing += (_, e) => { if (DataContext is MainViewModel { IsBusy: true }) e.Cancel = true; };
@@ -223,7 +228,7 @@ public partial class MainWindow : Window
         if (DataContext is MainViewModel { IsBusy: false } model)
         {
             var dialog = new SettingsWindow(model.Options, model.OverwritePolicy, model.Theme, model.ValidateBeforeConversion,
-                model.IgnoreLeadingTheForFileOrganization, model.AudioBitrates, model.SaveOptions, model.Backdrop, model.RememberInputFolder, model.RecoveryVerification, model.SaveResumableRun);
+                model.IgnoreLeadingTheForFileOrganization, model.AudioBitrates, model.SaveOptions, model.Backdrop, model.RememberInputFolder, model.RecoveryVerification, model.SaveResumableRun, model.CheckForUpdatesOnStartup);
             dialog.RestorePresentation(this, model.OptionsWindowSize, model.OptionsTabIndex);
             await ModalDialog.ShowAsync(dialog, this);
             model.RememberOptionsWindow(dialog.LastNormalSize, dialog.CurrentTabIndex);
@@ -247,7 +252,9 @@ public partial class MainWindow : Window
     }
     private void Exit_Click(object? sender, RoutedEventArgs e) => Close();
     private async void About_Click(object? sender, RoutedEventArgs e) => await ModalDialog.ShowAsync(new AboutWindow(), this);
-    private async void CheckForUpdates_Click(object? sender, RoutedEventArgs e)
+    private async void CheckForUpdates_Click(object? sender, RoutedEventArgs e) => await CheckForUpdatesAsync(manual: true);
+
+    private async System.Threading.Tasks.Task CheckForUpdatesAsync(bool manual)
     {
         var menuItem = CheckForUpdatesMenuItem;
         if (!menuItem.IsEnabled) return;
@@ -258,6 +265,7 @@ public partial class MainWindow : Window
         try
         {
             var (isInstalled, update) = await UpdateService.CheckForUpdatesAsync();
+            if (!manual && update == null) return;
             message = (isInstalled, update) switch
             {
                 (false, _) => "Install Karaoke Toolkit with Velopack to check for updates.",
@@ -268,6 +276,7 @@ public partial class MainWindow : Window
         catch (Exception error)
         {
             System.Diagnostics.Trace.TraceWarning("Velopack Flow update check failed: {0}", error);
+            if (!manual) return;
             message = "Could not check for updates. Try again later.";
         }
         finally
