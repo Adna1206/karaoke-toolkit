@@ -26,9 +26,9 @@ if ($CdrdaoOnly) {
     $cdrdao = Get-Content -LiteralPath $cdrdaoManifestPath -Raw | ConvertFrom-Json
     $runtime = Get-Content -LiteralPath $cdrdaoRuntimePath -Raw | ConvertFrom-Json
     $archives = @([IO.Path]::GetFileName($cdrdao.source.archive); $runtime.sourceArchive) | Select-Object -Unique
-    $sources = foreach ($archive in $archives) {
-        $matches = @($manifest.sources | Where-Object archive -eq $archive)
-        if ($matches.Count -ne 1) { throw "Expected one source pin for $archive." }
+    $sources = foreach ($sourceArchive in $archives) {
+        $matches = @($manifest.sources | Where-Object archive -eq $sourceArchive)
+        if ($matches.Count -ne 1) { throw "Expected one source pin for $sourceArchive." }
         $matches[0]
     }
     $manifest.sources = @($sources)
@@ -88,8 +88,8 @@ if (!$CdrdaoOnly) {
 $applicationLicenses = Join-Path $output 'licenses/application'
 New-Item -ItemType Directory -Path $applicationLicenses -Force | Out-Null
 foreach ($file in @('LICENSE', 'NOTICE.txt')) { Copy-Item -LiteralPath (Join-Path $repo $file) -Destination $applicationLicenses }
-Copy-Item -LiteralPath (Join-Path $repo 'docs/distribution-licensing.md') -Destination (Join-Path $output 'README.md')
-Copy-Item -LiteralPath (Join-Path $repo 'docs/source-availability.md') -Destination (Join-Path $output 'source-availability.md')
+Copy-Item -LiteralPath (Join-Path $repo 'docs/distribution/distribution-licensing.md') -Destination (Join-Path $output 'README.md')
+Copy-Item -LiteralPath (Join-Path $repo 'docs/distribution/source-availability.md') -Destination (Join-Path $output 'source-availability.md')
 $verified | ForEach-Object { $_.Hash + '  ' + $_.Archive } | Set-Content -LiteralPath (Join-Path $output 'SHA256SUMS.txt') -Encoding ascii
 if ($CdrdaoOnly) {
     Write-Warning 'This bundle covers only Windows cdrdao and its runtime DLLs. Review the manifest limitations before publication.'

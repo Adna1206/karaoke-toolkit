@@ -8,47 +8,55 @@ the current checkout. [Planned work](todo.md) is a backlog, not implemented beha
 
 | Guide | Covers |
 | --- | --- |
-| [File workflows](file-workflow-features.md) | Selection, archives, compression, folder tools, reports, validation and Explorer integration |
-| [CLI](cli.md) | Headless commands, per-run settings, JSON, exit codes and recovery |
-| [MCP](mcp.md) | Local stdio tools, client setup, operation exposure and file-change policy |
-| [CLI examples](cli-examples.md) | Practical conversion, tagging, video, folder and scripting workflows |
-| [Tagging](tagging.md) | Filename patterns, editable previews, supported formats and tag verification |
-| [Recipes](recipes.md) | Saved multi-step operations, step settings, chaining and execution |
-| [Crash recovery](crash-recovery.md) | Saved runs, workflow continuation, transaction guarantees and limits |
-| [Disc ripping](disc-ripping.md) | Experimental cdrdao reader, configuration and hardware-test limits |
+| [File workflows](user/file-workflow-features.md) | Selection, archives, compression, folder tools, reports, validation and Explorer integration |
+| [CLI](user/cli.md) | Headless commands, per-run settings, JSON, exit codes and recovery |
+| [MCP](user/mcp.md) | Local stdio tools, client setup, operation exposure and file-change policy |
+| [CLI examples](user/cli-examples.md) | Practical conversion, tagging, video, folder and scripting workflows |
+| [Tagging](user/tagging.md) | Filename patterns, editable previews, supported formats and tag verification |
+| [Recipes](user/recipes.md) | Saved multi-step operations, step settings, chaining and execution |
+| [Crash recovery](user/crash-recovery.md) | Saved runs, workflow continuation, transaction guarantees and limits |
+| [Disc ripping](user/disc-ripping.md) | Experimental cdrdao reader, configuration and hardware-test limits |
 
 ## Development and distribution
 
 | Guide | Covers |
 | --- | --- |
 | [Changelog](changelogs/README.md) | Version history, user-visible changes and upgrade steps |
-| [App structure](app-structure.md) | Avalonia features, views/viewmodels and shared services |
-| [Core structure](core-structure.md) | Processing responsibilities and namespace organization |
-| [Group by Track ID](track-grouping.md) | Numeric ranges, masked folders and automatic parents |
-| [Operation contracts](operations.md) | Shared identities, capabilities, interface registrations and compatibility |
-| [Activity table messages](activity-messages.md) | Item labels, progress and summaries |
-| [UI definitions](ui-definitions.md) | Operation/setting metadata and presentation preferences |
-| [Test structure](test-structure.md) | Shared suite, fixtures, coverage and commands |
-| [Audio runtime](audio-runtime.md) | FFmpeg preparation, format checks and opt-in benchmarks |
-| [Artifacts](artifacts.md) | Generated output locations and cleanup |
-| [Publishing](publishing.md) | Windows/Linux packages, prerequisites and release-readiness limits |
-| [Updates](updates.md) | Velopack lifecycle and Flow update checks |
-| [Versioning](versioning.md) | Shared YEAR.MONTH.BUILD version |
-| [Commit conventions](commit-conventions.md) | Conventional Commit messages |
+| [App structure](development/app-structure.md) | Avalonia features, views/viewmodels and shared services |
+| [Core structure](development/core-structure.md) | Processing responsibilities and namespace organization |
+| [Group by Track ID](user/track-grouping.md) | Numeric ranges, masked folders and automatic parents |
+| [Operation contracts](development/operations.md) | Shared identities, capabilities, interface registrations and compatibility |
+| [Activity table messages](development/activity-messages.md) | Item labels, progress and summaries |
+| [UI definitions](development/ui-definitions.md) | Operation/setting metadata and presentation preferences |
+| [Test structure](development/test-structure.md) | Shared suite, fixtures, coverage and commands |
+| [Audio runtime](distribution/audio-runtime.md) | FFmpeg preparation, format checks and opt-in benchmarks |
+| [Artifacts](distribution/artifacts.md) | Generated output locations and cleanup |
+| [Publishing](distribution/publishing.md) | Windows/Linux packages, prerequisites and release-readiness limits |
+| [Updates](distribution/updates.md) | Velopack lifecycle and Flow update checks |
+| [Versioning](distribution/versioning.md) | Shared YEAR.MONTH.BUILD version |
+| [Commit conventions](development/commit-conventions.md) | Conventional Commit messages |
 
 ## Planning and dependency records
 
 - [TODO](todo.md): pending features and deferred work.
-- [Online lookup research](future-online-renaming.md): dated provider notes and
+- [Online lookup research](research/future-online-renaming.md): dated provider notes and
   requirements for a possible future integration.
 - [Handoff](handoff.md): current baseline and verification evidence; refresh at
   meaningful stopping points rather than duplicating status in feature guides.
 - [Vendor versions](../vendor/versions.md): pinned native distributions and provenance.
 - [Licence inventory](../licenses/README.md): shipped notices and distribution obligations.
-- [Source availability](source-availability.md): component versions, source links and verification status for download pages.
-- [Distribution licensing](distribution-licensing.md): verified runtime source matches, source assembly and remaining release obligations.
+- [Source availability](distribution/source-availability.md): component versions, source links and verification status for download pages.
+- [Distribution licensing](distribution/distribution-licensing.md): verified runtime source matches, source assembly and remaining release obligations.
 
-Keep this directory flat while the guides remain easy to navigate through this
-index. Use lowercase-kebab-case filenames for guides; conventional `README.md`
-entry points and root `AGENTS.md` retain their established names. Keep provider
-READMEs beside their vendor inputs and fixture instructions beside test fixtures.
+## Community and direction
+
+- [Contributing](CONTRIBUTING.md)
+- [Support](SUPPORT.md)
+- [Security policy](SECURITY.md)
+- [Code of conduct](CODE_OF_CONDUCT.md)
+- [Roadmap](ROADMAP.md)
+
+Keep user, development, distribution and research guides in their respective
+subfolders. Use lowercase-kebab-case for guides and conventional uppercase
+filenames for the index, roadmap and community files. Keep provider READMEs
+beside their vendor inputs and fixture instructions beside test fixtures.

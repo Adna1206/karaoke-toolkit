@@ -162,7 +162,7 @@ public sealed class CliApplication(IOperationExecutor? executor = null, IDiscRea
         Option names are case-sensitive; command and enum choices ignore case.
         JSON enum settings use names, except ZipCompression which also accepts 0-9.
         Flags override --options FILE.json; desktop preferences are not loaded.
-        See docs/cli.md in the source repository for workflows and settings examples.
+        See docs/user/cli.md in the source repository for workflows and settings examples.
 
         Ctrl+C cancels remaining work; completed groups remain committed.
         Recovery uses saved settings, including recipe snapshots and remaining steps.

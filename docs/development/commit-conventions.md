@@ -27,6 +27,6 @@ Use `!` after the type or scope for a breaking change, and explain the change
 in the commit body. For example: `feat(controller)!: change telemetry format`.
 
 For a version-only commit, use `chore: bump version to <new-version>`, with
-the number from [`Directory.Build.props`](../Directory.Build.props). This repository uses
+the number from [`Directory.Build.props`](../../Directory.Build.props). This repository uses
 `YEAR.MONTH.BUILD` for its version, so the version number is maintained
 independently of Conventional Commits' Semantic Versioning associations.

@@ -240,11 +240,11 @@ interrupted quarantine and report exports. Explorer registration/removal is test
 an isolated temporary registry branch, without installing live Explorer entries.
 
 For the shared suite and verification commands, see
-[test structure](test-structure.md). A named artifact build can avoid replacing
+[test structure](../development/test-structure.md). A named artifact build can avoid replacing
 binaries used by a running development instance:
 
 ```powershell
 dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj -c Release -p:ArtifactBuildName=StandaloneTests -p:UsedAvaloniaProducts=
 ```
 
-The requested pre-processing preview remains in [TODO](todo.md).
+The requested pre-processing preview remains in [TODO](../todo.md).

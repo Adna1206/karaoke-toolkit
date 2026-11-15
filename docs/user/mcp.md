@@ -187,5 +187,5 @@ results do not establish Linux/macOS verification.
 checks MCP files/notices before packaging. Shared logging/DI abstractions are aligned
 at 11.0.0 to prevent incompatible DLL copies in that combined folder. MCP has no
 Avalonia/Velopack/CLI project dependency and adds no SDK dependency to App startup.
-See [publishing](publishing.md), [operations](operations.md) and
-[licence inventory](../licenses/README.md).
+See [publishing](../distribution/publishing.md), [operations](../development/operations.md) and
+[licence inventory](../../licenses/README.md).

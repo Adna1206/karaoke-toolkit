@@ -59,7 +59,7 @@ compatibility but are no longer used by the home layout.
 
 Tools also opens the Recipe Builder. Core's `Recipes` folder owns the portable
 workflow definitions, chaining constraints and execution; App coordinates runs
-through the existing main progress/report screen. See [recipes.md](recipes.md).
+through the existing main progress/report screen. See [recipes.md](../user/recipes.md).
 The builder edits saved recipes only. Its library populates the home Recipes
 category and Favourites; input controls follow the selected recipe's first step.
 

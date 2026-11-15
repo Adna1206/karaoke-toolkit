@@ -5,8 +5,8 @@ source links and outstanding matches for download-page preparation. This guide
 retains the detailed evidence and investigation notes.
 
 Karaoke Toolkit's original code and assets are licensed under **GPL-3.0-or-later**.
-Copyright © 2026 André Almeida (ADNA). See [LICENSE](../LICENSE)
-and [the application notice](../NOTICE.txt). Third-party components retain their
+Copyright © 2026 André Almeida (ADNA). See [LICENSE](../../LICENSE)
+and [the application notice](../../NOTICE.txt). Third-party components retain their
 own licences. Application licensing does not resolve the remaining dependency
 source-distribution work recorded below.
 
@@ -179,7 +179,7 @@ Finish by recovering the exact build inputs and notices, or replacing the
 native distribution with a build whose complete inputs can be retained and
 verified. Replacing binaries needs conversion/media regression checks; this
 licensing work has not changed them. macOS FFmpeg provenance remains separately
-unresolved as recorded in the [vendor inventory](../vendor/versions.md).
+unresolved as recorded in the [vendor inventory](../../vendor/versions.md).
 
 A follow-up found an archived index for the September 29 BtbN release, but no
 verified build-recipe revision or complete corresponding source for that pair.
@@ -215,4 +215,4 @@ architecture before publishing it.
 - [MSYS2 source-package archive](https://repo.msys2.org/msys/sources/)
 - [TagLibSharp release source](https://github.com/mono/taglib-sharp/tree/b5ae84f2e84087bf160bb0471420200dd2b5d809)
 
-See the [licence inventory](../licenses/README.md) for the other shipped notices.
+See the [licence inventory](../../licenses/README.md) for the other shipped notices.

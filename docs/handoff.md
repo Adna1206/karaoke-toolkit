@@ -1,5 +1,72 @@
 # Current handoff
 
+## Recovery path-check performance
+
+On 2026-11-16, master at `b3f9b09`, version 2026.11.17, reduced recovery
+path safety checks to one attribute query per path component and reused the
+leaf attributes during capture and verification. Ancestor checks and fresh
+content hashes remain in place. Recovery changes and the documentation
+reorganization are being committed separately on master.
+
+`pwsh -NoProfile -File scripts/Test.ps1 -NoRestore` passed 741 Windows tests
+with local test-host access. The first run had one discovery miss immediately
+after killing a conversion worker. The test now waits for discovery within
+its existing timeout. The isolated comparison in
+`artifacts/checks/recovery-phases/Phases.csproj -- --compare` compared 2,000
+small files twice and produced identical fingerprint maps in 1.4–1.5 seconds
+versus 3.8–4.0 seconds before. Separate 10,000-file timings varied with system
+load. No cross-platform timing or larger-file throughput was measured.
+Revisit further tuning only if real workloads still show a material delay.
+
+## Recovery discovery and profiling
+
+On 2026-11-16, master at `b3f9b09`, version 2026.11.17, combined scoped
+conversion and workflow journal discovery into one tree walk and removed the
+duplicate startup index pass. Changes are uncommitted with the earlier recipe
+and docs work. The focused command
+`pwsh -NoProfile -File scripts/Test.ps1 -NoRestore -Filter 'FullyQualifiedName~Recovery|FullyQualifiedName~Recipes|FullyQualifiedName~Flatten'`
+passed 132 tests with local test-host access. `git diff --check` passed.
+
+The local `artifacts/checks/recovery-phases/Phases.csproj` harness used two
+10,000-file fixtures. Median discovery fell from 6 to 2 ms on the flat fixture
+and 484 to 319 ms on the nested one. SHA-256 capture, including path checks,
+took 19–26 seconds. A synthetic checkpoint write took 16–91 ms. A controlled
+Windows lock reproduced sharing violation 32 during the atomic rename. The
+source remained in place and the rename worked after releasing the lock.
+Next, isolate path-check costs from hashing before changing capture. Consider
+a bounded retry at the atomic rename if brief locks are a real usage problem.
+
+## Recipe checkpoint and input selection
+
+On 2026-11-16, master at `b3f9b09`, version 2026.11.17, saved completed
+recipe checkpoints before replacing live state and preserved operation
+records when saving fails. Recovery honors a saved stop after reporting is
+interrupted. Indexed moved-file results by source and computed desktop
+status without flattening step results. These changes and the earlier docs
+reorganization are uncommitted.
+
+`pwsh -NoProfile -File scripts/Test.ps1 -NoRestore -Filter 'FullyQualifiedName~Recipes|FullyQualifiedName~Recovery|FullyQualifiedName~RunStatus'`
+passed 130 tests with local test-host access after the sandbox connection
+timed out. A local 10,000-file synthetic selector comparison returned
+identical inputs in 1.6 seconds with indexing versus 2.5 seconds before.
+The two-step synthetic recipe took 82 seconds with real filesystem checks
+and checkpoints and a fixture executor. Creating its report took 7 ms.
+This did not exercise media processing or desktop rendering. Profile
+recovery scans and fingerprinting separately before changing verification
+or adding retries.
+
+## Documentation layout and community guides
+
+On 2026-11-16, master at `b3f9b09`, version 2026.11.17, grouped the guides
+under user, development, distribution and research. Added a README Quick
+Start, community guides and a roadmap linked from the [docs index](README.md).
+Updated repository links and source archive paths. Fixed a PowerShell variable
+collision affecting CDRDAO-only source preparation. Local Markdown targets
+and `git diff --check` passed. Running
+`pwsh -NoProfile -File scripts/Prepare-DistributionSources.ps1 -CdrdaoOnly -Archive`
+verified 21 ZIP entries. Changes are uncommitted. A public installer URL and
+private reporting contact remain to be established before public launch.
+
 ## Windows FFmpeg source review
 
 On 2026-11-15, master at `9f9dc76`, version 2026.11.17, checked the
@@ -28,7 +95,7 @@ finish the FFmpeg source inventory before using this as a complete release asset
 ## Source availability register
 
 On 2026-11-15, master at `9f9dc76`, version 2026.11.17, added
-[source availability](source-availability.md) with component versions, upstream
+[source availability](distribution/source-availability.md) with component versions, upstream
 source links and explicit provenance gaps. Linked it from the docs index,
 licence inventory and distribution guide. This is documentation only; no source
 hosting, download page or packaging changes. Existing startup-update changes
@@ -105,7 +172,7 @@ Live layout and scrolling remain to be checked.
 ## Desktop activity table
 
 Extracted the live table into ActivityLogView with view-owned auto-scroll.
-See [App structure](app-structure.md). The Windows Release App build passed.
+See [App structure](development/app-structure.md). The Windows Release App build passed.
 MainWindow visibility falls back to the idle layout when the designer has no
 view model. The standalone ActivityLogView provides design-only sample rows.
 The Windows Release App build passed with zero warnings or errors. Live
@@ -128,7 +195,7 @@ Release suite passed **118/118** using RecoveryModes and filter
 Desktop Settings → Recovery and CLI/MCP expose SHA-256, xxHash128, metadata only,
 no verification and an option to disable automatic batch resume for standalone
 grouping, alphabetical organization and flattening. SHA-256 is the default.
-See [recovery verification](crash-recovery.md#verification-settings). Other
+See [recovery verification](user/crash-recovery.md#verification-settings). Other
 recovery and publication paths retain their existing SHA-256 behavior. The
 Windows Release suite passed **732/732** before the final manual-review test
 and license additions. The final targeted Release run passed **234/234**.
@@ -143,8 +210,8 @@ file-move modes on native Linux and macOS.
 ## File move recovery and activity wording · 2026-11-15
 
 Standalone flattening and alphabetical organization use saved SHA-256 move
-plans. Desktop shows preparation in the activity log without an operation warning. See [crash recovery](crash-recovery.md)
-and [activity table messages](activity-messages.md). The Windows Release run
+plans. Desktop shows preparation in the activity log without an operation warning. See [crash recovery](user/crash-recovery.md)
+and [activity table messages](development/activity-messages.md). The Windows Release run
 passed **58/58** using the GroupingFinal command below without logger arguments
 and with `--filter 'FullyQualifiedName~FileOperations|FullyQualifiedName~WorkflowRecovery|FullyQualifiedName~OperationFlow'`.
 The dialog and native Linux/macOS execution still need live verification.
@@ -154,7 +221,7 @@ The dialog and native Linux/macOS execution still need live verification.
 Implemented on `master` at base `6237ae5`, version **2026.11.16**. The
 uncommitted feature adds desktop setup and preview, CLI and MCP dispatch, a
 shared interval planner, and resumable copy and move publication. See
-[Group by Track ID](track-grouping.md). Existing distribution evidence edits
+[Group by Track ID](user/track-grouping.md). Existing distribution evidence edits
 remain in the working tree. Move requires a same-volume destination. Live
 desktop layout and native Linux/macOS execution remain to be checked.
 
@@ -290,9 +357,9 @@ dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj -c Release --no-res
 
 - Before public distribution, resolve corresponding source for downloadable
   FFmpeg builds and arrange source access for other bundled copyleft
-  components. See [distribution licensing](distribution-licensing.md).
+  components. See [distribution licensing](distribution/distribution-licensing.md).
 - Run the full suite after the activity and readiness changes, inspect the grouping dialog live, and smoke-test any packages selected for release. Linux packages are cross-built; macOS packaging and
   physical disc-ripping verification remain open.
 - See [TODO](todo.md) for the FFMpegCore migration and other planned features.
   The backlog now includes native vendoring investigation and Velopack update UI.
-  See [updates](updates.md) for the manual Flow check and remaining update work.
+  See [updates](distribution/updates.md) for the manual Flow check and remaining update work.

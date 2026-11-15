@@ -3,7 +3,7 @@
 This register tracks source links for components with source-distribution
 obligations or exceptions requiring review. Use it to prepare the download page's
 **Third-party source code** section. It complements the
-[licence inventory](../licenses/README.md); it is not a complete dependency list.
+[licence inventory](../../licenses/README.md); it is not a complete dependency list.
 
 Baseline: Toolkit **2026.11.17**, reviewed 2026-11-15. Versions below describe
 the pinned distribution, not the latest upstream release.
@@ -23,7 +23,7 @@ the pinned distribution, not the latest upstream release.
 ### Libraries inside FFmpeg
 
 These are part of the FFmpeg source review, not separate NuGet dependencies.
-The [source manifest](../vendor/distribution-sources.json) records available
+The [source manifest](../../vendor/distribution-sources.json) records available
 archives and hashes; [distribution licensing](distribution-licensing.md#remaining-ffmpeg-work)
 records the detailed gaps. Do not present candidate sources as verified matches.
 

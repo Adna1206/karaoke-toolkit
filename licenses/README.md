@@ -1,6 +1,6 @@
 # Third-party licenses and notices
 
-See the [source availability register](../docs/source-availability.md) for
+See the [source availability register](../docs/distribution/source-availability.md) for
 component versions, source links and unresolved matches to use on download pages.
 
 This directory keeps readable license texts for dependencies currently used or
@@ -12,7 +12,7 @@ source or notice obligations.
 
 Copyright © 2026 André Almeida (ADNA). The application licence
 does not replace third-party licences or resolve source-distribution obligations. See the
-[distribution licensing record](../docs/distribution-licensing.md) for verified
+[distribution licensing record](../docs/distribution/distribution-licensing.md) for verified
 runtime source matches, source assembly and remaining FFmpeg work.
 
 | Component | Version / scope | License text | App package |

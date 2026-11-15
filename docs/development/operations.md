@@ -20,7 +20,7 @@ chooses to expose. App's metadata retains those labels and input-picker behaviou
 CLI's `CliOperationCatalog` explicitly includes each operation with a command name,
 or excludes it with a reason. Core still validates execution capabilities independently.
 MCP has its own explicit `McpOperationCatalog` over these identities, with the same
-CS8509 compiler guard. Its decisions also apply to recipe/recovery calls. See [MCP](mcp.md).
+CS8509 compiler guard. Its decisions also apply to recipe/recovery calls. See [MCP](../user/mcp.md).
 
 ## Adding an operation
 
@@ -47,7 +47,7 @@ unattended capability compatibility and shared App/recipe identities.
 CLI and MCP share the planner. Desktop rechecks the approved plan before
 applying. CLI and MCP use the same options and require an explicit output path.
 The operation is directly available in all three interfaces. Recipe steps do
-not currently include it. See [Group by Track ID](track-grouping.md).
+not currently include it. See [Group by Track ID](../user/track-grouping.md).
 
 ## Persistence and disc ripping
 
@@ -63,7 +63,7 @@ migration. Reports already use readable operation/status strings.
 through `RipFormat`. Duplicate CDG output-mode identities and the duplicate cleanup
 identity have been removed. Hardware-unverified status applies to physical capture;
 ordinary Audio+G/BIN/ZIP conversion uses the tested processing engines.
-See [disc ripping](disc-ripping.md).
+See [disc ripping](../user/disc-ripping.md).
 
 App metadata and recipe registrations derive built-in IDs from the enum's names.
 Recipe step `OperationId` fields remain strings. User-created recipe instances use

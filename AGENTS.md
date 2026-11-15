@@ -18,13 +18,13 @@ the remaining feature and reference guides.
 
 | When changing | Standards to consult |
 | --- | --- |
-| Commits or release versions | [Commit conventions](docs/commit-conventions.md), [versioning](docs/versioning.md), [changelog](docs/changelogs/README.md) |
-| Project layout or tests | [App structure](docs/app-structure.md), [Core structure](docs/core-structure.md), [test structure](docs/test-structure.md) |
-| Operation IDs, requests, or interface exposure | [Operation contracts](docs/operations.md), [CLI](docs/cli.md), [MCP](docs/mcp.md), [recipes](docs/recipes.md) |
-| Desktop metadata, settings, or activity rows | [UI definitions](docs/ui-definitions.md), [activity table messages](docs/activity-messages.md) |
-| File publication, overwrite, or resume | [Crash recovery](docs/crash-recovery.md) |
-| Build outputs, native runtime, or release packaging | [Artifacts](docs/artifacts.md), [audio runtime](docs/audio-runtime.md), [publishing](docs/publishing.md), [updates](docs/updates.md) |
-| Dependencies, notices, or distribution obligations | [Licence inventory](licenses/README.md), [distribution licensing](docs/distribution-licensing.md), [vendor versions](vendor/versions.md) |
+| Commits or release versions | [Commit conventions](docs/development/commit-conventions.md), [versioning](docs/distribution/versioning.md), [changelog](docs/changelogs/README.md) |
+| Project layout or tests | [App structure](docs/development/app-structure.md), [Core structure](docs/development/core-structure.md), [test structure](docs/development/test-structure.md) |
+| Operation IDs, requests, or interface exposure | [Operation contracts](docs/development/operations.md), [CLI](docs/user/cli.md), [MCP](docs/user/mcp.md), [recipes](docs/user/recipes.md) |
+| Desktop metadata, settings, or activity rows | [UI definitions](docs/development/ui-definitions.md), [activity table messages](docs/development/activity-messages.md) |
+| File publication, overwrite, or resume | [Crash recovery](docs/user/crash-recovery.md) |
+| Build outputs, native runtime, or release packaging | [Artifacts](docs/distribution/artifacts.md), [audio runtime](docs/distribution/audio-runtime.md), [publishing](docs/distribution/publishing.md), [updates](docs/distribution/updates.md) |
+| Dependencies, notices, or distribution obligations | [Licence inventory](licenses/README.md), [distribution licensing](docs/distribution/distribution-licensing.md), [vendor versions](vendor/versions.md) |
 
 ## Architecture and conventions
 
@@ -37,33 +37,33 @@ the remaining feature and reference guides.
 - `KaraokeToolkit.Cli`: console adapter over Core's unattended execution services.
   No GUI dependency. Includes recipes/recovery, explicit quarantine, dry runs and
   experimental disc capture. Never prompt or elevate; recipe steps cannot use Ask.
-  See [CLI](docs/cli.md).
+  See [CLI](docs/user/cli.md).
 - `KaraokeToolkit.Mcp`: client-launched local stdio tool provider over Core, with
   explicit operation include/exclude decisions and CS8509 as an error. No CLI/App
   dependency, listening port or background service. Read-only by default; writes
-  require owner startup `--allow-writes` and per-call confirmation. See [MCP](docs/mcp.md).
+  require owner startup `--allow-writes` and per-call confirmation. See [MCP](docs/user/mcp.md).
 - Keep namespaces aligned with folders. App uses feature folders; Core uses
-  responsibility folders. Read [App structure](docs/app-structure.md),
-  [Core structure](docs/core-structure.md) and [test structure](docs/test-structure.md).
+  responsibility folders. Read [App structure](docs/development/app-structure.md),
+  [Core structure](docs/development/core-structure.md) and [test structure](docs/development/test-structure.md).
 - Operation presentation metadata lives in App; Core's recipe registry determines
   recipe eligibility. Step settings are saved independently of general preferences.
-  See [UI definitions](docs/ui-definitions.md) and [recipes](docs/recipes.md).
+  See [UI definitions](docs/development/ui-definitions.md) and [recipes](docs/user/recipes.md).
 - All built-in identities live in Core's `Execution/OperationId`. Persist names,
   never enum numbers; numeric values and ordering are internal details.
   Update Core's catalogue and CLI's explicit
   include/exclude registry together. Their exhaustive switches must keep CS8509
   as an error; do not add catch-all fallbacks or automatic CLI exposure. General
   requests belong in Execution; conversion requests belong in Conversion. See
-  [operation contracts](docs/operations.md).
+  [operation contracts](docs/development/operations.md).
 - Preserve persisted operation names and setting keys when reorganizing code.
   The current pre-production identity cleanup deliberately breaks old journals;
   do not add numeric aliases or migration for them. Update references and
   `InternalsVisibleTo` when renaming projects.
-- Use [Conventional Commits](docs/commit-conventions.md). The shared release version
+- Use [Conventional Commits](docs/development/commit-conventions.md). The shared release version
   lives in `Directory.Build.props`, with YEAR.MONTH.BUILD and BUILD starting at 1
   for a new month. Bump versions when requested. With each bump, create or
   update the release's changelog and link it at the top of the [changelog
-  index](docs/changelogs/README.md). Follow the [versioning guide](docs/versioning.md).
+  index](docs/changelogs/README.md). Follow the [versioning guide](docs/distribution/versioning.md).
 
 ## Build, test and publish
 
@@ -86,7 +86,7 @@ In the agent sandbox, the established test command is:
   use targeted UI verification when the change needs it. Do not duplicate Core
   conversion tests in CLI/MCP adapters.
 - Native runtime manifests under `vendor/` pin exact URLs and SHA-256 digests. Build targets fetch cache misses by RID and verify archives before extraction. Tests use self-contained fixtures and explicit expected outcomes.
-- Follow the shared desktop activity conventions in [UI definitions](docs/ui-definitions.md).
+- Follow the shared desktop activity conventions in [UI definitions](docs/development/ui-definitions.md).
   Emit structured source and label fields for item rows. Keep count-only updates
   available to progress bars without repeating them in the activity table.
 - If the sandboxed Windows build succeeds and VSTest times out connecting to
@@ -96,11 +96,11 @@ In the agent sandbox, the established test command is:
   output names when concurrent runs or deliberate comparisons need isolation.
 - Custom outputs belong under ignored `artifacts/`; normal bin/obj are unchanged.
   Keep generated media, installers and test reports out of source control. See
-  [artifact locations](docs/artifacts.md) and [audio runtime](docs/audio-runtime.md).
+  [artifact locations](docs/distribution/artifacts.md) and [audio runtime](docs/distribution/audio-runtime.md).
 - Publishing is explicit, not an ordinary Release post-build step. The script
   creates self-contained Windows/Linux x64 packages and restores a repository-local
   `vpk` tool. Keep `.config/dotnet-tools.json` aligned with the App's Velopack version.
-  See [publishing](docs/publishing.md). It does not upload or install packages.
+  See [publishing](docs/distribution/publishing.md). It does not upload or install packages.
 - After relevant changes, run appropriate tests and record the actual command,
   result and limitations. Do not claim installation/hardware/platform verification
   from a successful package build alone. Documentation-only edits need link/diff
@@ -109,7 +109,7 @@ In the agent sandbox, the established test command is:
 ## Decisions to preserve
 
 - Velopack Flow checks are available manually. Startup checks are opt-in. Automatic application of pending updates is disabled.
-  See [updates](docs/updates.md).
+  See [updates](docs/distribution/updates.md).
 - No karaoke player/preview playback yet; it is deferred for discussion. A planned
   processing preview means outputs/conflicts/deletions, not media playback.
 - CLI and MCP call shared Core services directly; never shell out to each other.
@@ -122,7 +122,7 @@ In the agent sandbox, the established test command is:
 - Existing Windows Explorer integration is classic/per-user. Modern Windows 11
   shell integration and an additional MSI are future work, not delivered features.
 - File-changing operations must retain existing transaction, overwrite, validation
-  and recovery guarantees. Read [crash recovery](docs/crash-recovery.md) before
+  and recovery guarantees. Read [crash recovery](docs/user/crash-recovery.md) before
   changing publication/checkpoint behaviour. Completed workflow changes are not
   rolled back as an entire recipe.
 - CLI output-folder conversions keep originals and use destination-volume staging
@@ -135,7 +135,7 @@ In the agent sandbox, the established test command is:
   elsewhere. Distinguish intended compatibility from verified platform support.
   Linux packages are cross-built;
   macOS packaging via a macOS CI runner is a TODO. Disc ripping is experimental
-  and not verified with physical hardware. See [disc ripping](docs/disc-ripping.md).
+  and not verified with physical hardware. See [disc ripping](docs/user/disc-ripping.md).
 - Preserve/update shipped third-party notices and About entries when dependencies
   change. [Licence inventory](licenses/README.md) records remaining distribution
   obligations; generated packages are not evidence those obligations are complete.

@@ -4,7 +4,7 @@ Audio decoding and MP3/OGG/WMA/WAV/FLAC/AAC encoding use FFMpegCore 5.5.0 (MIT),
 restored by NuGet.
 FFMpegCore invokes bundled FFmpeg/ffprobe processes; NuGet does not supply those
 executables. Experimental CD reading uses cdrdao.
-See [disc ripping](disc-ripping.md) for packaging and hardware-test limitations.
+See [disc ripping](../user/disc-ripping.md) for packaging and hardware-test limitations.
 Tests assert deterministic PCM, graphics, duration and timing expectations.
 
 ## Runtime preparation
@@ -40,7 +40,7 @@ version3, without GPL or nonfree components). Their `LICENSE.txt`, the GPL v3
 text incorporated by LGPL v3, and `runtime-manifest.json` are included in the
 FFmpeg output folder and copied to `licenses/ffmpeg/`, which About reads.
 The app also publishes common package notices from
-[`licenses/`](../licenses/README.md). Each RID has its own version, hash and
+[`licenses/`](../../licenses/README.md). Each RID has its own version, hash and
 source metadata in the manifest.
 
 Before distributing a release, retain and provide the corresponding source and

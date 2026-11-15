@@ -76,4 +76,4 @@ The Recipe Builder reuses these operation labels and setting definitions. Core's
 `RecipeOperations` supplies execution and chaining constraints by the same stable
 operation IDs. Register recipe support there only when an operation has a
 non-interactive input/output contract; catalog tests check the builder's supported
-IDs. See [recipes.md](recipes.md) for settings snapshots and output flow.
+IDs. See [recipes.md](../user/recipes.md) for settings snapshots and output flow.

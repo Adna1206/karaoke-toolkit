@@ -20,6 +20,12 @@ recipe still existing in the library. A tagging checkpoint stores the accepted
 preview (including manual corrections) and run options, skips completed files and
 continues the batch without asking for a new pattern.
 
+If saving a completed recipe step fails, the previous checkpoint and its
+operation records remain available through **Recover**. Once the filesystem
+problem is resolved, recovery uses those records to recognize work already
+published. If the saved step ended in failure, cancellation or an empty result,
+recovery honors that stop before starting another step.
+
 **Later** leaves files and journals untouched and does not start a fresh operation over
 the interrupted run. A normal Cancel still discards unpublished work and ends the run;
 this feature recovers unexpected termination and retained publication failures, rather

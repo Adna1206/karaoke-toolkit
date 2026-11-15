@@ -9,7 +9,7 @@ The official release does not provide Linux or macOS binaries. Build those from
 the pinned source on the target platform and review the resulting runtime
 dependencies before adding them here. Windows builds bundle this reader for the
 experimental CD+G operation; Linux/macOS use an installed executable or configured
-path. See [disc ripping](../../docs/disc-ripping.md) for integration and limits.
+path. See [disc ripping](../../docs/user/disc-ripping.md) for integration and limits.
 
 CDRDAO's source archive includes GPL v2 `COPYING`. All four runtime DLLs now
 match archived MSYS2 packages byte-for-byte; `runtime-components.json` records
@@ -17,6 +17,6 @@ their identities and source archives. Repository `licenses/cdrdao/` retains
 their licence texts, which build preparation copies to output `licenses/cdrdao/`.
 Source packages, patches and
 build recipes can be assembled with `scripts/Prepare-DistributionSources.ps1`;
-see [distribution licensing](../../docs/distribution-licensing.md). Public source
+see [distribution licensing](../../docs/distribution/distribution-licensing.md). Public source
 access still needs arranging alongside any binary release. A drive and CD+G disc are required to establish ripping
 compatibility; the version check did not access a drive.

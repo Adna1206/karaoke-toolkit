@@ -73,7 +73,7 @@ checkpointed inside the parent recipe rather than a separate tagging recovery jo
 
 Results use the standard session report header with **Tagging Report** as type.
 The About page lists TagLibSharp and displays its shipped LGPL v2.1 text; see
-[licence inventory](../licenses/README.md) for source/distribution information.
+[licence inventory](../../licenses/README.md) for source/distribution information.
 Automated tests cover writable audio/video formats, packet and decoded-audio
 preservation, settings history, ZIPs, failure/cancellation and recovery. Native
 execution on Linux/macOS and uncommon third-party media variants still need testing.

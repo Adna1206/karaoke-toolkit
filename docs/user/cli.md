@@ -268,7 +268,7 @@ Core's `OperationId` and `OperationCatalog` declare identities and capabilities.
 `CliOperationCatalog` explicitly exposes or excludes every enum entry; a new entry
 without a decision fails compilation. Command names, parsing, formatting and exit
 codes stay in CLI. General requests use the enum; conversion engines receive a
-separate `ConversionRequest`. See [operation contracts](operations.md).
+separate `ConversionRequest`. See [operation contracts](../development/operations.md).
 `OperationExecutionService` calls existing engines and can be reused directly by
 the MCP adapter, without launching CLI subprocesses. The desktop routes remain
 unchanged.

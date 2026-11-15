@@ -30,7 +30,7 @@
 - [ ] **Investigate the vendoring system** — evaluate how to acquire, pin, and
   retain native binaries, their exact source and build inputs, and notices.
   Compare upstream release archives with builds we control and account for Git
-  LFS history before public distribution. See [distribution licensing](distribution-licensing.md).
+  LFS history before public distribution. See [distribution licensing](distribution/distribution-licensing.md).
 
 - [ ] **Smaller Windows FFmpeg bundle (optional)** — consider omitting unused
   `ffplay.exe` (about 8.8 MB compressed in the 2026.11.17 full update package).
@@ -42,7 +42,7 @@
 - [ ] **Add Velopack update downloads and installation** — verify the manual
   Flow check against a hosted release, then add download and apply/restart prompts. Verify
   that applying updates waits for file operations and preserves user data.
-  See [updates](updates.md).
+  See [updates](distribution/updates.md).
 
 - [ ] **macOS packaging via GitHub Actions** — consider macOS runners to publish
   Apple Silicon builds and run Velopack's macOS packaging tools, with

@@ -1,7 +1,7 @@
 # Pinned software versions
 
 Native archives are fetched on demand using the exact URLs and hashes in the
-platform manifests. See [runtime preparation](../docs/audio-runtime.md#runtime-preparation).
+platform manifests. See [runtime preparation](../docs/distribution/audio-runtime.md#runtime-preparation).
 
 This inventory records binaries stored under `vendor/`. Update it and the relevant checksum manifest when a binary changes. NuGet packages are versioned in the project files.
 
@@ -26,6 +26,6 @@ The complete Windows and Linux archives are in `ffmpeg/<rid>/`; the macOS vendor
 `cdrdao/manifest.json` records these assets. The four Windows runtime DLLs are
 matched to archived MSYS2 packages in `cdrdao/runtime-components.json`; their
 notices are shipped and matching source packages are pinned in
-`distribution-sources.json`. See [distribution licensing](../docs/distribution-licensing.md)
+`distribution-sources.json`. See [distribution licensing](../docs/distribution/distribution-licensing.md)
 for source assembly and unresolved FFmpeg inputs. The experimental disc reader
 uses cdrdao. Linux/macOS require an installed executable; no bundled builds are present.

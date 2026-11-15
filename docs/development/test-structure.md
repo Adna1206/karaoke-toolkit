@@ -66,5 +66,5 @@ Linux/macOS build preparation needs PowerShell 7; native execution still needs t
 on each OS. A Windows test run does not establish native support on another platform.
 
 Generated fixtures live under `artifacts/tests/runs/<run-id>/fixtures`, and reports under
-`artifacts/tests/results`. See [artifacts](artifacts.md). Audio benchmarks run through
-this test executable and measure FFmpeg only; see [audio runtime](audio-runtime.md).
+`artifacts/tests/results`. See [artifacts](../distribution/artifacts.md). Audio benchmarks run through
+this test executable and measure FFmpeg only; see [audio runtime](../distribution/audio-runtime.md).
