@@ -10,6 +10,11 @@ Inspired by MP3+G Toolz, Karaoke Toolkit is an Avalonia desktop app for local
 karaoke-file conversion, metadata and file management. Windows is the validated
 runtime platform; Windows and Linux x64 packages can be generated locally.
 
+The application includes a [command-line interface](docs/user/cli.md) for
+automating karaoke workflows and a [local MCP server](docs/user/mcp.md) for
+connecting compatible AI assistants and tools. Find setup and copyable
+configuration under **Settings → Integrations**.
+
 Karaoke Toolkit is an AI-assisted project. The maintainer makes the design
 decisions, defines the architecture, and chooses the development standards.
 The maintainer and AI tools both contribute code, and AI drafts most of the
