@@ -1,8 +1,9 @@
 # Planned features
 
 - [ ] **FFMpegCore migration** — upgrade the .NET wrapper from 5.5.0 to 6.0.0.
-  Update FFprobe calls and FFmpeg process handling for the new APIs. Test audio
-  conversion, MP4 encoding, cancellation and cleanup of partial output.
+  Adapt the remaining wrapper calls and process handling to the new APIs.
+  Keep the direct FFprobe JSON reader and verify audio conversion, MP4 encoding,
+  cancellation and cleanup of partial output.
 
 - [ ] **Karaoke key and tempo changes** — use [SoundTouch.Net](https://github.com/owoudenberg/soundtouch.net)
   to shift pitch in semitones and adjust tempo independently. Process decoded
@@ -24,24 +25,22 @@
   selection within the relevant command/example/setup section rather than as a
   disconnected shared control. Review keyboard navigation, accessibility, small-window
   layouts and consistency of Apply/OK/Cancel versus immediate actions. Preserve
-  existing preferences and processing behaviour. Current Settings work is stopped;
-  resume this redesign only when requested.
+  existing preferences and processing behaviour. Resume the broader redesign
+  when requested.
 
-- [ ] **Investigate the vendoring system** — evaluate how to acquire, pin, and
-  retain native binaries, their exact source and build inputs, and notices.
-  Compare upstream release archives with builds we control and account for Git
-  LFS history before public distribution. See [distribution licensing](distribution/distribution-licensing.md).
+- [ ] **Linux and Apple Silicon dependency sources** — finish collecting the
+  required sources, recipes and patches for the pinned FFmpeg runtime packages
+  before distributing binaries for those platforms. See
+  [distribution licensing](distribution/distribution-licensing.md#remaining-ffmpeg-work).
 
-- [ ] **Smaller Windows FFmpeg bundle (optional)** — consider omitting unused
-  `ffplay.exe` (about 8.8 MB compressed in the 2026.11.17 full update package).
-  Verify the packaged `ffmpeg.exe`, `ffprobe.exe` and conversion workflows.
-  For further savings, consider a smaller LGPL build that keeps the required
-  codecs, filters and formats. Features compiled into shared DLLs, such as
-  Blu-ray support, require a rebuild to remove.
+- [ ] **Smaller Windows FFmpeg build (optional)** — measure potential savings
+  from an LGPL build configured for Toolkit's required codecs, filters and
+  formats. Verify conversion workflows before replacing the current bundle.
 
-- [ ] **Add Velopack update downloads and installation** — verify the manual
-  Flow check against a hosted release, then add download and apply/restart prompts. Verify
-  that applying updates waits for file operations and preserves user data.
+- [ ] **Add Velopack update downloads and installation** — verify that an
+  installed build detects a newer release on GitHub, then add download and
+  apply/restart prompts. Verify that applying updates waits for file operations
+  and preserves user data.
   See [updates](distribution/updates.md).
 
 - [ ] **macOS packaging via GitHub Actions** — consider macOS runners to publish
@@ -50,14 +49,13 @@
   redistribution requirements, test on macOS, and plan signing/notarization before
   public distribution. Local Windows development should not require a physical Mac.
 
-- [ ] **GitHub CI and release automation** — consider pull-request/push build and
-  test checks across supported platforms, retained test reports and package artifacts,
-  and manually triggered or version-tagged releases. CLI platform testing now has
-  `.github/workflows/cli-platforms.yml`; release/package automation remains planned. Reuse the publish scripts and
-  pinned tools; validate shared versions, generate release notes/checksums, and
-  optionally sign and upload installers/update feeds after checks pass. Decide on
-  release hosting (including a separate releases-only repo), protect signing/upload
-  credentials, and review runner/LFS costs.
+- [ ] **GitHub CI and release automation** — extend the existing
+  [CLI platform workflow](../.github/workflows/cli-platforms.yml) with broader
+  checks as needed. Automate the [GitHub Releases workflow](distribution/publishing.md)
+  using the pinned tools and existing scripts. Verify tagged versions and retain
+  test reports and build artifacts. Include the installers, update feeds,
+  third-party source archives and checksums. Review signing and upload
+  credential handling.
 
 - [ ] **Windows MSI installer** — extend `scripts/Publish.ps1` to generate an MSI
   through Velopack's WiX integration (`vpk pack --msi`) alongside the existing
@@ -75,8 +73,8 @@
   This requires a separate renderer and accuracy checks; the current optional graphics
   smoothing only interpolates the original pixels and does not reconstruct lyrics.
 
-- [ ] **Preview before processing** — show selected source groups, planned outputs,
-  existing-file conflicts and originals scheduled for deletion before starting work.
-  The current results window is an after-run report, not a preview or dry run.
-  Tag Karaoke Files has its own editable metadata preview; this item concerns the
-  broader conversion and file-management workflow.
+- [ ] **Extend desktop processing previews** — show selected source groups,
+  planned outputs, existing-file conflicts and originals scheduled for deletion
+  for more conversion and file-management workflows. Build on the existing
+  [CLI dry runs](user/cli.md#recipes-previews-and-quarantine) and the desktop
+  previews for tagging and track grouping.
