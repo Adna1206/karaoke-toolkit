@@ -1,0 +1,659 @@
+{
+  "runtimeIdentifier": "win-x64",
+  "provider": "conda-forge",
+  "version": "9.0.2",
+  "packages": [
+    {
+      "name": "aom",
+      "version": "3.15.3",
+      "build": "pl5321h06fc181_0",
+      "license": "BSD-2-Clause",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/aom-3.15.3-pl5321h06fc181_0.conda",
+      "sha256": "302f726d93ad4c113a8f7b8d72b5d1bcf1ad3ff10950ee6161b99787025458da",
+      "files": [
+        {
+          "path": "Library/bin/aom.dll",
+          "sha256": "8c9dbaeb1f0b9ad951fab804cc40b0915ba502b6023bdd752f12b3f1e98505f0"
+        }
+      ]
+    },
+    {
+      "name": "bzip2",
+      "version": "1.0.8",
+      "build": "h0ad9c76_10",
+      "license": "bzip2-1.0.6",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/bzip2-1.0.8-h0ad9c76_10.conda",
+      "sha256": "04767466ee9227c9c57ab2c6503e0149177d34111c7418d2f420297acb1eb229",
+      "files": [
+        {
+          "path": "Library/bin/libbz2.dll",
+          "sha256": "7f3ddbb88b670d79ada028480067ccdf240601319128e40eec8dce1daf4a9238"
+        }
+      ]
+    },
+    {
+      "name": "cairo",
+      "version": "1.18.6",
+      "build": "h477c42c_0",
+      "license": "LGPL-2.1-only or MPL-1.1",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/cairo-1.18.6-h477c42c_0.conda",
+      "sha256": "af62a4e441719050878d050d242619f8256a891983515950f8fb877137868a45",
+      "files": [
+        {
+          "path": "Library/bin/cairo.dll",
+          "sha256": "4998f9ee2e525e1a3824e65d1dbc76621a81204f3dc3d324e16121c3e7e3cc44"
+        }
+      ]
+    },
+    {
+      "name": "ffmpeg",
+      "version": "9.0.2",
+      "build": "lgpl_h9d1ee69_608",
+      "license": "LGPL-2.1-or-later",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/ffmpeg-9.0.2-lgpl_h9d1ee69_608.conda",
+      "sha256": "76962013d16bc46a51a258ef59347d054639e07c184f12db2fe44981daa5243f",
+      "files": [
+        {
+          "path": "Library/bin/avcodec-63.dll",
+          "sha256": "1a7a602aac5987a247d93eac28cc2e39187e15cfccfd25d83cba411bc3824098"
+        },
+        {
+          "path": "Library/bin/avdevice-63.dll",
+          "sha256": "712604a453ccd03fbfd88df99b6d1dad639b054f01ac126e7b3f1d4d785cbf22"
+        },
+        {
+          "path": "Library/bin/avfilter-12.dll",
+          "sha256": "a44d25ad0074b391b0514142e040be852916185331efba4bf49c5b27ef097884"
+        },
+        {
+          "path": "Library/bin/avformat-63.dll",
+          "sha256": "e882e91080b1305900ebc389e3d418b097c5ee037c3833318f73651c080e2d10"
+        },
+        {
+          "path": "Library/bin/avutil-61.dll",
+          "sha256": "1414cbcf0cef6b890c9ada0d9568a730eda461d1f8044c5d1872ce8c3d671341"
+        },
+        {
+          "path": "Library/bin/ffmpeg.exe",
+          "sha256": "9d42f2977d34924e2f3b12b73d401a7bde3747b297c072fc180e03f37cbb2a3f"
+        },
+        {
+          "path": "Library/bin/ffprobe.exe",
+          "sha256": "72ac384ab17226424e85563b2fe407146b1ef682ef89b1e6a63ab77fcfb16403"
+        },
+        {
+          "path": "Library/bin/swresample-7.dll",
+          "sha256": "1ffb1625fbde17a84bb7ada5332956f207646b737d9544fd007ddc77744bd84b"
+        },
+        {
+          "path": "Library/bin/swscale-10.dll",
+          "sha256": "ba267cee7fb27370d05b5bb3f36731746499d38a7b87041ba1911e722870f7d9"
+        }
+      ]
+    },
+    {
+      "name": "fontconfig",
+      "version": "2.18.3",
+      "build": "hd47e2ca_2",
+      "license": "MIT",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/fontconfig-2.18.3-hd47e2ca_2.conda",
+      "sha256": "27bdb90f2d70d2068bd3c2e98a3ac6010fd70ed52797a581a842d374929487ba",
+      "files": [
+        {
+          "path": "Library/bin/fontconfig-1.dll",
+          "sha256": "3a6614f1dc73bacdeecd5d5f3de814c49d758bade28eb5cd6837ec7ff663b159"
+        }
+      ]
+    },
+    {
+      "name": "fribidi",
+      "version": "1.0.18",
+      "build": "hfd05255_0",
+      "license": "LGPL-2.1-or-later",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/fribidi-1.0.18-hfd05255_0.conda",
+      "sha256": "beb4dad871f0e1fcfb088698ec08898bca9f4b0b385053aafafe4eee352654b5",
+      "files": [
+        {
+          "path": "Library/bin/fribidi-0.dll",
+          "sha256": "97b32cb28a6c6b4322bbda2de308ba122339dc3859adbbdc36361d16b4cf2cf2"
+        }
+      ]
+    },
+    {
+      "name": "gdk-pixbuf",
+      "version": "2.44.8",
+      "build": "h1f5b9c4_2",
+      "license": "LGPL-2.1-or-later",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/gdk-pixbuf-2.44.8-h1f5b9c4_2.conda",
+      "sha256": "c97af0d751d2afb09b1728946dd9ded817ab8a3805da6ac2c0bc55c9894cd2d5",
+      "files": [
+        {
+          "path": "Library/bin/gdk_pixbuf-2.0-0.dll",
+          "sha256": "e4cbc3490e37862cebd8ab37bfd4bc3b17a3e2fb2c1d873ebb68aad1bb50636c"
+        }
+      ]
+    },
+    {
+      "name": "graphite2",
+      "version": "1.3.15",
+      "build": "h5112557_1",
+      "license": "LGPL-2.0-or-later",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/graphite2-1.3.15-h5112557_1.conda",
+      "sha256": "93a59bdf944fb6f947bd7ad2f293d5d80db3a90f8ff8dfabc591e3752141e46f",
+      "files": [
+        {
+          "path": "Library/bin/graphite2.dll",
+          "sha256": "e477faad350b1641f08d4d20acd92dc5568a9b8edb34400d5fe436d3bf26b044"
+        }
+      ]
+    },
+    {
+      "name": "icu",
+      "version": "78.3",
+      "build": "h5112557_2",
+      "license": "MIT",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/icu-78.3-h5112557_2.conda",
+      "sha256": "75c549b55b673e15de8785a8e5dd85bca7eb612eee0ff4dc8d7bdaa15eacbdbb",
+      "files": [
+        {
+          "path": "Library/bin/icudt78.dll",
+          "sha256": "18dd8e1881c5d378de868f8f2c2309d95d3f6757ef40868b76657e7a1f061a51"
+        },
+        {
+          "path": "Library/bin/icuuc78.dll",
+          "sha256": "af525f3cb120014ded7c1b5c346ea00a5a488dee5d17b18e0172b6421e730737"
+        }
+      ]
+    },
+    {
+      "name": "lame",
+      "version": "4.0",
+      "build": "h0c5f640_1",
+      "license": "LGPL-2.0-only",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/lame-4.0-h0c5f640_1.conda",
+      "sha256": "c1df9067381c938f819639a3c1b151a28bd1880c044951b5e14785a89fd91cf5",
+      "files": [
+        {
+          "path": "Library/bin/libmp3lame.dll",
+          "sha256": "d40fe15c80165169ae4e7b7ba6af7a88ad4f68ce5da98daadc6c08c950cb62dd"
+        }
+      ]
+    },
+    {
+      "name": "libbrotlicommon",
+      "version": "1.2.1",
+      "build": "hf02afa3_0",
+      "license": "MIT",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/libbrotlicommon-1.2.1-hf02afa3_0.conda",
+      "sha256": "dc2d23fff23a10ee424e946314344c35c9a222eddca93eb53fc6b897d37f6d03",
+      "files": [
+        {
+          "path": "Library/bin/brotlicommon.dll",
+          "sha256": "fceb6655fc49c5196eb35196223dc776ebadcf739d31f11599e276050da301f3"
+        }
+      ]
+    },
+    {
+      "name": "libbrotlidec",
+      "version": "1.2.1",
+      "build": "h84f9c24_0",
+      "license": "MIT",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/libbrotlidec-1.2.1-h84f9c24_0.conda",
+      "sha256": "9b0c2c98dd0d054c1b3f4583645d1b867b575daeb28d807f36da3d9c6867bf4f",
+      "files": [
+        {
+          "path": "Library/bin/brotlidec.dll",
+          "sha256": "c55bc6e9bc80e1e226c16469e06c0b7edd20f881d3960faa5c0d02a92a5f3d6d"
+        }
+      ]
+    },
+    {
+      "name": "libbrotlienc",
+      "version": "1.2.1",
+      "build": "he2a975b_0",
+      "license": "MIT",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/libbrotlienc-1.2.1-he2a975b_0.conda",
+      "sha256": "bf61cccd9f825ca405241ded17806181e02fb383a5a295e6d38ac8fd5774b80d",
+      "files": [
+        {
+          "path": "Library/bin/brotlienc.dll",
+          "sha256": "6637988f39af61e9ee82cafd24e344cc077973df9ad0dd3765379fe9342f940e"
+        }
+      ]
+    },
+    {
+      "name": "libdav1d7",
+      "version": "1.5.4",
+      "build": "h6a83c73_4",
+      "license": "BSD-2-Clause",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/libdav1d7-1.5.4-h6a83c73_4.conda",
+      "sha256": "8c4514f16f22eabec86afaf737285efded4b09633e0e4fb50d58e51830b3471e",
+      "files": [
+        {
+          "path": "Library/bin/dav1d.dll",
+          "sha256": "d54f5ce3f48cce2f7ed340e16bbaacc48601ac4a7d41a1410d35a0da1049b362"
+        }
+      ]
+    },
+    {
+      "name": "libexpat",
+      "version": "2.9.0",
+      "build": "hac47afa_0",
+      "license": "MIT",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/libexpat-2.9.0-hac47afa_0.conda",
+      "sha256": "d4a8e5aac8999a90cd71aa6f9f5c40d8594ed2b89cd7f898f997767ecc6cd52d",
+      "files": [
+        {
+          "path": "Library/bin/libexpat.dll",
+          "sha256": "05997b58cea2c628e97590120338957d2178a34dac3086f49211f70640ba1c44"
+        }
+      ]
+    },
+    {
+      "name": "libffi",
+      "version": "3.7.0",
+      "build": "h3d046cb_1",
+      "license": "MIT",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/libffi-3.7.0-h3d046cb_1.conda",
+      "sha256": "613e8077c5cca5df7fe84ade7d5050301bee3c6c4c450ffe61d34a349ab4f11c",
+      "files": [
+        {
+          "path": "Library/bin/ffi-8.dll",
+          "sha256": "922fe231d83f412d351e2560714e248d097aae0b44c8410fb1826411e2528e69"
+        }
+      ]
+    },
+    {
+      "name": "libfreetype6",
+      "version": "2.14.3",
+      "build": "hdbac1cb_2",
+      "license": "GPL-2.0-only OR FTL",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/libfreetype6-2.14.3-hdbac1cb_2.conda",
+      "sha256": "cbc650854003e434d4ff6c7b1a2667e38a4242ad8a391a1c5ff89721624065ce",
+      "files": [
+        {
+          "path": "Library/bin/freetype.dll",
+          "sha256": "7a7fb5cf51bfab4f6b640c1850fc6371e9650c111f20af08a20479186d9058b5"
+        }
+      ],
+      "noticePackage": {
+        "origin": "https://conda.anaconda.org/conda-forge/win-64/freetype-2.14.3-h57928b3_2.conda",
+        "sha256": "32f7dd8ffe62fd485e9e6570e871f5be45af74c84fde62241a2417046a373efd"
+      }
+    },
+    {
+      "name": "libglib",
+      "version": "2.90.1",
+      "build": "h8c856d3_3",
+      "license": "LGPL-2.1-or-later",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/libglib-2.90.1-h8c856d3_3.conda",
+      "sha256": "fc62a1106d8b72559bbb2bb68e56f3637869ee19ad934d058c24e7e3d5d08e23",
+      "files": [
+        {
+          "path": "Library/bin/gio-2.0-0.dll",
+          "sha256": "0390bd612cc7d1f35bc1dd24aacc620675ee7cd5aefd2b501f29afc501454b1f"
+        },
+        {
+          "path": "Library/bin/glib-2.0-0.dll",
+          "sha256": "c11457bf8257f4d9997735fb2040dbb982414f11570fe92a5ae41ad2b3095d52"
+        },
+        {
+          "path": "Library/bin/gmodule-2.0-0.dll",
+          "sha256": "bfae68cd2a81f2bcb7612d722a7975b3af2867026144c851792d854d2a24e44c"
+        },
+        {
+          "path": "Library/bin/gobject-2.0-0.dll",
+          "sha256": "8f1e787b7ff4c8f4eb1ecc12820243071db514deae7752c746d1b12f91777a36"
+        }
+      ]
+    },
+    {
+      "name": "libharfbuzz",
+      "version": "15.0.0",
+      "build": "h03b5201_0",
+      "license": "MIT",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/libharfbuzz-15.0.0-h03b5201_0.conda",
+      "sha256": "28c321e6e5dcea4ed9e8e3f4fccc1627fdc631ee26bde4623c10317c1b3e7eca",
+      "files": [
+        {
+          "path": "Library/bin/harfbuzz.dll",
+          "sha256": "3ae3a9f9f61f2652cfc2171952d5f6c9cf62ac8cdc2a066a81a51cb83338f638"
+        }
+      ]
+    },
+    {
+      "name": "libhwy",
+      "version": "1.4.0",
+      "build": "h2419aca_2",
+      "license": "Apache-2.0 OR BSD-3-Clause",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/libhwy-1.4.0-h2419aca_2.conda",
+      "sha256": "1025cfd41fde07c7b99020ac0e177bf20b2b95c9268b0d27a6b016677333ec36",
+      "files": [
+        {
+          "path": "Library/bin/hwy.dll",
+          "sha256": "cf5bcd889640143987bf9d57bb2764a806a3ee2cc2302e6fb37b5d73d1900617"
+        }
+      ]
+    },
+    {
+      "name": "libiconv",
+      "version": "1.18",
+      "build": "hc1393d2_3",
+      "license": "LGPL-2.1-only",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/libiconv-1.18-hc1393d2_3.conda",
+      "sha256": "35e04e3ddac7720fc7c550a1c9f998604299d6a7bd1f3ec9b2825d825061daa2",
+      "files": [
+        {
+          "path": "Library/bin/charset.dll",
+          "sha256": "4983c202d0424ad6e271741fb9453b7a833bb1697854bc37046db39618234f14"
+        },
+        {
+          "path": "Library/bin/iconv.dll",
+          "sha256": "4fe67a10b7455892ac546d79bc0b2ab2e3483135495255ea2c31d2c794c28e38"
+        }
+      ]
+    },
+    {
+      "name": "libintl",
+      "version": "0.22.5",
+      "build": "h5728263_4",
+      "license": "LGPL-2.1-or-later",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/libintl-0.22.5-h5728263_4.conda",
+      "sha256": "85b50be2209f3b8a873830ec9894477d260f4c7ba9540e65959f5812bf7219f8",
+      "files": [
+        {
+          "path": "Library/bin/intl-8.dll",
+          "sha256": "19b198c14e5d54f3dd7b966f09458cc31566d9f2406c64ffc13b4386ce92ee6e"
+        }
+      ]
+    },
+    {
+      "name": "libjpeg-turbo",
+      "version": "3.2.1",
+      "build": "hfd05255_0",
+      "license": "IJG AND BSD-3-Clause AND Zlib",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/libjpeg-turbo-3.2.1-hfd05255_0.conda",
+      "sha256": "195be7b2ff1eeff02b31cf366437a38d84560c2f6c4facd56b2969024f50957f",
+      "files": [
+        {
+          "path": "Library/bin/jpeg8.dll",
+          "sha256": "0a5c1178b599856420b9afe3d9eb53e43ba83031123f3b72700d925023a752d5"
+        }
+      ]
+    },
+    {
+      "name": "libjxl",
+      "version": "0.13.0",
+      "build": "h932607e_0",
+      "license": "BSD-3-Clause",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/libjxl-0.13.0-h932607e_0.conda",
+      "sha256": "70ab2aa13da58f8071708b8c277066f7f11cb23c7478e0a9846e140176bdfc20",
+      "files": [
+        {
+          "path": "Library/bin/jxl_cms.dll",
+          "sha256": "3c5bde6a0515c0232bb8b09634ecbd4f54a1ce8adee7e046d41d4156b487c3be"
+        },
+        {
+          "path": "Library/bin/jxl_threads.dll",
+          "sha256": "c34680a60a6c81da7ebf339cf2658ef4065a5a70b9e58b74e5e34f719cf71537"
+        },
+        {
+          "path": "Library/bin/jxl.dll",
+          "sha256": "70b29397a93644264ab07561a455344716dd1179bb673d029acfd3dd430940e5"
+        }
+      ]
+    },
+    {
+      "name": "liblzma",
+      "version": "5.8.3",
+      "build": "hfd05255_1",
+      "license": "0BSD",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/liblzma-5.8.3-hfd05255_1.conda",
+      "sha256": "d36c4a1e1f80fd08e18a407e03622ff2f34dfdd022da6488ad19603dea19e6d5",
+      "files": [
+        {
+          "path": "Library/bin/liblzma.dll",
+          "sha256": "8439ed3564a8dbbf6355e29c92e88fdf1f6dee096504149fc051104155c868a9"
+        }
+      ]
+    },
+    {
+      "name": "libogg",
+      "version": "1.3.5",
+      "build": "h2466b09_1",
+      "license": "BSD-3-Clause",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/libogg-1.3.5-h2466b09_1.conda",
+      "sha256": "c63e5fb169dbd192aacdcee6e37235407f106b8ca9c9036942a25e0366cbc73c",
+      "files": [
+        {
+          "path": "Library/bin/ogg.dll",
+          "sha256": "3aca5530e09d7f13886f84e28a5c783fab9ff44a1ce3f05846fb561e67d59e2c"
+        }
+      ]
+    },
+    {
+      "name": "libopus",
+      "version": "1.6.1",
+      "build": "h6a83c73_1",
+      "license": "BSD-3-Clause",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/libopus-1.6.1-h6a83c73_1.conda",
+      "sha256": "0ca8a5f9c6505344d3c57068b50d2cfffe497e3ce1aa697deb46d8ab502d3cfa",
+      "files": [
+        {
+          "path": "Library/bin/opus.dll",
+          "sha256": "39b603e3d9594748f9d08ebd3f5b5afb2b4976181f9162497487aafa26d54805"
+        }
+      ]
+    },
+    {
+      "name": "libpango",
+      "version": "1.58.2",
+      "build": "h02b4fad_3",
+      "license": "LGPL-2.1-or-later",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/libpango-1.58.2-h02b4fad_3.conda",
+      "sha256": "ebd53d4f4f7887f0c613952610f3a9e2040f4f323570d4e3bc5b51d298c0c23e",
+      "files": [
+        {
+          "path": "Library/bin/pango-1.0-0.dll",
+          "sha256": "636e35ea18329d88afd7c32699abcbb541b61f32577b18b666b7a8ace2038342"
+        },
+        {
+          "path": "Library/bin/pangocairo-1.0-0.dll",
+          "sha256": "22a55c1ae6bac67f74f1949e8957f189b88f569ee61f198a64d2f4f556fc72fd"
+        },
+        {
+          "path": "Library/bin/pangoft2-1.0-0.dll",
+          "sha256": "6c54d701b131949a086e2292a1d23cc5656d21ab0ca4d81b25a264301e119a67"
+        },
+        {
+          "path": "Library/bin/pangowin32-1.0-0.dll",
+          "sha256": "cd2b27ad04c98804f6e1f20d1c38a3052adcb45b074755c7044d2dde4b47d508"
+        }
+      ]
+    },
+    {
+      "name": "libpng",
+      "version": "1.6.59",
+      "build": "hdc8cecf_0",
+      "license": "zlib-acknowledgement",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/libpng-1.6.59-hdc8cecf_0.conda",
+      "sha256": "36050852deae6edc98d7b71489b8d07254e2753c69bd524bf5784927cd1f0b2c",
+      "files": [
+        {
+          "path": "Library/bin/libpng16.dll",
+          "sha256": "d4547a7b9f58e4525be0e8b16cb688e16f314ad8e199456c7217dc8835ad4152"
+        }
+      ]
+    },
+    {
+      "name": "librsvg",
+      "version": "2.62.4",
+      "build": "h5506a08_0",
+      "license": "LGPL-2.1-or-later",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/librsvg-2.62.4-h5506a08_0.conda",
+      "sha256": "ba329e4bd97afd261a44933b599450bead02e519e8ec280a98aae438816fb7f9",
+      "files": [
+        {
+          "path": "Library/bin/rsvg-2-2.dll",
+          "sha256": "ccd83573c3973b64ab37ac9a5e62ddd05bfadc2da28d828546dee5ed957a54c3"
+        }
+      ]
+    },
+    {
+      "name": "libvorbis",
+      "version": "1.3.7",
+      "build": "h5112557_2",
+      "license": "BSD-3-Clause",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/libvorbis-1.3.7-h5112557_2.conda",
+      "sha256": "429124709c73b2e8fae5570bdc6b42f5418a7551ba72e591bb960b752e87b365",
+      "files": [
+        {
+          "path": "Library/bin/vorbis.dll",
+          "sha256": "533290a9452514c3b5220473c8d39e321882aa0cfde5ba21e04a7c772316d59e"
+        }
+      ]
+    },
+    {
+      "name": "libwebp-base",
+      "version": "1.6.0",
+      "build": "h4d5522a_1",
+      "license": "BSD-3-Clause",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/libwebp-base-1.6.0-h4d5522a_1.conda",
+      "sha256": "4470d98d3178b0d45492eed4808afe421d2e7808352b8d06c2dc29166b75d94d",
+      "files": [
+        {
+          "path": "Library/bin/libsharpyuv.dll",
+          "sha256": "09e089c9ad5da983f04e98ccc8f41de1750b0a351370a4d42b9080c3e68eac50"
+        },
+        {
+          "path": "Library/bin/libwebp.dll",
+          "sha256": "9e13857e99f7fa275aa7870393322d3d54dc55d0a9293098f60f199ae070d235"
+        },
+        {
+          "path": "Library/bin/libwebpmux.dll",
+          "sha256": "dfa99a3245a78c0ea006907a52705aa07413200c38a190a6ad6e3839455705f3"
+        }
+      ]
+    },
+    {
+      "name": "libxml2-16",
+      "version": "2.15.4",
+      "build": "h3cfd58e_1",
+      "license": "MIT",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/libxml2-16-2.15.4-h3cfd58e_1.conda",
+      "sha256": "819c4edd7b7bcfa9461aeccb56c0a7e9fa7c251163333e64222c142499822958",
+      "files": [
+        {
+          "path": "Library/bin/libxml2.dll",
+          "sha256": "5955b2406eb7c3510a74dd794550a740b0d61e89f7159c102b59d3d58fa10ed5"
+        }
+      ]
+    },
+    {
+      "name": "libzlib",
+      "version": "1.3.2",
+      "build": "hfd05255_3",
+      "license": "Zlib",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/libzlib-1.3.2-hfd05255_3.conda",
+      "sha256": "0629c2cc0404d3bb29d6baa7b4ba62da80797015e86de050db81ea5a07050527",
+      "files": [
+        {
+          "path": "Library/bin/zlib.dll",
+          "sha256": "f4f26ea6300c8449daad4650915e01ac80aafc6ca8b73a50be450f1fb66cdd63"
+        }
+      ]
+    },
+    {
+      "name": "mpg123",
+      "version": "1.33.7",
+      "build": "ha58212f_1",
+      "license": "LGPL-2.1-only",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/mpg123-1.33.7-ha58212f_1.conda",
+      "sha256": "c8a4c4580179383855c826b57720ecd10b4f526f19a7da63645cef50769069ba",
+      "files": [
+        {
+          "path": "Library/bin/mpg123.dll",
+          "sha256": "ff884231a35bb884372746ff5b72a263378e5eac5155b595d0d685be8ec5d0c0"
+        }
+      ]
+    },
+    {
+      "name": "openh264",
+      "version": "2.7.0",
+      "build": "h1eab103_0",
+      "license": "BSD-2-Clause",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/openh264-2.7.0-h1eab103_0.conda",
+      "sha256": "02ff6d4dc7aa89f1a23e8cd0699f01074e4383ef5ebcaa20f430cb8dc888e82d",
+      "files": [
+        {
+          "path": "Library/bin/openh264-8.dll",
+          "sha256": "eb16ef5bfd7cebf0b51a1880bd1994f8bd6bbb4e6e9ad7bd91ba488a463d7347"
+        }
+      ]
+    },
+    {
+      "name": "openssl",
+      "version": "3.6.5",
+      "build": "hf411b9b_0",
+      "license": "Apache-2.0",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/openssl-3.6.5-hf411b9b_0.conda",
+      "sha256": "bc44625e0c6d83f3e02b5f6adc01e0e3ca7001d3d94e24959591a57f5a011b9a",
+      "files": [
+        {
+          "path": "Library/bin/libcrypto-3-x64.dll",
+          "sha256": "7ff26fb03c914b87e22f55c6abed6eda0bfbfc628f9c1f1fde67993ddf1f8d47"
+        },
+        {
+          "path": "Library/bin/libssl-3-x64.dll",
+          "sha256": "a1b3fd1f6eb95812e4fc3c68106f8ebec6b3f9dad9ff873ce4eebe20582b6f4f"
+        }
+      ]
+    },
+    {
+      "name": "pcre2",
+      "version": "10.49",
+      "build": "h8466c1e_0",
+      "license": "BSD-3-Clause",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/pcre2-10.49-h8466c1e_0.conda",
+      "sha256": "78f6df5c499f668989dc8967c6ab24af3e2529d0bf53ce983c7a8d713c39239f",
+      "files": [
+        {
+          "path": "Library/bin/pcre2-8.dll",
+          "sha256": "8c951f2bd00f5f439bc8757455938d842e97931ff09280d6792834dcb9051bdb"
+        }
+      ]
+    },
+    {
+      "name": "pixman",
+      "version": "0.46.4",
+      "build": "h5112557_3",
+      "license": "MIT",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/pixman-0.46.4-h5112557_3.conda",
+      "sha256": "cad8b94c2b00264a15d469eed6dc53aac1c59c6d46f27ad1d91bfaf227cf136a",
+      "files": [
+        {
+          "path": "Library/bin/pixman-1-0.dll",
+          "sha256": "8bd9175343f28fd439bac2fd4fb6859d9b98ac0f1571717aad0fd01b4c125fa3"
+        }
+      ]
+    },
+    {
+      "name": "svt-av1",
+      "version": "4.3.0",
+      "build": "hac47afa_0",
+      "license": "BSD-2-Clause",
+      "origin": "https://conda.anaconda.org/conda-forge/win-64/svt-av1-4.3.0-hac47afa_0.conda",
+      "sha256": "a5575c389ee81a33401dbc359087a8a527adc11225488d2a8b811a1cfe0869a1",
+      "files": [
+        {
+          "path": "Library/bin/SvtAv1Enc.dll",
+          "sha256": "250e82a4e8820c7cb3fb8816ba5bd7988aa45934d4f4c6732a7a3a34dd1e8a7a"
+        }
+      ]
+    }
+  ],
+  "windowsPrerequisites": [
+    "Windows Universal CRT",
+    "Microsoft Visual C++ v14 x64 Redistributable"
+  ]
+}

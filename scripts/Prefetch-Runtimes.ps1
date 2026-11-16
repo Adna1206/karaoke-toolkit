@@ -12,9 +12,12 @@ $ffmpeg = Get-Content -LiteralPath (Join-Path $repo 'vendor/ffmpeg/manifest.json
 $cdrdao = Get-Content -LiteralPath (Join-Path $repo 'vendor/cdrdao/manifest.json') -Raw | ConvertFrom-Json
 foreach ($rid in ($RuntimeIdentifier | Select-Object -Unique)) {
     $platform = $ffmpeg.platforms.PSObject.Properties[$rid].Value
-    Get-PinnedRuntimeArchive $repo $platform.archive $platform.sha256 $platform.origin
-    if ($platform.probeArchive) {
-        Get-PinnedRuntimeArchive $repo $platform.probeArchive $platform.probeSha256 $platform.probeOrigin
+    $lock = Get-Content -LiteralPath (Join-Path $repo ('vendor/ffmpeg/' + $platform.condaLock)) -Raw | ConvertFrom-Json
+    foreach ($package in $lock.packages) {
+        foreach ($pin in (@($package, $package.noticePackage) + $package.noticeFiles) | Where-Object { $_ }) {
+            $uri = [uri]$pin.origin
+            Get-PinnedRuntimeArchive $repo ([IO.Path]::GetFileName($uri.AbsolutePath)) $pin.sha256 $uri
+        }
     }
     if ($rid -eq 'win-x64') {
         $reader = $cdrdao.platforms.PSObject.Properties[$rid].Value

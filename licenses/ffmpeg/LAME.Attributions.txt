@@ -1,9 +1,0 @@
-LAME MP3 encoder library (libmp3lame)
-https://lame.sourceforge.io/
-
-Copyrights (c) 1999-2011 by The LAME Project
-Copyrights (c) 1999,2000,2001 by Mark Taylor
-Copyrights (c) 1998 by Michael Cheng
-Copyrights (c) 1995,1996,1997 by Michael Hipp: mpglib
-
-See LAME.LGPLv2.txt for the upstream library licence.

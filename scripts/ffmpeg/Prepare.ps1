@@ -14,15 +14,18 @@ if (!$platform) {
 }
 . (Join-Path (Split-Path $PSScriptRoot -Parent) 'Get-PinnedRuntimeArchive.ps1')
 $platform = $platform.Value
-$archive = Get-PinnedRuntimeArchive $repo $platform.archive $platform.sha256 $platform.origin
-$paired = [bool]$platform.probeArchive
-$verifiedHash = $platform.sha256
-if ($paired) {
-    $probeArchive = Get-PinnedRuntimeArchive $repo $platform.probeArchive $platform.probeSha256 $platform.probeOrigin
-    $verifiedHash += ':' + $platform.probeSha256
+$lockPath = Join-Path $repo ('vendor/ffmpeg/' + $platform.condaLock)
+$condaLock = Get-Content -LiteralPath $lockPath -Raw | ConvertFrom-Json
+if ($condaLock.runtimeIdentifier -cne $RuntimeIdentifier -or $condaLock.provider -cne 'conda-forge' -or
+    $condaLock.version -cne $platform.version -or $condaLock.version -cnotmatch '^[0-9]+\.[0-9]+\.[0-9]+$' -or
+    !$condaLock.packages.Count) {
+    throw 'Invalid Conda runtime lock.'
 }
-
-$cache = Join-Path $repo ('artifacts/runtime/ffmpeg/' + $platform.version + '/' + $RuntimeIdentifier)
+$expander = Join-Path $PSScriptRoot 'Expand-CondaRuntime.ps1'
+$verifiedHash = (Get-Sha256 $lockPath) + ':' + (Get-Sha256 $expander)
+. $expander
+$cacheVersion = 'conda-' + $condaLock.version
+$cache = Join-Path $repo ('artifacts/runtime/ffmpeg/' + $cacheVersion + '/' + $RuntimeIdentifier)
 $mutex = New-Object System.Threading.Mutex($false, ('KaraokeToolkit-FFmpeg-' + $RuntimeIdentifier))
 $locked = $false
 try {
@@ -40,44 +43,8 @@ try {
         New-Item -ItemType Directory -Force -Path $cache | Out-Null
         $unpacked = Join-Path $cache ('unpacked-' + [guid]::NewGuid().ToString('N'))
         New-Item -ItemType Directory -Path $unpacked | Out-Null
-        if ($paired) {
-            Add-Type -AssemblyName System.IO.Compression.FileSystem
-            $distribution = Join-Path $unpacked 'distribution'
-            $bin = Join-Path $distribution 'bin'
-            New-Item -ItemType Directory -Path $bin | Out-Null
-            foreach ($pair in @(@($archive, 'ffmpeg'), @($probeArchive, 'ffprobe'))) {
-                $zip = [IO.Compression.ZipFile]::OpenRead($pair[0])
-                try {
-                    $entry = $zip.GetEntry($pair[1])
-                    if (!$entry) { throw "Vendored archive is missing $($pair[1]): $($pair[0])" }
-                    $inputStream = $entry.Open()
-                    $outputStream = [IO.File]::Create((Join-Path $bin $pair[1]))
-                    try { $inputStream.CopyTo($outputStream) }
-                    finally { $inputStream.Dispose(); $outputStream.Dispose() }
-                } finally { $zip.Dispose() }
-            }
-            if ($platform.binarySha256 -and (Get-Sha256 (Join-Path $bin 'ffmpeg')) -ne $platform.binarySha256) {
-                throw 'Vendored FFmpeg binary checksum mismatch.'
-            }
-            if ($platform.probeBinarySha256 -and (Get-Sha256 (Join-Path $bin 'ffprobe')) -ne $platform.probeBinarySha256) {
-                throw 'Vendored FFprobe binary checksum mismatch.'
-            }
-            $notice = Join-Path (Join-Path $repo ('vendor/ffmpeg/' + $RuntimeIdentifier)) 'LICENSE.txt'
-            if (!(Test-Path -LiteralPath $notice -PathType Leaf)) { throw "Vendored license notice is missing: $notice" }
-            Copy-Item -LiteralPath $notice -Destination $distribution
-            $gpl = Join-Path (Join-Path $repo ('vendor/ffmpeg/' + $RuntimeIdentifier)) $platform.licenseText
-            if (!(Test-Path -LiteralPath $gpl -PathType Leaf)) { throw "Vendored GPL license text is missing: $gpl" }
-            Copy-Item -LiteralPath $gpl -Destination $distribution
-        } elseif ($archive.EndsWith('.zip', [StringComparison]::OrdinalIgnoreCase)) {
-            Add-Type -AssemblyName System.IO.Compression.FileSystem
-            [IO.Compression.ZipFile]::ExtractToDirectory($archive, $unpacked)
-        } elseif ($archive.EndsWith('.tar.xz', [StringComparison]::OrdinalIgnoreCase) -or
-                  $archive.EndsWith('.tar.gz', [StringComparison]::OrdinalIgnoreCase)) {
-            & tar -xf $archive -C $unpacked
-            if ($LASTEXITCODE -ne 0) { throw 'FFmpeg archive extraction failed.' }
-        } else { throw "Unsupported FFmpeg archive format: $archive" }
-        if (!$paired) { $distribution = (Get-ChildItem -LiteralPath $unpacked -Directory | Select-Object -First 1).FullName }
-        if (!$distribution) { throw 'FFmpeg archive has no distribution directory.' }
+        $distribution = Join-Path $unpacked 'distribution'
+        Expand-CondaRuntime $repo $condaLock $distribution
         Set-Content -LiteralPath $distributionFile -Value $distribution
         Set-Content -LiteralPath $marker -Value $verifiedHash
     }
@@ -113,11 +80,9 @@ try {
     New-Item -ItemType Directory -Path $output | Out-Null
     # Keep the distribution layout, shared libraries and upstream notices intact.
     Get-ChildItem -LiteralPath $distribution | Copy-Item -Destination $output -Recurse -Force
-    Copy-Item -LiteralPath $manifestPath -Destination (Join-Path $output 'runtime-manifest.json')
-    if (!$paired) {
-        # LGPL v3 incorporates the GPL v3 terms; preserve both texts together.
-        Copy-Item -LiteralPath (Join-Path $repo 'licenses/FFmpeg.GPLv3.txt') -Destination (Join-Path $output 'COPYING.GPLv3')
-    }
+    Copy-Item -LiteralPath $lockPath -Destination (Join-Path $output 'runtime-manifest.json')
+    # LGPL v3 incorporates the GPL v3 terms.
+    Copy-Item -LiteralPath (Join-Path $repo 'licenses/FFmpeg.GPLv3.txt') -Destination (Join-Path $output 'COPYING.GPLv3')
     $licenseDirectory = Join-Path (Split-Path $output -Parent) 'licenses/ffmpeg'
     # Replace this generated component folder so renamed notices cannot linger.
     if (![IO.Path]::GetFullPath($licenseDirectory).StartsWith($repoRoot, $comparison)) { throw 'Unexpected FFmpeg notice directory.' }
@@ -142,13 +107,9 @@ try {
         }
         Copy-Item -LiteralPath $notice.FullName -Destination $destination -Force
     }
-    foreach ($name in $platform.libraryNotices) {
-        if ([IO.Path]::GetFileName($name) -ne $name) { throw "Unsafe FFmpeg notice filename: $name" }
-        $notice = Join-Path $repo ('licenses/ffmpeg/' + $name)
-        Copy-Item -LiteralPath $notice -Destination $licenseDirectory -Force
-    }
-    Copy-Item -LiteralPath $manifestPath -Destination (Join-Path $licenseDirectory 'runtime-manifest.json') -Force
-    if ($paired -and $env:OS -ne 'Windows_NT') {
+    Copy-Item -LiteralPath (Join-Path $output 'conda-notices') -Destination $licenseDirectory -Recurse
+    Copy-Item -LiteralPath $lockPath -Destination (Join-Path $licenseDirectory 'runtime-manifest.json')
+    if (!$suffix -and $env:OS -ne 'Windows_NT') {
         & chmod +x (Join-Path $output 'bin/ffmpeg') (Join-Path $output 'bin/ffprobe')
         if ($LASTEXITCODE -ne 0) { throw 'Could not set FFmpeg executable permissions.' }
     }

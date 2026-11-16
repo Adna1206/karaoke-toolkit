@@ -14,9 +14,11 @@ The default targets are Windows x64 and Linux x64. To package just one:
 ```
 
 Use Windows PowerShell 5.1 or PowerShell 7 on Windows. Linux hosts need PowerShell 7
-and the existing FFmpeg preparation prerequisites. The .NET 10 SDK is required.
-First-time NuGet/tool/runtime restores require network access. Native media tools
-come from the pinned vendor archives, not new downloads.
+and the FFmpeg preparation prerequisites, including Zstandard-capable tar. The
+.NET 10 SDK is required. Windows Setup declares the Visual C++ v14 x64
+redistributable as a prerequisite. Portable Windows builds need it installed.
+First-time NuGet/tool/runtime restores require network access. Build preparation
+fetches pinned native archives on a cache miss and verifies their checksums.
 
 ## What the script does
 
@@ -39,6 +41,7 @@ from a different platform or overwrite earlier packages:
 
 Windows produces a Setup EXE, portable ZIP, full update package and release metadata.
 Setup creates Desktop and Start menu shortcuts automatically.
+
 The Setup EXE has the evaluated app version appended before its extension, for
 example `KaraokeToolkit-win-Setup-2026.11.7.exe`. Checksums use the final filename.
 App, CLI and MCP outputs include `licenses/application/LICENSE` (GNU GPL v3)
@@ -56,13 +59,40 @@ not bundled in the Linux package. Velopack's Windows cross-packaging tool recogn
 ELF executables, giving bundled Linux binaries executable permissions in the AppImage.
 After downloading an AppImage on Linux, mark the outer file executable if necessary.
 
-The script does not install packages, upload releases, sign
-packages, change Explorer registrations or bump the app version. Packages are local
-unsigned build outputs. Signing, real install/upgrade/uninstall testing, Linux runtime
-testing and distribution/source obligations remain release-readiness work.
-See [distribution licensing](distribution-licensing.md) for the separate source
-assembly command and unresolved FFmpeg inputs. Its current output is incomplete
-source evidence, not a complete public-release source bundle.
+The script produces unsigned local packages. Installing, signing, uploading,
+changing Explorer registrations and bumping the app version are separate steps.
+
+## Sharing a Windows test build
+
+1. Commit the exact build inputs, tag the commit and build the installer from that
+   tag. On a clean Windows machine without the Visual C++ x64 runtime, verify
+   that Setup downloads and installs the prerequisite, Toolkit launches, and
+   a media conversion completes. Open **About → Third-party notices** and
+   confirm the OpenH264 entry displays its licence text.
+2. Review the Windows source inventory and generate the third-party source archive
+   with `scripts/Prepare-DistributionSources.ps1 -Archive`. See the
+   [distribution licensing record](distribution-licensing.md#remaining-ffmpeg-work)
+   for its scope and remaining verification.
+3. Attach Setup and the matching third-party source archive to the GitHub Release.
+   Link both the third-party archive and the exact Toolkit tag from the release
+   notes. GitHub supplies the tagged Toolkit source downloads automatically.
+   A private repository link works when every installer recipient can download
+   the matching source. A separate Toolkit source ZIP is optional when that
+   access is in place. [GPLv3 §6](https://www.gnu.org/licenses/gpl-3.0.html#section6)
+   · [GitHub release docs](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases)
+
+For the app's GitHub update check, also attach `releases.win.json` and the
+matching full `.nupkg` to the same published release. Attach the Linux channel's
+`releases.linux.json` and full package when publishing Linux. Keep the generated
+asset names. Published prereleases are visible to installed apps on the matching
+channel. With one architecture per operating system, each platform uses its
+default channel. If a release adds a second architecture for an OS, give each
+architecture a distinct channel and its own feed and full update package.
+The app checks without credentials, so the repository must be public
+for in-app checks to work. [Velopack GitHub publishing](https://docs.velopack.io/distributing/self-hosting)
+
+Keep Linux and macOS downloads out of a Windows-only test release until those
+targets have their own native runtime and source checks.
 
 ## Build versus publish
 

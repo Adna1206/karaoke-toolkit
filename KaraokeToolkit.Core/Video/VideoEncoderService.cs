@@ -19,7 +19,7 @@ internal static class VideoEncoderService
         string videoCodec = settings.VideoContainer == VideoContainer.AVI ? "mpeg4" : await ChooseH264Async(ffmpeg, token);
         string audioCodec = settings.VideoContainer == VideoContainer.AVI ? "libmp3lame" : "aac";
         int audioBitrate = await ResolveAudioBitrateKbpsAsync(audio, settings, options, token);
-        var sourceInfo = await FFProbe.AnalyseAsync(audio, options, token);
+        var sourceInfo = await MediaProbe.AnalyseAsync(audio, options, token);
         double audioSeconds = sourceInfo.Duration.TotalSeconds;
         if (!double.IsFinite(audioSeconds) || audioSeconds <= 0)
             throw new InvalidDataException("Input audio has no usable duration.");
@@ -47,7 +47,7 @@ internal static class VideoEncoderService
         token.ThrowIfCancellationRequested();
         if (!File.Exists(output) || new FileInfo(output).Length == 0)
             throw new InvalidDataException("FFmpeg produced no video. Check that the CDG contains renderable graphics packets.");
-        var info = await FFProbe.AnalyseAsync(output, options, token);
+        var info = await MediaProbe.AnalyseAsync(output, options, token);
         if (info.PrimaryVideoStream == null || info.PrimaryAudioStream == null || info.Duration <= TimeSpan.Zero)
             throw new InvalidDataException("Video output is missing graphics or audio.");
     }
@@ -57,7 +57,7 @@ internal static class VideoEncoderService
         FFOptions options, CancellationToken token)
     {
         if (!settings.VideoAudioMatchSourceBitrate) return settings.VideoAudioBitrateKbps;
-        var info = await FFProbe.AnalyseAsync(audio, options, token);
+        var info = await MediaProbe.AnalyseAsync(audio, options, token);
         var stream = info.PrimaryAudioStream;
         if (stream == null) throw new InvalidDataException("Input has no audio stream.");
         double source = Convert.ToDouble(stream.BitRate, System.Globalization.CultureInfo.InvariantCulture) / 1000;

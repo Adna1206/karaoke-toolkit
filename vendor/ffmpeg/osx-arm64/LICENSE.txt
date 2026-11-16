@@ -1,9 +1,0 @@
-FFmpeg and FFprobe 9.0.2 for macOS Apple Silicon, built by Martin Riedl.
-This build enables GPL code and version 3 licensing. See COPYING.GPLv3.
-
-Source release: https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz
-Build script repository: https://git.martin-riedl.de/ffmpeg/build-script
-Build configuration and dependency versions: https://ffmpeg.martin-riedl.de/download/macos/arm64/1789931890_9.0.2/versions.txt
-
-The exact build-script revision, external-library sources and complete notices
-still need to be verified before public redistribution.

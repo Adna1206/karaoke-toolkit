@@ -10,6 +10,10 @@ BUILD counts releases within the month, not local compilations. For example:
 Before releasing, update the single `<Version>` value and rebuild/publish. Nothing
 automatically increments it. Keep BUILD below 65535 for Windows version metadata.
 
+Tag the exact release commit with a `v` prefix, such as `v2026.11.17`, and
+publish packages from that commit. Mark beta builds as GitHub prereleases.
+See [publishing](publishing.md#sharing-a-windows-test-build) for release assets.
+
 When bumping the version for a release, add `docs/changelogs/<version>.md` and
 link it at the top of the [changelog index](../changelogs/README.md). Summarize the
 changes users will notice and include any required upgrade steps.

@@ -275,7 +275,7 @@ public partial class MainWindow : Window
         }
         catch (Exception error)
         {
-            System.Diagnostics.Trace.TraceWarning("Velopack Flow update check failed: {0}", error);
+            System.Diagnostics.Trace.TraceWarning("GitHub Releases update check failed: {0}", error);
             if (!manual) return;
             message = "Could not check for updates. Try again later.";
         }

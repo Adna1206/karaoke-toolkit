@@ -6,6 +6,21 @@ namespace KaraokeToolkit.Tests.App.About;
 public class AboutViewModelTests
 {
     [Fact]
+    public void ShowsOpenH264LicenceFromBundledFfmpegNotices()
+    {
+        string folder = TestMediaFixture.NewFolder();
+        string notices = Directory.CreateDirectory(
+            Path.Combine(folder, "licenses", "ffmpeg", "conda-notices", "openh264")).FullName;
+        const string noticeText = "Copyright (c) 2013, Cisco Systems";
+        File.WriteAllText(Path.Combine(notices, "openh264.LICENSE.txt"), noticeText);
+
+        var model = new AboutViewModel(folder);
+
+        Assert.Equal("FFmpeg · OpenH264 · BSD-2-Clause", Assert.Single(model.Notices).Name);
+        Assert.Equal(noticeText, model.NoticeText);
+    }
+
+    [Fact]
     public void ShowsOnlyCanonicalLicenseTextsWithoutLoadingBinaries()
     {
         string folder = TestMediaFixture.NewFolder();

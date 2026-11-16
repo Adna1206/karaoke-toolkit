@@ -51,7 +51,6 @@ try {
     $runId = (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 6)
     $stagingRun = Join-Path $repo "artifacts/publish/$version/$runId"
     $releaseRoot = Join-Path $repo "artifacts/releases/$version/$runId"
-    $ffmpegManifest = Get-Content -LiteralPath (Join-Path $repo 'vendor/ffmpeg/manifest.json') -Raw | ConvertFrom-Json
     foreach ($rid in ($RuntimeIdentifier | Select-Object -Unique)) {
         $publish = Join-Path $stagingRun $rid
         $packages = Join-Path $releaseRoot $rid
@@ -83,9 +82,15 @@ try {
             'licenses/README.md', 'licenses/Velopack.txt', 'licenses/TagLibSharp.txt')) {
             if (!(Test-Path -LiteralPath (Join-Path $publish $file) -PathType Leaf)) { throw "Published $rid build is missing $file" }
         }
-        foreach ($notice in $ffmpegManifest.platforms.$rid.libraryNotices) {
-            if (!(Test-Path -LiteralPath (Join-Path $publish ('licenses/ffmpeg/' + $notice)) -PathType Leaf)) {
-                throw "Published $rid build is missing FFmpeg notice: $notice"
+        $ffmpegLock = Get-Content -LiteralPath (Join-Path $publish 'ffmpeg/runtime-manifest.json') -Raw | ConvertFrom-Json
+        if ($ffmpegLock.runtimeIdentifier -cne $rid -or !$ffmpegLock.packages.Count) {
+            throw "Published $rid build has an invalid FFmpeg runtime lock."
+        }
+        foreach ($package in $ffmpegLock.packages) {
+            $notices = Join-Path $publish ('licenses/ffmpeg/conda-notices/' + $package.name)
+            if (!(Test-Path -LiteralPath $notices -PathType Container) -or
+                !(Get-ChildItem -LiteralPath $notices -File)) {
+                throw "Published $rid build is missing FFmpeg notices for $($package.name)."
             }
         }
         if ($isWindowsTarget -and !(Test-Path -LiteralPath (Join-Path $publish 'cdrdao/cdrdao.exe') -PathType Leaf)) {
@@ -105,7 +110,7 @@ try {
             '--packVersion', $version, '--packDir', $publish, '--mainExe', $mainExe,
             '--packTitle', $product, '--packAuthors', 'ADNA', '--runtime', $rid,
             '--icon', $icon, '--outputDir', $packages)
-        if ($isWindowsTarget) { $packArguments += @('--shortcuts', 'Desktop,StartMenuRoot') }
+        if ($isWindowsTarget) { $packArguments += @('--shortcuts', 'Desktop,StartMenuRoot', '--framework', 'vcredist143-x64') }
         else { $packArguments += @('--categories', 'AudioVideo') }
         Invoke-DotNet $packArguments
         $expectedPattern = if ($isWindowsTarget) { '*-Setup.exe' } else { '*.AppImage' }

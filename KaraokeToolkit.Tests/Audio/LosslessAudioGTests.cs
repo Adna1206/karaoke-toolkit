@@ -33,7 +33,7 @@ public class LosslessAudioGTests
         model.SetInputs([folder]);
         await model.StartCommand.ExecuteAsync(null);
         Assert.Equal("Succeeded", Assert.Single(model.LastReport!.Entries).Status);
-        var info = await FFProbe.AnalyseAsync(Path.Combine(folder, "song.mp3"), FFmpegRuntime.Options(folder));
+        var info = await MediaProbe.AnalyseAsync(Path.Combine(folder, "song.mp3"), FFmpegRuntime.Options(folder));
         Assert.Equal(192000, info.PrimaryAudioStream?.BitRate);
     }
 
@@ -64,7 +64,7 @@ public class LosslessAudioGTests
         Assert.Equal(graphics, File.ReadAllBytes(cdg));
         string mp3 = Path.Combine(folder, "song.mp3");
         Assert.True(new FileInfo(mp3).Length > 0);
-        var info = await FFProbe.AnalyseAsync(mp3, FFmpegRuntime.Options(folder));
+        var info = await MediaProbe.AnalyseAsync(mp3, FFmpegRuntime.Options(folder));
         Assert.Equal("mp3", info.PrimaryAudioStream?.CodecName);
         Assert.Empty(Directory.GetDirectories(folder, ".karaoke-job-*"));
     }
@@ -88,7 +88,7 @@ public class LosslessAudioGTests
 
         var result = await Service().RunAsync(new(Action.LosslessGToMp3G, folder, Options(delete: true)));
         Assert.True(result.Succeeded == 1, string.Join("; ", result.Files.Select(f => f.Message)));
-        var info = await FFProbe.AnalyseAsync(Path.Combine(folder, "song.mp3"), FFmpegRuntime.Options(folder));
+        var info = await MediaProbe.AnalyseAsync(Path.Combine(folder, "song.mp3"), FFmpegRuntime.Options(folder));
         Assert.Equal(44100, info.PrimaryAudioStream?.SampleRateHz);
         Assert.Equal(graphics, File.ReadAllBytes(cdg));
         Assert.False(File.Exists(input));

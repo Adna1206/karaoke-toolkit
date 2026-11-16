@@ -1,5 +1,9 @@
 # Planned features
 
+- [ ] **Enable private vulnerability reporting after going public** — enable
+  GitHub private vulnerability reporting, verify the reporter-facing button,
+  and add the verified route to [SECURITY.md](SECURITY.md).
+
 - [ ] **FFMpegCore migration** — upgrade the .NET wrapper from 5.5.0 to 6.0.0.
   Update FFprobe calls and FFmpeg process handling for the new APIs. Test audio
   conversion, MP4 encoding, cancellation and cleanup of partial output.

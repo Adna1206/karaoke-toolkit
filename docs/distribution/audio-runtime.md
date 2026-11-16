@@ -9,49 +9,41 @@ Tests assert deterministic PCM, graphics, duration and timing expectations.
 
 ## Runtime preparation
 
-Directory.Build.targets runs native runtime preparation for the selected .NET
-Runtime Identifier. On a cache miss it downloads the exact archive or archive
-pair pinned in the vendor manifests and verifies SHA-256 before extraction.
-Downloads are cached in `artifacts/runtime/downloads/<sha256>/`. The extracted
-FFmpeg distribution goes into the output's `ffmpeg/` directory. Windows
-preparation also fetches cdrdao and its release source. A warm cache supports
-offline preparation. The application does not fetch binaries at startup.
+Directory.Build.targets prepares the native runtime for the selected .NET
+Runtime Identifier. Windows x64, Linux x64 and Apple Silicon use Conda-forge
+FFmpeg 9.0.2 LGPL builds. The [per-target locks](../../vendor/versions.md#ffmpeg)
+pin each package and shipped file by SHA-256. Cold builds fetch the archives into
+`artifacts/runtime/downloads/<sha256>/` and extract the pinned FFmpeg, FFprobe,
+shared libraries and notices to the build output. Preparation requires tar with
+Zstandard support (GNU tar requires the `zstd` executable). Build hosts on Linux
+and macOS also require PowerShell 7. The application starts with the bundled
+runtime and does not download anything at startup.
 
 Use `./scripts/Prefetch-Runtimes.ps1 -RuntimeIdentifier win-x64,linux-x64,osx-arm64`
-to warm individual target caches ahead of time. If an upstream build disappears,
-restore a copy with the exact expected SHA-256 to its cache path. Builds fail
-with the URL and digest when a pin cannot be fetched and verified.
+to warm the caches. If a pin disappears upstream, restore a copy with the expected
+SHA-256 to the corresponding cache directory.
 
-`win-x64` and `linux-x64` use pinned BtbN LGPL shared builds. The macOS target
-uses separate Martin Riedl FFmpeg/FFprobe ZIPs for Apple Silicon. They contain GPL code. The paired
-ZIPs are assembled into `bin/` with the applicable GPL text and provider notice.
-Linux/macOS build hosts need PowerShell 7 (`pwsh`); tar is needed for tar archives.
-Build preparation sets executable permissions on macOS when run there. Cross-
-publishing from Windows does not verify macOS execution or signing. Media tests
-use the native runtime for their build target.
+Windows Setup uses Velopack to download and install Microsoft's Visual C++ v14
+x64 redistributable when needed. That step requires internet access. Portable
+Windows builds and local tests need the runtime installed separately. Windows
+supplies the Universal CRT. Unix bundles retain the loader-relative `bin/` and
+`lib/` layout. Preparation works without a Conda installation or Conda install
+hooks. Cross-preparation verifies archives and layout. Run tests on each native
+target before distributing its binary package.
 
-`-p:SkipFFmpegPrepare=true` is for compilation-only checks; it does not produce a
-runnable package unless the runtime is already present.
+`-p:SkipFFmpegPrepare=true` supports compilation-only checks. The build output
+requires a prepared runtime to run media workflows.
 
 ## Licensing and distribution
 
-The pinned Windows and Linux FFmpeg builds are LGPL **version 3** (they enable
-version3, without GPL or nonfree components). Their `LICENSE.txt`, the GPL v3
-text incorporated by LGPL v3, and `runtime-manifest.json` are included in the
-FFmpeg output folder and copied to `licenses/ffmpeg/`, which About reads.
-The app also publishes common package notices from
-[`licenses/`](../../licenses/README.md). Each RID has its own version, hash and
-source metadata in the manifest.
+The FFmpeg binaries enable LGPL version 3. Per-package notices and the runtime
+lock ship in `ffmpeg/` and `licenses/ffmpeg/`. About reads the latter. The lock
+records the version, checksum, provenance and shipped files for each package.
 
-Before distributing a release, retain and provide the corresponding source and
-build information required by the licenses of FFmpeg and its bundled dependencies.
-A source-repository link alone is not a complete corresponding-source bundle.
-The preparation script preserves binary notices; it does not assemble that source
-bundle. See https://ffmpeg.org/legal.html for upstream guidance.
-
-The macOS builds are for local development until they have been run on their
-target architectures and their GPL corresponding-source obligations are met.
-See [distribution licensing](distribution-licensing.md) for the remaining macOS source and provenance checks.
+Before distributing a binary release, retain and provide the applicable
+corresponding source and build information. See the
+[source availability register](source-availability.md) and
+[distribution licensing record](distribution-licensing.md#remaining-ffmpeg-work).
 
 ## Behavior and tests
 

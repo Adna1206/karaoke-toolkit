@@ -23,7 +23,7 @@ internal static class LosslessAudioTranscoder
         using var stop = CancellationTokenSource.CreateLinkedTokenSource(token, timeout.Token);
         try
         {
-            var info = await FFProbe.AnalyseAsync(input, options, stop.Token, "-protocol_whitelist file,pipe");
+            var info = await MediaProbe.AnalyseAsync(input, options, stop.Token);
             var stream = info.PrimaryAudioStream ?? throw new InvalidDataException("Input contains no audio stream.");
             string codec = stream.CodecName.ToLowerInvariant();
             bool uncompressedPcm = codec.StartsWith("pcm_s", StringComparison.Ordinal) ||

@@ -39,15 +39,20 @@ public class KaraokeTaggingTests
         string folder = TestMediaFixture.NewFolder();
         TestMediaFixture.Seed(folder, Action.AudioGToBin, "keep");
         string path = Path.Combine(folder, "SF123-04 - Artist - Title" + extension);
-        if (extension == ".wav") File.Move(Path.Combine(folder, "song.wav"), path);
+        if (extension == ".webm")
+        {
+            File.Copy(Path.Combine(AppContext.BaseDirectory, "Support", "Fixtures", "abc-vp9-opus.webm"), path);
+            File.Delete(Path.Combine(folder, "song.wav"));
+        }
+        else if (extension == ".wav") File.Move(Path.Combine(folder, "song.wav"), path);
         else
         {
             var start = new ProcessStartInfo(Path.Combine(FFmpegRuntime.Options(folder).BinaryFolder, OperatingSystem.IsWindows() ? "ffmpeg.exe" : "ffmpeg"))
             { UseShellExecute = false, CreateNoWindow = true, RedirectStandardError = true };
             var arguments = new List<string> { "-nostdin", "-v", "error", "-i", Path.Combine(folder, "song.wav") };
-            if (extension is ".mp4" or ".mkv" or ".avi" or ".webm")
+            if (extension is ".mp4" or ".mkv" or ".avi")
             {
-                arguments.AddRange(["-f", "lavfi", "-i", "color=c=blue:s=160x120:r=10", "-shortest", "-c:v", extension == ".webm" ? "libvpx-vp9" : "mpeg4"]);
+                arguments.AddRange(["-f", "lavfi", "-i", "color=c=blue:s=160x120:r=10", "-shortest", "-c:v", "mpeg4"]);
             }
             if (extension == ".m4a") arguments.AddRange(["-c:a", "alac"]);
             arguments.Add(path);
@@ -78,6 +83,7 @@ public class KaraokeTaggingTests
     public async Task WritesFourTagsWithoutReencodingAndKeepsGraphics(string extension)
     {
         string path = await CreateMedia(extension), cdg = Path.ChangeExtension(path, ".cdg");
+        string? webmStreams = extension == ".webm" ? await ReadEncodedStreamHashes(path) : null;
         string graphicsHash = FileTransaction.Hash(cdg);
         string pcm = Path.Combine(TestMediaFixture.NewFolder(), "before.pcm");
         await AudioDecoderService.DecodeAsync(path, pcm, default, resampleForMp3G: true);
@@ -91,7 +97,28 @@ public class KaraokeTaggingTests
         await AudioDecoderService.DecodeAsync(path, Path.Combine(Path.GetDirectoryName(pcm)!, "after.pcm"), default, resampleForMp3G: true);
         Assert.Equal(audioHash, FileTransaction.Hash(Path.Combine(Path.GetDirectoryName(pcm)!, "after.pcm")));
         Assert.Equal(graphicsHash, FileTransaction.Hash(cdg));
+        if (webmStreams != null)
+            Assert.Equal(webmStreams, await ReadEncodedStreamHashes(path));
         Assert.Empty(Directory.GetDirectories(Path.GetDirectoryName(path)!, ".karaoke-job-*"));
+    }
+
+    private static async Task<string> ReadEncodedStreamHashes(string path)
+    {
+        var binaries = FFmpegRuntime.Options(Path.GetDirectoryName(path)!).BinaryFolder;
+        var start = new ProcessStartInfo(Path.Combine(binaries, OperatingSystem.IsWindows() ? "ffmpeg.exe" : "ffmpeg"))
+        { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
+        foreach (string arg in new[] { "-nostdin", "-v", "error", "-i", path, "-map", "0:v:0", "-map", "0:a:0",
+            "-c", "copy", "-f", "streamhash", "-hash", "sha256", "-" })
+            start.ArgumentList.Add(arg);
+        using var process = Process.Start(start)!;
+        var stdout = process.StandardOutput.ReadToEndAsync();
+        var stderr = process.StandardError.ReadToEndAsync();
+        await process.WaitForExitAsync();
+        Assert.True(process.ExitCode == 0, await stderr);
+        string hashes = await stdout;
+        Assert.Contains("0,v,SHA256=", hashes);
+        Assert.Contains("1,a,SHA256=", hashes);
+        return hashes;
     }
 
     [Fact]

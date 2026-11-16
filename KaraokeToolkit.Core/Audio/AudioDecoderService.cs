@@ -14,7 +14,7 @@ internal static class AudioDecoderService
         using var stop = CancellationTokenSource.CreateLinkedTokenSource(token, timeout.Token);
         try
         {
-            var info = await FFProbe.AnalyseAsync(input, options, stop.Token, "-protocol_whitelist file,pipe");
+            var info = await MediaProbe.AnalyseAsync(input, options, stop.Token);
             var audio = info.PrimaryAudioStream ?? throw new InvalidDataException("Input contains no audio stream.");
             if (!resampleForMp3G && (audio.SampleRateHz != 44100 || audio.Channels != 2))
                 throw new InvalidDataException("BIN audio must be 44.1 kHz stereo; resampling is not implemented.");

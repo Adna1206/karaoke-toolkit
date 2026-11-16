@@ -98,6 +98,10 @@ public partial class AboutViewModel : ViewModelBase
 
     private static string NativeDisplayName(string folder, string filename)
     {
+        if (folder == "ffmpeg" && System.IO.Path.GetFileName(filename)
+            .Equals("openh264.LICENSE.txt", StringComparison.OrdinalIgnoreCase))
+            return "FFmpeg · OpenH264 · BSD-2-Clause";
+
         string origin = folder == "ffmpeg" ? "FFmpeg" : folder;
         string[] parts = System.IO.Path.ChangeExtension(filename, null)!.Split('.', 2);
         string document = string.Join(" · ", parts.Length > 1 && parts[0].Equals(origin, StringComparison.OrdinalIgnoreCase)

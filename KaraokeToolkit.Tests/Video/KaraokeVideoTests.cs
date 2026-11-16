@@ -29,7 +29,7 @@ public class KaraokeVideoTests
         string output = Path.Combine(folder, "song.mp4");
         await VideoEncoderService.EncodeAsync(graphics, audio, output,
             new() { VideoResolution = resolution, VideoGraphicsSmoothing = smoothing, VideoFrameRate = 25 }, default);
-        var info = await FFProbe.AnalyseAsync(output, FFmpegRuntime.Options(folder));
+        var info = await MediaProbe.AnalyseAsync(output, FFmpegRuntime.Options(folder));
         Assert.Equal(width, info.PrimaryVideoStream!.Width);
         Assert.Equal(height, info.PrimaryVideoStream.Height);
         Assert.NotNull(info.PrimaryAudioStream);
@@ -80,7 +80,7 @@ public class KaraokeVideoTests
         Assert.All(originals, path => Assert.True(File.Exists(path)));
         Assert.Empty(Directory.GetFiles(folder, "*.cue"));
         Assert.Empty(Directory.GetFiles(folder, "*.txt"));
-        var info = await FFProbe.AnalyseAsync(video, FFmpegRuntime.Options(folder));
+        var info = await MediaProbe.AnalyseAsync(video, FFmpegRuntime.Options(folder));
         Assert.NotNull(info.PrimaryVideoStream);
         Assert.NotNull(info.PrimaryAudioStream);
         Assert.Equal(1280, info.PrimaryVideoStream!.Width);
@@ -123,7 +123,7 @@ public class KaraokeVideoTests
         var result = await new ConversionService(new RecoveryStore(TestMediaFixture.NewFolder()))
             .RunAsync(new(Action.KaraokeToVideo, folder, new ConversionOptions()));
         Assert.True(result.Succeeded == 1, string.Join("; ", result.Files.Select(file => file.Message)));
-        var info = await FFProbe.AnalyseAsync(Path.Combine(folder, "song.mp4"), FFmpegRuntime.Options(folder));
+        var info = await MediaProbe.AnalyseAsync(Path.Combine(folder, "song.mp4"), FFmpegRuntime.Options(folder));
         Assert.InRange(info.Duration.TotalSeconds, 1.9, 2.2);
     }
 

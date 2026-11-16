@@ -1,5 +1,113 @@
 # Current handoff
 
+## GitHub Releases update checks
+
+On 2026-11-16, master at `952c6dc`, version 2026.11.17, pointed Velopack
+at `Adna1206/karaoke-toolkit` GitHub Releases. The client checks anonymously
+and includes published prereleases for its installed channel.
+`scripts/Test.ps1 -NoRestore -Filter 'FullyQualifiedName~UpdateServiceTests|FullyQualifiedName~PreferenceTests'`
+passed 20/20. GitHub returned 404 for the repository lookup with the available
+access, so live update discovery remains unverified. Build and install the
+GitHub-enabled version, then test discovery against a newer published release
+with the matching channel assets. No repository visibility or release changes
+were made. See [updates](distribution/updates.md) and [publishing](distribution/publishing.md).
+
+On 2026-11-16, master at `952c6dc`, version 2026.11.17, labelled the
+existing bundled OpenH264 BSD-2-Clause text in About → Third-party notices.
+`scripts/Test.ps1 -NoRestore -Filter 'FullyQualifiedName~AboutViewModelTests'`
+passed 4/4. The label change is uncommitted and awaits the next installer build.
+The changelog and publishing guide now cover the label and the clean Windows
+Setup check. The next step is to commit and tag the release inputs, rebuild,
+and verify Setup on a clean machine.
+
+## Windows tester source package
+
+On 2026-11-16, master at `952c6dc`, version 2026.11.17, collected the
+checksum-pinned Windows FFmpeg dependency sources, patches and package recipes.
+The source archive includes all 357 Rust registry inputs from the pinned
+librsvg release lockfile. The [distribution record](distribution/distribution-licensing.md#remaining-ffmpeg-work)
+lists the scope. `scripts/Prepare-DistributionSources.ps1 -Archive` verified
+the 582-file ZIP under `artifacts/distribution-sources/` with prefix
+`20261116-054802-a35fc4`. The separate Toolkit source snapshot with that
+prefix verified 342 files. `scripts/Publish.ps1 -RuntimeIdentifier win-x64`
+rebuilt the unsigned installer under release run `20261116-054827-91429c`.
+Clean Windows setup and Linux/macOS native runtime testing
+remain open. Linux and macOS dependency source assembly is still pending.
+Updated the 2026.11.17 changelog and documented the release assets. For the
+Windows test release, commit and tag the build inputs, rebuild from the tag,
+smoke-test the installer and share the reviewed third-party source ZIP. Link
+the matching Toolkit tag where all installer recipients can download it.
+No changes were committed and no artifacts were uploaded.
+
+## Conda-forge FFmpeg replacement
+
+On 2026-11-16, master at `952c6dc`, version 2026.11.17, replaced the BtbN
+and Martin Riedl runtimes with Conda-forge FFmpeg 9.0.2 LGPL for Windows x64,
+Linux x64 and Apple Silicon. Retired the previous build paths, pins, maintained
+notices and unpacked runtime caches. Preparation verifies the archives, each
+shipped binary and the package notices. The Windows setup declares Visual C++
+x64 as a prerequisite. Added a synthetic VP9/Opus fixture and encoded-stream
+hash checks, and switched to direct FFprobe JSON reads to fix truncated output
+seen in parallel tests.
+
+- `scripts/Test.ps1 -NoRestore` passed 741/741 tests on Windows with the
+  default runtime. NuGet vulnerability metadata was unavailable. TRX under
+  `artifacts/tests/results/` begins `20261116-053659-50e93d`.
+- `scripts/Prefetch-Runtimes.ps1 -RuntimeIdentifier win-x64,linux-x64,osx-arm64`
+  verified the warm cache. Cross-prepared and independently verified 61 Windows,
+  97 Linux and 75 macOS files, with an installed notice for each locked package.
+- `scripts/Publish.ps1` produced the unsigned Windows installer and
+  cross-built Linux AppImage under
+  `artifacts/releases/2026.11.17/20261116-053738-4b0fb7/`.
+- `scripts/Prepare-DistributionSources.ps1 -Archive` verified the 69-file
+  evidence ZIP at `artifacts/distribution-sources/20261116-054124-9e9099-third-party-sources-2026.11.17-incomplete.zip`.
+  It includes upstream FFmpeg source and the three embedded build recipes.
+
+Changes are uncommitted. Nothing was installed or uploaded. Next, run a clean
+Windows setup smoke test and native Linux/macOS media tests.
+See [distribution licensing](distribution/distribution-licensing.md#remaining-ffmpeg-work).
+
+## Windows FFmpeg source gap review
+
+On 2026-11-16, master at `952c6dc`, version 2026.11.17, added 35 source pins
+covering AMF headers, MinGW-w64, OpenCORE AMR, SoXR, nested inputs and crates
+identified in the Windows codec DLL and verified against rav1e's lockfile.
+Added three Windows FFmpeg notice texts and verified all three by SHA-256
+in the output of `scripts/ffmpeg/Prepare.ps1` with `-RuntimeIdentifier win-x64`.
+`pwsh -NoProfile -File scripts/Prepare-DistributionSources.ps1 -Archive`
+verified 168 ZIP entries in
+`artifacts/distribution-sources/20261116-013415-60c23e-third-party-sources-2026.11.17-incomplete.zip`.
+`git diff --check` passed. Changes are uncommitted. Exact resolution of
+nested and generated inputs and the complete licence notice review remain
+open. No repackaged installer or source archive was uploaded.
+
+## Public source and Windows package review
+
+On 2026-11-16, master at `1205c2a`, version 2026.11.17, audited the replacement
+repository before a possible visibility change. Authenticated GitHub API
+inspection found only master and zero tags, issues, PRs, releases, Actions
+runs or artifacts. Scanned 1,022 blobs reachable from origin/master and
+commit messages with a local credential-pattern check. No credential matches
+were found. One non-noreply address occurs in Git commit metadata. Confirm
+its publication with the owner before changing visibility. This was a
+pattern scan, not a complete manual audit. The owner subsequently chose to
+replace that address with GitHub's noreply identity in all 39 commits.
+Verified commit trees, messages and dates, then replaced GitHub master with
+a force-with-lease push. Local and remote master now point to `952c6dc`.
+The repository uses noreply for future commits. The original-history bundle
+and isolated rewrite repository were removed at the owner's request.
+Visibility is unchanged. Private
+vulnerability reporting is recorded in [TODO](todo.md) for after launch.
+
+`pwsh -NoProfile -File scripts/Publish.ps1 -RuntimeIdentifier win-x64` rebuilt
+unsigned packages under `artifacts/releases/2026.11.17/20261116-011028-3cb4dc/win-x64`
+and verified their checksums. The extracted portable package reported CLI
+version 2026.11.17 and produced a probed H.264/AAC MP4. CDRDAO printed 1.2.6
+and usage outside the sandbox. Installer execution, hardware and upload
+remain unverified. GitHub Releases can host the manual download. The FFmpeg
+corresponding-source gaps still block treating the source archive as complete.
+This documentation is uncommitted.
+
 ## Recovery path-check performance
 
 On 2026-11-16, master at `b3f9b09`, version 2026.11.17, reduced recovery

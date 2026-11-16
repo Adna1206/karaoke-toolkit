@@ -97,6 +97,35 @@ replacement/relinking rights must remain available in a public release.
 
 ## Remaining FFmpeg work
 
+The active Windows x64, Linux x64 and Apple Silicon bundles use Conda-forge FFmpeg
+9.0.2 LGPL. The [runtime locks](../../vendor/versions.md#ffmpeg) identify the exact
+packages and shipped files. Preparation publishes the original package licence
+texts and the accompanying runtime lock. The FFmpeg core source archive matches
+the SHA-256 in all three embedded FFmpeg recipes.
+
+The source ZIP includes the embedded FFmpeg recipes and patches. It includes
+checksum-matched Windows sources and package recipes for Cairo, FriBidi,
+GdkPixbuf, Graphite2, LAME, GLib, GNU libiconv, GNU gettext (libintl), Pango,
+librsvg and mpg123. FreeType source is also included. The librsvg release
+lockfile pins the Rust registry archives in the ZIP. Linux and Apple Silicon
+dependency source assembly remains open. Review additional statically linked
+inputs where applicable. Windows portable builds require the Visual
+C++ x64 redistributable and Windows setup declares it as a prerequisite.
+Run clean-install and media workflow checks on the target hosts.
+
+The Conda-forge OpenH264 DLL ships with Cisco's BSD-2-Clause copyright notice,
+licence terms and disclaimer. Toolkit displays the bundled text under
+**About → Third-party notices → FFmpeg · OpenH264 · BSD-2-Clause**.
+Cisco describes separate terms for patent-pool coverage of its own binary
+downloads. Coverage for the Conda-forge build remains unverified.
+[Cisco OpenH264 FAQ](https://www.openh264.org/faq.html)
+
+## Historical FFmpeg investigations
+
+The following evidence describes earlier binary builds and the Windows
+Conda-forge evaluation. The source archive assembled for the current runtime
+uses the Conda-forge source pin and runtime locks.
+
 The Windows and Linux BtbN archives each contain an LGPLv3 text. Preparation
 preserves it and adds GPLv3, whose terms LGPLv3 incorporates. The two macOS
 ZIPs contain binaries alone. Preparation supplies the recorded vendor notice
@@ -127,12 +156,95 @@ This identifies the expected libudfread input from the recipe. No BD-J JAR
 was found in the extracted Windows archive.
 
 The Windows recipe also selects NVIDIA codec header revision `ced4f8eb`
-for FFmpeg 8.1, and pins LAME at SVN revision 7113. The remaining review
-includes source inputs fetched by nested build steps. Examples are
-Shaderc's pinned dependencies in its DEPS file, JPEG XL's Highway submodule,
-and dependency resolution for the Rust builds. A recipe pin establishes
-provenance for that stage, but does not establish that every stage was
-linked into the shipped binary.
+for FFmpeg 8.1, and pins LAME at SVN revision 7113. The source manifest now
+includes the AMF headers installed by the recipe (58 files including its
+licence, checked against Git blob IDs), MinGW-w64, OpenCORE AMR and SoXR.
+It also includes Shaderc's DEPS pins and selected nested sources for JPEG XL
+(Highway), GLib, libplacebo, Mbed TLS and its crypto library, nghttp3, and zimg.
+Twelve Rust crate versions were identified in source paths in Windows
+`avcodec-62.dll`. Each downloaded crate matches its checksum in rav1e's
+pinned Cargo.lock. The recipe runs `cargo update cc`, so the lockfile and
+the visible DLL strings do not establish the full dependency resolution.
+Rav1e declares `cc` under `[build-dependencies]`. Its changed version is
+evidence that the recipe can resolve inputs during a build. It is not evidence
+of an extra runtime crate linked into the DLL.
+The Windows notice bundle now includes libudfread, OpenCORE AMR and SoXR
+licence texts from their pinned sources.
+
+Remaining work is to reconcile all linked inputs, nested build dependencies
+and notices against the shipped Windows binaries. A recipe pin establishes
+the source for that stage, while binary or build evidence is needed to
+determine which stages contribute code. Locally generated archives without
+an `origin` URL need their exact source reference and revision or existing
+cache copy when rebuilding the source bundle.
+
+The GitHub release asset digest matches the repository's pinned Windows ZIP.
+The ZIP's PE imports name the FFmpeg shared DLLs and Windows libraries.
+They do not enumerate external code linked statically into those DLLs.
+The exact October 31 build logs and dependency image digest were not recovered.
+The pinned workflow publishes dependency images under mutable tags and
+disables build provenance attestations for those images. A neighboring run
+or today's image would not establish the inputs to our archived binary.
+
+### Windows replacement build scope
+
+For a build we control, start from the current FFmpeg source revision with
+shared libraries, autodetection disabled and GPL/nonfree modes disabled.
+Keep FFmpeg's built-in local media support on the first pass to avoid narrowing
+input compatibility accidentally. Pin only the external libraries Toolkit
+requests by name, plus their actual build dependencies:
+
+| External library | Toolkit path to preserve |
+| --- | --- |
+| LAME | MP3 audio export, lossless Audio+G to MP3+G, and AVI audio |
+| libogg and libvorbis | Ogg/Vorbis audio export |
+| OpenH264 | H.264 video for MP4 and MKV |
+
+Keep `ffprobe` and test both executables against the built DLLs. Exercise all
+six audio outputs, CD+G to MP4/MKV/AVI, lossless input variants, and Matroska
+metadata remuxing. Preserve the build environment identity, source archives,
+any patches, configure options, notices, and output hashes together. This
+host has no installed WSL distribution and no Docker executable was found.
+Use a prepared Windows native toolchain or a Linux cross-build runner to
+build and verify a candidate before changing the pinned Windows runtime.
+
+### Conda-forge Windows candidate
+
+The tested candidate was `win-64/ffmpeg-9.0.2-lgpl_h9d1ee69_608.conda`,
+SHA-256 `76962013d16bc46a51a258ef59347d054639e07c184f12db2fe44981daa5243f`.
+The package carries its rendered build recipe, source pin and patches.
+The binary reports `--disable-gpl`, `--enable-version3` and shared FFmpeg
+libraries. The runtime dependency solve was recorded separately because
+it can select packages newer than the original build inputs.
+
+An isolated Windows probe resolved 77 packages and copied the normal PE
+import closure for `ffmpeg.exe` and `ffprobe.exe` into the Toolkit layout.
+The resulting folder contained 79 files (about 119 MB before compression)
+from 42 packages. Both executables ran with a Windows-only PATH. This
+probes local media workflows, with no claim about every optional loader,
+format or dependency on a clean Windows machine. Before selecting it for
+distribution, pin the runtime closure, review the redistributability of
+its packages, and assemble the source and notices for the files shipped.
+
+The Windows media suite passed 221 of 222 cases. The remaining test calls
+`libvpx-vp9` to create a WebM fixture, an encoder absent from the candidate.
+A separate test generated VP9/Opus WebM with BtbN, then used Toolkit's CLI
+with the Conda runtime to tag it. The tags persisted and both encoded
+stream hashes were unchanged. The automated tagging test now uses a
+synthetic VP9/Opus fixture and checks both encoded stream hashes.
+
+The opt-in Windows build now uses an exact package and per-binary checksum
+lock. It extracts 61 files from 40 binary packages plus an intermediate
+FreeType package for matching notices. The Windows UCRT and Microsoft Visual
+C++ runtime must be available on the host. Their DLLs are excluded from the
+candidate. This path collects upstream package notices, but the matching
+source archive and clean Windows installer verification remain pending.
+
+The Linux x64 `lgpl_hff9caec_808` and Apple Silicon `lgpl_ha3d7a35_8`
+9.0.2 candidates were downloaded and their dependency plans resolved.
+Both packages mark the executables with a Conda build-prefix placeholder.
+A relocation and shared-library loading check on native runners is needed
+before pinning their redistributable runtimes.
 
 The [LAME SVN tree at revision 7113](https://svn.code.sf.net/p/lame/svn/!svn/rvr/7113/trunk/lame/)
 was reachable and identified itself as that revision. The tested ZIP snapshot

@@ -27,6 +27,7 @@
 
   <ItemGroup>
     <None Update="Support\Fixtures\*.7z" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Support\Fixtures\abc-vp9-opus.webm" CopyToOutputDirectory="PreserveNewest" />
     <AssemblyMetadata Include="RepositoryArtifactsPath" Value="$(RepositoryArtifactsPath)" />
     <Using Include="Xunit" />
     <Using Include="KaraokeToolkit.App.Metadata" />

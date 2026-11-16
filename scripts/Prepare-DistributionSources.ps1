@@ -17,6 +17,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path $PSScriptRoot -Parent
+. (Join-Path $PSScriptRoot 'Get-PinnedRuntimeArchive.ps1')
 $manifestPath = Join-Path $repo 'vendor/distribution-sources.json'
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 $cdrdaoManifestPath = Join-Path $repo 'vendor/cdrdao/manifest.json'
@@ -38,8 +39,7 @@ if ($CdrdaoOnly) {
 }
 $cache = Join-Path $repo 'artifacts/checks/licensing'
 New-Item -ItemType Directory -Force -Path $cache | Out-Null
-$verified = @()
-foreach ($source in $sources) {
+function Confirm-SourceArchive($source, [string]$archiveDirectory = '') {
     if ([IO.Path]::GetFileName($source.archive) -ne $source.archive) { throw 'Unsafe source archive name.' }
     $path = if ($source.repositoryPath) { Join-Path $repo $source.repositoryPath } else { Join-Path $cache $source.archive }
     $runtimeArchive = Join-Path $repo "artifacts/runtime/downloads/$($source.sha256)/$($source.archive)"
@@ -61,11 +61,38 @@ foreach ($source in $sources) {
     if ((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant() -ne $source.sha256) {
         throw "Source checksum mismatch: $($source.component)"
     }
-    $verified += [pscustomobject]@{ Path = $path; Archive = $source.archive; Hash = $source.sha256 }
+    [pscustomobject]@{ Path = $path; Archive = $archiveDirectory + $source.archive; Hash = $source.sha256 }
+}
+
+$verified = @($sources | ForEach-Object { Confirm-SourceArchive $_ })
+if (!$CdrdaoOnly) {
+    # The release's own lockfile identifies the exact Rust inputs to librsvg.
+    $svg = $sources | Where-Object windowsRuntimePackage -CEQ 'librsvg'
+    $svgArchive = $verified | Where-Object Archive -CEQ $svg.archive
+    $svgFolder = $svg.archive -replace '\.tar\.xz$', ''
+    $cargoLock = & tar -xOf $svgArchive.Path -- "$svgFolder/Cargo.lock"
+    if ($LASTEXITCODE -ne 0) { throw 'Cannot read librsvg Cargo.lock.' }
+    $packageBlocks = ($cargoLock -join "`n") -split '(?m)^\[\[package\]\]\s*$'
+    $crates = foreach ($package in $packageBlocks) {
+        if ($package -notmatch '(?m)^source = "([^"]+)"') { continue }
+        if ($Matches[1] -cne 'registry+https://github.com/rust-lang/crates.io-index' -or
+            $package -cnotmatch '(?m)^name = "([a-zA-Z0-9_-]+)"\s+version = "([0-9a-zA-Z.+-]+)"\s+source = "[^"]+"\s+checksum = "([0-9a-f]{64})"') {
+            throw 'Unsupported dependency in librsvg Cargo.lock.'
+        }
+        $crateName, $version, $hash = $Matches[1], $Matches[2], $Matches[3]
+        $crateArchive = "$crateName-$version.crate"
+        Confirm-SourceArchive @{ archive = $crateArchive; origin = "https://static.crates.io/crates/$crateName/$crateArchive"; sha256 = $hash; component = $crateArchive } 'ffmpeg/win-x64/librsvg-crates/'
+    }
+    if (!$crates) { throw 'No registry dependencies found in librsvg Cargo.lock.' }
+    $verified += $crates
 }
 $output = Join-Path $repo ('artifacts/distribution-sources/' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 6))
 New-Item -ItemType Directory -Path $output -Force | Out-Null
-foreach ($source in $verified) { Copy-Item -LiteralPath $source.Path -Destination (Join-Path $output $source.Archive) }
+foreach ($source in $verified) {
+    $destination = Join-Path $output $source.Archive
+    New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force | Out-Null
+    Copy-Item -LiteralPath $source.Path -Destination $destination
+}
 $outputManifest = Join-Path $output 'distribution-sources.json'
 if ($CdrdaoOnly) {
     $manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $outputManifest -Encoding utf8
@@ -81,9 +108,46 @@ Copy-Item -LiteralPath (Join-Path $repo 'licenses/cdrdao') -Destination $notices
 Copy-Item -LiteralPath (Join-Path $repo 'licenses/CDRDAO.GPLv2.txt') -Destination (Join-Path $notices 'cdrdao')
 if (!$CdrdaoOnly) {
     Copy-Item -LiteralPath (Join-Path $repo 'licenses/TagLibSharp.txt') -Destination $notices
-    Copy-Item -LiteralPath (Join-Path $repo 'licenses/ffmpeg') -Destination $notices -Recurse
-    Copy-Item -LiteralPath (Join-Path $repo 'licenses/FFmpeg.GPLv3.txt') -Destination (Join-Path $notices 'ffmpeg')
-    Copy-Item -LiteralPath (Join-Path $repo 'vendor/ffmpeg/manifest.json') -Destination (Join-Path $output 'ffmpeg-runtime-manifest.json')
+    $ffmpegNotices = Join-Path $notices 'ffmpeg'
+    New-Item -ItemType Directory -Path $ffmpegNotices | Out-Null
+    Copy-Item -LiteralPath (Join-Path $repo 'licenses/FFmpeg.GPLv3.txt'), (Join-Path $repo 'licenses/FFmpeg.LGPLv3.txt') -Destination $ffmpegNotices
+    $ffmpegProvenance = Join-Path $output 'ffmpeg'
+    New-Item -ItemType Directory -Path $ffmpegProvenance -Force | Out-Null
+    $ffmpegVendor = Join-Path $repo 'vendor/ffmpeg'
+    $runtimeManifestPath = Join-Path $ffmpegVendor 'manifest.json'
+    $runtimeManifest = Get-Content -LiteralPath $runtimeManifestPath -Raw | ConvertFrom-Json
+    Copy-Item -LiteralPath $runtimeManifestPath -Destination $ffmpegProvenance
+    foreach ($platform in $runtimeManifest.platforms.PSObject.Properties) {
+        $lockPath = Join-Path $ffmpegVendor $platform.Value.condaLock
+        Copy-Item -LiteralPath $lockPath -Destination $ffmpegProvenance
+        $lock = Get-Content -LiteralPath $lockPath -Raw | ConvertFrom-Json
+        $recipePackages = @('ffmpeg')
+        if ($platform.Name -ceq 'win-x64') {
+            $recipePackages += @($sources | Where-Object windowsRuntimePackage | ForEach-Object windowsRuntimePackage)
+        }
+        foreach ($packageName in $recipePackages) {
+            $package = $lock.packages | Where-Object name -CEQ $packageName
+            if (!$package) { throw "Cannot match $packageName to the $($platform.Name) runtime lock." }
+            $origin = [uri]$package.origin
+            $name = [IO.Path]::GetFileName($origin.AbsolutePath)
+            $cached = Join-Path $repo "artifacts/runtime/downloads/$($package.sha256)/$name"
+            if (!$Download -and !(Test-Path -LiteralPath $cached -PathType Leaf)) {
+                throw "Missing recipe package: $cached. Use -Download to fetch it."
+            }
+            $archivePath = Get-PinnedRuntimeArchive $repo $name $package.sha256 $origin
+            $recipeDirectory = Join-Path $ffmpegProvenance "$($platform.Name)/$packageName"
+            New-Item -ItemType Directory -Path $recipeDirectory -Force | Out-Null
+            $metadataMember = 'info-' + [IO.Path]::GetFileNameWithoutExtension($name) + '.tar.zst'
+            & tar -xf $archivePath -C $recipeDirectory -- $metadataMember
+            if ($LASTEXITCODE -ne 0) { throw "Cannot extract $name metadata." }
+            $metadataArchive = Join-Path $recipeDirectory $metadataMember
+            $members = @('info/recipe')
+            if ($packageName -ceq 'librsvg') { $members += 'info/licenses/THIRDPARTY.yml' }
+            & tar -xf $metadataArchive -C $recipeDirectory -- @members
+            if ($LASTEXITCODE -ne 0) { throw "Cannot extract the recipe for $name." }
+            Remove-Item -LiteralPath $metadataArchive
+        }
+    }
 }
 $applicationLicenses = Join-Path $output 'licenses/application'
 New-Item -ItemType Directory -Path $applicationLicenses -Force | Out-Null

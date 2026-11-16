@@ -2,17 +2,10 @@
   "schemaVersion": 1,
   "completeForPublicDistribution": false,
   "limitations": [
-    "The BtbN recipe archives are a partial set and may include stages that do not contribute code to the shipped binaries. Nested inputs and notices still need review. AMF, mingw-w64, opencore-amr and soxr archives are missing.",
-    "TagLibSharp archive is the upstream release source; NuGet does not record a source commit, so binary reproducibility is not established.",
-    "The Mac recipe candidate matches the version report where pinned, but the build commit is unconfirmed and x264 was fetched from a moving branch. The corresponding dependency sources and notices remain incomplete."
+    "Windows includes the upstream archives and embedded package recipes for the reviewed LGPL dependencies and Cairo, the optional FreeType source, and all registry inputs in librsvg Cargo.lock. Linux and macOS dependency source assembly remains open. The bundle does not establish independently reproducible binaries.",
+    "TagLibSharp archive is the upstream release source; NuGet does not record a source commit, so binary reproducibility is not established."
   ],
   "sources": [
-    {
-      "component": "btbn-lame",
-      "archive": "btbn-lame-r7113.tar.gz",
-      "sourceReference": "https://svn.code.sf.net/p/lame/svn/!svn/rvr/7113/trunk/lame/",
-      "sha256": "5a9e279207b561a76fb916f70e5884c5dba75b405472ae0333ed0145c512a2b6"
-    },
     {
       "component": "gcc-runtime",
       "archive": "gcc-15.2.0-1.src.tar.zst",
@@ -32,30 +25,6 @@
       "sha256": "f670a95a25e25679f1658840d8930eb11a0fe6ba22e748d657ee44235a3b628c"
     },
     {
-      "component": "FFmpeg-core-only",
-      "archive": "ffmpeg-8dca1586f468bfcbb78ae3ed618af1361d9f140a.tar.gz",
-      "origin": "https://codeload.github.com/FFmpeg/FFmpeg/tar.gz/8dca1586f468bfcbb78ae3ed618af1361d9f140a",
-      "sha256": "5ce832c43ca0a336c747db9dcd448655c64c25e33cb9868e1cc5b24abb04dbaa"
-    },
-    {
-      "component": "BtbN-build-recipe",
-      "archive": "recipe-5031c6f1082414e53688d39e521849905071070d.tar.gz",
-      "origin": "https://codeload.github.com/FFmpeg-Builds/FFmpeg-Builds/tar.gz/5031c6f1082414e53688d39e521849905071070d",
-      "sha256": "3d82bbb1dd436116034bb4d945245e5550dff0d89db0094e9af90382527c2c17"
-    },
-    {
-      "component": "FFmpeg-macOS-release-source",
-      "archive": "ffmpeg-9.0.2.tar.xz",
-      "origin": "https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz",
-      "sha256": "8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e"
-    },
-    {
-      "component": "Riedl-Apple-Silicon-build-metadata",
-      "archive": "ffmpeg-9.0.2-riedl-arm64-versions.txt",
-      "origin": "https://ffmpeg.martin-riedl.de/download/macos/arm64/1789931890_9.0.2/versions.txt",
-      "sha256": "fc92572e752e09b20e7ff28d64fb7096f7bc1a0d589b2e40f17ac91b7fd0ca61"
-    },
-    {
       "component": "TagLibSharp",
       "archive": "taglib-sharp-b5ae84f2e84087bf160bb0471420200dd2b5d809.tar.gz",
       "origin": "https://codeload.github.com/mono/taglib-sharp/tar.gz/b5ae84f2e84087bf160bb0471420200dd2b5d809",
@@ -67,562 +36,94 @@
       "sha256": "10d15b0dc78bd44a9a4a8d7d85498c734771036159d05aa940e17f18fc40d40f"
     },
     {
-      "component": "btbn-vorbis",
-      "archive": "btbn-vorbis-1b75110b.tar.gz",
-      "origin": "https://codeload.github.com/xiph/vorbis/tar.gz/1b75110b5a2754ba1931d82dd83cb822b266a21d",
-      "sha256": "bd0f08c8a63debdce27dd71de7d953f9c92e410d1cfe263220bcb49fff2ab749"
+      "component": "FFmpeg-core",
+      "archive": "ffmpeg-9.0.2.tar.gz",
+      "origin": "https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.gz",
+      "sha256": "84960df915059e8754fef2cd7c9afeb614062b1b5458ec471eecee619ee04e98"
     },
     {
-      "component": "btbn-ogg",
-      "archive": "btbn-ogg-06a5e026.tar.gz",
-      "origin": "https://codeload.github.com/xiph/ogg/tar.gz/06a5e0262cdc28aa4ae6797627a783b5010440f0",
-      "sha256": "fd7ab06f9fe9ace6b75d4223cf9034c9648cbe9f16120a344ec82f27c605ca11"
+      "component": "conda-win-x64-cairo",
+      "archive": "cairo-1.18.6.tar.xz",
+      "origin": "https://cairographics.org/releases/cairo-1.18.6.tar.xz",
+      "sha256": "1c767308174337a74694da0f3ec069c271452163a1ef4540964c50c301f157d4",
+      "windowsRuntimePackage": "cairo"
     },
     {
-      "component": "btbn-libass",
-      "archive": "btbn-libass-f61db567.tar.gz",
-      "origin": "https://codeload.github.com/libass/libass/tar.gz/f61db567e6593df3470e91594bcd4ad2d0473aff",
-      "sha256": "edb3e866ca9394152484bc9a83b68a395f5c9052ae0dc502e4100035c250330b"
+      "component": "conda-win-x64-fribidi",
+      "archive": "fribidi-1.0.18.tar.xz",
+      "origin": "https://github.com/fribidi/fribidi/releases/download/v1.0.18/fribidi-1.0.18.tar.xz",
+      "sha256": "1de5e8073d035388b71d0b2d452b1da1f8caeea8a7702997b401fe1b6250727f",
+      "windowsRuntimePackage": "fribidi"
     },
     {
-      "component": "btbn-twolame",
-      "archive": "btbn-twolame-6fced852.tar.gz",
-      "origin": "https://codeload.github.com/njh/twolame/tar.gz/6fced852d4d5cfad58cf9dbe3ea619b08e87d398",
-      "sha256": "6fd32a3d16a57ceacd5a64c4b6c54d6118b213fe8c63bc2900045200e2012000"
+      "component": "conda-win-x64-gdk-pixbuf",
+      "archive": "gdk-pixbuf-2.44.8.tar.xz",
+      "origin": "https://download.gnome.org/sources/gdk-pixbuf/2.44/gdk-pixbuf-2.44.8.tar.xz",
+      "sha256": "919f529512961a12e81cd4b4b466a48c3933469e7f9a310c6513cd4fb252ba3c",
+      "windowsRuntimePackage": "gdk-pixbuf"
     },
     {
-      "component": "btbn-libbluray",
-      "archive": "btbn-libbluray-f33a738f.tar.gz",
-      "origin": "https://code.videolan.org/videolan/libbluray/-/archive/f33a738fd7bb8b5e1148b0a5424778db7342450b/libbluray-f33a738fd7bb8b5e1148b0a5424778db7342450b.tar.gz",
-      "sha256": "2e47fcd0cc043e5c9b819503118e5dce5d24f1dc362b909d53bae61f5ac23d8c"
+      "component": "conda-win-x64-graphite2",
+      "archive": "graphite2-1.3.15.tgz",
+      "origin": "https://github.com/silnrsi/graphite/releases/download/1.3.15/graphite2-1.3.15.tgz",
+      "sha256": "c6bc8b4252724665297f7cad0c55897285c673f9b8e6db3522ace833593fe0b1",
+      "windowsRuntimePackage": "graphite2"
     },
     {
-      "component": "btbn-gnulib",
-      "archive": "btbn-gnulib-5df606bb.tar.gz",
-      "origin": "https://codeload.github.com/coreutils/gnulib/tar.gz/5df606bbd0ef54a8f150c3303c870b9381a661f0",
-      "sha256": "0c27d0d9459e131dcc143f0b074b0940f63cb394b2a281c608fc6fbdd515d3f6"
+      "component": "conda-win-x64-lame",
+      "archive": "lame-4.0.tar.gz",
+      "origin": "https://downloads.sourceforge.net/sourceforge/lame/lame-4.0.tar.gz",
+      "sha256": "3df5124d5ad3a98312ffd7ba6a9b36230e4f8a3e66d3ce0f425e336c32d216eb",
+      "windowsRuntimePackage": "lame"
     },
     {
-      "component": "Riedl-Apple-Silicon-recipe-candidate",
-      "archive": "riedl-recipe-candidate-6a611e19870e197bc37c6e4c7fccddebd3715466.tar.gz",
-      "origin": "https://git.martin-riedl.de/ffmpeg/build-script/archive/6a611e19870e197bc37c6e4c7fccddebd3715466.tar.gz",
-      "sha256": "467803813ab9f090052b0913bd12f984dcee888b154eb3644f7b1cbf04b57887"
+      "component": "conda-win-x64-libglib",
+      "archive": "glib-2.90.1.tar.xz",
+      "origin": "https://download.gnome.org/sources/glib/2.90/glib-2.90.1.tar.xz",
+      "sha256": "93c941aa17d5eb1d53fe838365f29a8b4e539c222a256d974ec8f30fc413e396",
+      "windowsRuntimePackage": "libglib"
     },
     {
-      "component": "btbn-libiconv",
-      "archive": "btbn-libiconv-b5a1735e.tar.gz",
-      "origin": "https://git.savannah.gnu.org/gitweb/?p=libiconv.git;a=snapshot;h=b5a1735e02bf43ee6e490fcf9395e8abc8d32432;sf=tgz",
-      "sha256": "8399b003f3d3dd6f32b05e9bcdf1b31b07a6c66468f26fe952d519f04deb00a3"
+      "component": "conda-win-x64-libiconv",
+      "archive": "libiconv-1.18.tar.gz",
+      "origin": "https://ftp.gnu.org/gnu/libiconv/libiconv-1.18.tar.gz",
+      "sha256": "3b08f5f4f9b4eb82f151a7040bfd6fe6c6fb922efe4b1659c66ea933276965e8",
+      "windowsRuntimePackage": "libiconv"
     },
     {
-      "component": "btbn-fribidi",
-      "archive": "btbn-fribidi-d2f3e1f4.tar.gz",
-      "origin": "https://codeload.github.com/fribidi/fribidi/tar.gz/d2f3e1f4946e7cef9789e1c3ebdb4a60d4314c7f",
-      "sha256": "0a666e0f5a42e9e938e38f6c2859fe39eda37ca9852e8afd1c2d226be163a529"
+      "component": "conda-win-x64-libintl",
+      "archive": "gettext-0.22.5.tar.xz",
+      "origin": "https://ftp.gnu.org/pub/gnu/gettext/gettext-0.22.5.tar.xz",
+      "sha256": "fe10c37353213d78a5b83d48af231e005c4da84db5ce88037d88355938259640",
+      "windowsRuntimePackage": "libintl"
     },
     {
-      "component": "btbn-libaribb24",
-      "archive": "btbn-libaribb24-5e9be272.tar.gz",
-      "origin": "https://codeload.github.com/nkoriyama/aribb24/tar.gz/5e9be272f96e00f15a2f3c5f8ba7e124862aec38",
-      "sha256": "651e88af3c8189d4faed538bee3affde360eb4698a70505765fc7e5653f5eb23"
+      "component": "conda-win-x64-libpango",
+      "archive": "pango-1.58.2.tar.xz",
+      "origin": "https://download.gnome.org/sources/pango/1.58/pango-1.58.2.tar.xz",
+      "sha256": "342385b6ca3b7c73455d7c80a13b7dbe4489e00bc3bd4c5bd6ed4dce421e374a",
+      "windowsRuntimePackage": "libpango"
     },
     {
-      "component": "btbn-libaribcaption",
-      "archive": "btbn-libaribcaption-37dde0f3.tar.gz",
-      "origin": "https://codeload.github.com/xqq/libaribcaption/tar.gz/37dde0f32652c32aa98bf92278944d1cfb2e7354",
-      "sha256": "ace54ae69e1b38481917d36161a8960ed93f51f7fd343575fab36dfe3ea072f6"
+      "component": "conda-win-x64-librsvg",
+      "archive": "librsvg-2.62.4.tar.xz",
+      "origin": "https://download.gnome.org/sources/librsvg/2.62/librsvg-2.62.4.tar.xz",
+      "sha256": "c982b8157a054b803493bf994d31e50105eb948dd8da6b4ab9734e8d392712a3",
+      "windowsRuntimePackage": "librsvg"
     },
     {
-      "component": "btbn-libbluray-libudfread-gitlink",
-      "archive": "btbn-libbluray-libudfread-139a2194.tar.gz",
-      "origin": "https://code.videolan.org/videolan/libudfread/-/archive/139a2194525f2745b98a98e4d8fa627d07440176/libudfread-139a2194525f2745b98a98e4d8fa627d07440176.tar.gz",
-      "sha256": "aaccb7877139abe3c47a6bdb142dc3b1f1ab885a0e4b4e956e631d7a0445f960"
+      "component": "conda-win-x64-mpg123",
+      "archive": "mpg123-1.33.7.tar.bz2",
+      "origin": "https://downloads.sourceforge.net/project/mpg123/mpg123/1.33.7/mpg123-1.33.7.tar.bz2",
+      "sha256": "31d0e35a4ca567ec9b5ebda6c3062bb4435d6d3eacd6ef0d95cadd7854dc03ee",
+      "windowsRuntimePackage": "mpg123"
     },
     {
-      "component": "btbn-libopus",
-      "archive": "btbn-libopus-a8b2545e.tar.gz",
-      "origin": "https://codeload.github.com/xiph/opus/tar.gz/a8b2545eec71e0f53ecead2d583e7b6baa42684d",
-      "sha256": "ebbb3534c688d680c4e79f6bcdb72b4115c1ff565ed4f52a56a55ba87269baa6"
-    },
-    {
-      "component": "btbn-libtheora",
-      "archive": "btbn-libtheora-28fd5ec7.tar.gz",
-      "origin": "https://codeload.github.com/xiph/theora/tar.gz/28fd5ec77f0ad0e07a371cef1047828116f6bd8a",
-      "sha256": "b92c94380b3c86db5797e8f248373eecfc6230c8a0b374e64b4041645b0d2152"
-    },
-    {
-      "component": "btbn-libxml2",
-      "archive": "btbn-libxml2-c79c9612.tar.gz",
-      "origin": "https://codeload.github.com/GNOME/libxml2/tar.gz/c79c9612fcc77b06b0d16f35fd363d938bdbbf5e",
-      "sha256": "13bda7af58a59bddc052ddb34b3472eb1ee18fdc72465f626daa3e2dd530b269"
-    },
-    {
-      "component": "btbn-openh264",
-      "archive": "btbn-openh264-1bca6231.tar.gz",
-      "origin": "https://codeload.github.com/cisco/openh264/tar.gz/1bca62311e447fd9c39fc93de2c4b96cd5ce971c",
-      "sha256": "2238d3e5956ef0d288dd43842a0220015cf72c4327d98684e8bc47ffa7cf5308"
-    },
-    {
-      "component": "btbn-openjpeg",
-      "archive": "btbn-openjpeg-8314119b.tar.gz",
-      "origin": "https://codeload.github.com/uclouvain/openjpeg/tar.gz/8314119b067c0fc77834731168daaebd379fdb12",
-      "sha256": "e723e8babb2188e8743308842bb1bfc9809f0375cd964cfeac2fb17285094321"
-    },
-    {
-      "component": "btbn-snappy",
-      "archive": "btbn-snappy-94660645.tar.gz",
-      "origin": "https://codeload.github.com/google/snappy/tar.gz/946606459314e55d029c85f9a8c46f8809467f0f",
-      "sha256": "78767c8f8d9ac0eb26a7ab04ed33ed9b33b9de7f80434bc66d4792fb55c83cb8"
-    },
-    {
-      "component": "btbn-srt",
-      "archive": "btbn-srt-9f239023.tar.gz",
-      "origin": "https://codeload.github.com/Haivision/srt/tar.gz/9f2390232a8256ed4c72a5418c2b2777c49ad737",
-      "sha256": "4946189b19692b40d2872b16410f5b58b8023888e93275fc9e76415614ce941c"
-    },
-    {
-      "component": "btbn-vmaf",
-      "archive": "btbn-vmaf-f712fa75.tar.gz",
-      "origin": "https://codeload.github.com/Netflix/vmaf/tar.gz/f712fa7564fe49b12991d83920b83573af2ae063",
-      "sha256": "18e7e34c4165d4fd9781beb4aac11866c3b7d5ad4e1149b201417e7b7e379b54"
-    },
-    {
-      "component": "btbn-vvenc",
-      "archive": "btbn-vvenc-0e7508b8.tar.gz",
-      "origin": "https://codeload.github.com/fraunhoferhhi/vvenc/tar.gz/0e7508b811bbea3cd510956ddb3193f3a4c93684",
-      "sha256": "3771b472b4a491cb3979dc858e6a8bb23552b7dd864e0a3f68c7d0ca0e0394b7"
-    },
-    {
-      "component": "btbn-zimg",
-      "archive": "btbn-zimg-67e06032.tar.gz",
-      "origin": "https://codeload.github.com/sekrit-twc/zimg/tar.gz/67e0603271c080e22c8429856dd4a8a56587e61e",
-      "sha256": "539495d51fcd8c7ef9b89a611454e0c1173d18e8d4e743efdef67c4aa7e40d4f"
-    },
-    {
-      "component": "btbn-zlib",
-      "archive": "btbn-zlib-9d314c34.tar.gz",
-      "origin": "https://codeload.github.com/madler/zlib/tar.gz/9d314c341b2ce16e01ae44e27ec3dd2f32aa58fd",
-      "sha256": "bb27c6019ed72ea6d3ceb574cd8074083a7391afa08404ddf945bcd24f01742b"
-    },
-    {
-      "component": "riedl-lame",
-      "archive": "riedl-lame-4.0.tar.gz",
-      "origin": "https://unlimited.dl.sourceforge.net/project/lame/lame/4.0/lame-4.0.tar.gz",
-      "sha256": "3df5124d5ad3a98312ffd7ba6a9b36230e4f8a3e66d3ce0f425e336c32d216eb"
-    },
-    {
-      "component": "riedl-libass",
-      "archive": "riedl-libass-0.17.5.tar.gz",
-      "origin": "https://github.com/libass/libass/releases/download/0.17.5/libass-0.17.5.tar.gz",
-      "sha256": "caab4b993dd7be6187c55623b789ed75dddefea6e65938af134637c732fe094a"
-    },
-    {
-      "component": "riedl-libvorbis",
-      "archive": "riedl-libvorbis-1.3.7.tar.gz",
-      "origin": "https://ftp.osuosl.org/pub/xiph/releases/vorbis/libvorbis-1.3.7.tar.gz",
-      "sha256": "0e982409a9c3fc82ee06e08205b1355e5c6aa4c36bca58146ef399621b0ce5ab"
-    },
-    {
-      "component": "btbn-libudfread",
-      "archive": "btbn-libudfread-b0bc6957.tar.gz",
-      "origin": "https://code.videolan.org/videolan/libudfread/-/archive/b0bc6957e7e07d5f35391f210596d9eb71cffdd9/libudfread-b0bc6957e7e07d5f35391f210596d9eb71cffdd9.tar.gz",
-      "sha256": "c04bb96b72dd0760030d880ad6c9ea2ae80abbdd648de127adb1b2e8555186aa"
-    },
-    {
-      "component": "btbn-aom",
-      "archive": "btbn-aom-9ace39e0.tar.gz",
-      "origin": "https://aomedia.googlesource.com/aom/+archive/9ace39e02a34992b83fc7f7f2bfbbd2e79348c74.tar.gz",
-      "sha256": "10bc0d17735bd82265b44b5d6be6fdc98aefc0429e2c205d7e8170dabe521aaa"
-    },
-    {
-      "component": "btbn-brotli",
-      "archive": "btbn-brotli-2e2bcf17.tar.gz",
-      "origin": "https://codeload.github.com/google/brotli/tar.gz/2e2bcf17ae7115d84ef6588d9a3651cc987d73e7",
-      "sha256": "347a89614fdd147fd47ab1035dac67d50faf0a071fd26ca49dcf1ee513851125"
-    },
-    {
-      "component": "btbn-cairo",
-      "archive": "btbn-cairo-74755964.tar.gz",
-      "origin": "https://gitlab.freedesktop.org/cairo/cairo/-/archive/74755964edef651691d5cd36ff140108298e4e6e/cairo-74755964edef651691d5cd36ff140108298e4e6e.tar.gz",
-      "sha256": "b9fdbe04623d904d821e521d5aabb0f0445e1307ac1b0d478de3e23f0ae95043"
-    },
-    {
-      "component": "btbn-chromaprint",
-      "archive": "btbn-chromaprint-3b38c100.tar.gz",
-      "origin": "https://codeload.github.com/acoustid/chromaprint/tar.gz/3b38c100022bdfb49be7797c4828a476f1621d55",
-      "sha256": "c68c77e11c9afe905117e3af24eb1bd802342d19b6d4629bae3bebc912df1dc6"
-    },
-    {
-      "component": "btbn-dav1d",
-      "archive": "btbn-dav1d-b8b2d726.tar.gz",
-      "origin": "https://code.videolan.org/videolan/dav1d/-/archive/b8b2d726b4b78a2fb174cb45baff441b5969672c/dav1d-b8b2d726b4b78a2fb174cb45baff441b5969672c.tar.gz",
-      "sha256": "9c97302591bc60d51cc8583ac179fdebc661e45542b9c12fd41de585f2e67882"
-    },
-    {
-      "component": "btbn-ffnvcodec2",
-      "archive": "btbn-ffnvcodec2-ced4f8eb.tar.gz",
-      "origin": "https://codeload.github.com/FFmpeg/nv-codec-headers/tar.gz/ced4f8eba3ba5dd431932cba17928f0dffdaeb2b",
-      "sha256": "625ddd8f2a603699fdba101bebcde0e7a97bcc7b8a82ec7f45a7d06d61336597"
-    },
-    {
-      "component": "btbn-fftw3",
-      "archive": "btbn-fftw3-a7b679c5.tar.gz",
-      "origin": "https://codeload.github.com/FFTW/fftw3/tar.gz/a7b679c528330cf6258253d6dcf5ec90552e6c93",
-      "sha256": "cb4c579c7d67b933b91eb37c0c18e929734ac8cbe7154f742a4a3dde139e18d7"
-    },
-    {
-      "component": "btbn-fontconfig",
-      "archive": "btbn-fontconfig-b25ffeab.tar.gz",
-      "origin": "https://gitlab.freedesktop.org/fontconfig/fontconfig/-/archive/b25ffeabd15b76f86c0c6736f6df2f1b89858010/fontconfig-b25ffeabd15b76f86c0c6736f6df2f1b89858010.tar.gz",
-      "sha256": "6ae28798f69f70393e17aa39a01a968776af2ebae28f90276c021fb4bb0ecaa3"
-    },
-    {
-      "component": "btbn-freetype",
-      "archive": "btbn-freetype-4ba7c3d8.tar.gz",
-      "origin": "https://gitlab.freedesktop.org/freetype/freetype/-/archive/4ba7c3d82ab8b3cc80b869337d2c2b1913c5e415/freetype-4ba7c3d82ab8b3cc80b869337d2c2b1913c5e415.tar.gz",
-      "sha256": "fda0f8f46b11c059e036ec776c2e18d1cd18a9db48136b563cad12e16a2e62c9"
-    },
-    {
-      "component": "btbn-glib",
-      "archive": "btbn-glib-50b938a3.tar.gz",
-      "origin": "https://codeload.github.com/GNOME/glib/tar.gz/50b938a3e8f5154a25b5af3dd8b9dd8b2ccba7c3",
-      "sha256": "74fac520b197c74e865df01cd8ff1c9d900e8af30e6cf31165a81b2eefa2842d"
-    },
-    {
-      "component": "btbn-gme",
-      "archive": "btbn-gme-f68963b1.tar.gz",
-      "origin": "https://codeload.github.com/libgme/game-music-emu/tar.gz/f68963b1de0633149b05732113d3c3113c6f63a1",
-      "sha256": "c4c47251e12b2b147eabb54499c94cf3b607b68f830e231a396f541f4897e74e"
-    },
-    {
-      "component": "btbn-gmp",
-      "archive": "btbn-gmp-5c3e9a9d.tar.gz",
-      "origin": "https://codeload.github.com/BtbN/gmplib/tar.gz/5c3e9a9d52b697cab7b7d26a53972a3bf922d59a",
-      "sha256": "2c495cfe0d82f176fb3f787e33763968dbffe2d727603c3a428862cade84a63e"
-    },
-    {
-      "component": "btbn-harfbuzz",
-      "archive": "btbn-harfbuzz-75d8ac5d.tar.gz",
-      "origin": "https://codeload.github.com/harfbuzz/harfbuzz/tar.gz/75d8ac5d2313842550174eaab0cbaf653c8f2f77",
-      "sha256": "c4b5dfbde9a212ec480eb289f06be6ebffa1b2af5d38061c9a2f78bade609f82"
-    },
-    {
-      "component": "btbn-kvazaar",
-      "archive": "btbn-kvazaar-1f11f9ae.tar.gz",
-      "origin": "https://codeload.github.com/ultravideo/kvazaar/tar.gz/1f11f9ae33ef0cbe48a7d335b7144af1ecfe8092",
-      "sha256": "3d21b434af303e2dab208db123b1734936e5bda419768c6ac0237b0973512faa"
-    },
-    {
-      "component": "btbn-lcevcdec",
-      "archive": "btbn-lcevcdec-741fb7c8.tar.gz",
-      "origin": "https://codeload.github.com/v-novaltd/LCEVCdec/tar.gz/741fb7c869cf61012f7dcebfcd9e56981198c78b",
-      "sha256": "3e6c324d7f0612169ef9968fecb6b48b48cb10701edf1853d684210e85f97e8f"
-    },
-    {
-      "component": "btbn-lcms2",
-      "archive": "btbn-lcms2-1112313b.tar.gz",
-      "origin": "https://codeload.github.com/mm2/Little-CMS/tar.gz/1112313b3784ced9297d8c0ee076aba17499827a",
-      "sha256": "bf8f3ac2d0a291f74225e2447f3703a75530c8be7019c6ea5fab3084be18b474"
-    },
-    {
-      "component": "btbn-libffi",
-      "archive": "btbn-libffi-bc553867.tar.gz",
-      "origin": "https://codeload.github.com/libffi/libffi/tar.gz/bc553867367246d140cd156f060bd0409f57f157",
-      "sha256": "93e39e60c6a2486f50661a57a95b8d70587c3e9d05e15aae27ccce04c4fe33ac"
-    },
-    {
-      "component": "btbn-libjxl",
-      "archive": "btbn-libjxl-e47d2a2b.tar.gz",
-      "origin": "https://codeload.github.com/libjxl/libjxl/tar.gz/e47d2a2b5bb418f2947ce07f36cb048861db3820",
-      "sha256": "487268a592413cb8ae7b94773a6c6b4b955db09b79ab69d6b9dd1c82e073af69"
-    },
-    {
-      "component": "btbn-libplacebo",
-      "archive": "btbn-libplacebo-275f7dea.tar.gz",
-      "origin": "https://code.videolan.org/videolan/libplacebo/-/archive/275f7dea27924cdd34ab2e6c20e448b6bc4fab65/libplacebo-275f7dea27924cdd34ab2e6c20e448b6bc4fab65.tar.gz",
-      "sha256": "adbca47395410ada01414bc527e0103c716b9b758be857464c40e5ff0ec695be"
-    },
-    {
-      "component": "btbn-libpng",
-      "archive": "btbn-libpng-0b087682.tar.gz",
-      "origin": "https://codeload.github.com/glennrp/libpng/tar.gz/0b0876829d77db0827a8cc2c4326f63be22b2aa1",
-      "sha256": "e8a842d274db0a7399288294522232bb323b4fc4911e86b9702b2db9f826318a"
-    },
-    {
-      "component": "btbn-libpsl",
-      "archive": "btbn-libpsl-620d51d1.tar.gz",
-      "origin": "https://codeload.github.com/rockdaboot/libpsl/tar.gz/620d51d13351e8f3cb724471032246592c9bbd69",
-      "sha256": "0a9173d464615e1bc5614b7c5789f2f013cb587d239e80cb2145916bdf19f976"
-    },
-    {
-      "component": "btbn-libpsl2",
-      "archive": "btbn-libpsl2-8437e526.tar.gz",
-      "origin": "https://codeload.github.com/publicsuffix/list/tar.gz/8437e5262f13305f94087abe699b4fe2be1d1de8",
-      "sha256": "4b475ba68bc51e2e9c45ebd861749dfd14fe27357f68b7cf3b031ab4100396bf"
-    },
-    {
-      "component": "btbn-librist",
-      "archive": "btbn-librist-47ad5513.tar.gz",
-      "origin": "https://code.videolan.org/rist/librist/-/archive/47ad5513d1aa0adb692d78f635512e7fa123f06e/librist-47ad5513d1aa0adb692d78f635512e7fa123f06e.tar.gz",
-      "sha256": "224f9de3825c1be8680438c6254c0e3bffca4c66979f8707cd329b0ffa17620f"
-    },
-    {
-      "component": "btbn-librsvg",
-      "archive": "btbn-librsvg-0c074d0a.tar.gz",
-      "origin": "https://codeload.github.com/GNOME/librsvg/tar.gz/0c074d0a25adefd65843067306f9bc1fb609f68f",
-      "sha256": "35038fa3521bca4bfb7004f01ebfb496890e782c6d9c7839b6b82aa061ddc1bf"
-    },
-    {
-      "component": "btbn-libsamplerate",
-      "archive": "btbn-libsamplerate-0844c208.tar.gz",
-      "origin": "https://codeload.github.com/libsndfile/libsamplerate/tar.gz/0844c208f683527c08ea8a80acc13b398aa9c8bf",
-      "sha256": "c5b976c99196df8247dd429fcaa05f44e281ec15b48f185c9b60c979c468d4c6"
-    },
-    {
-      "component": "btbn-libssh",
-      "archive": "btbn-libssh-9de02f3d.tar.gz",
-      "origin": "https://gitlab.com/libssh/libssh-mirror/-/archive/9de02f3d01ba16d06f46c0c4d27aa08d8deeecee/libssh-mirror-9de02f3d01ba16d06f46c0c4d27aa08d8deeecee.tar.gz",
-      "sha256": "3746f5276d6d69667d8e4ccfa44c26468bc18c5f4e61bbaec20030fc0adf853a"
-    },
-    {
-      "component": "btbn-libunibreak",
-      "archive": "btbn-libunibreak-f8172fe7.tar.gz",
-      "origin": "https://codeload.github.com/adah1972/libunibreak/tar.gz/f8172fe771ef620112247cadfb876aecaa4f769e",
-      "sha256": "6b4fbe4836f6b1be34a5ba86961b13347169cbefaedaf08fc0b2ddfb718c0193"
-    },
-    {
-      "component": "btbn-libva",
-      "archive": "btbn-libva-f052e984.tar.gz",
-      "origin": "https://codeload.github.com/intel/libva/tar.gz/f052e984e0c8bf10784198cc311b23c567b1367f",
-      "sha256": "549d8b3984e7221572db3d4a9d45561d88197e553e067e09bc37352629278682"
-    },
-    {
-      "component": "btbn-libvpx",
-      "archive": "btbn-libvpx-900b2a52.tar.gz",
-      "origin": "https://chromium.googlesource.com/webm/libvpx/+archive/900b2a52b69e9d4ab72eb855c365da1100c50eb1.tar.gz",
-      "sha256": "e29760830259f255ee091756f27071835242623e92278c0759e541d8beaabee8"
-    },
-    {
-      "component": "btbn-libwebp",
-      "archive": "btbn-libwebp-1844042d.tar.gz",
-      "origin": "https://chromium.googlesource.com/webm/libwebp/+archive/1844042d1ca751e62e61df7617dba19c98588339.tar.gz",
-      "sha256": "25990f85329c5ee440ea1b88b2457128bb8019716def4149a71c668833620511"
-    },
-    {
-      "component": "btbn-libzmq",
-      "archive": "btbn-libzmq-46493370.tar.gz",
-      "origin": "https://codeload.github.com/zeromq/libzmq/tar.gz/46493370217ac135246617fa2f6ac819d8b61bfc",
-      "sha256": "a5219efcc1bd863f1e37c170ce05a04f0c11cce497ea52222dd8a1952a78c1b9"
-    },
-    {
-      "component": "btbn-lilv",
-      "archive": "btbn-lilv-4b8f3005.tar.gz",
-      "origin": "https://codeload.github.com/lv2/lilv/tar.gz/4b8f30055fa5cb4134a2eb45fc1555bc04289314",
-      "sha256": "37c5df93860082273ab02104556b45625303a04a299d2914f5dd215f39a29409"
-    },
-    {
-      "component": "btbn-lv2",
-      "archive": "btbn-lv2-3c57dae6.tar.gz",
-      "origin": "https://codeload.github.com/lv2/lv2/tar.gz/3c57dae600a5ad8d05acd53ee3490f7d91cb7be6",
-      "sha256": "4769e649aabf1774aaf2cb4dede19ae2463ded0e94cd3cc3af81403992398457"
-    },
-    {
-      "component": "btbn-mbedtls",
-      "archive": "btbn-mbedtls-v4.2.0.tar.gz",
-      "origin": "https://codeload.github.com/ARMmbed/mbedtls/tar.gz/v4.2.0",
-      "sha256": "b9ab45865d759879d1936c6a637bcb60fc682e687768a90ac0a01a8759e7ebea"
-    },
-    {
-      "component": "btbn-mingw-std-threads",
-      "archive": "btbn-mingw-std-threads-c931bac2.tar.gz",
-      "origin": "https://codeload.github.com/meganz/mingw-std-threads/tar.gz/c931bac289dd431f1dd30fc4a5d1a7be36668073",
-      "sha256": "bba362a5fd537ecd223239efa1f7e7c570018e6d5ea7b26cc0515d3ede9da5ad"
-    },
-    {
-      "component": "btbn-nghttp2",
-      "archive": "btbn-nghttp2-3baf9561.tar.gz",
-      "origin": "https://codeload.github.com/nghttp2/nghttp2/tar.gz/3baf9561e09f7ac8b0dce6e84132ce3909309ef0",
-      "sha256": "5c455314bcc0b910d4418d70c294b04bddda9cd1006661c1c658aaa481020c2f"
-    },
-    {
-      "component": "btbn-nghttp3",
-      "archive": "btbn-nghttp3-ac11a456.tar.gz",
-      "origin": "https://codeload.github.com/ngtcp2/nghttp3/tar.gz/ac11a456eb9d76e55fd6c1626727111cd29d5459",
-      "sha256": "b4a14281d819db98c2725591ef2e5754bbe73823be1768a1fcc93f9944be1e37"
-    },
-    {
-      "component": "btbn-ngtcp2",
-      "archive": "btbn-ngtcp2-20da63db.tar.gz",
-      "origin": "https://codeload.github.com/ngtcp2/ngtcp2/tar.gz/20da63db12a3e7fd2a3ae1a9f15be3cadd3f2695",
-      "sha256": "532a1113f7eda54a3e8087195f4e9731eed4be964c3bb23e02c22cd093a042c1"
-    },
-    {
-      "component": "btbn-onevpl",
-      "archive": "btbn-onevpl-674d015b.tar.gz",
-      "origin": "https://codeload.github.com/intel/libvpl/tar.gz/674d015bcb294bc39fa276e99a652ea045423e82",
-      "sha256": "9d5d3c221b9d41468e04add6855cf5eec6df06dae7be649f84e1f846c98e38fb"
-    },
-    {
-      "component": "btbn-openal",
-      "archive": "btbn-openal-4a52288b.tar.gz",
-      "origin": "https://codeload.github.com/kcat/openal-soft/tar.gz/4a52288b772d1722713675f71bb30f321e78fd80",
-      "sha256": "e06d35a855df060cf757a9162a4880b531f304cacbc29a6ea9a0be5809f25b56"
-    },
-    {
-      "component": "btbn-openapv",
-      "archive": "btbn-openapv-b4ff6985.tar.gz",
-      "origin": "https://codeload.github.com/AcademySoftwareFoundation/openapv/tar.gz/b4ff69856b4c3e8849df431ee3db54fd535f9bf3",
-      "sha256": "56b2a82babc60623cddf24880e03b64b70aa4cfc6548746da6230829d2d965be"
-    },
-    {
-      "component": "btbn-opencl",
-      "archive": "btbn-opencl-82f60316.tar.gz",
-      "origin": "https://codeload.github.com/KhronosGroup/OpenCL-Headers/tar.gz/82f60316cc142e7b21dc1d8983b26de18858fbd9",
-      "sha256": "7576bc8ba67af73ef30ae28096b4d19b953e7767960f24fba0e14d97e732f62d"
-    },
-    {
-      "component": "btbn-opencl2",
-      "archive": "btbn-opencl2-5192c84f.tar.gz",
-      "origin": "https://codeload.github.com/KhronosGroup/OpenCL-ICD-Loader/tar.gz/5192c84f8059e5f703e5452929b613f9487f6e4c",
-      "sha256": "c4ac098692a8b23827050cc10169aaae7b5d7578c4da6e2a9cd532964ef25583"
-    },
-    {
-      "component": "btbn-openmpt",
-      "archive": "btbn-openmpt-3ee3c800.tar.gz",
-      "origin": "https://codeload.github.com/OpenMPT/openmpt/tar.gz/3ee3c8000b45886703816fd027369ab6ad6fc6cb",
-      "sha256": "bf76cce9e4ae883966ebcdc0cd401533869f3337cf27814561737ea33dd76f7e"
-    },
-    {
-      "component": "btbn-openssl",
-      "archive": "btbn-openssl-openssl-.tar.gz",
-      "origin": "https://codeload.github.com/openssl/openssl/tar.gz/openssl-3.6.5",
-      "sha256": "f3091b7ccb41a11d877b7406b7afc9dd9c5003d299c6bb33cff882127bc06c91"
-    },
-    {
-      "component": "btbn-pango",
-      "archive": "btbn-pango-68e981d2.tar.gz",
-      "origin": "https://codeload.github.com/GNOME/pango/tar.gz/68e981d243d50e03f3df12fb400f31647ef570d2",
-      "sha256": "26039d1800a91f6b185f9533f5754e17a994170d154b406fdbd16fa2de9c97c4"
-    },
-    {
-      "component": "btbn-pcre2",
-      "archive": "btbn-pcre2-be940c4e.tar.gz",
-      "origin": "https://codeload.github.com/PCRE2Project/pcre2/tar.gz/be940c4eaec0bc4117e06e8f14e56bf82089be6b",
-      "sha256": "e239983e09c9387d69935e3f50771af68d023ea314582f9ae3efe8c67e3d9e87"
-    },
-    {
-      "component": "btbn-pixman",
-      "archive": "btbn-pixman-e7fd4414.tar.gz",
-      "origin": "https://gitlab.freedesktop.org/pixman/pixman/-/archive/e7fd44140fe6edef507d54bdbc25c09543ffc936/pixman-e7fd44140fe6edef507d54bdbc25c09543ffc936.tar.gz",
-      "sha256": "334c066fddd7b948ee11ee7cf9a5b7558e91e0a01882f0c87d6b763bc404b64d"
-    },
-    {
-      "component": "btbn-rav1e",
-      "archive": "btbn-rav1e-31435de9.tar.gz",
-      "origin": "https://codeload.github.com/xiph/rav1e/tar.gz/31435de9d76fddd38f6dcc31d4014574cebb2092",
-      "sha256": "ac56fef82e5f41b53d2c6088f4b0693380c389a55665a698ba768908ee17f073"
-    },
-    {
-      "component": "btbn-sdl",
-      "archive": "btbn-sdl-8acf7cfc.tar.gz",
-      "origin": "https://codeload.github.com/libsdl-org/SDL/tar.gz/8acf7cfc0f88717e5c036f60f0314bfcafe39189",
-      "sha256": "48c1e74847e0508938a7e8a92f78e85c2908de1f3d3c87c5fc355a5f9506a30d"
-    },
-    {
-      "component": "btbn-serd",
-      "archive": "btbn-serd-b621b0bc.tar.gz",
-      "origin": "https://codeload.github.com/drobilla/serd/tar.gz/b621b0bc790d1e8102d3138ead16b974ddda8432",
-      "sha256": "67575636d233332ae137ac086e6dd193f1f8a10fd7ede8ef4dff539c8e784cbc"
-    },
-    {
-      "component": "btbn-shaderc",
-      "archive": "btbn-shaderc-2737994b.tar.gz",
-      "origin": "https://codeload.github.com/google/shaderc/tar.gz/2737994b552137a85545f956e303d620e6ff232c",
-      "sha256": "b8d8e28562357194cbcc036e6e2481a0d1563182d0387579c853d92e0febf04e"
-    },
-    {
-      "component": "btbn-sord",
-      "archive": "btbn-sord-4b5232bb.tar.gz",
-      "origin": "https://codeload.github.com/drobilla/sord/tar.gz/4b5232bb91e7f2f1b84df384494d073fabbcd312",
-      "sha256": "b5a1d3a34d7b177fd33f4ac7f96c3904861b2c6cf9b3039cb6856f6cb9abb995"
-    },
-    {
-      "component": "btbn-spirv-cross",
-      "archive": "btbn-spirv-cross-300681bb.tar.gz",
-      "origin": "https://codeload.github.com/KhronosGroup/SPIRV-Cross/tar.gz/300681bbcb8365a8d1eacdacdbdd0249bbf1d6b1",
-      "sha256": "ca390d0cfb115504b97af1120c3a9479fb7b8f9e1a590fc80dca52ec1dd1c489"
-    },
-    {
-      "component": "btbn-spirv-headers",
-      "archive": "btbn-spirv-headers-fbf86836.tar.gz",
-      "origin": "https://codeload.github.com/KhronosGroup/SPIRV-Headers/tar.gz/fbf86836a9b1966586faf7be7bb8a6440e156d62",
-      "sha256": "25198fd01717ec1d9b2b260f144fecba1265c51dcc8531ef98008e7b4dbb7e44"
-    },
-    {
-      "component": "btbn-sratom",
-      "archive": "btbn-sratom-9e8ee84e.tar.gz",
-      "origin": "https://codeload.github.com/lv2/sratom/tar.gz/9e8ee84eed502e6030ce8bb49694fd28542b08fc",
-      "sha256": "7a1785d825e6d1d60f11c7371a0a5fc8a6d66f407eddf9d37eb50dd87afe274f"
-    },
-    {
-      "component": "btbn-svtav1",
-      "archive": "btbn-svtav1-f2c3fb78.tar.gz",
-      "origin": "https://gitlab.com/AOMediaCodec/SVT-AV1/-/archive/f2c3fb78611d542b12b11c6d10d3744b31b754a0/SVT-AV1-f2c3fb78611d542b12b11c6d10d3744b31b754a0.tar.gz",
-      "sha256": "d9bcd78b7eb1410bba087fd1dbbe30d7a297cdd1a5a903fa5f3c2c1a85608fe2"
-    },
-    {
-      "component": "btbn-uavs3d",
-      "archive": "btbn-uavs3d-0e20d2c2.tar.gz",
-      "origin": "https://codeload.github.com/uavs3/uavs3d/tar.gz/0e20d2c291853f196c68922a264bcd8471d75b68",
-      "sha256": "1c1eb778b6080bc01493180ea7ae671c6444ce3aa760b5d021ba882eb0f9e3a0"
-    },
-    {
-      "component": "btbn-vapoursynth",
-      "archive": "btbn-vapoursynth-R81.tar.gz",
-      "origin": "https://codeload.github.com/vapoursynth/vapoursynth/tar.gz/R81",
-      "sha256": "4ef8aa67d890fec387f7f5eeec3b54bb0cf6cf5579af2d64a8ea5373c71a6e84"
-    },
-    {
-      "component": "btbn-vulkan-loader",
-      "archive": "btbn-vulkan-loader-65b39365.tar.gz",
-      "origin": "https://codeload.github.com/BtbN/Vulkan-Shim-Loader/tar.gz/65b3936528cd92eb4ea3de485d03f858a3850484",
-      "sha256": "1cea0208588bd9d30379e7b83800dd7a32ca68d43c118642693be57782f8633d"
-    },
-    {
-      "component": "btbn-vulkan-loader2",
-      "archive": "btbn-vulkan-loader2-v1.4.366.tar.gz",
-      "origin": "https://codeload.github.com/KhronosGroup/Vulkan-Headers/tar.gz/v1.4.366",
-      "sha256": "577b90c208e6fd39ec9a1460e48772f63c76f6f5afb441df2a977a0fdb3f618c"
-    },
-    {
-      "component": "btbn-xxhash",
-      "archive": "btbn-xxhash-61fd0fec.tar.gz",
-      "origin": "https://codeload.github.com/Cyan4973/xxHash/tar.gz/61fd0fece2ebafc5bd9b573050e0c046c4e48d28",
-      "sha256": "3151a710abc691e32670a57d5a7458db4581e4b205fc64f588bf882cf77075ce"
-    },
-    {
-      "component": "btbn-xz",
-      "archive": "btbn-xz-299eb5c3.tar.gz",
-      "origin": "https://codeload.github.com/tukaani-project/xz/tar.gz/299eb5c3f597f107fd6019bf156885ac8bfaa5ea",
-      "sha256": "c1f497513e85cbc2f3760990a6ed9cbebe6386f273481b87251d0d6eb481c51a"
-    },
-    {
-      "component": "btbn-zix",
-      "archive": "btbn-zix-17d63239.tar.gz",
-      "origin": "https://codeload.github.com/drobilla/zix/tar.gz/17d632393f5addb6fa24dda2927b96515407cca7",
-      "sha256": "a1b95d6eb32a00f881f620edcab9d27335250e37c6ad879feb0c29a7fc2c02e5"
-    },
-    {
-      "component": "btbn-zstd",
-      "archive": "btbn-zstd-49cf5179.tar.gz",
-      "origin": "https://codeload.github.com/facebook/zstd/tar.gz/49cf51799ea051457f57243527aa2058f999f005",
-      "sha256": "20b3aa4295de44d8ea74c0bedbd036364c9d82609325b660a4900becbd56383a"
-    },
-    {
-      "component": "btbn-zvbi",
-      "archive": "btbn-zvbi-34bb6f66.tar.gz",
-      "origin": "https://codeload.github.com/zapping-vbi/zvbi/tar.gz/34bb6f660c5c1bacd4a66cc7b22311e4ca3c1ab5",
-      "sha256": "5c671a9f052e41cf770372a263ee6258cb41f6c97ce884080f68b341ab81db1a"
+      "component": "conda-win-x64-libfreetype6",
+      "archive": "freetype-2.14.3.tar.gz",
+      "origin": "https://download.savannah.gnu.org/releases/freetype/freetype-2.14.3.tar.gz",
+      "sha256": "e61b31ab26358b946e767ed7eb7f4bb2e507da1cfefeb7a8861ace7fd5c899a1",
+      "windowsRuntimePackage": "libfreetype6"
     }
   ]
 }

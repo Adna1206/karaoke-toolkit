@@ -77,7 +77,7 @@ Open `KaraokeToolkit.slnx` in Visual Studio with .NET 10 tooling. Projects:
 - `KaraokeToolkit.Cli`: [command-line operations and recipes](docs/user/cli.md), shipped with App and usable without a GUI.
 - `KaraokeToolkit.Mcp`: [local MCP tools](docs/user/mcp.md), launched by a client and shipped with App; no hosted service.
 
-The build fetches the pinned FFmpeg archive on a cache miss and verifies its
+The build fetches the pinned FFmpeg packages on a cache miss and verifies their
 checksum before extracting it.
 See [audio runtime and benchmarks](docs/distribution/audio-runtime.md) for platforms and packaging,
 and [vendor versions](vendor/versions.md) for the inventory. The
@@ -127,6 +127,6 @@ and Linux x64 AppImages with the repository-pinned Velopack tool. See
 [publishing packages](docs/distribution/publishing.md). Signing, uploads and real installation/
 upgrade testing remain pending.
 
-The App checks Velopack Flow on demand from the Help menu.
+The App checks GitHub Releases on demand from the Help menu.
 Automatic application of pending updates remains disabled. See
 [update integration](docs/distribution/updates.md).

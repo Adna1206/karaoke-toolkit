@@ -35,10 +35,9 @@ runtime source matches, source assembly and remaining FFmpeg work.
 | Microsoft.Extensions components | 11.0.0 | `Microsoft.Extensions.txt` (MIT), `Microsoft.Extensions.ThirdPartyNotices.txt` | Shared logging/DI abstractions aligned at 11.0.0; MCP hosting components |
 | Microsoft.IO.RecyclableMemoryStream (Avalonia diagnostics dependency) | 3.0.1 | `Microsoft.IO.RecyclableMemoryStream.txt` (MIT) | App output |
 | Tmds.DBus.Protocol (Avalonia Linux integration) | 0.94.1 | `Tmds.DBus.Protocol.txt` (MIT) | Included with app notices |
-| FFmpeg, Windows/Linux BtbN builds | 8.1 branch | `FFmpeg.LGPLv3.txt` and `FFmpeg.GPLv3.txt` | In `ffmpeg/` for those RIDs |
-| FFmpeg, macOS Apple Silicon Martin Riedl build | 9.0.2 | `FFmpeg.GPLv3.txt` | In `ffmpeg/` for `osx-arm64` |
-| libvorbis in the pinned FFmpeg builds | 1.3.7, all three RIDs | `ffmpeg/libvorbis.BSD-3-Clause.txt` | In `licenses/ffmpeg/` for all three RIDs |
-| LAME, libass, GNU libiconv, libbluray, TwoLAME in the pinned FFmpeg builds | Per-target inventory in `vendor/ffmpeg/manifest.json` | Upstream licence texts and LAME attribution in `ffmpeg/` | In `licenses/ffmpeg/` for the targets listed in the manifest |
+| FFmpeg, Conda-forge Windows/Linux x64 and Apple Silicon builds | 9.0.2 | LGPL v3 and incorporated GPL v3 terms | Generated `licenses/ffmpeg/` for all three targets |
+| FFmpeg shared libraries | Exact versions in the [runtime locks](../vendor/versions.md#ffmpeg) | Pinned upstream and package licences | Generated `licenses/ffmpeg/conda-notices/` per target |
+| OpenH264 | Per-target build in the FFmpeg runtime locks | Cisco copyright notice and BSD-2-Clause text from the runtime package | About → Third-party notices → FFmpeg · OpenH264 · BSD-2-Clause |
 | CDRDAO | 1.2.6 | `CDRDAO.GPLv2.txt` | Bundled Windows x64 reader, with source archive |
 | MSYS2 runtime | 3.6.5-1 | LGPL v3 or later with linking exception; additional newlib notices, under `licenses/cdrdao/` | Windows `licenses/cdrdao/` |
 | GCC runtime DLLs | gcc-libs 15.2.0-1 | GPL v3 or later with GCC Runtime Library Exception 3.1, under `licenses/cdrdao/` | Windows `licenses/cdrdao/` |
