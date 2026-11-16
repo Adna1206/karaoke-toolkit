@@ -1,11 +1,13 @@
 # Security policy
 
-If you already have a private way to reach the maintainer, use it to report
-suspected vulnerabilities. The project has yet to establish a dedicated
-reporting address.
+Use GitHub's [Report a vulnerability](https://github.com/Adna1206/karaoke-toolkit/security/advisories/new)
+form to send a private report to the maintainer. You can also open the
+repository's **Security → Advisories** page and select **Report a vulnerability**.
 
-Include the Toolkit version, operating system, affected operation and enough
-detail to reproduce the problem. Remove personal data from logs or samples.
+Include the Toolkit version, operating system, affected operation, what an
+attacker could do or what data could be affected, and enough detail for the
+maintainer to investigate. Remove personal data and credentials from logs or
+samples.
 Keep vulnerability details out of public issues. See [Support](SUPPORT.md)
 for ordinary bugs and usage questions.
 

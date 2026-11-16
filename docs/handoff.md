@@ -1,5 +1,11 @@
 # Current handoff
 
+## Private vulnerability reporting
+
+Enabled on GitHub on 2026-11-16 from `master` at `b3314ac`. GitHub's API
+confirmed the setting and the public Advisories page showed the report button.
+The [security policy](SECURITY.md) links to the private form.
+
 ## 2026.11.17 Windows x64 prerelease
 
 Released 2026-11-16 from `master` commit `4fa7a4e`, tagged `v2026.11.17`.
