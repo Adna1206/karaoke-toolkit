@@ -10,9 +10,10 @@ Inspired by MP3+G Toolz, Karaoke Toolkit is an Avalonia desktop app for local
 karaoke-file conversion, metadata and file management. Windows is the validated
 runtime platform; Windows and Linux x64 packages can be generated locally.
 
-Karaoke Toolkit is an AI-assisted project. The maintainer and AI tools both
-contribute to the code, and AI drafts most of the documentation. The maintainer
-guides development and makes the final project decisions.
+Karaoke Toolkit is an AI-assisted project. The maintainer makes the design
+decisions, defines the architecture, and chooses the development standards.
+The maintainer and AI tools both contribute code, and AI drafts most of the
+documentation.
 
 Audio processing uses bundled FFmpeg, ZIP operations use SharpCompress, and
 experimental CD+G ripping uses cdrdao. Windows x64 bundles the disc reader;

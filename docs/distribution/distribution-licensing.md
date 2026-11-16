@@ -28,7 +28,8 @@ The source evidence can be assembled offline after those archives are cached:
 Output is a fresh directory under ignored `artifacts/distribution-sources/`,
 containing the archives, checksums, manifest and this document. It is deliberately
 labelled incomplete. Ordinary builds do not download these sources or add their
-size to installed packages. No public hosting or source offer is configured.
+size to installed packages. The [2026.11.17 Windows prerelease](https://github.com/Adna1206/karaoke-toolkit/releases/tag/v2026.11.17)
+links its Windows third-party source archive and the matching Toolkit tag.
 `-Archive` writes a sibling ZIP named with the Toolkit version and `incomplete`,
 plus a `.sha256` sidecar. It includes the current full source inventory (including
 other platforms), notices and provenance documents. Combine with `-CdrdaoOnly`

@@ -38,5 +38,7 @@ continue using the existing local application data location.
 
 `scripts/Publish.ps1` restores the matching repository-local `vpk` tool and creates
 Windows x64 and Linux x64 packages. See [publishing](publishing.md) for commands and
-artifact locations. Release uploads, signing and installation/update testing remain
-future work. The MIT notice ships in `licenses/Velopack.txt` and is listed in About.
+artifact locations. The [Windows x64 prerelease](https://github.com/Adna1206/karaoke-toolkit/releases/tag/v2026.11.17)
+has a public Windows feed. Clean-machine installation and in-app discovery of a
+newer release still need verification. The MIT notice ships in
+`licenses/Velopack.txt` and is listed in About.

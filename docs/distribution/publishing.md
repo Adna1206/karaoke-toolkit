@@ -70,12 +70,14 @@ changing Explorer registrations and bumping the app version are separate steps.
    a media conversion completes. Open **About → Third-party notices** and
    confirm the OpenH264 entry displays its licence text.
 2. Review the Windows source inventory and generate the third-party source archive
-   with `scripts/Prepare-DistributionSources.ps1 -Archive`. See the
+   by running `scripts/Prepare-DistributionSources.ps1 -Archive` from the
+   tagged checkout. This is a separate step from building Setup. See the
    [distribution licensing record](distribution-licensing.md#remaining-ffmpeg-work)
    for its scope and remaining verification.
 3. Attach Setup and the matching third-party source archive to the GitHub Release.
    Link both the third-party archive and the exact Toolkit tag from the release
-   notes. GitHub supplies the tagged Toolkit source downloads automatically.
+   notes. GitHub automatically generates the tagged Toolkit source ZIP and
+   tarball. The third-party archive is a separate release upload.
    A private repository link works when every installer recipient can download
    the matching source. A separate Toolkit source ZIP is optional when that
    access is in place. [GPLv3 §6](https://www.gnu.org/licenses/gpl-3.0.html#section6)
