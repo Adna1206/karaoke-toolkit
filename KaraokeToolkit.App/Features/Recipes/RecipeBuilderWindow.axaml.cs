@@ -22,6 +22,21 @@ public partial class RecipeBuilderWindow : Window
     }
     private RecipeBuilderViewModel Model => (RecipeBuilderViewModel)DataContext!;
     private void Close_Click(object? sender, RoutedEventArgs e) => Close();
+    private void OpenSavedRecipes_Click(object? sender, RoutedEventArgs e)
+    {
+        var menu = new MenuFlyout
+        {
+            Placement = PlacementMode.BottomEdgeAlignedLeft,
+            ItemsSource = Model.SavedRecipes.Select(recipe =>
+            {
+                var item = new MenuItem { Header = recipe.Name };
+                item.Click += (_, _) => Model.SelectedSavedRecipe = recipe;
+                return item;
+            }).ToArray()
+        };
+        menu.ShowAt(RecipeNameField);
+    }
+
     private void Save_Click(object? sender, RoutedEventArgs e)
     {
         try { Model.Save(); }
@@ -48,14 +63,20 @@ public partial class RecipeBuilderWindow : Window
         var delete = new Button { Content = "Delete Recipe" };
         cancel.Click += (_, _) => dialog.Close();
         delete.Click += (_, _) => { confirmed = true; dialog.Close(); };
+        var actions = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Spacing = WindowSpacing.FooterButtonGap,
+            Children = { cancel, delete }
+        };
         dialog.Content = new StackPanel
         {
-            Margin = WindowSpacing.ContentInset, Spacing = 18,
+            Margin = WindowSpacing.ContentInset, Spacing = 14,
             Children =
             {
                 new TextBlock { Text = $"Delete “{name}” from your saved recipes?\n\nUnsaved edits to this recipe will be discarded. Karaoke files and exported recipe copies will not be deleted.", TextWrapping = TextWrapping.Wrap },
-                new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right,
-                    Spacing = 10, Children = { cancel, delete } }
+                new Border { Classes = { "windowFooter", "dialog" }, Child = actions }
             }
         };
         dialog.Opened += (_, _) => cancel.Focus();

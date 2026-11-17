@@ -16,6 +16,8 @@ public class RecipeBuilderTests
         string directory = TestMediaFixture.NewFolder();
         var defaults = new RecipeStep { Options = new() { ZipCompression = ZipCompression.Level3 } };
         var model = new RecipeBuilderViewModel(directory, defaults);
+        Assert.Empty(model.Name);
+        Assert.False(model.AddStepCommand.CanExecute(null));
         model.SelectedOperation = model.Operations.Single(operation => operation.Id == "ZipToAudioG");
         model.AddStepCommand.Execute(null);
         var first = Assert.Single(model.Steps);
@@ -24,6 +26,7 @@ public class RecipeBuilderTests
         model.AddStepCommand.Execute(null);
         Assert.Equal(ZipCompression.Level3, defaults.Options.ZipCompression);
         Assert.Equal(ZipCompression.Level3, model.Steps[1].Step.Options.ZipCompression);
+        Assert.False(model.CanSave);
         model.Name = "Extract and package"; model.Save();
         var reopened = new RecipeBuilderViewModel(directory, defaults);
         reopened.SelectedSavedRecipe = Assert.Single(reopened.SavedRecipes);
@@ -64,7 +67,7 @@ public class RecipeBuilderTests
         Assert.True(model.CanDeleteRecipe);
         model.DeleteSavedRecipe(removed.Id);
         Assert.Null(model.SelectedSavedRecipe); Assert.False(model.CanDeleteRecipe);
-        Assert.Empty(model.Steps); Assert.Equal("New recipe", model.Name);
+        Assert.Empty(model.Steps); Assert.Empty(model.Name);
         Assert.Equal(keepId, Assert.Single(model.SavedRecipes).Id);
         Assert.Equal(keepId, Assert.Single(new RecipeStore(directory).Load()).Id);
         Assert.Equal("karaoke file", File.ReadAllText(input)); Assert.True(File.Exists(exportedCopy));

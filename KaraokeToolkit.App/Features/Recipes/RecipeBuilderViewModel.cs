@@ -44,12 +44,13 @@ public partial class RecipeBuilderViewModel : ViewModelBase
     public ObservableCollection<RecipeStepItem> Steps { get; } = [];
     public IReadOnlyList<OperationDefinition> Operations { get; } = OperationDefinitions.All
         .Where(definition => definition.CanUseInRecipes).ToArray();
-    [ObservableProperty] public partial string Name { get; set; } = "New recipe";
+    [ObservableProperty] public partial string Name { get; set; } = "";
     [ObservableProperty] public partial StatusKind StatusSeverity { get; set; }
     [ObservableProperty] public partial string Error { get; set; } = "";
     [ObservableProperty, NotifyPropertyChangedFor(nameof(CanDeleteRecipe))]
     public partial RecipeDefinition? SelectedSavedRecipe { get; set; }
-    [ObservableProperty] public partial OperationDefinition? SelectedOperation { get; set; }
+    [ObservableProperty, NotifyCanExecuteChangedFor(nameof(AddStepCommand))]
+    public partial OperationDefinition? SelectedOperation { get; set; }
     [ObservableProperty] public partial RecipeStepItem? SelectedStep { get; set; }
     public string StepDescription => SelectedStep?.Definition.Description ?? "Select a step to inspect or configure it.";
     public bool HasSelectedStep => SelectedStep != null;
@@ -68,7 +69,6 @@ public partial class RecipeBuilderViewModel : ViewModelBase
         store = new(directory);
         this.defaults = defaults;
         this.mp3Bitrate = mp3Bitrate ?? defaults.Options.AudioBitrate;
-        SelectedOperation = Operations.First();
         Steps.CollectionChanged += (_, _) => Refresh();
         try { foreach (var recipe in store.Load()) SavedRecipes.Add(recipe); }
         catch (Exception error) { SetStatus("Could not load the recipe library: " + error.Message, StatusKind.Failure); }
@@ -80,6 +80,8 @@ public partial class RecipeBuilderViewModel : ViewModelBase
     }
 
     public RecipeDefinition Definition() => new() { Id = id, Name = Name.Trim(), Steps = Steps.Select(item => item.Step).ToArray() };
+    private RecipeDefinition DefinitionForStepValidation() =>
+        string.IsNullOrWhiteSpace(Name) ? Definition() with { Name = "Untitled recipe" } : Definition();
     partial void OnNameChanged(string value) => Refresh();
     partial void OnSelectedStepChanged(RecipeStepItem? value)
     {
@@ -101,9 +103,11 @@ public partial class RecipeBuilderViewModel : ViewModelBase
     private void NewRecipe()
     {
         SelectedSavedRecipe = null;
-        id = Guid.NewGuid(); Name = "New recipe"; Steps.Clear(); SelectedStep = null; Error = "";
+        id = Guid.NewGuid(); Name = ""; Steps.Clear(); SelectedStep = null; SelectedOperation = null; Error = "";
     }
-    [RelayCommand]
+    private bool CanAddStep => SelectedOperation != null;
+
+    [RelayCommand(CanExecute = nameof(CanAddStep))]
     private void AddStep()
     {
         if (SelectedOperation == null) return;
@@ -112,7 +116,8 @@ public partial class RecipeBuilderViewModel : ViewModelBase
             { Options = step.Options with { AudioEncoder = KaraokeToolkit.Core.Audio.AudioEncoder.MP3, AudioBitrate = mp3Bitrate } };
         try
         {
-            RecipeOperations.Validate(Definition() with { Steps = Steps.Select(item => item.Step).Append(step).ToArray() });
+            var definition = DefinitionForStepValidation();
+            RecipeOperations.Validate(definition with { Steps = definition.Steps.Append(step).ToArray() });
             var item = new RecipeStepItem(step); Steps.Add(item); SelectedStep = item; Error = "";
         }
         catch (Exception error) { SetStatus(error.Message, StatusKind.Failure); }
@@ -165,7 +170,7 @@ public partial class RecipeBuilderViewModel : ViewModelBase
         OnPropertyChanged(nameof(CanSave));
         if (Steps.Count > 0)
         {
-            try { RecipeOperations.Validate(Definition()); Error = ""; }
+            try { RecipeOperations.Validate(DefinitionForStepValidation()); Error = ""; }
             catch (Exception error) { SetStatus(error.Message, StatusKind.Failure); }
         }
     }

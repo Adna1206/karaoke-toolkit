@@ -7,6 +7,7 @@ Completed changes cannot be undone as a whole recipe. After an interruption,
 the recovery prompt offers to resume the saved workflow; it never resumes silently.
 
 Open **Tools → Recipe Builder (Experimental)** to create a named sequence of built-in operations.
+Type a name in the recipe field or use its arrow to open a saved recipe.
 Add steps, reorder them, and use **Step Settings** to configure each step. New
 steps copy current app preferences; their snapshots are saved with the recipe.
 Displayed step numbers update after reordering or removal. Reordering immediately

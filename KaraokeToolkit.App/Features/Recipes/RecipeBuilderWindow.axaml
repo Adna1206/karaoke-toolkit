@@ -1,29 +1,32 @@
 <Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:shared="using:KaraokeToolkit.App.Shared"
-        xmlns:vm="using:KaraokeToolkit.App.Features.Recipes" xmlns:metadata="using:KaraokeToolkit.App.Metadata" xmlns:recipes="using:KaraokeToolkit.Core.Recipes"
+        xmlns:vm="using:KaraokeToolkit.App.Features.Recipes" xmlns:metadata="using:KaraokeToolkit.App.Metadata"
         x:Class="KaraokeToolkit.App.Features.Recipes.RecipeBuilderWindow" x:DataType="vm:RecipeBuilderViewModel"
         Width="900" Height="620" MinWidth="750" MinHeight="480" WindowStartupLocation="CenterOwner">
- <Grid Margin="{x:Static shared:WindowSpacing.ContentInset}" RowDefinitions="Auto,Auto,Auto,*,Auto,Auto" RowSpacing="14">
+ <Grid Margin="{x:Static shared:WindowSpacing.ContentInset}" RowDefinitions="Auto,Auto,*,Auto,Auto" RowSpacing="14">
   <StackPanel Spacing="6">
    <TextBlock Text="Recipe Builder (Experimental)" Classes="heading1"/>
    <TextBlock Text="Experimental: review each step's settings before running. Completed changes cannot be undone as a whole recipe, and interrupted recipes do not automatically resume." TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.75"/>
   </StackPanel>
   <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8">
-   <ComboBox ItemsSource="{Binding SavedRecipes}" SelectedItem="{Binding SelectedSavedRecipe}" PlaceholderText="Saved recipes" HorizontalAlignment="Stretch">
-    <ComboBox.ItemTemplate><DataTemplate x:DataType="recipes:RecipeDefinition"><TextBlock Text="{Binding Name}"/></DataTemplate></ComboBox.ItemTemplate>
-   </ComboBox>
+   <TextBox x:Name="RecipeNameField" Text="{Binding Name}" MaxLength="200" PlaceholderText="Name your recipe" AutomationProperties.Name="Recipe name">
+    <TextBox.InnerRightContent>
+     <Button Theme="{DynamicResource FluentTextBoxButton}" Focusable="True" Click="OpenSavedRecipes_Click"
+             AutomationProperties.Name="Saved recipes"
+             ToolTip.Tip="Open a saved recipe" IsEnabled="{Binding !!SavedRecipes.Count}">
+      <PathIcon Width="12" Height="12" Data="M 0,0 L 6,5 L 12,0 L 12,2 L 6,7 L 0,2 Z"/>
+     </Button>
+    </TextBox.InnerRightContent>
+   </TextBox>
    <Button Grid.Column="1" Content="New" Command="{Binding NewRecipeCommand}"/>
    <Button Grid.Column="2" Content="Save" Click="Save_Click" IsEnabled="{Binding CanSave}"/>
    <Button Grid.Column="3" Content="Delete Recipe…" Click="Delete_Click" IsEnabled="{Binding CanDeleteRecipe}"/>
    <Button Grid.Column="4" Content="Import…" Click="Import_Click"/>
    <Button Grid.Column="5" Content="Export…" Click="Export_Click" IsEnabled="{Binding CanSave}"/>
   </Grid>
-  <Grid Grid.Row="2" ColumnDefinitions="Auto,*" ColumnSpacing="12">
-   <TextBlock Text="Recipe name" VerticalAlignment="Center"/>
-   <TextBox Grid.Column="1" Text="{Binding Name}" MaxLength="200" AutomationProperties.Name="Recipe name"/>
-  </Grid>
-  <Grid Grid.Row="3" RowDefinitions="Auto,*,Auto,Auto" RowSpacing="12">
+  <Grid Grid.Row="2" RowDefinitions="Auto,*,Auto,Auto" RowSpacing="12">
    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-    <ComboBox ItemsSource="{Binding Operations}" SelectedItem="{Binding SelectedOperation}" HorizontalAlignment="Stretch" AutomationProperties.Name="Operation to add">
+    <ComboBox ItemsSource="{Binding Operations}" SelectedItem="{Binding SelectedOperation}" HorizontalAlignment="Stretch"
+              PlaceholderText="Choose an operation to add" AutomationProperties.Name="Operation to add">
      <ComboBox.ItemTemplate><DataTemplate x:DataType="metadata:OperationDefinition"><TextBlock Text="{Binding Label}"/></DataTemplate></ComboBox.ItemTemplate>
     </ComboBox>
     <Button Grid.Column="1" Content="Add Step" Command="{Binding AddStepCommand}"/>
@@ -39,8 +42,8 @@
    </StackPanel>
    <TextBlock Grid.Row="3" Text="{Binding StepDescription}" TextWrapping="Wrap" MaxHeight="55" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
   </Grid>
-  <TextBlock Grid.Row="4" Text="Save your recipe, then select it under Recipes (Experimental) on the home screen to choose inputs and run it. Each step uses its saved settings." TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
-  <Border Grid.Row="5" Classes="windowFooter dialog">
+  <TextBlock Grid.Row="3" Text="Save your recipe, then select it under Recipes (Experimental) on the home screen to choose inputs and run it. Each step uses its saved settings." TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
+  <Border Grid.Row="4" Classes="windowFooter dialog">
     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
      <shared:StatusBar Message="{Binding Error}" Kind="{Binding StatusSeverity}" VerticalAlignment="Center"/>
      <Button Grid.Column="1" Content="Close" Click="Close_Click"/>
