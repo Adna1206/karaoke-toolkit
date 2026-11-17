@@ -12,6 +12,29 @@ internal static class MediaProbe
 {
     internal static async Task<MediaInfo> AnalyseAsync(string path, FFOptions options, CancellationToken token = default)
     {
+        const int attempts = 2;
+        for (int attempt = 1; ; attempt++)
+        {
+            string output = await ReadProbeOutputAsync(path, options, token);
+            token.ThrowIfCancellationRequested();
+            try
+            {
+                using var json = JsonDocument.Parse(output);
+                return ReadMediaInfo(json.RootElement);
+            }
+            catch (JsonException) when (attempt < attempts)
+            {
+                // FFprobe can exit successfully with incomplete JSON. Retry the read-only probe once.
+            }
+            catch (JsonException error)
+            {
+                throw new InvalidDataException($"FFprobe returned invalid JSON for '{Path.GetFileName(path)}' after {attempts} attempts.", error);
+            }
+        }
+    }
+
+    private static async Task<string> ReadProbeOutputAsync(string path, FFOptions options, CancellationToken token)
+    {
         token.ThrowIfCancellationRequested();
         string executable = Path.Combine(options.BinaryFolder, OperatingSystem.IsWindows() ? "ffprobe.exe" : "ffprobe");
         var start = new ProcessStartInfo(executable)
@@ -44,8 +67,11 @@ internal static class MediaProbe
             throw new InvalidDataException($"FFprobe failed for '{Path.GetFileName(path)}' (exit {process.ExitCode}): {error[..Math.Min(error.Length, 1200)]}");
         }
 
-        using var json = JsonDocument.Parse(await stdout);
-        var root = json.RootElement;
+        return await stdout;
+    }
+
+    private static MediaInfo ReadMediaInfo(JsonElement root)
+    {
         double seconds = root.TryGetProperty("format", out var format) &&
             double.TryParse(Text(format, "duration"), NumberStyles.Float, CultureInfo.InvariantCulture, out double duration)
             ? duration : 0;
