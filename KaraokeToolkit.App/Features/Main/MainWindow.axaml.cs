@@ -48,8 +48,16 @@ public partial class MainWindow : Window
             return rip.Result;
         };
         model.RestoreQuarantinedFilesAsync = RestoreQuarantinedFilesAsync;
-        model.ConfigureTaggingAsync = async viewModel => await ModalDialog.ShowAsync<TaggingRequest?>(new TaggingWindow { DataContext = viewModel }, this);
-        model.ConfigureTrackGroupingAsync = viewModel => ModalDialog.ShowAsync<TrackGroupingSubmission?>(new TrackGroupingWindow { DataContext = viewModel }, this);
+        model.ConfigureTaggingAsync = viewModel =>
+        {
+            var preview = new TaggingPreviewView(viewModel, ConfirmDiscardPreviewAsync);
+            return ShowPreviewAsync(preview, preview.ReviewAsync);
+        };
+        model.ConfigureTrackGroupingAsync = viewModel =>
+        {
+            var preview = new TrackGroupingPreviewView(viewModel, ConfirmDiscardPreviewAsync);
+            return ShowPreviewAsync(preview, preview.ReviewAsync);
+        };
         model.ResolveConflictAsync = ResolveConflictAsync;
         model.ConfirmRecoveryAsync = ConfirmRecoveryAsync;
         await model.CheckForRecoveryAsync();
@@ -65,6 +73,23 @@ public partial class MainWindow : Window
             if (IsVisible) await CheckForUpdatesAsync(manual: false);
         }
     }
+
+    private async Task<T?> ShowPreviewAsync<T>(Control preview, Func<Task<T?>> review) where T : class
+    {
+        OperationPreview.Content = preview;
+        OperationWorkspace.IsVisible = false;
+        OperationPreview.IsVisible = true;
+        try { return await review(); }
+        finally
+        {
+            OperationPreview.IsVisible = false;
+            OperationPreview.Content = null;
+            OperationWorkspace.IsVisible = true;
+        }
+    }
+
+    private Task<bool> ConfirmDiscardPreviewAsync() =>
+        ConfirmActionAsync("Discard preview edits?", "Going back will discard your edits to this preview.", "Discard edits");
 
     private void ConfigureWindowsTitleBar()
     {
@@ -165,7 +190,7 @@ public partial class MainWindow : Window
             }));
             if (files.Count == 0 || files[0].TryGetLocalPath() is not { } path)
                 return;
-            if (!await ConfirmRestoreAsync("Restore Quarantined Files", "Restore the files listed in this Damaged manifest to their original paths? Existing files will never be replaced.\n\n" + path, "Restore"))
+            if (!await ConfirmActionAsync("Restore Quarantined Files", "Restore the files listed in this Damaged manifest to their original paths? Existing files will never be replaced.\n\n" + path, "Restore"))
                 return;
             model.IsBusy = true;
             await new QuarantineService().RestoreAsync(path);
@@ -177,7 +202,7 @@ public partial class MainWindow : Window
         catch (Exception error) { model.StatusOutcome = RunStatus.Failure; model.Status = "Restore stopped: " + error.Message; }
         finally { model.IsBusy = false; }
     }
-    private async Task<bool> ConfirmRestoreAsync(string title, string text, string action)
+    private async Task<bool> ConfirmActionAsync(string title, string text, string action)
     {
         bool accepted = false;
         var dialog = new Window { Title = WindowTitles.For(title), Width = 610, SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner };
@@ -293,7 +318,7 @@ public partial class MainWindow : Window
     private static Window CreateInfoDialog(string title, TextBlock message, ProgressBar? progress = null)
     {
         var dialog = new Window { Title = WindowTitles.For(title), Width = 480, SizeToContent = SizeToContent.Height, CanResize = false, WindowStartupLocation = WindowStartupLocation.CenterOwner };
-        var close = new Button { Content = "Close", HorizontalAlignment = HorizontalAlignment.Right };
+        var close = new Button { Content = "Close", MinWidth = 85, HorizontalAlignment = HorizontalAlignment.Right };
         close.Click += (_, _) => dialog.Close();
         Control body = message;
         if (progress != null)
@@ -309,7 +334,8 @@ public partial class MainWindow : Window
                 Children = { message, progress }
             };
         }
-        var content = new StackPanel { Margin = WindowSpacing.ContentInset, Spacing = 20, Children = { body, close } };
+        var footer = new Border { Classes = { "windowFooter", "dialog" }, Child = close };
+        var content = new StackPanel { Margin = WindowSpacing.ContentInset, Spacing = 14, Children = { body, footer } };
         dialog.Content = content;
         return dialog;
     }

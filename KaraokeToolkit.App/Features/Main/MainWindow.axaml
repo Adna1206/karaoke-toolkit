@@ -21,7 +21,7 @@
    </Style>
   </ControlTheme>
  </Window.Resources>
- <Grid RowDefinitions="Auto,Auto,*,Auto">
+ <Grid RowDefinitions="Auto,Auto,*">
   <Grid x:Name="MenuRow" ColumnDefinitions="Auto,Auto,*">
    <StackPanel x:Name="TitleBarIdentity" IsVisible="False" Orientation="Horizontal" Spacing="8"
                Margin="24,0,12,0" Background="Transparent">
@@ -56,7 +56,8 @@
     </StackPanel>
    </DockPanel>
   </Border>
-  <vm:OperationPickerView Grid.Row="2" Margin="24,20" x:Name="OperationPicker"
+  <Grid Grid.Row="2" x:Name="OperationWorkspace" RowDefinitions="*,Auto">
+  <vm:OperationPickerView Margin="24,20" x:Name="OperationPicker"
                           IsVisible="{Binding !ShowProgress, FallbackValue=True}">
    <vm:OperationPickerView.SourcePanel>
     <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,1,0,0" Padding="0,14,0,0">
@@ -80,8 +81,8 @@
     </Border>
    </vm:OperationPickerView.SourcePanel>
   </vm:OperationPickerView>
-  <vm:OperationProgressView Grid.Row="2" Margin="24,16" IsVisible="{Binding ShowProgress, FallbackValue=False}"/>
-  <Border Grid.Row="3" Classes="windowFooter" Padding="{x:Static shared:WindowSpacing.ContentInset}">
+  <vm:OperationProgressView Margin="24,16" IsVisible="{Binding ShowProgress, FallbackValue=False}"/>
+  <Border Grid.Row="1" Classes="windowFooter" Padding="{x:Static shared:WindowSpacing.ContentInset}">
     <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="{x:Static shared:WindowSpacing.FooterButtonGap}">
      <Grid ColumnDefinitions="*,Auto"
            ColumnSpacing="{x:Static shared:WindowSpacing.StatusProgressGap}" VerticalAlignment="Center">
@@ -100,5 +101,8 @@
      </Grid>
     </Grid>
   </Border>
+  </Grid>
+  <ContentControl Grid.Row="2" x:Name="OperationPreview" IsVisible="False"
+                  HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"/>
  </Grid>
 </Window>

@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using KaraokeToolkit.App.Shared;
 using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.FileOperations;
@@ -14,13 +15,27 @@ namespace KaraokeToolkit.App.Features.TrackGrouping;
 
 internal sealed record TrackGroupingSubmission(OperationRequest Request, TrackGroupingPlan Plan);
 public sealed record TrackGroupingPreviewIssue(string Text);
-public sealed record TrackGroupingNode(string Label, string Detail, IReadOnlyList<TrackGroupingNode> Children);
+public sealed partial class TrackGroupingNode(string label, string detail, IReadOnlyList<TrackGroupingNode> children) : ObservableObject
+{
+    public string Label { get; } = label;
+    public string Detail { get; } = detail;
+    public IReadOnlyList<TrackGroupingNode> Children { get; } = children;
+    [ObservableProperty] public partial bool IsExpanded { get; set; }
+
+    internal void SetExpanded(bool expanded)
+    {
+        IsExpanded = expanded && Children.Count > 0;
+        foreach (var child in Children)
+            child.SetExpanded(expanded);
+    }
+}
 
 public sealed partial class TrackGroupingViewModel(IReadOnlyList<string> inputs) : ViewModelBase
 {
     private CancellationTokenSource? previewCancellation;
     private TrackGroupingSubmission? submission;
     private bool closed;
+    private bool expandedAll;
 
     [ObservableProperty] public partial string? OutputFolder { get; set; } = DefaultOutput(inputs, wholeFolders: false);
     [ObservableProperty, NotifyPropertyChangedFor(nameof(ScanFolders))]
@@ -44,7 +59,8 @@ public sealed partial class TrackGroupingViewModel(IReadOnlyList<string> inputs)
     [ObservableProperty] public partial StatusKind StatusSeverity { get; set; }
     [ObservableProperty] public partial string Status { get; set; } = "";
     public PreviewProgress PreviewProgress { get; } = new();
-    [ObservableProperty] public partial IReadOnlyList<TrackGroupingNode> Tree { get; set; } = [];
+    [ObservableProperty, NotifyCanExecuteChangedFor(nameof(ToggleTreeExpansionCommand))]
+    public partial IReadOnlyList<TrackGroupingNode> Tree { get; set; } = [];
     [ObservableProperty, NotifyPropertyChangedFor(nameof(HasIssues))]
     public partial IReadOnlyList<TrackGroupingPreviewIssue> Issues { get; set; } = [];
 
@@ -72,6 +88,24 @@ public sealed partial class TrackGroupingViewModel(IReadOnlyList<string> inputs)
     public string ApplyLabel => Move ? "Move items" : "Copy items";
     public bool HasIssues => Issues.Count > 0;
     public bool CanApply => submission != null;
+    internal bool HasEdits { get; private set; }
+    public string TreeExpansionLabel => expandedAll ? "Collapse all" : "Expand all";
+    private bool CanToggleTreeExpansion => Tree.Any(node => node.Children.Count > 0);
+
+    partial void OnTreeChanged(IReadOnlyList<TrackGroupingNode> value)
+    {
+        expandedAll = false;
+        OnPropertyChanged(nameof(TreeExpansionLabel));
+    }
+
+    [RelayCommand(CanExecute = nameof(CanToggleTreeExpansion))]
+    private void ToggleTreeExpansion()
+    {
+        expandedAll = !expandedAll;
+        foreach (var node in Tree)
+            node.SetExpanded(expandedAll);
+        OnPropertyChanged(nameof(TreeExpansionLabel));
+    }
 
     protected override void OnPropertyChanged(PropertyChangedEventArgs e)
     {
@@ -80,7 +114,10 @@ public sealed partial class TrackGroupingViewModel(IReadOnlyList<string> inputs)
             nameof(GroupingMode) or nameof(TrailingDigits) or nameof(MaskStyle) or nameof(CreateParents) or
             nameof(MaxParentLevels) or nameof(SkipSingleChildParents) or nameof(RangeSize) or nameof(RangeStart) or
             nameof(RangeSeparatorStyle) or nameof(CustomRangeSeparator) or nameof(IdSeparatorStyle) or nameof(Move))
+        {
+            HasEdits = true;
             _ = PreviewAsync();
+        }
     }
 
     internal TrackGroupingSubmission? GetSubmission() => submission;

@@ -1,18 +1,19 @@
 # Karaoke tagging
 
 Choose **File & Folder Tools → Tag Karaoke Files**, select media or folders and
-click Start. The dialog previews filename-derived tags, shows current values,
+click Start. The main workspace previews filename-derived tags, shows current values,
 and lets you correct fields or exclude rows before **Apply Tags**. Changing the
 pattern requires clicking **Refresh**. Use **Select all** or **Deselect all**
 to update which editable rows are included. Folder recursion uses the existing preference.
 The preview animates its progress bar while scanning inputs, then shows how many
-files it has checked once the file count is known.
+files it has checked once the file count is known. **Back** returns to the
+selected operation and inputs. Confirm before leaving a preview with edits.
 
 The default is `%DISC%-%TRACK% - %ARTIST% - %TITLE%`. Tokens can be reordered or
 omitted, and separators are literal text. For example `%DISC%. %ARTIST% - %TITLE%`
 reads `ABC123. Artist - Title`. Type a pattern directly into the dropdown or
 choose a previously accepted pattern. The last accepted pattern is filled in
-when you reopen the dialog.
+when you reopen the preview.
 Cancelled or merely previewed combinations are not added.
 
 | Token | Metadata field |

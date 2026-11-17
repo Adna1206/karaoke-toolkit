@@ -1,12 +1,11 @@
-<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:KaraokeToolkit.App.Features.Tagging" xmlns:shared="using:KaraokeToolkit.App.Shared" x:Class="KaraokeToolkit.App.Features.Tagging.TaggingWindow"
-        x:DataType="vm:TaggingViewModel" Title="{x:Static shared:WindowTitles.Tagging}"
-        Width="980" Height="730" MinWidth="760" MinHeight="560" WindowStartupLocation="CenterOwner">
-  <Window.Styles>
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:KaraokeToolkit.App.Features.Tagging" xmlns:shared="using:KaraokeToolkit.App.Shared" x:Class="KaraokeToolkit.App.Features.Tagging.TaggingPreviewView"
+        x:DataType="vm:TaggingViewModel">
+  <UserControl.Styles>
     <Style Selector="ComboBox.filenamePattern /template/ TextBox#PART_EditableTextBox">
       <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
-  </Window.Styles>
+  </UserControl.Styles>
   <Grid Margin="{x:Static shared:WindowSpacing.ContentInset}" RowDefinitions="Auto,Auto,Auto,*,Auto,Auto" RowSpacing="14">
     <TextBlock Text="Tag Karaoke Files" Classes="heading1"/>
     <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="12">
@@ -60,10 +59,10 @@
                        Value="{Binding PreviewProgress.Percent, Mode=OneWay}"/>
         </Grid>
         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top" Spacing="{x:Static shared:WindowSpacing.FooterButtonGap}">
-          <Button Content="Cancel" IsCancel="True" Click="Cancel_Click" MinWidth="90"/>
+          <Button Content="Back" Click="Back_Click" MinWidth="90"/>
           <Button Content="Apply Tags" Classes.accent="{Binding CanApply}" IsEnabled="{Binding CanApply}" Click="Apply_Click" MinWidth="110"/>
         </StackPanel>
       </Grid>
     </Border>
   </Grid>
-</Window>
+</UserControl>

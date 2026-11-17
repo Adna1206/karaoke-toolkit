@@ -29,6 +29,9 @@ public partial class TaggingRow(TaggingPreview preview) : ObservableObject
     [ObservableProperty] private string track = preview.Tags?.Track?.ToString(CultureInfo.InvariantCulture) ?? "";
     [ObservableProperty] private string artist = preview.Tags?.Artist ?? "";
     [ObservableProperty] private string title = preview.Tags?.Title ?? "";
+    internal bool HasEdits => Included != Preview.CanApply || Album != (Preview.Tags?.Album ?? "")
+        || Track != (Preview.Tags?.Track?.ToString(CultureInfo.InvariantCulture) ?? "")
+        || Artist != (Preview.Tags?.Artist ?? "") || Title != (Preview.Tags?.Title ?? "");
     public TaggingPreview ToPreview()
     {
         if (!Included || !CanEdit) return Preview with { Tags = null, Error = Preview.Error ?? "Excluded in preview." };
@@ -47,6 +50,7 @@ public partial class TaggingRow(TaggingPreview preview) : ObservableObject
 public partial class TaggingViewModel(IReadOnlyList<string> inputs, bool recurse, IReadOnlyList<string> patterns, string initialPattern) : ViewModelBase
 {
     private readonly KaraokeTaggingService service = new();
+    private readonly string originalPattern = initialPattern;
     private string? previewPattern;
     private bool changingSelection;
     public IReadOnlyList<string> Patterns { get; } = patterns;
@@ -64,6 +68,8 @@ public partial class TaggingViewModel(IReadOnlyList<string> inputs, bool recurse
     [ObservableProperty] private bool clearOtherDescriptiveTags = true;
     public bool CanPreview => !Busy;
     public bool CanApply => !Busy && previewPattern == Pattern && Rows.Any(r => r.CanEdit && r.Included);
+    internal bool HasEdits => Pattern != originalPattern || FillEmptyOnly || !ClearComments
+        || !ClearOtherDescriptiveTags || Rows.Any(row => row.HasEdits);
     [RelayCommand(CanExecute = nameof(CanPreview))]
     public async Task PreviewAsync(CancellationToken token = default)
     {

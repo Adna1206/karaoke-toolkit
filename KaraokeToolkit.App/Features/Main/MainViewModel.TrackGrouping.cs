@@ -26,7 +26,7 @@ public partial class MainViewModel
                     if (await CheckForRecoveryAsync(Directory.Exists(input) ? input : Path.GetDirectoryName(Path.GetFullPath(input))!))
                         return;
                 IsBusy = true;
-                if (ConfigureTrackGroupingAsync == null) throw new InvalidOperationException("The grouping dialog is unavailable.");
+                if (ConfigureTrackGroupingAsync == null) throw new InvalidOperationException("The grouping preview is unavailable.");
                 submission = await ConfigureTrackGroupingAsync(new(CurrentInputs));
                 if (submission == null) return;
             }
@@ -56,8 +56,7 @@ public partial class MainViewModel
             int skipped = result.Report.Entries.Count(entry => entry.Status == "Skipped");
             int failed = result.Report.Entries.Count(entry => entry.Status is "Failed" or "Blocked");
             Status = $"{(result.Report.Cancelled ? "Grouping cancelled" : "Grouping finished")} · {completed} completed · {skipped} skipped · {failed} failed";
-            StatusOutcome = result.Report.Cancelled ? RunStatus.Neutral : failed > 0 && completed == 0 ? RunStatus.Failure
-                : result.HasIssues || skipped > 0 || completed == 0 ? RunStatus.Warning : RunStatus.Success;
+            StatusOutcome = RunStatusSummary.From(result.Report.Cancelled, completed, failed, skipped);
             if (!result.Report.Cancelled && failed == 0) Progress = TotalProgress = 100;
             var logged = Activity.Select(entry => entry.Message).ToHashSet(StringComparer.Ordinal);
             foreach (var entry in result.Report.Entries)

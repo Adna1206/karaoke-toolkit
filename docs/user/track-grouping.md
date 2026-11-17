@@ -6,6 +6,8 @@ group each selected folder as a whole. Whole folders keep their contents and
 names. Files keep their names and matching audio and graphics are grouped together.
 The preview animates its progress bar while scanning and preparing the preview.
 It shows item counts during grouping and item destination checks.
+The preview opens in the main workspace. **Back** returns to the selected
+operation and inputs, with confirmation if you changed the grouping settings.
 
 - **Number ranges** uses a configurable range size and origin. With 50 starting
   at 1, `ABC33601` and `ABC-33650` go in `ABC-33601 to ABC-33650` when the
@@ -23,10 +25,12 @@ For files and whole-folder items, it uses their containing folder. For a folder
 being scanned, it uses the selected folder itself. You can change it before
 applying. Items already at their planned path are skipped.
 
-Review the live destination tree before applying. When there are skipped items
+Review the live destination tree before applying. Use **Expand all** and
+**Collapse all** beside **Refresh** to open or close every branch.
+When there are skipped items
 or conflicts, drag the divider above their panel to resize it. The Move or Copy
 button uses the accent colour once the plan is ready. Conflicts block
-the batch. The desktop dialog defaults to Move, which requires a same-volume
+the batch. The desktop preview defaults to Move, which requires a same-volume
 destination. CLI and MCP default to Copy.
 Interrupted publication can be resumed from the saved plan using Recover.
 The same operation is available through the [CLI](cli.md) and [MCP](mcp.md).

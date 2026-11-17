@@ -60,7 +60,9 @@ public class TaggingViewModelTests
         await model.PreviewAsync();
         Assert.True(model.CanApply);
         var row = Assert.Single(model.Rows);
+        Assert.False(model.HasEdits);
         row.Artist = "Corrected artist"; row.Track = "bad";
+        Assert.True(model.HasEdits);
         Assert.Null(model.BuildRequest()); Assert.Contains("0 or greater", model.Status);
         row.Track = "7";
         var request = model.BuildRequest()!;

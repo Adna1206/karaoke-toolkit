@@ -47,13 +47,21 @@ public class OperationFlowTests
         model.ConfigureTrackGroupingAsync = async dialog =>
         {
             Assert.True(dialog.Move);
+            Assert.False(dialog.HasEdits);
             Assert.Equal("Move items", dialog.ApplyLabel);
             dialog.GroupingMode = 1;
+            Assert.True(dialog.HasEdits);
             dialog.RangeSeparatorStyle = 1;
             Assert.Equal(destination, dialog.OutputFolder);
             await dialog.PreviewAsync();
             Assert.False(dialog.HasIssues);
             var group = Assert.Single(dialog.Tree);
+            Assert.Equal("Expand all", dialog.TreeExpansionLabel);
+            dialog.ToggleTreeExpansionCommand.Execute(null);
+            Assert.True(group.IsExpanded);
+            Assert.Equal("Collapse all", dialog.TreeExpansionLabel);
+            dialog.ToggleTreeExpansionCommand.Execute(null);
+            Assert.False(group.IsExpanded);
             Assert.Equal("BKD-33601 to BKD-33650", group.Detail);
             Assert.Equal("BKD33601 - Artist - Title.zip", Assert.Single(group.Children).Label);
             Assert.False(Directory.Exists(Path.Combine(destination, "BKD-33601 to BKD-33650")));
