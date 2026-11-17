@@ -1,5 +1,18 @@
 # Current handoff
 
+## Desktop and operation changes
+
+2026-11-17, `master` from base `f27cf0f`, version 2026.11.17. This batch adds
+startup and operation wait indicators, the resizable Track Grouping issues panel,
+and Add/Remove Track ID Separator across desktop, CLI, MCP and recipes. FFprobe
+retries once on malformed JSON. Explorer multi-selection is documented in
+[TODO](todo.md).
+
+`scripts/Test.ps1 -NoRestore` passed 748/748 with local test-host access on the
+final working tree. The batch is committed. Next, visually check desktop startup,
+the preview divider and progress indicators, and smoke-test disc detection on a
+physical drive. The cause of intermittent FFprobe truncation remains unverified.
+
 ## Private vulnerability reporting
 
 Enabled on GitHub on 2026-11-16 from `master` at `b3314ac`. GitHub's API

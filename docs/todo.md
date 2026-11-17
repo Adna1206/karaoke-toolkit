@@ -1,5 +1,12 @@
 # Planned features
 
+- [ ] **Open multiple files from Windows Explorer** — make **Open in Karaoke
+  Toolkit** accept the full Explorer selection and load it in one window.
+  Use a shell handler that receives the selection as a batch. Preserve per-user
+  registration, existing single-item and folder-background commands, and default
+  file associations. Verify with multiple ZIPs, including paths with spaces.
+  See [Windows Explorer integration](user/file-workflow-features.md#windows-explorer).
+
 - [ ] **FFMpegCore migration** — upgrade the .NET wrapper from 5.5.0 to 6.0.0.
   Adapt the remaining wrapper calls and process handling to the new APIs.
   Keep the direct FFprobe JSON reader and verify audio conversion, MP4 encoding,
