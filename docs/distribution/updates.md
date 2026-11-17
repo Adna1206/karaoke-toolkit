@@ -17,7 +17,9 @@ are hidden. The app checks anonymously, so the repository must be public for
 the built-in check to work. Unpackaged development builds report that an
 installation is needed. [Velopack update sources](https://docs.velopack.io/integrating/update-sources)
 
-The manual check reports a newer version, no update, or a failed request. Downloads
+The manual check opens a dialog with an animated progress bar and shows the
+result in the same dialog. Closing it dismisses the status while the check
+finishes in the background. Downloads
 and apply/restart controls are planned. To verify availability end to end,
 install a build with the GitHub source and publish a newer GitHub Release with
 matching channel assets. Installations built with the old Flow source need the

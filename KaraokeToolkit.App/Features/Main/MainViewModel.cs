@@ -210,6 +210,7 @@ public partial class MainViewModel : ViewModelBase
         get; set;
     }
     [ObservableProperty] public partial string RecoveryMessage { get; set; } = "";
+    [ObservableProperty] public partial bool ShowRecoveryCheckProgress { get; private set; }
     private string lastMessage = "";
     private string? activityRoot;
     public OverwritePolicy OverwritePolicy { get; private set; } = OverwritePolicy.Ask;
@@ -512,7 +513,9 @@ public partial class MainViewModel : ViewModelBase
         RecoveryJob? resume = null;
         try
         {
+            ShowRecoveryCheckProgress = folder != null;
             var jobs = await Task.Run(() => recovery.Find(folder, Options.RecurseFolders));
+            ShowRecoveryCheckProgress = false;
             RecoveryAvailable = jobs.Count > 0;
             RecoveryMessage = RecoveryAvailable ? $"Recovery available: {jobs.Count} interrupted run(s)." : "";
             if (!RecoveryAvailable)
@@ -522,7 +525,11 @@ public partial class MainViewModel : ViewModelBase
                 resume = jobs[0];
         }
         catch (Exception error) { Status = "Could not inspect recovery files: " + error.Message; return true; }
-        finally { IsBusy = false; }
+        finally
+        {
+            ShowRecoveryCheckProgress = false;
+            IsBusy = false;
+        }
         if (resume != null)
         try
         {

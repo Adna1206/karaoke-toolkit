@@ -20,7 +20,7 @@
    </Grid>
    <TextBlock Text="Audio encoding, ZIP compression and overwrite settings come from Settings. Disc data is never deleted. CUE/TXT files can be created afterwards using File Tools." TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
   </StackPanel>
-  <StackPanel Grid.Row="5" Spacing="8"><ProgressBar Value="{Binding Progress}" Maximum="100"/><TextBlock Text="{Binding Status}" TextWrapping="Wrap"/></StackPanel>
+  <StackPanel Grid.Row="5" Spacing="8"><ProgressBar Value="{Binding Progress}" Maximum="100" IsIndeterminate="{Binding IsDetectingDrives}"/><TextBlock Text="{Binding Status}" TextWrapping="Wrap"/></StackPanel>
   <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
    <Button Content="Start" Command="{Binding StartCommand}"/><Button Content="Cancel" Command="{Binding CancelCommand}"/>
    <Button Content="Close" IsEnabled="{Binding CanEdit}" Click="Close_Click"/>

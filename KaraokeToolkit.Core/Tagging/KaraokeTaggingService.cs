@@ -62,6 +62,10 @@ public sealed class KaraokeTaggingService(RecoveryStore? recovery = null)
     /// <remarks>Returns applicability/errors per candidate. The preview is a snapshot, not a reservation;
     /// application must still verify that its inputs have not changed.</remarks>
     public Task<IReadOnlyList<TaggingPreview>> PreviewAsync(IEnumerable<string> inputs, string pattern, bool recurse, CancellationToken token = default)
+        => PreviewAsync(inputs, pattern, recurse, token, null);
+
+    public Task<IReadOnlyList<TaggingPreview>> PreviewAsync(IEnumerable<string> inputs, string pattern, bool recurse,
+        CancellationToken token, Action<int, int>? report)
         => Task.Run(async () =>
         {
             var template = new FilenameTagPattern(pattern);
@@ -81,6 +85,7 @@ public sealed class KaraokeTaggingService(RecoveryStore? recovery = null)
                 if (audio.Length == 1) { files.Remove(cdg); files.Add(audio[0]); }
             }
             var result = new List<TaggingPreview>();
+            report?.Invoke(0, files.Count);
             foreach (string path in files.Order(InputSelection.Paths))
             {
                 token.ThrowIfCancellationRequested();
@@ -111,6 +116,7 @@ public sealed class KaraokeTaggingService(RecoveryStore? recovery = null)
                 }
                 catch (Exception error) when (error is not OperationCanceledException)
                 { result.Add(new(path, null, null, error.Message, null)); }
+                report?.Invoke(result.Count, files.Count);
             }
             return (IReadOnlyList<TaggingPreview>)result;
         }, token);

@@ -36,6 +36,7 @@ public partial class DiscRipViewModel : ViewModelBase
     public partial bool IsBusy { get; set; }
     [ObservableProperty] public partial string Status { get; set; } = "Refresh to detect drives and audio tracks.";
     [ObservableProperty] public partial int Progress { get; set; }
+    [ObservableProperty] public partial bool IsDetectingDrives { get; private set; }
     public bool CanEdit => !IsBusy;
     public bool CanStart => !IsBusy && Result == null && options.ExperimentalDiscRipping && SelectedDrive is { SupportsCdg: true } && Tracks.Any(t => t.Selected);
     public DiscRipViewModel(ConversionOptions options, OverwritePolicy policy, IDiscReader? reader = null,
@@ -56,6 +57,9 @@ public partial class DiscRipViewModel : ViewModelBase
     private async Task RefreshAsync()
     {
         IsBusy = true;
+        Progress = 0;
+        Status = "Detecting drives and reading tracks…";
+        IsDetectingDrives = true;
         using var source = new CancellationTokenSource(); cancellation = source;
         try
         {
@@ -66,12 +70,18 @@ public partial class DiscRipViewModel : ViewModelBase
         }
         catch (OperationCanceledException) { Status = "Drive scan cancelled or timed out."; }
         catch (Exception error) { Status = "Could not inspect drives: " + error.Message; }
-        finally { cancellation = null; IsBusy = false; }
+        finally
+        {
+            IsDetectingDrives = false;
+            cancellation = null;
+            IsBusy = false;
+        }
     }
     [RelayCommand(CanExecute = nameof(CanStart))]
     private async Task StartAsync()
     {
         IsBusy = true;
+        Progress = 0;
         using var source = new CancellationTokenSource(); cancellation = source;
         try
         {

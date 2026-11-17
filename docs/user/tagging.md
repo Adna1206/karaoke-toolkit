@@ -4,6 +4,8 @@ Choose **File & Folder Tools → Tag Karaoke Files**, select media or folders an
 click Start. The dialog previews filename-derived tags, shows current values,
 and lets you correct fields or exclude rows before **Apply Tags**. Changing the
 pattern requires a fresh preview. Folder recursion uses the existing preference.
+The preview animates its progress bar while scanning inputs, then shows how many
+files it has checked once the file count is known.
 
 The default is `%DISC%-%TRACK% - %ARTIST% - %TITLE%`. Tokens can be reordered or
 omitted, and separators are literal text. For example `%DISC%. %ARTIST% - %TITLE%`

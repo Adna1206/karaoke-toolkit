@@ -28,6 +28,14 @@ public sealed record TrackGroupingIssue(string Source, string Message, bool IsCo
 
 public sealed record TrackGroupingPlan(IReadOnlyList<TrackGroupingItem> Items, IReadOnlyList<TrackGroupingIssue> Issues);
 
+public enum TrackGroupingPreviewStage
+{
+    Grouping,
+    BuildingGroups,
+    CheckingDestinations,
+    CheckingConflicts
+}
+
 public static partial class TrackGroupingPlanner
 {
     private static readonly StringComparer Paths = InputSelection.Paths;
@@ -56,6 +64,10 @@ public static partial class TrackGroupingPlanner
 
     public static TrackGroupingPlan Plan(IReadOnlyList<string> inputs, string outputFolder, TrackGroupingOptions options,
         CancellationToken token = default)
+        => Plan(inputs, outputFolder, options, token, null);
+
+    public static TrackGroupingPlan Plan(IReadOnlyList<string> inputs, string outputFolder, TrackGroupingOptions options,
+        CancellationToken token, Action<TrackGroupingPreviewStage, int, int>? report)
     {
         Validate(options);
         ArgumentException.ThrowIfNullOrWhiteSpace(outputFolder);
@@ -106,9 +118,11 @@ public static partial class TrackGroupingPlanner
 
         var candidates = new List<Candidate>();
         Regex? customRange = CustomFolderRange(options);
+        int grouped = 0;
         foreach (string source in sources.Order(Paths))
         {
             token.ThrowIfCancellationRequested();
+            report?.Invoke(TrackGroupingPreviewStage.Grouping, grouped++, sources.Count);
             bool directory = Directory.Exists(source);
             if (Ancestors(source).Any(sources.Contains))
             {
@@ -150,6 +164,7 @@ public static partial class TrackGroupingPlanner
             candidates.Add(new(source, directory, group, levels));
         }
 
+        report?.Invoke(TrackGroupingPreviewStage.BuildingGroups, 0, 0);
         var children = new Dictionary<string, HashSet<string>>(Paths);
         foreach (var candidate in candidates)
         {
@@ -168,9 +183,11 @@ public static partial class TrackGroupingPlanner
         var items = new List<TrackGroupingItem>();
         var leafIntervals = new Dictionary<string, Interval>(Paths);
         var groupFolders = new HashSet<string>(Paths);
+        int checkedDestinations = 0;
         foreach (var candidate in candidates)
         {
             token.ThrowIfCancellationRequested();
+            report?.Invoke(TrackGroupingPreviewStage.CheckingDestinations, checkedDestinations++, candidates.Count);
             string logicalParent = output;
             string destinationParent = output;
             for (int i = 0; i < candidate.Levels.Length; i++)
@@ -198,6 +215,7 @@ public static partial class TrackGroupingPlanner
                 issues.Add(new(candidate.Source, "Destination already exists: " + target, true));
         }
 
+        report?.Invoke(TrackGroupingPreviewStage.CheckingConflicts, 0, 0);
         foreach (string folder in groupFolders.Order(Paths))
         {
             if (File.Exists(folder))

@@ -104,9 +104,14 @@
     </Grid>
     <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="12">
      <Border Classes="status" Classes.success="{Binding StatusSucceeded}" Classes.warning="{Binding StatusWarning}" Classes.failure="{Binding StatusFailed}"
+             IsVisible="{Binding !ShowRecoveryCheckProgress}"
              Padding="10,6" CornerRadius="4" BorderThickness="3,0,0,0" VerticalAlignment="Center">
-      <TextBlock Text="{Binding Status}" TextWrapping="Wrap" MaxHeight="42" FontSize="{DynamicResource SmallTextSize}"/>
+      <TextBlock Text="{Binding Status, FallbackValue='Starting Karaoke Toolkit…'}" TextWrapping="Wrap" MaxHeight="42" FontSize="{DynamicResource SmallTextSize}"/>
      </Border>
+     <Grid IsVisible="{Binding ShowRecoveryCheckProgress}" ColumnDefinitions="Auto,*" ColumnSpacing="12" VerticalAlignment="Center" Margin="10,6">
+      <ProgressBar IsIndeterminate="True" Width="96" VerticalAlignment="Center"/>
+      <TextBlock Grid.Column="1" Text="Checking for interrupted runs…" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="{DynamicResource SmallTextSize}"/>
+     </Grid>
      <Button Grid.Column="1" Content="View Last Run Report…" Click="Results_Click" IsEnabled="{Binding CanViewReport}"/>
      <Button Grid.Column="2" Content="Back" Click="Back_Click" IsVisible="{Binding ShowProgress, FallbackValue=False}" IsEnabled="{Binding CanEdit}"/>
      <Grid Grid.Column="3">

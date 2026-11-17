@@ -41,7 +41,12 @@
                  TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
     </StackPanel>
     <Grid Grid.Row="5" ColumnDefinitions="*,Auto" ColumnSpacing="16">
-      <TextBlock Text="{Binding Status}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+      <DockPanel LastChildFill="True">
+        <ProgressBar DockPanel.Dock="Left" Width="72" Margin="0,0,10,0" VerticalAlignment="Center"
+                     IsVisible="{Binding PreviewProgress.IsVisible}" IsIndeterminate="{Binding PreviewProgress.IsIndeterminate}"
+                     Value="{Binding PreviewProgress.Percent, Mode=OneWay}"/>
+        <TextBlock Text="{Binding Status}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+      </DockPanel>
       <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
         <Button Content="Cancel" IsCancel="True" Click="Cancel_Click" MinWidth="90"/>
         <Button Content="Apply Tags" IsEnabled="{Binding CanApply}" Click="Apply_Click" MinWidth="110"/>

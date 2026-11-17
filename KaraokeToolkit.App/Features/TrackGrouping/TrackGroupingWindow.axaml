@@ -72,31 +72,58 @@
           <CheckBox IsChecked="{Binding Move}" Content="Move items instead of copying"/>
         </StackPanel>
       </ScrollViewer>
-      <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*,Auto,Auto" RowSpacing="6">
-        <DockPanel>
+      <Grid Grid.Column="1" RowDefinitions="Auto,3*,Auto,*">
+        <Grid.Styles>
+          <Style Selector="TreeView.destinationPreview">
+            <Setter Property="Grid.RowSpan" Value="3"/>
+          </Style>
+          <Style Selector="TreeView.destinationPreview.withIssues">
+            <Setter Property="Grid.RowSpan" Value="1"/>
+          </Style>
+        </Grid.Styles>
+        <DockPanel Margin="0,0,0,6">
           <Button DockPanel.Dock="Right" Content="Refresh" Click="Refresh_Click"/>
           <TextBlock Classes="heading3" Text="Destination preview" VerticalAlignment="Center"/>
         </DockPanel>
-        <TextBlock Grid.Row="1" Text="{Binding Example}" TextWrapping="Wrap"/>
-        <TreeView Grid.Row="2" ItemsSource="{Binding Tree}" AutomationProperties.Name="Destination preview">
+        <TreeView Grid.Row="1" Classes="destinationPreview" Classes.withIssues="{Binding HasIssues}"
+                  ItemsSource="{Binding Tree}" AutomationProperties.Name="Destination preview">
           <TreeView.ItemTemplate>
             <TreeDataTemplate x:DataType="vm:TrackGroupingNode" ItemsSource="{Binding Children}">
               <TextBlock Text="{Binding Label}" ToolTip.Tip="{Binding Detail}"/>
             </TreeDataTemplate>
           </TreeView.ItemTemplate>
         </TreeView>
-        <TextBlock Grid.Row="3" IsVisible="{Binding HasIssues}" Classes="heading3" Text="Skipped items and conflicts"/>
-        <ListBox Grid.Row="4" IsVisible="{Binding HasIssues}" Height="120" ItemsSource="{Binding Issues}" AutomationProperties.Name="Skipped items and conflicts">
-          <ListBox.ItemTemplate>
-            <DataTemplate x:DataType="vm:TrackGroupingPreviewIssue">
-              <TextBlock Text="{Binding Text}" ToolTip.Tip="{Binding Text}" TextWrapping="Wrap"/>
-            </DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
+        <GridSplitter Grid.Row="2" IsVisible="{Binding HasIssues}" Height="14" Background="Transparent"
+                      ResizeDirection="Rows" ResizeBehavior="PreviousAndNext" HorizontalAlignment="Stretch"
+                      AutomationProperties.Name="Resize skipped items and conflicts panel">
+          <GridSplitter.Template>
+            <ControlTemplate>
+              <Border Background="{TemplateBinding Background}">
+                <Border Width="32" Height="3" CornerRadius="2" HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Background="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+              </Border>
+            </ControlTemplate>
+          </GridSplitter.Template>
+        </GridSplitter>
+        <Grid Grid.Row="3" IsVisible="{Binding HasIssues}" RowDefinitions="Auto,*" RowSpacing="6" MinHeight="64">
+          <TextBlock Classes="heading3" Text="Skipped items and conflicts"/>
+          <ListBox Grid.Row="1" ItemsSource="{Binding Issues}" AutomationProperties.Name="Skipped items and conflicts">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:TrackGroupingPreviewIssue">
+                <TextBlock Text="{Binding Text}" ToolTip.Tip="{Binding Text}" TextWrapping="Wrap"/>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
       </Grid>
     </Grid>
     <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="16">
-      <TextBlock Text="{Binding Status}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+      <DockPanel LastChildFill="True">
+        <ProgressBar DockPanel.Dock="Left" Width="72" Margin="0,0,10,0" VerticalAlignment="Center"
+                     IsVisible="{Binding PreviewProgress.IsVisible}" IsIndeterminate="{Binding PreviewProgress.IsIndeterminate}"
+                     Value="{Binding PreviewProgress.Percent, Mode=OneWay}"/>
+        <TextBlock Text="{Binding Status}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+      </DockPanel>
       <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
         <Button Content="Cancel" IsCancel="True" Click="Cancel_Click"/>
         <Button Classes.accent="{Binding CanApply}" Content="{Binding ApplyLabel}" IsEnabled="{Binding CanApply}" Click="Apply_Click"/>

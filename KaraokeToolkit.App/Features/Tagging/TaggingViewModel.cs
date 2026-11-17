@@ -49,6 +49,7 @@ public partial class TaggingViewModel(IReadOnlyList<string> inputs, bool recurse
     private string? previewPattern;
     public IReadOnlyList<string> Patterns { get; } = patterns;
     public ObservableCollection<TaggingRow> Rows { get; } = [];
+    public PreviewProgress PreviewProgress { get; } = new();
     [ObservableProperty] private string recoveryNotice = "";
     [ObservableProperty, NotifyPropertyChangedFor(nameof(CanApply))] private string pattern = initialPattern;
     [ObservableProperty] private string? selectedPattern = initialPattern;
@@ -63,12 +64,15 @@ public partial class TaggingViewModel(IReadOnlyList<string> inputs, bool recurse
     [RelayCommand(CanExecute = nameof(CanPreview))]
     public async Task PreviewAsync(CancellationToken token = default)
     {
+        if (Busy) return;
         Busy = true;
-        Status = "Reading media tags…";
+        Status = "Scanning inputs for media…";
+        var report = PreviewProgress.Begin(status => Status = status);
         try
         {
             string requested = Pattern;
-            var result = await service.PreviewAsync(inputs, requested, recurse, token);
+            var result = await service.PreviewAsync(inputs, requested, recurse, token,
+                (completed, total) => report("Reading media tags", completed, total));
             Rows.Clear();
             foreach (var row in result) Rows.Add(new(row));
             previewPattern = requested;
@@ -76,7 +80,12 @@ public partial class TaggingViewModel(IReadOnlyList<string> inputs, bool recurse
         }
         catch (OperationCanceledException) { Status = "Preview cancelled."; }
         catch (Exception error) { previewPattern = null; Status = error.Message; }
-        finally { Busy = false; OnPropertyChanged(nameof(CanApply)); }
+        finally
+        {
+            PreviewProgress.Finish();
+            Busy = false;
+            OnPropertyChanged(nameof(CanApply));
+        }
     }
     public TaggingRequest? BuildRequest()
     {

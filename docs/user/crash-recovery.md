@@ -1,8 +1,9 @@
 # Crash recovery
 
 The app offers **Recover and resume** or **Later** when it starts and finds an
-interrupted run. Selecting its source folder (or pressing Start with that folder
-typed in) also checks for recovery, including nested folders when recursion is enabled.
+interrupted run. When you start a file-based operation, the app checks the
+source folders for recovery, including nested folders when recursion is enabled.
+The status area shows “Checking for interrupted runs…” while the folder check runs.
 The **Recover…** button returns to pending recovery. Nothing resumes automatically.
 
 During recovery the main window explicitly shows **Recovery mode** and prefixes the

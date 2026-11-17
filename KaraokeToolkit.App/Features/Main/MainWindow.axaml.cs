@@ -34,38 +34,36 @@ public partial class MainWindow : Window
         DragDrop.SetAllowDrop(this, true);
         AddHandler(DragDrop.DragOverEvent, OnDragOver, RoutingStrategies.Bubble, handledEventsToo: true);
         AddHandler(DragDrop.DropEvent, OnDrop, RoutingStrategies.Bubble, handledEventsToo: true);
-        Opened += async (_, _) =>
-        {
-            if (DataContext is MainViewModel model)
-            {
-                model.RipDiscAsync = async () =>
-                {
-                    var dialog = new DiscRipWindow();
-                    var rip = new DiscRipViewModel(model.Options, model.OverwritePolicy, resolve: (conflict, token) => ResolveConflictForOwnerAsync(dialog, conflict, token));
-                    dialog.DataContext = rip;
-                    await ModalDialog.ShowAsync(dialog, this);
-                    return rip.Result;
-                };
-                model.RestoreQuarantinedFilesAsync = RestoreQuarantinedFilesAsync;
-                model.ConfigureTaggingAsync = async viewModel => await ModalDialog.ShowAsync<TaggingRequest?>(new TaggingWindow { DataContext = viewModel }, this);
-                model.ConfigureTrackGroupingAsync = viewModel => ModalDialog.ShowAsync<TrackGroupingSubmission?>(new TrackGroupingWindow { DataContext = viewModel }, this);
-                model.ResolveConflictAsync = ResolveConflictAsync;
-                model.ConfirmRecoveryAsync = ConfirmRecoveryAsync;
-                await model.CheckForRecoveryAsync();
-                // Recovery briefly disables editing; focus once the home list is ready.
-                if (!model.ShowProgress)
-                {
-                    model.SelectedSection = model.VisibleSections.FirstOrDefault();
-                    OperationPicker.FocusFirstCategory();
-                }
-                if (model.CheckForUpdatesOnStartup)
-                {
-                    await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
-                    if (IsVisible) await CheckForUpdatesAsync(manual: false);
-                }
-            }
-        };
         Closing += (_, e) => { if (DataContext is MainViewModel { IsBusy: true }) e.Cancel = true; };
+    }
+
+    internal async Task CompleteStartupAsync(MainViewModel model)
+    {
+        model.RipDiscAsync = async () =>
+        {
+            var dialog = new DiscRipWindow();
+            var rip = new DiscRipViewModel(model.Options, model.OverwritePolicy, resolve: (conflict, token) => ResolveConflictForOwnerAsync(dialog, conflict, token));
+            dialog.DataContext = rip;
+            await ModalDialog.ShowAsync(dialog, this);
+            return rip.Result;
+        };
+        model.RestoreQuarantinedFilesAsync = RestoreQuarantinedFilesAsync;
+        model.ConfigureTaggingAsync = async viewModel => await ModalDialog.ShowAsync<TaggingRequest?>(new TaggingWindow { DataContext = viewModel }, this);
+        model.ConfigureTrackGroupingAsync = viewModel => ModalDialog.ShowAsync<TrackGroupingSubmission?>(new TrackGroupingWindow { DataContext = viewModel }, this);
+        model.ResolveConflictAsync = ResolveConflictAsync;
+        model.ConfirmRecoveryAsync = ConfirmRecoveryAsync;
+        await model.CheckForRecoveryAsync();
+        // Recovery briefly disables editing; focus once the home list is ready.
+        if (!model.ShowProgress)
+        {
+            model.SelectedSection = model.VisibleSections.FirstOrDefault();
+            OperationPicker.FocusFirstCategory();
+        }
+        if (model.CheckForUpdatesOnStartup)
+        {
+            await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+            if (IsVisible) await CheckForUpdatesAsync(manual: false);
+        }
     }
 
     private void ConfigureWindowsTitleBar()
@@ -102,12 +100,7 @@ public partial class MainWindow : Window
                 SuggestedStartLocation = startFolder
             }));
             if (folders.Count > 0 && !model.IsBusy)
-            {
                 model.AddPickedInputs(folders.Select(f => f.TryGetLocalPath()).OfType<string>().ToArray());
-                foreach (var path in model.CurrentInputs)
-                if (await model.CheckForRecoveryAsync(path))
-                    break;
-            }
         }
         catch (Exception error) { model.Status = "Could not select folders: " + error.Message; }
     }
@@ -116,7 +109,7 @@ public partial class MainWindow : Window
         e.DragEffects = DataContext is MainViewModel { CanChooseSource: true } && e.DataTransfer.Contains(DataFormat.File) ? DragDropEffects.Copy : DragDropEffects.None;
         e.Handled = true;
     }
-    private async void OnDrop(object? sender, DragEventArgs e)
+    private void OnDrop(object? sender, DragEventArgs e)
     {
         e.Handled = true;
         if (DataContext is not MainViewModel { CanChooseSource: true } model)
@@ -126,12 +119,6 @@ public partial class MainWindow : Window
             var files = e.DataTransfer.TryGetFiles();
             if (files != null)
                 model.AddInputs(files.Select(f => f.TryGetLocalPath()).OfType<string>());
-            foreach (string input in model.CurrentInputs)
-            {
-                string folder = System.IO.Directory.Exists(input) ? input : System.IO.Path.GetDirectoryName(input)!;
-                if (await model.CheckForRecoveryAsync(folder))
-                    break;
-            }
         }
         catch (Exception error) { model.Status = "Could not use dropped files: " + error.Message; }
     }
@@ -261,10 +248,14 @@ public partial class MainWindow : Window
         var header = menuItem.Header;
         menuItem.IsEnabled = false;
         menuItem.Header = "Checking for updates…";
+        var status = new TextBlock { Text = "Checking for updates…", TextWrapping = TextWrapping.Wrap };
+        var progress = new ProgressBar { IsIndeterminate = true };
+        Window? dialog = manual ? CreateInfoDialog("Check for updates", status, progress) : null;
+        Task? dialogClosed = dialog == null ? null : ModalDialog.ShowAsync(dialog, this);
         string message;
         try
         {
-            var (isInstalled, update) = await UpdateService.CheckForUpdatesAsync();
+            var (isInstalled, update) = await Task.Run(UpdateService.CheckForUpdatesAsync);
             if (!manual && update == null) return;
             message = (isInstalled, update) switch
             {
@@ -285,18 +276,30 @@ public partial class MainWindow : Window
             menuItem.IsEnabled = true;
         }
 
-        if (IsVisible)
+        if (dialogClosed != null)
+        {
+            progress.IsVisible = false;
+            status.Text = message;
+            await dialogClosed;
+        }
+        else if (IsVisible)
             await ShowInfo("Check for updates", message);
     }
 
     private async void Help_Click(object? sender, RoutedEventArgs e) => await ShowInfo("Help", "Choose a category and operation, add source files or folders, then click Start. Add buttons and drag-and-drop accumulate selections; Clear removes them. Star operations to find them in Favourites. Disc ripping and restoration ask for their inputs after Start.\n\nUse Tools → Settings to configure recursion, deletion, compression, encoding and existing-file handling. Output files are written beside source files unless the operation asks for a destination.\n\nCancel discards unpublished work; completed files remain. Review the event log and View Last Run Report when processing finishes.");
-    private async System.Threading.Tasks.Task ShowInfo(string title, string text)
+    private Task ShowInfo(string title, string text) =>
+        ModalDialog.ShowAsync(CreateInfoDialog(title, new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap }), this);
+
+    private static Window CreateInfoDialog(string title, TextBlock message, ProgressBar? progress = null)
     {
         var dialog = new Window { Title = WindowTitles.For(title), Width = 480, SizeToContent = SizeToContent.Height, CanResize = false, WindowStartupLocation = WindowStartupLocation.CenterOwner };
         var close = new Button { Content = "Close", HorizontalAlignment = HorizontalAlignment.Right };
         close.Click += (_, _) => dialog.Close();
-        dialog.Content = new StackPanel { Margin = new Avalonia.Thickness(24), Spacing = 20, Children = { new TextBlock { Text = text, TextWrapping = Avalonia.Media.TextWrapping.Wrap }, close } };
-        await ModalDialog.ShowAsync(dialog, this);
+        var content = new StackPanel { Margin = new Avalonia.Thickness(24), Spacing = 20, Children = { message } };
+        if (progress != null) content.Children.Add(progress);
+        content.Children.Add(close);
+        dialog.Content = content;
+        return dialog;
     }
     private async Task<bool> ConfirmRecoveryAsync(RecoveryJob job)
     {

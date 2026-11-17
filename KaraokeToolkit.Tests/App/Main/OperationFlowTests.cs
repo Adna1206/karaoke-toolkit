@@ -53,7 +53,9 @@ public class OperationFlowTests
             Assert.Equal(destination, dialog.OutputFolder);
             await dialog.PreviewAsync();
             Assert.False(dialog.HasIssues);
-            Assert.Contains("BKD33601 - Artist - Title.zip → BKD-33601 to BKD-33650", dialog.Example);
+            var group = Assert.Single(dialog.Tree);
+            Assert.Equal("BKD-33601 to BKD-33650", group.Detail);
+            Assert.Equal("BKD33601 - Artist - Title.zip", Assert.Single(group.Children).Label);
             Assert.False(Directory.Exists(Path.Combine(destination, "BKD-33601 to BKD-33650")));
             return dialog.GetSubmission();
         };

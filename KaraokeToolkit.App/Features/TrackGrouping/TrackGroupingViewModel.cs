@@ -42,7 +42,7 @@ public sealed partial class TrackGroupingViewModel(IReadOnlyList<string> inputs)
     [ObservableProperty, NotifyPropertyChangedFor(nameof(ApplyLabel))]
     public partial bool Move { get; set; } = true;
     [ObservableProperty] public partial string Status { get; set; } = "";
-    [ObservableProperty] public partial string Example { get; set; } = "";
+    public PreviewProgress PreviewProgress { get; } = new();
     [ObservableProperty] public partial IReadOnlyList<TrackGroupingNode> Tree { get; set; } = [];
     [ObservableProperty, NotifyPropertyChangedFor(nameof(HasIssues))]
     public partial IReadOnlyList<TrackGroupingPreviewIssue> Issues { get; set; } = [];
@@ -88,6 +88,7 @@ public sealed partial class TrackGroupingViewModel(IReadOnlyList<string> inputs)
     {
         closed = true;
         previewCancellation?.Cancel();
+        PreviewProgress.Finish();
     }
 
     internal async Task PreviewAsync()
@@ -100,33 +101,38 @@ public sealed partial class TrackGroupingViewModel(IReadOnlyList<string> inputs)
         OnPropertyChanged(nameof(CanApply));
         Tree = [];
         Issues = [];
-        Example = "";
         Status = "Preparing preview…";
+        var report = PreviewProgress.Begin(status => Status = status);
         try
         {
             await Task.Delay(225, cancellation.Token);
             bool hasDestination = !string.IsNullOrWhiteSpace(OutputFolder);
             if (hasDestination && !Path.IsPathFullyQualified(OutputFolder!))
                 throw new ArgumentException("Enter a full destination folder path.");
-            // A hypothetical destination lets the same planner show real examples before the user picks a folder.
+            // A hypothetical destination lets the planner build the tree before the user picks a folder.
             string destination = hasDestination ? OutputFolder! : Path.Combine(Path.GetTempPath(), "Karaoke Toolkit Preview " + Guid.NewGuid());
             var options = BuildOptions();
             var request = new OperationRequest(OperationId.GroupByTrackId, inputs) { OutputFolder = destination, Grouping = options };
             var preview = await Task.Run(() =>
             {
-                var plan = TrackGroupingPlanner.Plan(inputs, destination, hasDestination ? options : options with { Move = false }, cancellation.Token);
+                report("Scanning inputs", 0, 0);
+                var plan = TrackGroupingPlanner.Plan(inputs, destination, hasDestination ? options : options with { Move = false },
+                    cancellation.Token, (stage, completed, total) => report(stage switch
+                    {
+                        TrackGroupingPreviewStage.Grouping => "Grouping items",
+                        TrackGroupingPreviewStage.BuildingGroups => "Building group folders",
+                        TrackGroupingPreviewStage.CheckingDestinations => "Checking item destinations",
+                        TrackGroupingPreviewStage.CheckingConflicts => "Checking grouping conflicts",
+                        _ => "Preparing preview"
+                    }, completed, total));
+                report("Preparing preview", 0, 0);
                 var rows = plan.Items.Select(item => (item, relativePath: Path.GetRelativePath(destination, item.Destination))).ToArray();
                 var tree = BuildTree(rows, cancellation.Token);
-                var byPrefix = rows.DistinctBy(row => string.Concat(Path.GetFileName(row.item.Source).TakeWhile(char.IsAsciiLetter)),
-                    StringComparer.OrdinalIgnoreCase).Take(3).ToArray();
-                var examples = byPrefix.Concat(rows.Except(byPrefix)).Take(3).Select(row =>
-                    $"{Path.GetFileName(row.item.Source)} → {Path.GetDirectoryName(row.relativePath)}");
-                return (plan, tree, examples: string.Join(Environment.NewLine, examples));
+                return (plan, tree);
             }, cancellation.Token);
             cancellation.Token.ThrowIfCancellationRequested();
 
             Tree = preview.tree;
-            Example = preview.examples;
             Issues = preview.plan.Issues.Select(issue => new TrackGroupingPreviewIssue(
                 $"{(issue.IsConflict ? "Conflict" : "Skipped")} · {issue.Source} · {issue.Message}")).ToArray();
             bool conflict = preview.plan.Issues.Any(issue => issue.IsConflict);
@@ -145,7 +151,11 @@ public sealed partial class TrackGroupingViewModel(IReadOnlyList<string> inputs)
         }
         finally
         {
-            if (ReferenceEquals(previewCancellation, cancellation)) previewCancellation = null;
+            if (ReferenceEquals(previewCancellation, cancellation))
+            {
+                previewCancellation = null;
+                PreviewProgress.Finish();
+            }
         }
     }
 
