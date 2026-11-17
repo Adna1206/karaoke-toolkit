@@ -7,8 +7,11 @@ standardizes desktop footer spacing, dividers and typography, and uses one
 shared status slot per window with progress to the right where applicable.
 Tagging now has an editable pattern dropdown with centered text, Refresh,
 bulk row selection, and an accent button when tags can be applied.
+The update popup uses plain text beside its progress bar, then shows the
+result in the same popup.
 
-`scripts/Test.ps1 -NoRestore` passed 748/748 with local test-host access.
+`scripts/Test.ps1 -NoRestore` passed 748/748 with local test-host access
+before the popup restyle. The Release App build passed after the restyle.
 Next, visually check the pattern field, status transitions and footer spacing.
 
 ## Desktop and operation changes

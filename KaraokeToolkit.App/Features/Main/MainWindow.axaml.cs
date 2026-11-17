@@ -248,7 +248,7 @@ public partial class MainWindow : Window
         var header = menuItem.Header;
         menuItem.IsEnabled = false;
         menuItem.Header = "Checking for updates…";
-        var status = new StatusBar { Message = "Checking for updates…" };
+        var status = new TextBlock { Text = "Checking for updates…", TextWrapping = TextWrapping.Wrap };
         var progress = new ProgressBar { IsIndeterminate = true };
         Window? dialog = manual ? CreateInfoDialog("Check for updates", status, progress) : null;
         Task? dialogClosed = dialog == null ? null : ModalDialog.ShowAsync(dialog, this);
@@ -257,7 +257,6 @@ public partial class MainWindow : Window
         {
             var (isInstalled, update) = await Task.Run(UpdateService.CheckForUpdatesAsync);
             if (!manual && update == null) return;
-            status.Kind = !isInstalled ? StatusKind.Warning : update == null ? StatusKind.Success : StatusKind.Info;
             message = (isInstalled, update) switch
             {
                 (false, _) => "Install Karaoke Toolkit with Velopack to check for updates.",
@@ -269,7 +268,6 @@ public partial class MainWindow : Window
         {
             System.Diagnostics.Trace.TraceWarning("GitHub Releases update check failed: {0}", error);
             if (!manual) return;
-            status.Kind = StatusKind.Failure;
             message = "Could not check for updates. Try again later.";
         }
         finally
@@ -278,21 +276,21 @@ public partial class MainWindow : Window
             menuItem.IsEnabled = true;
         }
 
-        status.Message = message;
+        status.Text = message;
         if (dialogClosed != null)
         {
             progress.IsVisible = false;
             await dialogClosed;
         }
         else if (IsVisible)
-            await ModalDialog.ShowAsync(CreateInfoDialog("Check for updates", status), this);
+            await ShowInfo("Check for updates", message);
     }
 
     private async void Help_Click(object? sender, RoutedEventArgs e) => await ShowInfo("Help", "Choose a category and operation, add source files or folders, then click Start. Add buttons and drag-and-drop accumulate selections; Clear removes them. Star operations to find them in Favourites. Disc ripping and restoration ask for their inputs after Start.\n\nUse Tools → Settings to configure recursion, deletion, compression, encoding and existing-file handling. Output files are written beside source files unless the operation asks for a destination.\n\nCancel discards unpublished work; completed files remain. Review the event log and View Last Run Report when processing finishes.");
     private Task ShowInfo(string title, string text) =>
         ModalDialog.ShowAsync(CreateInfoDialog(title, new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap }), this);
 
-    private static Window CreateInfoDialog(string title, Control message, ProgressBar? progress = null)
+    private static Window CreateInfoDialog(string title, TextBlock message, ProgressBar? progress = null)
     {
         var dialog = new Window { Title = WindowTitles.For(title), Width = 480, SizeToContent = SizeToContent.Height, CanResize = false, WindowStartupLocation = WindowStartupLocation.CenterOwner };
         var close = new Button { Content = "Close", HorizontalAlignment = HorizontalAlignment.Right };
@@ -300,6 +298,7 @@ public partial class MainWindow : Window
         Control body = message;
         if (progress != null)
         {
+            message.VerticalAlignment = VerticalAlignment.Center;
             progress.Width = WindowSpacing.StatusProgressWidth;
             progress.VerticalAlignment = VerticalAlignment.Center;
             Grid.SetColumn(progress, 1);
