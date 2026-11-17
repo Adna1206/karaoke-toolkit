@@ -40,6 +40,11 @@ group and finishes publication using the saved paths. It does not rescan the
 input selection. Desktop, CLI and MCP can resume these jobs. Plan revalidation
 and source hashing happen before the first item is published. Standalone flattening and alphabetical organization also hash their move plans and save a recovery journal before moving items. Recipe steps save their plan in the recipe journal.
 
+Flattening records a failure and continues if it cannot inspect or remove a
+child folder during empty-folder cleanup. The folder stays in place and the
+failure appears in the run report. Move or verification failures that may
+leave a partially published group still stop the run for recovery.
+
 ## Verification settings
 
 **Settings → Recovery** controls new standalone Track Grouping, Alphabetical
@@ -57,6 +62,18 @@ saved per run. An older journal without a verification mode uses SHA-256.
 Conversion and tagging publication, recipe recovery, and quarantine retain
 their existing SHA-256 checks. The setting is separate from archive validation
 and does not change any recorded fingerprint.
+
+## Batch failure handling
+
+Continue processing when an item failure is isolated and the affected item
+is in a known safe state. Collect the failures in the final run report and
+show a red completion status if any item failed. Stop and retain recovery
+data if a group may be partially published or its state cannot be verified.
+
+Conversions, tagging and disc ripping generally continue after isolated item
+failures. Flattening does so for empty-folder cleanup failures. A recipe can
+finish the current step's batch, and a failed step prevents later steps from
+starting.
 
 ## File handling
 

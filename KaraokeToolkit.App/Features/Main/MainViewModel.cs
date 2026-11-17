@@ -716,9 +716,12 @@ public partial class MainViewModel : ViewModelBase
                 run.StopProgress();
                 LastReport = resumed.Report;
                 FoundFiles = resumed.Found;
-                StatusOutcome = resumed.HasIssues ? RunStatus.Warning : resumed.Report.Cancelled ? RunStatus.Neutral : RunStatus.Success;
+                int succeeded = resumed.Report.Entries.Count(entry => entry.Status == "Succeeded");
+                int failed = resumed.Report.Entries.Count(entry => entry.Status is "Failed" or "Blocked");
+                int skipped = resumed.Report.Entries.Count(entry => entry.Status == "Skipped");
+                StatusOutcome = RunStatusSummary.From(resumed.Report.Cancelled, succeeded, failed, skipped);
                 if (!resumed.Report.Cancelled) Progress = TotalProgress = 100;
-                Status = resumed.Report.Cancelled ? "File move recovery cancelled." : "File move recovery finished.";
+                Status = $"{(resumed.Report.Cancelled ? "File move recovery cancelled" : "File move recovery finished")}: {succeeded} completed, {skipped} skipped, {failed} failed.";
                 Activity.Add(new(Elapsed, Status));
             }
             catch (Exception error)

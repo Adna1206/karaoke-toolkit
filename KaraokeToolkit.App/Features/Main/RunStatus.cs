@@ -6,12 +6,11 @@ public enum RunStatus { Neutral, Success, Warning, Failure }
 
 internal static class RunStatusSummary
 {
-    // Cancellation is intentional. Mixed results and skipped work need review;
-    // an empty run must not imply that files were successfully processed.
+    // Recorded failures remain visible even when other items completed or the run was cancelled.
     internal static RunStatus From(ConversionResult result) => From(result.Cancelled, result.Succeeded, result.Failed, result.Skipped);
 
-    internal static RunStatus From(bool cancelled, int succeeded, int failed, int skipped) => cancelled ? RunStatus.Neutral
-        : failed > 0 && succeeded == 0 ? RunStatus.Failure
-        : failed > 0 || skipped > 0 || succeeded == 0 ? RunStatus.Warning
+    internal static RunStatus From(bool cancelled, int succeeded, int failed, int skipped) => failed > 0 ? RunStatus.Failure
+        : cancelled ? RunStatus.Neutral
+        : skipped > 0 || succeeded == 0 ? RunStatus.Warning
         : RunStatus.Success;
 }

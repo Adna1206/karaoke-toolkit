@@ -9,11 +9,12 @@ public class RunStatusTests
     [Theory]
     [InlineData(1, 0, 0, false, RunStatus.Success)]
     [InlineData(1, 1, 0, false, RunStatus.Warning)]
-    [InlineData(1, 0, 1, false, RunStatus.Warning)]
+    [InlineData(1, 0, 1, false, RunStatus.Failure)]
     [InlineData(0, 0, 1, false, RunStatus.Failure)]
     [InlineData(0, 1, 0, false, RunStatus.Warning)]
     [InlineData(0, 0, 0, false, RunStatus.Warning)]
-    [InlineData(1, 0, 1, true, RunStatus.Neutral)]
+    [InlineData(1, 0, 1, true, RunStatus.Failure)]
+    [InlineData(1, 0, 0, true, RunStatus.Neutral)]
     public void CompletionDistinguishesSuccessPartialFailureAndCancellation(int succeeded, int skipped, int failed, bool cancelled, RunStatus expected)
     {
         var files = Enumerable.Repeat(ConversionStatus.Succeeded, succeeded)

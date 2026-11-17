@@ -96,9 +96,9 @@ public partial class DiscRipViewModel : ViewModelBase
                 Result = await new DiscRipService(reader).RunAsync(new(SelectedDrive!, Tracks.Where(t => t.Selected).Select(t => t.Track.Number).ToArray(), Destination, DiscName, (RipFormat)Format, options), policy, reporter, source.Token, resolve);
             }
             finally { accepting = false; }
-            StatusSeverity = Result.Cancelled ? StatusKind.Info
-                : Result.Failed > 0 && Result.Succeeded == 0 ? StatusKind.Failure
-                : Result.Failed > 0 || Result.Skipped > 0 || Result.Succeeded == 0 ? StatusKind.Warning : StatusKind.Success;
+            StatusSeverity = Result.Failed > 0 ? StatusKind.Failure
+                : Result.Cancelled ? StatusKind.Info
+                : Result.Skipped > 0 || Result.Succeeded == 0 ? StatusKind.Warning : StatusKind.Success;
             Status = $"{(Result.Cancelled ? "Cancelled" : "Finished")}: {Result.Succeeded} succeeded, {Result.Skipped} skipped, {Result.Failed} failed.";
             if (Result.Failed > 0) Status += " " + string.Join("; ", Result.Files.Where(f => f.Status == ConversionStatus.Failed).Select(f => f.Source + ": " + f.Message));
         }

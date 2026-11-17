@@ -89,9 +89,22 @@ internal static class WorkflowMoves
                         if (move.Target == null)
                         {
                             RunSession.CheckPlainPath(move.Source);
-                            if (Directory.Exists(move.Source) && Directory.EnumerateFileSystemEntries(move.Source).Any())
-                            { results.Add(new(move.Source, ConversionStatus.Skipped, [], "Child folder still contains items that could not be moved.")); continue; }
-                            if (Directory.Exists(move.Source)) Directory.Delete(move.Source);
+                            try
+                            {
+                                if (Directory.Exists(move.Source) && Directory.EnumerateFileSystemEntries(move.Source).Any())
+                                {
+                                    results.Add(new(move.Source, ConversionStatus.Skipped, [], "Child folder still contains items that could not be moved."));
+                                    continue;
+                                }
+                                if (Directory.Exists(move.Source)) Directory.Delete(move.Source);
+                            }
+                            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+                            {
+                                // Cleanup follows the checkpointed moves. Leave the folder in place
+                                // and record the failure without stopping unrelated groups.
+                                results.Add(new(move.Source, ConversionStatus.Failed, [], "Could not remove child folder: " + error.Message));
+                                continue;
+                            }
                             session.Data.Expected.Remove(move.Source);
                             results.Add(new(move.Source, ConversionStatus.Succeeded, [], "Removed empty child folder."));
                         }

@@ -101,7 +101,7 @@ public partial class ResultsWindow : Window
                 r.Manifest == null ? r.MovedFiles : r.MovedFiles.Concat([r.Manifest]).ToArray())));
             int moved = results.Count(result => result.Succeeded);
             int failed = results.Count - moved;
-            model.MessageSeverity = failed == 0 ? StatusKind.Success : moved == 0 ? StatusKind.Failure : StatusKind.Warning;
+            model.MessageSeverity = failed > 0 ? StatusKind.Failure : StatusKind.Success;
             model.Message = $"{moved} group(s) moved. {failed} could not be moved. Restore is available using each manifest.";
         }
         catch (Exception error) { model.MessageSeverity = StatusKind.Failure; model.Message = error.Message; }

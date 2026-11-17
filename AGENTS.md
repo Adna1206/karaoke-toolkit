@@ -125,6 +125,11 @@ In the agent sandbox, the established test command is:
   and recovery guarantees. Read [crash recovery](docs/user/crash-recovery.md) before
   changing publication/checkpoint behaviour. Completed workflow changes are not
   rolled back as an entire recipe.
+- For an isolated item failure, continue with the rest of the batch when the
+  affected item is in a known safe state. Record the failure in the final report
+  and show a red desktop completion status if any item failed. Stop and retain
+  recovery data if publication may be partial or the file state cannot be
+  verified. See [batch failure handling](docs/user/crash-recovery.md#batch-failure-handling).
 - CLI output-folder conversions keep originals and use destination-volume staging
   with saved destination-aware recovery. Do not extend this to cross-directory
   source deletion without a durable transaction design. Dry runs never invoke
