@@ -35,6 +35,7 @@ public partial class DiscRipViewModel : ViewModelBase
     [ObservableProperty, NotifyPropertyChangedFor(nameof(CanEdit)), NotifyCanExecuteChangedFor(nameof(RefreshCommand)), NotifyCanExecuteChangedFor(nameof(StartCommand)), NotifyCanExecuteChangedFor(nameof(CancelCommand))]
     public partial bool IsBusy { get; set; }
     [ObservableProperty] public partial string Status { get; set; } = "Refresh to detect drives and audio tracks.";
+    [ObservableProperty] public partial StatusKind StatusSeverity { get; set; }
     [ObservableProperty] public partial int Progress { get; set; }
     [ObservableProperty] public partial bool IsDetectingDrives { get; private set; }
     public bool CanEdit => !IsBusy;
@@ -58,6 +59,7 @@ public partial class DiscRipViewModel : ViewModelBase
     {
         IsBusy = true;
         Progress = 0;
+        StatusSeverity = StatusKind.Info;
         Status = "Detecting drives and reading tracks…";
         IsDetectingDrives = true;
         using var source = new CancellationTokenSource(); cancellation = source;
@@ -66,10 +68,11 @@ public partial class DiscRipViewModel : ViewModelBase
             Drives.Clear(); SelectedDrive = null; Result = null;
             foreach (var drive in await reader.ScanAsync(source.Token)) Drives.Add(drive);
             SelectedDrive = Drives.FirstOrDefault(d => d.SupportsCdg && d.Tracks.Length > 0) ?? Drives.FirstOrDefault();
+            StatusSeverity = Tracks.Count == 0 ? StatusKind.Warning : StatusKind.Info;
             Status = Drives.Count == 0 ? "No optical drives detected." : SelectedDrive?.SupportsCdg != true ? "No drive reports CD+G reading support." : Tracks.Count == 0 ? "Insert an audio/CD+G disc, then Refresh." : "Select tracks and an output folder. Reading is experimental.";
         }
-        catch (OperationCanceledException) { Status = "Drive scan cancelled or timed out."; }
-        catch (Exception error) { Status = "Could not inspect drives: " + error.Message; }
+        catch (OperationCanceledException) { StatusSeverity = StatusKind.Warning; Status = "Drive scan cancelled or timed out."; }
+        catch (Exception error) { StatusSeverity = StatusKind.Failure; Status = "Could not inspect drives: " + error.Message; }
         finally
         {
             IsDetectingDrives = false;
@@ -82,6 +85,7 @@ public partial class DiscRipViewModel : ViewModelBase
     {
         IsBusy = true;
         Progress = 0;
+        StatusSeverity = StatusKind.Info;
         using var source = new CancellationTokenSource(); cancellation = source;
         try
         {
@@ -92,10 +96,13 @@ public partial class DiscRipViewModel : ViewModelBase
                 Result = await new DiscRipService(reader).RunAsync(new(SelectedDrive!, Tracks.Where(t => t.Selected).Select(t => t.Track.Number).ToArray(), Destination, DiscName, (RipFormat)Format, options), policy, reporter, source.Token, resolve);
             }
             finally { accepting = false; }
+            StatusSeverity = Result.Cancelled ? StatusKind.Info
+                : Result.Failed > 0 && Result.Succeeded == 0 ? StatusKind.Failure
+                : Result.Failed > 0 || Result.Skipped > 0 || Result.Succeeded == 0 ? StatusKind.Warning : StatusKind.Success;
             Status = $"{(Result.Cancelled ? "Cancelled" : "Finished")}: {Result.Succeeded} succeeded, {Result.Skipped} skipped, {Result.Failed} failed.";
             if (Result.Failed > 0) Status += " " + string.Join("; ", Result.Files.Where(f => f.Status == ConversionStatus.Failed).Select(f => f.Source + ": " + f.Message));
         }
-        catch (Exception error) { Status = error.Message; }
+        catch (Exception error) { StatusSeverity = StatusKind.Failure; Status = error.Message; }
         finally { cancellation = null; IsBusy = false; }
     }
     [RelayCommand(CanExecute = nameof(IsBusy))]

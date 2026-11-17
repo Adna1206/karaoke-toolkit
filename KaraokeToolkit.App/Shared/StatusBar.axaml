@@ -1,0 +1,46 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="using:Avalonia.Data.Converters"
+             xmlns:shared="using:KaraokeToolkit.App.Shared"
+             x:Class="KaraokeToolkit.App.Shared.StatusBar"
+             x:DataType="shared:StatusBar" x:Name="Root">
+  <UserControl.Styles>
+    <Style Selector="Border.statusSurface">
+      <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+    </Style>
+    <Style Selector="shared|StatusBar:success Border.statusSurface">
+      <Setter Property="Background" Value="#262FA855"/>
+      <Setter Property="BorderBrush" Value="#2FA855"/>
+    </Style>
+    <Style Selector="shared|StatusBar:warning Border.statusSurface">
+      <Setter Property="Background" Value="#26D69B23"/>
+      <Setter Property="BorderBrush" Value="#D69B23"/>
+    </Style>
+    <Style Selector="shared|StatusBar:failure Border.statusSurface">
+      <Setter Property="Background" Value="#26DC4545"/>
+      <Setter Property="BorderBrush" Value="#DC4545"/>
+    </Style>
+    <Style Selector="Path.statusIcon">
+      <Setter Property="Data" Value="M 15,8 A 7,7 0 1 1 1,8 A 7,7 0 1 1 15,8 Z M 8,7 L 8,11.5 M 8,4.5 L 8,5"/>
+    </Style>
+    <Style Selector="shared|StatusBar:success Path.statusIcon">
+      <Setter Property="Data" Value="M 15,8 A 7,7 0 1 1 1,8 A 7,7 0 1 1 15,8 Z M 4.5,8 L 7,10.5 L 11.5,6"/>
+    </Style>
+    <Style Selector="shared|StatusBar:warning Path.statusIcon">
+      <Setter Property="Data" Value="M 8,1.5 L 15,14 L 1,14 Z M 8,6 L 8,9.5 M 8,11.5 L 8,12"/>
+    </Style>
+    <Style Selector="shared|StatusBar:failure Path.statusIcon">
+      <Setter Property="Data" Value="M 15,8 A 7,7 0 1 1 1,8 A 7,7 0 1 1 15,8 Z M 5.5,5.5 L 10.5,10.5 M 10.5,5.5 L 5.5,10.5"/>
+    </Style>
+  </UserControl.Styles>
+  <Border IsVisible="{Binding #Root.Message, Converter={x:Static converters:StringConverters.IsNotNullOrEmpty}}"
+          x:Name="Surface" Classes="statusSurface" Padding="10,6" CornerRadius="4" BorderThickness="3,0,0,0">
+    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+      <Path Classes="statusIcon" Width="16" Height="16" Stretch="Uniform" StrokeThickness="1.4"
+            Stroke="{Binding #Surface.BorderBrush}" VerticalAlignment="Center" IsHitTestVisible="False"/>
+      <TextBlock Grid.Column="1" Text="{Binding #Root.Message}" TextWrapping="Wrap"
+                 MaxHeight="{Binding #Root.MaxMessageHeight}" VerticalAlignment="Center"
+                 FontSize="{DynamicResource SmallTextSize}"/>
+    </Grid>
+  </Border>
+</UserControl>

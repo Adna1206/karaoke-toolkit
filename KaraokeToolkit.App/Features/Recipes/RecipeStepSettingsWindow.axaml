@@ -1,7 +1,7 @@
-<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:KaraokeToolkit.App.Features.Recipes"
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:shared="using:KaraokeToolkit.App.Shared" xmlns:vm="using:KaraokeToolkit.App.Features.Recipes"
  x:Class="KaraokeToolkit.App.Features.Recipes.RecipeStepSettingsWindow" x:DataType="vm:RecipeStepOptionsViewModel"
  Width="650" Height="620" MinWidth="550" MinHeight="450" WindowStartupLocation="CenterOwner">
- <Grid Margin="24" RowDefinitions="Auto,*,Auto,Auto" RowSpacing="14">
+ <Grid Margin="{x:Static shared:WindowSpacing.ContentInset}" RowDefinitions="Auto,*,Auto,Auto" RowSpacing="14">
   <TextBlock Text="Step Settings" Classes="heading1"/>
   <TabControl Grid.Row="1">
    <TabItem Header="Processing"><ScrollViewer><StackPanel Margin="0,14" Spacing="10">
@@ -48,9 +48,11 @@
     <TextBlock Text="{Binding Definitions.VideoAudioBitrateKbps.Label}" FontWeight="SemiBold"/><ComboBox ItemsSource="{Binding VideoAudioBitrates}" SelectedItem="{Binding VideoAudioBitrateKbps}" HorizontalAlignment="Stretch"/>
    </StackPanel></ScrollViewer></TabItem>
   </TabControl>
-  <TextBlock Grid.Row="2" Text="{Binding Error}" TextWrapping="Wrap"/>
-  <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="12">
-   <Button Content="Cancel" Click="Cancel_Click"/><Button Content="OK" Click="Save_Click"/>
-  </StackPanel>
+  <shared:StatusBar Grid.Row="2" Message="{Binding Error}" Kind="Failure"/>
+  <Border Grid.Row="3" Classes="windowFooter dialog">
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="{x:Static shared:WindowSpacing.FooterButtonGap}">
+     <Button Content="Cancel" Click="Cancel_Click"/><Button Content="OK" Click="Save_Click"/>
+    </StackPanel>
+  </Border>
  </Grid>
 </Window>

@@ -45,12 +45,13 @@ public partial class ResultsWindow : Window
         {
             if (ResultsList.SelectedItem is not ReportRow row)
             {
+                model.MessageSeverity = StatusKind.Warning;
                 model.Message = "Select a result first.";
                 return;
             }
             FolderLauncher.Open(row.Entry.Outputs.FirstOrDefault(p => File.Exists(p) || Directory.Exists(p)) ?? row.Source);
         }
-        catch (Exception error) { model.Message = error.Message; }
+        catch (Exception error) { model.MessageSeverity = StatusKind.Failure; model.Message = error.Message; }
     }
     private async void Save_Click(object? sender, RoutedEventArgs e)
     {
@@ -71,9 +72,10 @@ public partial class ResultsWindow : Window
             output.SetLength(0);
             await using var writer = new StreamWriter(output, new UTF8Encoding(false));
             await writer.WriteAsync(Path.GetExtension(file.Name).Equals(".json", StringComparison.OrdinalIgnoreCase) ? model.Report.ToJson() : model.Report.ToText());
+            model.MessageSeverity = StatusKind.Success;
             model.Message = "Report saved.";
         }
-        catch (Exception error) { model.Message = "Could not save report: " + error.Message; }
+        catch (Exception error) { model.MessageSeverity = StatusKind.Failure; model.Message = "Could not save report: " + error.Message; }
     }
     private async void Move_Click(object? sender, RoutedEventArgs e)
     {
@@ -82,6 +84,7 @@ public partial class ResultsWindow : Window
         var selection = ResultsList.SelectedItems?.Cast<ReportRow>().Where(r => r.CanMove).Select(r => r.Finding!).ToArray() ?? [];
         if (selection.Length == 0)
         {
+            model.MessageSeverity = StatusKind.Warning;
             model.Message = "Select validation issues to move. Valid and unreadable items are not moved.";
             return;
         }
@@ -89,15 +92,19 @@ public partial class ResultsWindow : Window
         if (!await ConfirmAsync("Move to Damaged", "Move these files into a unique batch beneath their source root's Damaged folder? Matching partners are kept together. Nothing is overwritten. A restore manifest is saved.\n\n" + files, "Move files"))
             return;
         model.IsBusy = true;
+        model.MessageSeverity = StatusKind.Info;
         model.Message = "Checking fingerprints and moving selected groups...";
         try
         {
             var results = await new QuarantineService().MoveAsync(selection);
             model.Replace(results.Select(r => new ReportEntry(r.Source, r.Succeeded ? "Moved" : "Move failed", r.Message,
                 r.Manifest == null ? r.MovedFiles : r.MovedFiles.Concat([r.Manifest]).ToArray())));
-            model.Message = $"{results.Count(r => r.Succeeded)} group(s) moved. {results.Count(r => !r.Succeeded)} could not be moved. Restore is available using each manifest.";
+            int moved = results.Count(result => result.Succeeded);
+            int failed = results.Count - moved;
+            model.MessageSeverity = failed == 0 ? StatusKind.Success : moved == 0 ? StatusKind.Failure : StatusKind.Warning;
+            model.Message = $"{moved} group(s) moved. {failed} could not be moved. Restore is available using each manifest.";
         }
-        catch (Exception error) { model.Message = error.Message; }
+        catch (Exception error) { model.MessageSeverity = StatusKind.Failure; model.Message = error.Message; }
         finally { model.IsBusy = false; }
     }
     private async Task<bool> ConfirmAsync(string title, string text, string action)
@@ -110,7 +117,7 @@ public partial class ResultsWindow : Window
         proceed.Click += (_, _) => { accepted = true; dialog.Close(); };
         dialog.Content = new StackPanel
         {
-            Margin = new Avalonia.Thickness(24),
+            Margin = WindowSpacing.ContentInset,
             Spacing = 18,
             Children =
         {

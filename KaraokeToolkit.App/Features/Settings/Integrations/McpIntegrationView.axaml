@@ -21,12 +21,11 @@
             <Button Content="Copy Client Configuration" Click="CopyConfiguration_Click" HorizontalAlignment="Left"
                     ToolTip.Tip="Copy a generic mcpServers JSON entry. Add it to your client's MCP configuration, then reconnect or restart that client."/>
                     <TextBox Text="{Binding ConfigurationJson, Mode=OneWay}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap"
-                             MaxHeight="220" FontFamily="Consolas, Menlo, monospace" AutomationProperties.Name="MCP client configuration"/>
+                             MaxHeight="220" FontFamily="{DynamicResource CodeFontFamily}" AutomationProperties.Name="MCP client configuration"/>
                     <TextBlock Text="Add this entry to your client's MCP configuration. Some clients use a different configuration format; use the same command and arguments. Reconnect after changing it."
                                TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
             <TextBlock Text="This choice changes the copied example only. It does not start MCP, save a global permission or modify your client settings." TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
                 </StackPanel>
             </Expander>
-            <TextBlock Text="{Binding Status}" IsVisible="{Binding HasStatus}" TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" AutomationProperties.Name="MCP integration status"/>
         </StackPanel>
 </UserControl>

@@ -45,6 +45,7 @@ public partial class RecipeBuilderViewModel : ViewModelBase
     public IReadOnlyList<OperationDefinition> Operations { get; } = OperationDefinitions.All
         .Where(definition => definition.CanUseInRecipes).ToArray();
     [ObservableProperty] public partial string Name { get; set; } = "New recipe";
+    [ObservableProperty] public partial StatusKind StatusSeverity { get; set; }
     [ObservableProperty] public partial string Error { get; set; } = "";
     [ObservableProperty, NotifyPropertyChangedFor(nameof(CanDeleteRecipe))]
     public partial RecipeDefinition? SelectedSavedRecipe { get; set; }
@@ -70,8 +71,14 @@ public partial class RecipeBuilderViewModel : ViewModelBase
         SelectedOperation = Operations.First();
         Steps.CollectionChanged += (_, _) => Refresh();
         try { foreach (var recipe in store.Load()) SavedRecipes.Add(recipe); }
-        catch (Exception error) { Error = "Could not load the recipe library: " + error.Message; }
+        catch (Exception error) { SetStatus("Could not load the recipe library: " + error.Message, StatusKind.Failure); }
     }
+    internal void SetStatus(string message, StatusKind severity)
+    {
+        StatusSeverity = severity;
+        Error = message;
+    }
+
     public RecipeDefinition Definition() => new() { Id = id, Name = Name.Trim(), Steps = Steps.Select(item => item.Step).ToArray() };
     partial void OnNameChanged(string value) => Refresh();
     partial void OnSelectedStepChanged(RecipeStepItem? value)
@@ -108,7 +115,7 @@ public partial class RecipeBuilderViewModel : ViewModelBase
             RecipeOperations.Validate(Definition() with { Steps = Steps.Select(item => item.Step).Append(step).ToArray() });
             var item = new RecipeStepItem(step); Steps.Add(item); SelectedStep = item; Error = "";
         }
-        catch (Exception error) { Error = error.Message; }
+        catch (Exception error) { SetStatus(error.Message, StatusKind.Failure); }
     }
     [RelayCommand]
     private void RemoveStep() { if (SelectedStep != null) { int index = Steps.IndexOf(SelectedStep); Steps.Remove(SelectedStep); SelectedStep = Steps.ElementAtOrDefault(Math.Min(index, Steps.Count - 1)); } }
@@ -138,7 +145,7 @@ public partial class RecipeBuilderViewModel : ViewModelBase
         if (previous != null) SavedRecipes.Remove(previous);
         SavedRecipes.Add(recipe);
         SelectedSavedRecipe = recipe;
-        Error = "Recipe saved.";
+        SetStatus("Recipe saved.", StatusKind.Success);
     }
     public void DeleteSavedRecipe(Guid recipeId)
     {
@@ -150,7 +157,7 @@ public partial class RecipeBuilderViewModel : ViewModelBase
         if (SelectedSavedRecipe?.Id == recipeId) SelectedSavedRecipe = null;
         SavedRecipes.Remove(recipe);
         if (clearEditor) NewRecipe();
-        Error = $"Deleted recipe: {recipe.Name}.";
+        SetStatus($"Deleted recipe: {recipe.Name}.", StatusKind.Success);
     }
     private void Refresh()
     {
@@ -159,7 +166,7 @@ public partial class RecipeBuilderViewModel : ViewModelBase
         if (Steps.Count > 0)
         {
             try { RecipeOperations.Validate(Definition()); Error = ""; }
-            catch (Exception error) { Error = error.Message; }
+            catch (Exception error) { SetStatus(error.Message, StatusKind.Failure); }
         }
     }
 }

@@ -25,7 +25,7 @@ public partial class RecipeBuilderWindow : Window
     private void Save_Click(object? sender, RoutedEventArgs e)
     {
         try { Model.Save(); }
-        catch (Exception error) { Model.Error = "Could not save recipe: " + error.Message; }
+        catch (Exception error) { Model.SetStatus("Could not save recipe: " + error.Message, StatusKind.Failure); }
     }
     private async void Delete_Click(object? sender, RoutedEventArgs e)
     {
@@ -34,7 +34,7 @@ public partial class RecipeBuilderWindow : Window
         {
             if (await ConfirmDeleteAsync(recipe.Name)) Model.DeleteSavedRecipe(recipe.Id);
         }
-        catch (Exception error) { Model.Error = "Could not delete recipe: " + error.Message; }
+        catch (Exception error) { Model.SetStatus("Could not delete recipe: " + error.Message, StatusKind.Failure); }
     }
     private async Task<bool> ConfirmDeleteAsync(string name)
     {
@@ -50,7 +50,7 @@ public partial class RecipeBuilderWindow : Window
         delete.Click += (_, _) => { confirmed = true; dialog.Close(); };
         dialog.Content = new StackPanel
         {
-            Margin = new Avalonia.Thickness(24), Spacing = 18,
+            Margin = WindowSpacing.ContentInset, Spacing = 18,
             Children =
             {
                 new TextBlock { Text = $"Delete “{name}” from your saved recipes?\n\nUnsaved edits to this recipe will be discarded. Karaoke files and exported recipe copies will not be deleted.", TextWrapping = TextWrapping.Wrap },
@@ -72,9 +72,9 @@ public partial class RecipeBuilderWindow : Window
             if (files.FirstOrDefault()?.TryGetLocalPath() is not { } path) return;
             Model.Load(RecipeJson.Deserialize(await File.ReadAllTextAsync(path)) with { Id = Guid.NewGuid() });
             Model.SelectedSavedRecipe = null;
-            Model.Error = "Recipe imported. Save to keep it in your library.";
+            Model.SetStatus("Recipe imported. Save to keep it in your library.", StatusKind.Info);
         }
-        catch (Exception error) { Model.Error = "Could not import recipe: " + error.Message; }
+        catch (Exception error) { Model.SetStatus("Could not import recipe: " + error.Message, StatusKind.Failure); }
     }
     private async void Export_Click(object? sender, RoutedEventArgs e)
     {
@@ -84,7 +84,7 @@ public partial class RecipeBuilderWindow : Window
             var file = await ModalDialog.RunAsync(this, () => StorageProvider.SaveFilePickerAsync(new() { Title = "Export Recipe", SuggestedFileName = "recipe.json", DefaultExtension = "json", FileTypeChoices = [RecipeFile] }));
             if (file?.TryGetLocalPath() is { } path) await File.WriteAllTextAsync(path, json);
         }
-        catch (Exception error) { Model.Error = "Could not export recipe: " + error.Message; }
+        catch (Exception error) { Model.SetStatus("Could not export recipe: " + error.Message, StatusKind.Failure); }
     }
     private async void Settings_Click(object? sender, RoutedEventArgs e)
     {

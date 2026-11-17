@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -47,25 +48,28 @@ public partial class TaggingViewModel(IReadOnlyList<string> inputs, bool recurse
 {
     private readonly KaraokeTaggingService service = new();
     private string? previewPattern;
+    private bool changingSelection;
     public IReadOnlyList<string> Patterns { get; } = patterns;
     public ObservableCollection<TaggingRow> Rows { get; } = [];
     public PreviewProgress PreviewProgress { get; } = new();
-    [ObservableProperty] private string recoveryNotice = "";
+    internal string RecoveryNotice { get; set; } = "";
     [ObservableProperty, NotifyPropertyChangedFor(nameof(CanApply))] private string pattern = initialPattern;
-    [ObservableProperty] private string? selectedPattern = initialPattern;
-    partial void OnSelectedPatternChanged(string? value) { if (value != null) Pattern = value; }
-    [ObservableProperty, NotifyPropertyChangedFor(nameof(CanApply)), NotifyPropertyChangedFor(nameof(CanPreview)), NotifyCanExecuteChangedFor(nameof(PreviewCommand))] private bool busy;
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(CanApply)), NotifyPropertyChangedFor(nameof(CanPreview)), NotifyCanExecuteChangedFor(nameof(PreviewCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SelectAllCommand)), NotifyCanExecuteChangedFor(nameof(DeselectAllCommand))]
+    private bool busy;
+    [ObservableProperty] private StatusKind statusSeverity;
     [ObservableProperty] private string status = "Preview the filename tags before applying them.";
     [ObservableProperty] private bool fillEmptyOnly;
     [ObservableProperty] private bool clearComments = true;
     [ObservableProperty] private bool clearOtherDescriptiveTags = true;
     public bool CanPreview => !Busy;
-    public bool CanApply => !Busy && previewPattern == Pattern && Rows.Any(r => r.CanEdit);
+    public bool CanApply => !Busy && previewPattern == Pattern && Rows.Any(r => r.CanEdit && r.Included);
     [RelayCommand(CanExecute = nameof(CanPreview))]
     public async Task PreviewAsync(CancellationToken token = default)
     {
         if (Busy) return;
         Busy = true;
+        StatusSeverity = StatusKind.Info;
         Status = "Scanning inputs for media…";
         var report = PreviewProgress.Begin(status => Status = status);
         try
@@ -73,13 +77,28 @@ public partial class TaggingViewModel(IReadOnlyList<string> inputs, bool recurse
             string requested = Pattern;
             var result = await service.PreviewAsync(inputs, requested, recurse, token,
                 (completed, total) => report("Reading media tags", completed, total));
+            foreach (var row in Rows)
+                row.PropertyChanged -= OnRowPropertyChanged;
             Rows.Clear();
-            foreach (var row in result) Rows.Add(new(row));
+            foreach (var preview in result)
+            {
+                var row = new TaggingRow(preview);
+                row.PropertyChanged += OnRowPropertyChanged;
+                Rows.Add(row);
+            }
             previewPattern = requested;
-            Status = $"{Rows.Count(r => r.CanEdit)} ready; {Rows.Count(r => !r.CanEdit)} need attention. Review all fields, especially names containing your separators.";
+            int ready = Rows.Count(row => row.CanEdit);
+            int needsAttention = Rows.Count - ready;
+            StatusSeverity = ready == 0 || needsAttention > 0 ? StatusKind.Warning : StatusKind.Success;
+            Status = $"{ready} ready; {needsAttention} need attention. Review all fields, especially names containing your separators.";
+            if (RecoveryNotice.Length > 0)
+            {
+                Status = $"{RecoveryNotice} {Status}";
+                RecoveryNotice = "";
+            }
         }
         catch (OperationCanceledException) { Status = "Preview cancelled."; }
-        catch (Exception error) { previewPattern = null; Status = error.Message; }
+        catch (Exception error) { previewPattern = null; StatusSeverity = StatusKind.Failure; Status = error.Message; }
         finally
         {
             PreviewProgress.Finish();
@@ -87,15 +106,50 @@ public partial class TaggingViewModel(IReadOnlyList<string> inputs, bool recurse
             OnPropertyChanged(nameof(CanApply));
         }
     }
+    private void OnRowPropertyChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (!changingSelection && args.PropertyName == nameof(TaggingRow.Included))
+            OnPropertyChanged(nameof(CanApply));
+    }
+
+    private bool CanChangeSelection => !Busy && Rows.Any(row => row.CanEdit);
+
+    [RelayCommand(CanExecute = nameof(CanChangeSelection))]
+    private void SelectAll() => SetIncluded(true);
+
+    [RelayCommand(CanExecute = nameof(CanChangeSelection))]
+    private void DeselectAll() => SetIncluded(false);
+
+    private void SetIncluded(bool included)
+    {
+        changingSelection = true;
+        try
+        {
+            foreach (var row in Rows.Where(row => row.CanEdit))
+                row.Included = included;
+        }
+        finally
+        {
+            changingSelection = false;
+            OnPropertyChanged(nameof(CanApply));
+        }
+    }
+
     public TaggingRequest? BuildRequest()
     {
-        if (!CanApply) { Status = "Refresh the preview before applying tags."; return null; }
+        if (!CanApply)
+        {
+            StatusSeverity = StatusKind.Warning;
+            Status = Busy || previewPattern != Pattern
+                ? "Refresh the preview before applying tags."
+                : "Select at least one file to tag.";
+            return null;
+        }
         try
         {
             var files = Rows.Select(r => r.ToPreview()).ToArray();
-            if (!files.Any(p => p.CanApply)) { Status = "Select at least one file to tag."; return null; }
             return new(Pattern, files, new(FillEmptyOnly, ClearComments, ClearOtherDescriptiveTags));
         }
-        catch (FormatException error) { Status = error.Message; return null; }
+        catch (FormatException error) { StatusSeverity = StatusKind.Warning; Status = error.Message; return null; }
     }
 }

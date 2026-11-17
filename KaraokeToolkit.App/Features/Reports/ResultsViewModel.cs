@@ -34,6 +34,7 @@ public partial class ResultsViewModel(MainViewModel owner) : ViewModelBase
     {
         get; set;
     }
+    [ObservableProperty] public partial StatusKind MessageSeverity { get; set; }
     [ObservableProperty] public partial string Message { get; set; } = "Select a row to open its output folder. Ctrl/Shift selects multiple validation results.";
     public IReadOnlyList<ReportRow> Rows => Report.Entries.Where(e => Filter == "All" || (Filter == "Needs attention" ? e.Status is not ("Succeeded" or "Valid" or "Moved" or "Restored") : e.Status == Filter))
         .Select(e => new ReportRow(e, owner.ValidationFindings.FirstOrDefault(f => f.Source == e.Source))).ToArray();

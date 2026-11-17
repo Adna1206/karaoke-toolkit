@@ -187,7 +187,7 @@ public partial class MainWindow : Window
         proceed.Click += (_, _) => { accepted = true; dialog.Close(); };
         dialog.Content = new StackPanel
         {
-            Margin = new Avalonia.Thickness(24),
+            Margin = WindowSpacing.ContentInset,
             Spacing = 18,
             Children =
         {
@@ -248,7 +248,7 @@ public partial class MainWindow : Window
         var header = menuItem.Header;
         menuItem.IsEnabled = false;
         menuItem.Header = "Checking for updates…";
-        var status = new TextBlock { Text = "Checking for updates…", TextWrapping = TextWrapping.Wrap };
+        var status = new StatusBar { Message = "Checking for updates…" };
         var progress = new ProgressBar { IsIndeterminate = true };
         Window? dialog = manual ? CreateInfoDialog("Check for updates", status, progress) : null;
         Task? dialogClosed = dialog == null ? null : ModalDialog.ShowAsync(dialog, this);
@@ -257,6 +257,7 @@ public partial class MainWindow : Window
         {
             var (isInstalled, update) = await Task.Run(UpdateService.CheckForUpdatesAsync);
             if (!manual && update == null) return;
+            status.Kind = !isInstalled ? StatusKind.Warning : update == null ? StatusKind.Success : StatusKind.Info;
             message = (isInstalled, update) switch
             {
                 (false, _) => "Install Karaoke Toolkit with Velopack to check for updates.",
@@ -268,6 +269,7 @@ public partial class MainWindow : Window
         {
             System.Diagnostics.Trace.TraceWarning("GitHub Releases update check failed: {0}", error);
             if (!manual) return;
+            status.Kind = StatusKind.Failure;
             message = "Could not check for updates. Try again later.";
         }
         finally
@@ -276,28 +278,39 @@ public partial class MainWindow : Window
             menuItem.IsEnabled = true;
         }
 
+        status.Message = message;
         if (dialogClosed != null)
         {
             progress.IsVisible = false;
-            status.Text = message;
             await dialogClosed;
         }
         else if (IsVisible)
-            await ShowInfo("Check for updates", message);
+            await ModalDialog.ShowAsync(CreateInfoDialog("Check for updates", status), this);
     }
 
     private async void Help_Click(object? sender, RoutedEventArgs e) => await ShowInfo("Help", "Choose a category and operation, add source files or folders, then click Start. Add buttons and drag-and-drop accumulate selections; Clear removes them. Star operations to find them in Favourites. Disc ripping and restoration ask for their inputs after Start.\n\nUse Tools → Settings to configure recursion, deletion, compression, encoding and existing-file handling. Output files are written beside source files unless the operation asks for a destination.\n\nCancel discards unpublished work; completed files remain. Review the event log and View Last Run Report when processing finishes.");
     private Task ShowInfo(string title, string text) =>
         ModalDialog.ShowAsync(CreateInfoDialog(title, new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap }), this);
 
-    private static Window CreateInfoDialog(string title, TextBlock message, ProgressBar? progress = null)
+    private static Window CreateInfoDialog(string title, Control message, ProgressBar? progress = null)
     {
         var dialog = new Window { Title = WindowTitles.For(title), Width = 480, SizeToContent = SizeToContent.Height, CanResize = false, WindowStartupLocation = WindowStartupLocation.CenterOwner };
         var close = new Button { Content = "Close", HorizontalAlignment = HorizontalAlignment.Right };
         close.Click += (_, _) => dialog.Close();
-        var content = new StackPanel { Margin = new Avalonia.Thickness(24), Spacing = 20, Children = { message } };
-        if (progress != null) content.Children.Add(progress);
-        content.Children.Add(close);
+        Control body = message;
+        if (progress != null)
+        {
+            progress.Width = WindowSpacing.StatusProgressWidth;
+            progress.VerticalAlignment = VerticalAlignment.Center;
+            Grid.SetColumn(progress, 1);
+            body = new Grid
+            {
+                ColumnDefinitions = new ColumnDefinitions("*,Auto"),
+                ColumnSpacing = WindowSpacing.StatusProgressGap,
+                Children = { message, progress }
+            };
+        }
+        var content = new StackPanel { Margin = WindowSpacing.ContentInset, Spacing = 20, Children = { body, close } };
         dialog.Content = content;
         return dialog;
     }
@@ -311,7 +324,7 @@ public partial class MainWindow : Window
         later.Click += (_, _) => dialog.Close();
         dialog.Content = new StackPanel
         {
-            Margin = new Avalonia.Thickness(24),
+            Margin = WindowSpacing.ContentInset,
             Spacing = 18,
             Children =
             {
@@ -353,7 +366,7 @@ public partial class MainWindow : Window
             cancel.Click += (_, _) => dialog.Close();
             dialog.Content = new StackPanel
             {
-                Margin = new Avalonia.Thickness(24),
+                Margin = WindowSpacing.ContentInset,
                 Spacing = 18,
                 Children ={
                 new TextBlock {Text="These output files already exist:",FontWeight=Avalonia.Media.FontWeight.SemiBold},

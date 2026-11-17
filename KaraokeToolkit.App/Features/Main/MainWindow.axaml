@@ -1,4 +1,4 @@
-<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:core="using:KaraokeToolkit.Core"
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:shared="using:KaraokeToolkit.App.Shared" xmlns:core="using:KaraokeToolkit.Core"
  xmlns:vm="using:KaraokeToolkit.App.Features.Main" xmlns:chrome="using:Avalonia.Controls.Chrome"
  x:Class="KaraokeToolkit.App.Features.Main.MainWindow" x:DataType="vm:MainViewModel"
  Classes="mainWindow" Icon="/Assets/karaoke-toolkit.ico" Title="{x:Static core:ApplicationInfo.Name}" Width="1000" Height="700" MinWidth="900" MinHeight="620">
@@ -11,21 +11,6 @@
    <Setter Property="FontFamily" Value="{DynamicResource CaptionFontFamily}"/>
    <Setter Property="FontSize" Value="{DynamicResource CaptionFontSize}"/>
    <Setter Property="FontWeight" Value="Normal"/>
-  </Style>
-  <Style Selector="Menu#MainMenu MenuItem MenuItem">
-   <Setter Property="FontSize" Value="{DynamicResource DropdownMenuFontSize}"/>
-  </Style>
-  <Style Selector="Border.status.success">
-   <Setter Property="Background" Value="#262FA855"/>
-   <Setter Property="BorderBrush" Value="#2FA855"/>
-  </Style>
-  <Style Selector="Border.status.warning">
-   <Setter Property="Background" Value="#26D69B23"/>
-   <Setter Property="BorderBrush" Value="#D69B23"/>
-  </Style>
-  <Style Selector="Border.status.failure">
-   <Setter Property="Background" Value="#26DC4545"/>
-   <Setter Property="BorderBrush" Value="#DC4545"/>
   </Style>
  </Window.Styles>
  <Window.Resources>
@@ -96,30 +81,24 @@
    </vm:OperationPickerView.SourcePanel>
   </vm:OperationPickerView>
   <vm:OperationProgressView Grid.Row="2" Margin="24,16" IsVisible="{Binding ShowProgress, FallbackValue=False}"/>
-  <Border Grid.Row="3" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" Padding="24,14">
-   <StackPanel Spacing="12">
-    <Grid IsVisible="{Binding RecoveryAvailable}" ColumnDefinitions="*,Auto" ColumnSpacing="12">
-     <TextBlock Text="{Binding RecoveryMessage}" TextWrapping="Wrap" VerticalAlignment="Center" FontWeight="SemiBold"/>
-     <Button Grid.Column="1" Content="Recover…" Command="{Binding CheckRecoveryCommand}" IsEnabled="{Binding CanEdit}"/>
-    </Grid>
-    <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="12">
-     <Border Classes="status" Classes.success="{Binding StatusSucceeded}" Classes.warning="{Binding StatusWarning}" Classes.failure="{Binding StatusFailed}"
-             IsVisible="{Binding !ShowRecoveryCheckProgress}"
-             Padding="10,6" CornerRadius="4" BorderThickness="3,0,0,0" VerticalAlignment="Center">
-      <TextBlock Text="{Binding Status, FallbackValue='Starting Karaoke Toolkit…'}" TextWrapping="Wrap" MaxHeight="42" FontSize="{DynamicResource SmallTextSize}"/>
-     </Border>
-     <Grid IsVisible="{Binding ShowRecoveryCheckProgress}" ColumnDefinitions="Auto,*" ColumnSpacing="12" VerticalAlignment="Center" Margin="10,6">
-      <ProgressBar IsIndeterminate="True" Width="96" VerticalAlignment="Center"/>
-      <TextBlock Grid.Column="1" Text="Checking for interrupted runs…" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="{DynamicResource SmallTextSize}"/>
+  <Border Grid.Row="3" Classes="windowFooter" Padding="{x:Static shared:WindowSpacing.ContentInset}">
+    <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="{x:Static shared:WindowSpacing.FooterButtonGap}">
+     <Grid ColumnDefinitions="*,Auto"
+           ColumnSpacing="{x:Static shared:WindowSpacing.StatusProgressGap}" VerticalAlignment="Center">
+      <shared:StatusBar Message="{Binding FooterStatusMessage, FallbackValue='Starting Karaoke Toolkit…'}"
+                        Kind="{Binding FooterStatusKind}" MaxMessageHeight="42" VerticalAlignment="Center"/>
+      <ProgressBar Grid.Column="1" IsVisible="{Binding ShowRecoveryCheckProgress}" IsIndeterminate="True"
+                   Width="{x:Static shared:WindowSpacing.StatusProgressWidth}" VerticalAlignment="Center"/>
      </Grid>
-     <Button Grid.Column="1" Content="View Last Run Report…" Click="Results_Click" IsEnabled="{Binding CanViewReport}"/>
-     <Button Grid.Column="2" Content="Back" Click="Back_Click" IsVisible="{Binding ShowProgress, FallbackValue=False}" IsEnabled="{Binding CanEdit}"/>
-     <Grid Grid.Column="3">
+     <Button Grid.Column="1" Content="Recover…" Command="{Binding CheckRecoveryCommand}" IsVisible="{Binding RecoveryAvailable}"
+             IsEnabled="{Binding CanEdit}" ToolTip.Tip="{Binding RecoveryMessage}"/>
+     <Button Grid.Column="2" Content="View Last Run Report…" Click="Results_Click" IsEnabled="{Binding CanViewReport}"/>
+     <Button Grid.Column="3" Content="Back" Click="Back_Click" IsVisible="{Binding ShowProgress, FallbackValue=False}" IsEnabled="{Binding CanEdit}"/>
+     <Grid Grid.Column="4">
       <Button Content="Start" Command="{Binding StartCommand}" IsVisible="{Binding !IsBusy, FallbackValue=True}" MinWidth="105" Classes="accent"/>
       <Button Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy, FallbackValue=False}" MinWidth="105"/>
      </Grid>
     </Grid>
-   </StackPanel>
   </Border>
  </Grid>
 </Window>

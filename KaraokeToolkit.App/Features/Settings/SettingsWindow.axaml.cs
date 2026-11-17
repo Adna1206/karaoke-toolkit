@@ -97,7 +97,7 @@ public partial class SettingsWindow : Window
         reset.Click += (_, _) => { confirmed = true; dialog.Close(); };
         dialog.Content = new StackPanel
         {
-            Margin = new Avalonia.Thickness(24), Spacing = 18,
+            Margin = WindowSpacing.ContentInset, Spacing = 18,
             Children =
             {
                 new TextBlock

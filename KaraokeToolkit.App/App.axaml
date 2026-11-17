@@ -35,6 +35,14 @@
     <Application.Styles>
         <FluentTheme />
         <StyleInclude Source="avares://KaraokeToolkit.App/Shared/Typography.axaml"/>
+        <Style Selector="Border.windowFooter">
+            <Setter Property="BorderThickness" Value="0,1,0,0"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}"/>
+        </Style>
+        <Style Selector="Border.windowFooter.dialog">
+            <Setter Property="Margin" Value="{x:Static local:WindowSpacing.DialogFooterMargin}"/>
+            <Setter Property="Padding" Value="{x:Static local:WindowSpacing.DialogFooterPadding}"/>
+        </Style>
         <Style Selector="Window:not(.mainWindow)">
             <Setter Property="ExtendClientAreaToDecorationsHint">
                 <OnPlatform x:TypeArguments="x:Boolean">

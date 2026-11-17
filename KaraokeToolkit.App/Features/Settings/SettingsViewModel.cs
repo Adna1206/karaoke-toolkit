@@ -200,6 +200,15 @@ public partial class SettingsViewModel : ViewModelBase
             audioBitrates = audioBitrates.With((AudioEncoder)Encoder, value);
     }
     [ObservableProperty] public partial string Error { get; set; } = "";
+    [ObservableProperty] public partial StatusKind StatusSeverity { get; private set; } = StatusKind.Failure;
+
+    partial void OnErrorChanged(string value) => StatusSeverity = StatusKind.Failure;
+
+    internal void ShowStatus(string message, StatusKind kind)
+    {
+        Error = message;
+        StatusSeverity = kind;
+    }
     public SettingsViewModel() : this(new()) { }
     public SettingsViewModel(ConversionOptions options, AudioBitratePreferences? savedBitrates = null)
     {

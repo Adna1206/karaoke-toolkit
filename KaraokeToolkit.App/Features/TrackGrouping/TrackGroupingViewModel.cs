@@ -41,6 +41,7 @@ public sealed partial class TrackGroupingViewModel(IReadOnlyList<string> inputs)
     [ObservableProperty] public partial int IdSeparatorStyle { get; set; }
     [ObservableProperty, NotifyPropertyChangedFor(nameof(ApplyLabel))]
     public partial bool Move { get; set; } = true;
+    [ObservableProperty] public partial StatusKind StatusSeverity { get; set; }
     [ObservableProperty] public partial string Status { get; set; } = "";
     public PreviewProgress PreviewProgress { get; } = new();
     [ObservableProperty] public partial IReadOnlyList<TrackGroupingNode> Tree { get; set; } = [];
@@ -101,6 +102,7 @@ public sealed partial class TrackGroupingViewModel(IReadOnlyList<string> inputs)
         OnPropertyChanged(nameof(CanApply));
         Tree = [];
         Issues = [];
+        StatusSeverity = StatusKind.Info;
         Status = "Preparing preview…";
         var report = PreviewProgress.Begin(status => Status = status);
         try
@@ -139,6 +141,8 @@ public sealed partial class TrackGroupingViewModel(IReadOnlyList<string> inputs)
             if (hasDestination && preview.plan.Items.Count > 0 && !conflict)
                 submission = new(request, preview.plan);
             OnPropertyChanged(nameof(CanApply));
+            StatusSeverity = conflict || preview.plan.Items.Count == 0 || Issues.Count > 0 ? StatusKind.Warning
+                : hasDestination ? StatusKind.Success : StatusKind.Info;
             Status = conflict ? "Resolve the conflicts to continue."
                 : preview.plan.Items.Count == 0 ? "No selected items can be grouped."
                 : !hasDestination ? "Choose a destination to check for conflicts."
@@ -147,7 +151,11 @@ public sealed partial class TrackGroupingViewModel(IReadOnlyList<string> inputs)
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
         catch (Exception error) when (error is ArgumentException or IOException or UnauthorizedAccessException or NotSupportedException)
         {
-            if (!cancellation.IsCancellationRequested) Status = error.Message;
+            if (!cancellation.IsCancellationRequested)
+            {
+                StatusSeverity = StatusKind.Failure;
+                Status = error.Message;
+            }
         }
         finally
         {

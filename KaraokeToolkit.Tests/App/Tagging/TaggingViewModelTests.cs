@@ -73,8 +73,25 @@ public class TaggingViewModelTests
         await model.PreviewAsync();
         Assert.True(model.CanApply);
         Assert.Null(model.BuildRequest()!.Files[0].Tags!.Album);
-        row = Assert.Single(model.Rows); row.Included = false;
+        row = Assert.Single(model.Rows);
+        int applyChanges = 0;
+        model.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(TaggingViewModel.CanApply)) applyChanges++;
+        };
+        row.Included = false;
+        Assert.False(model.CanApply);
         Assert.Null(model.BuildRequest()); Assert.Contains("Select at least", model.Status);
+        row.Included = true;
+        Assert.True(model.CanApply);
+        Assert.Equal(2, applyChanges);
+        Assert.True(model.DeselectAllCommand.CanExecute(null));
+        model.DeselectAllCommand.Execute(null);
+        Assert.False(row.Included);
+        Assert.False(model.CanApply);
+        model.SelectAllCommand.Execute(null);
+        Assert.True(row.Included);
+        Assert.True(model.CanApply);
     }
 
     [Fact]

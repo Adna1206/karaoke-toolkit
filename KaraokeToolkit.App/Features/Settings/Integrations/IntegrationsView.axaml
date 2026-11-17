@@ -19,10 +19,10 @@
                 </StackPanel>
             </Expander>
             <Expander Header="Command Line Interface (CLI)" IsExpanded="True" HorizontalAlignment="Stretch">
-                <integrations:CliIntegrationView/>
+                <integrations:CliIntegrationView x:Name="CliIntegration"/>
             </Expander>
             <Expander Header="Model Context Protocol (MCP)" IsExpanded="True" HorizontalAlignment="Stretch">
-                <integrations:McpIntegrationView/>
+                <integrations:McpIntegrationView x:Name="McpIntegration"/>
             </Expander>
         </StackPanel>
     </ScrollViewer>

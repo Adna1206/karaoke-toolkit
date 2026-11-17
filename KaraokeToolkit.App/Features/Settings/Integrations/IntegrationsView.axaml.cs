@@ -2,6 +2,7 @@ using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using KaraokeToolkit.App.Services;
+using KaraokeToolkit.App.Shared;
 
 namespace KaraokeToolkit.App.Features.Settings.Integrations;
 
@@ -10,17 +11,20 @@ public partial class IntegrationsView : UserControl
     public IntegrationsView()
     {
         InitializeComponent();
+        CliIntegration.ReportStatus = ShowStatus;
+        McpIntegration.ReportStatus = ShowStatus;
         ExplorerSection.IsVisible = OperatingSystem.IsWindows();
-        if (ExplorerSection.IsVisible) RefreshExplorer();
+        if (ExplorerSection.IsVisible)
+        {
+            try { RefreshExplorer(); }
+            catch (Exception error) { ExplorerStatus.Text = "Could not read Explorer integration: " + error.Message; }
+        }
     }
 
     private void RefreshExplorer()
     {
-        try
-        {
-            ExplorerStatus.Text = new ExplorerIntegration().IsInstalled() ? "Enabled for this application location." : "Not enabled for this application location.";
-        }
-        catch (Exception error) { ExplorerStatus.Text = error.Message; }
+        bool enabled = new ExplorerIntegration().IsInstalled();
+        ExplorerStatus.Text = enabled ? "Enabled for this application location." : "Not enabled for this application location.";
     }
     private void EnableExplorer_Click(object? sender, RoutedEventArgs e)
     {
@@ -28,8 +32,9 @@ public partial class IntegrationsView : UserControl
         {
             new ExplorerIntegration().Install();
             RefreshExplorer();
+            ShowStatus("Explorer integration enabled.", StatusKind.Success);
         }
-        catch (Exception error) { ExplorerStatus.Text = "Could not enable Explorer integration: " + error.Message; }
+        catch (Exception error) { ShowStatus("Could not enable Explorer integration: " + error.Message, StatusKind.Failure); }
     }
     private void RemoveExplorer_Click(object? sender, RoutedEventArgs e)
     {
@@ -37,7 +42,11 @@ public partial class IntegrationsView : UserControl
         {
             new ExplorerIntegration().Remove();
             RefreshExplorer();
+            ShowStatus("Explorer integration removed.", StatusKind.Success);
         }
-        catch (Exception error) { ExplorerStatus.Text = "Could not remove Explorer integration: " + error.Message; }
+        catch (Exception error) { ShowStatus("Could not remove Explorer integration: " + error.Message, StatusKind.Failure); }
     }
+
+    private void ShowStatus(string message, StatusKind kind) =>
+        (DataContext as SettingsViewModel)?.ShowStatus(message, kind);
 }

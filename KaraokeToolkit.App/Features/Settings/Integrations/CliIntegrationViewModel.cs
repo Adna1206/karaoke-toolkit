@@ -15,6 +15,7 @@ public partial class CliIntegrationViewModel : ViewModelBase
     public string ExecutablePath { get; }
     public bool IsAvailable { get; }
     public bool IsMissing => !IsAvailable;
+    [ObservableProperty] public partial StatusKind StatusSeverity { get; private set; }
     public bool HasStatus => !string.IsNullOrWhiteSpace(Status);
     public bool ExampleNeedsFolder => ExampleIndex is 2 or 3;
     public string Availability => IsAvailable ? "Included with this application." : "CLI not found beside this build. Published app packages include it.";
@@ -63,14 +64,14 @@ public partial class CliIntegrationViewModel : ViewModelBase
 
     public async Task CopyAsync(string text, Func<string, Task> copy)
     {
-        try { await copy(text); Status = "Copied to clipboard."; }
-        catch (Exception error) { Status = "Could not copy: " + error.Message; }
+        try { await copy(text); StatusSeverity = StatusKind.Success; Status = "Copied to clipboard."; }
+        catch (Exception error) { StatusSeverity = StatusKind.Failure; Status = "Could not copy: " + error.Message; }
     }
 
     public void OpenTerminal(Action<string> open)
     {
-        if (!IsAvailable) { Status = Availability; return; }
-        try { open(Path.GetDirectoryName(ExecutablePath)!); Status = "Terminal opened in the application folder. No CLI command was run."; }
-        catch (Exception error) { Status = "Could not open a terminal: " + error.Message; }
+        if (!IsAvailable) { StatusSeverity = StatusKind.Warning; Status = Availability; return; }
+        try { open(Path.GetDirectoryName(ExecutablePath)!); StatusSeverity = StatusKind.Success; Status = "Terminal opened in the application folder. No CLI command was run."; }
+        catch (Exception error) { StatusSeverity = StatusKind.Failure; Status = "Could not open a terminal: " + error.Message; }
     }
 }

@@ -14,6 +14,7 @@ public partial class McpIntegrationViewModel : ViewModelBase
     public string ExecutablePath { get; }
     public bool IsAvailable { get; }
     public bool IsMissing => !IsAvailable;
+    [ObservableProperty] public partial StatusKind StatusSeverity { get; private set; }
     public bool HasStatus => !string.IsNullOrWhiteSpace(Status);
     public string Availability => "MCP not found beside this build. Published app packages include it.";
     public string[] FileAccessModes { get; } = ["Read only", "Allow file changes"];
@@ -45,7 +46,7 @@ public partial class McpIntegrationViewModel : ViewModelBase
 
     public async Task CopyAsync(string text, Func<string, Task> copy)
     {
-        try { await copy(text); Status = "Copied to clipboard."; }
-        catch (Exception error) { Status = "Could not copy: " + error.Message; }
+        try { await copy(text); StatusSeverity = StatusKind.Success; Status = "Copied to clipboard."; }
+        catch (Exception error) { StatusSeverity = StatusKind.Failure; Status = "Could not copy: " + error.Message; }
     }
 }

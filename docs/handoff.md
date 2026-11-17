@@ -1,5 +1,16 @@
 # Current handoff
 
+## Desktop status and tagging controls
+
+2026-11-17, `master` from base `2755ffe`, version 2026.11.17. This batch
+standardizes desktop footer spacing, dividers and typography, and uses one
+shared status slot per window with progress to the right where applicable.
+Tagging now has an editable pattern dropdown with centered text, Refresh,
+bulk row selection, and an accent button when tags can be applied.
+
+`scripts/Test.ps1 -NoRestore` passed 748/748 with local test-host access.
+Next, visually check the pattern field, status transitions and footer spacing.
+
 ## Desktop and operation changes
 
 2026-11-17, `master` from base `f27cf0f`, version 2026.11.17. This batch adds

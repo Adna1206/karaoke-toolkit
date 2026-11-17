@@ -4,12 +4,12 @@
         x:Class="KaraokeToolkit.App.Features.About.AboutWindow" x:DataType="vm:AboutViewModel"
         Title="{x:Static shared:WindowTitles.About}" Width="740" Height="620" MinWidth="640" MinHeight="500"
         WindowStartupLocation="CenterOwner">
-  <Grid Margin="28" RowDefinitions="Auto,*,Auto" RowSpacing="20">
+  <Grid Margin="{x:Static shared:WindowSpacing.ContentInset}" RowDefinitions="Auto,*,Auto" RowSpacing="20">
     <Grid ColumnDefinitions="88,*" ColumnSpacing="20">
       <Image Source="/Assets/karaoke-toolkit.png" Width="88" Height="88"/>
       <StackPanel Grid.Column="1" Spacing="5" VerticalAlignment="Center">
         <TextBlock Text="{Binding AppName}" Classes="heading1"/>
-        <TextBlock Text="{Binding Version}" FontSize="14" Opacity="0.7"/>
+        <TextBlock Text="{Binding Version}" Opacity="0.7"/>
       </StackPanel>
     </Grid>
     <TabControl Grid.Row="1">
@@ -57,6 +57,8 @@
         </Grid>
       </TabItem>
     </TabControl>
-    <Button Grid.Row="2" Content="Close" Click="Close_Click" IsCancel="True" MinWidth="90" HorizontalAlignment="Right"/>
+    <Border Grid.Row="2" Classes="windowFooter dialog">
+      <Button Content="Close" Click="Close_Click" IsCancel="True" MinWidth="90" HorizontalAlignment="Right"/>
+    </Border>
   </Grid>
 </Window>

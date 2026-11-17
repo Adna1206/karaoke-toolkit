@@ -20,7 +20,7 @@ public partial class DiscRipWindow : Window
             var selected = await ModalDialog.RunAsync(this, () => StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = "Choose ripped-track output folder" }));
             if (selected.Count > 0 && selected[0].TryGetLocalPath() is string path) model.Destination = path;
         }
-        catch (Exception error) { model.Status = error.Message; }
+        catch (Exception error) { model.StatusSeverity = StatusKind.Failure; model.Status = error.Message; }
     }
     private void Close_Click(object? sender, RoutedEventArgs e) => Close();
 }

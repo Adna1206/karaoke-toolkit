@@ -210,7 +210,8 @@ public partial class MainViewModel : ViewModelBase
         get; set;
     }
     [ObservableProperty] public partial string RecoveryMessage { get; set; } = "";
-    [ObservableProperty] public partial bool ShowRecoveryCheckProgress { get; private set; }
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(FooterStatusMessage)), NotifyPropertyChangedFor(nameof(FooterStatusKind))]
+    public partial bool ShowRecoveryCheckProgress { get; private set; }
     private string lastMessage = "";
     private string? activityRoot;
     public OverwritePolicy OverwritePolicy { get; private set; } = OverwritePolicy.Ask;
@@ -296,12 +297,18 @@ public partial class MainViewModel : ViewModelBase
         get; set;
     }
     [ObservableProperty] public partial string Elapsed { get; set; } = "00:00:00";
-    [ObservableProperty] public partial string Status { get; set; } = "Choose an operation and its inputs, then click Start.";
-    [ObservableProperty, NotifyPropertyChangedFor(nameof(StatusSucceeded)), NotifyPropertyChangedFor(nameof(StatusWarning)), NotifyPropertyChangedFor(nameof(StatusFailed))]
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(FooterStatusMessage))]
+    public partial string Status { get; set; } = "Choose an operation and its inputs, then click Start.";
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(FooterStatusKind))]
     public partial RunStatus StatusOutcome { get; set; }
-    public bool StatusSucceeded => StatusOutcome == RunStatus.Success;
-    public bool StatusWarning => StatusOutcome == RunStatus.Warning;
-    public bool StatusFailed => StatusOutcome == RunStatus.Failure;
+    public string FooterStatusMessage => ShowRecoveryCheckProgress ? "Checking for interrupted runs…" : Status;
+    public StatusKind FooterStatusKind => ShowRecoveryCheckProgress ? StatusKind.Info : StatusOutcome switch
+    {
+        RunStatus.Success => StatusKind.Success,
+        RunStatus.Warning => StatusKind.Warning,
+        RunStatus.Failure => StatusKind.Failure,
+        _ => StatusKind.Info
+    };
 
     partial void OnShowProgressChanged(bool value)
     {
@@ -520,11 +527,12 @@ public partial class MainViewModel : ViewModelBase
             RecoveryMessage = RecoveryAvailable ? $"Recovery available: {jobs.Count} interrupted run(s)." : "";
             if (!RecoveryAvailable)
                 return false;
+            StatusOutcome = RunStatus.Warning;
             Status = RecoveryMessage;
             if (ConfirmRecoveryAsync != null && await ConfirmRecoveryAsync(jobs[0]))
                 resume = jobs[0];
         }
-        catch (Exception error) { Status = "Could not inspect recovery files: " + error.Message; return true; }
+        catch (Exception error) { StatusOutcome = RunStatus.Failure; Status = "Could not inspect recovery files: " + error.Message; return true; }
         finally
         {
             ShowRecoveryCheckProgress = false;

@@ -25,7 +25,7 @@ public partial class MainViewModel
                 if (ConfigureTaggingAsync == null) throw new InvalidOperationException("The tagging dialog is unavailable.");
                 int recovered = await new KaraokeTaggingService(recovery).RecoverInterruptedPublicationsAsync(CurrentInputs, Options.RecurseFolders);
                 var dialog = new TaggingViewModel(CurrentInputs, Options.RecurseFolders, store.LoadTaggingPatterns(), store.LoadLastTaggingPattern());
-                if (recovered > 0) dialog.RecoveryNotice = $"Recovery: {recovered} interrupted tagging publication(s) checked. Review a fresh preview before continuing.";
+                if (recovered > 0) dialog.RecoveryNotice = $"Checked {recovered} interrupted tagging publication(s).";
                 request = await ConfigureTaggingAsync(dialog);
                 if (request == null) return;
             }

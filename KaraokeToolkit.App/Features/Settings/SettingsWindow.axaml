@@ -13,7 +13,7 @@
             <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}"/>
         </Style>
     </Window.Styles>
-    <Grid Margin="24" RowDefinitions="Auto,*,Auto,Auto" RowSpacing="16">
+    <Grid Margin="{x:Static shared:WindowSpacing.ContentInset}" RowDefinitions="Auto,*,Auto" RowSpacing="16">
         <TextBlock Text="Settings" Classes="heading1"/>
         <TabControl Grid.Row="1" x:Name="OptionsTabs">
             <TabItem Header="General">
@@ -174,15 +174,17 @@
                 </StackPanel>
             </TabItem>
         </TabControl>
-        <TextBlock Grid.Row="2" Text="{Binding Error}" TextWrapping="Wrap"/>
-        <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto">
-            <Button Content="{Binding Definitions.ResetDefaults.Label}" Click="ResetDefaults_Click" ToolTip.Tip="{Binding Definitions.ResetDefaults.Description}"/>
-        <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
-            <Button Content="{Binding Definitions.Save.Label}" Click="Save_Click" MinWidth="85" ToolTip.Tip="{Binding Definitions.Save.Description}"/>
-            <Button Content="{Binding Definitions.Cancel.Label}" Click="Cancel_Click" IsCancel="True" MinWidth="85" ToolTip.Tip="{Binding Definitions.Cancel.Description}"/>
-            <Button Content="{Binding Definitions.Apply.Label}" Click="Apply_Click" IsEnabled="{Binding HasChanges}" MinWidth="85" ToolTip.Tip="{Binding Definitions.Apply.Description}"/>
-        </StackPanel>
-        </Grid>
+        <Border Grid.Row="2" Classes="windowFooter dialog">
+          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{x:Static shared:WindowSpacing.FooterButtonGap}">
+              <Button Content="{Binding Definitions.ResetDefaults.Label}" Click="ResetDefaults_Click" ToolTip.Tip="{Binding Definitions.ResetDefaults.Description}"/>
+          <shared:StatusBar Grid.Column="1" Message="{Binding Error}" Kind="{Binding StatusSeverity}" VerticalAlignment="Center"/>
+          <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="{x:Static shared:WindowSpacing.FooterButtonGap}">
+              <Button Content="{Binding Definitions.Save.Label}" Click="Save_Click" MinWidth="85" ToolTip.Tip="{Binding Definitions.Save.Description}"/>
+              <Button Content="{Binding Definitions.Cancel.Label}" Click="Cancel_Click" IsCancel="True" MinWidth="85" ToolTip.Tip="{Binding Definitions.Cancel.Description}"/>
+              <Button Content="{Binding Definitions.Apply.Label}" Click="Apply_Click" IsEnabled="{Binding HasChanges}" MinWidth="85" ToolTip.Tip="{Binding Definitions.Apply.Description}"/>
+          </StackPanel>
+          </Grid>
+        </Border>
     </Grid>
 </Window>
 

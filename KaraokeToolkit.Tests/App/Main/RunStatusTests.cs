@@ -33,7 +33,7 @@ public class RunStatusTests
         await model.StartCommand.ExecuteAsync(null);
         Assert.True(model.ShowProgress);
         Assert.Equal(RunStatus.Warning, model.StatusOutcome);
-        Assert.True(model.StatusWarning);
+        Assert.Equal(KaraokeToolkit.App.Shared.StatusKind.Warning, model.FooterStatusKind);
         var report = model.LastReport;
         Assert.NotNull(report);
         model.ShowProgress = false;

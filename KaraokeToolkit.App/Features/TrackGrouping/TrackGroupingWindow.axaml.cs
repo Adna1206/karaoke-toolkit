@@ -34,7 +34,7 @@ public sealed partial class TrackGroupingWindow : Window
                     if (folder.TryGetLocalPath() is { } path) model.OutputFolder = path;
             }
         }
-        catch (Exception error) { model.Status = "Could not select a destination folder. " + error.Message; }
+        catch (Exception error) { model.StatusSeverity = StatusKind.Failure; model.Status = "Could not select a destination folder. " + error.Message; }
     }
 
     private void Cancel_Click(object? sender, RoutedEventArgs args) => Close();

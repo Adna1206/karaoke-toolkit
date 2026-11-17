@@ -2,37 +2,48 @@
         xmlns:vm="using:KaraokeToolkit.App.Features.Tagging" xmlns:shared="using:KaraokeToolkit.App.Shared" x:Class="KaraokeToolkit.App.Features.Tagging.TaggingWindow"
         x:DataType="vm:TaggingViewModel" Title="{x:Static shared:WindowTitles.Tagging}"
         Width="980" Height="730" MinWidth="760" MinHeight="560" WindowStartupLocation="CenterOwner">
-  <Grid Margin="24" RowDefinitions="Auto,Auto,Auto,*,Auto,Auto" RowSpacing="14">
+  <Window.Styles>
+    <Style Selector="ComboBox.filenamePattern /template/ TextBox#PART_EditableTextBox">
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+  </Window.Styles>
+  <Grid Margin="{x:Static shared:WindowSpacing.ContentInset}" RowDefinitions="Auto,Auto,Auto,*,Auto,Auto" RowSpacing="14">
     <TextBlock Text="Tag Karaoke Files" Classes="heading1"/>
-    <Grid Grid.Row="1" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="8">
-      <ComboBox ItemsSource="{Binding Patterns}" SelectedItem="{Binding SelectedPattern}" HorizontalAlignment="Stretch"
-                ToolTip.Tip="Previously used filename patterns. Edit the pattern below to create another combination."/>
-      <TextBox Grid.Row="1" Text="{Binding Pattern}" IsEnabled="{Binding CanPreview}" PlaceholderText="Filename pattern"/>
-      <Button Grid.Column="1" Grid.Row="1" Content="Preview" Command="{Binding PreviewCommand}" MinWidth="100"/>
+    <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="12">
+      <ComboBox Classes="filenamePattern" ItemsSource="{Binding Patterns}" Text="{Binding Pattern, Mode=TwoWay}" IsEditable="True"
+                Padding="11,5"
+                IsEnabled="{Binding CanPreview}" HorizontalAlignment="Stretch" PlaceholderText="Filename pattern"
+                AutomationProperties.Name="Filename pattern" ToolTip.Tip="Type a filename pattern or choose one from your history."/>
+      <Button Grid.Column="1" Content="Refresh" Command="{Binding PreviewCommand}" MinWidth="100"/>
     </Grid>
     <TextBlock Grid.Row="2" Text="%DISC% → Album · %TRACK% → numeric Track · %ARTIST% → Artist · %TITLE% → Title. Reorder fields and type any separators. ZIPs use the archive filename."
                TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.8"/>
-    <ListBox Grid.Row="3" ItemsSource="{Binding Rows}" SelectionMode="Single">
-      <ListBox.Styles><Style Selector="ListBoxItem"><Setter Property="HorizontalContentAlignment" Value="Stretch"/></Style></ListBox.Styles>
-      <ListBox.ItemTemplate><DataTemplate x:DataType="vm:TaggingRow">
-        <StackPanel Spacing="6" Margin="4,8">
-          <CheckBox Content="{Binding Name}" IsChecked="{Binding Included}" IsEnabled="{Binding CanEdit}" ToolTip.Tip="{Binding Path}"/>
-          <Grid ColumnDefinitions="*,70,*,*" RowDefinitions="Auto,Auto" RowSpacing="4" ColumnSpacing="8" IsEnabled="{Binding CanEdit}">
-            <TextBlock Text="Album / disc" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
-            <TextBlock Grid.Column="1" Text="Track" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
-            <TextBlock Grid.Column="2" Text="Artist" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
-            <TextBlock Grid.Column="3" Text="Title" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
-            <TextBox Grid.Row="1" Text="{Binding Album}" PlaceholderText="Album / disc" ToolTip.Tip="Album (karaoke disc identifier)"/>
-            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Track}" PlaceholderText="Track" ToolTip.Tip="Numeric track"/>
-            <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding Artist}" PlaceholderText="Artist" ToolTip.Tip="Artist"/>
-            <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding Title}" PlaceholderText="Title" ToolTip.Tip="Title"/>
-          </Grid>
-          <TextBlock Text="{Binding Existing}" FontSize="{DynamicResource SmallTextSize}" Opacity="0.65" TextWrapping="Wrap"/>
-        </StackPanel>
-      </DataTemplate></ListBox.ItemTemplate>
-    </ListBox>
+    <Grid Grid.Row="3" RowDefinitions="Auto,*" RowSpacing="8">
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Content="Select all" Command="{Binding SelectAllCommand}"/>
+        <Button Content="Deselect all" Command="{Binding DeselectAllCommand}"/>
+      </StackPanel>
+      <ListBox Grid.Row="1" ItemsSource="{Binding Rows}" SelectionMode="Single">
+        <ListBox.Styles><Style Selector="ListBoxItem"><Setter Property="HorizontalContentAlignment" Value="Stretch"/></Style></ListBox.Styles>
+        <ListBox.ItemTemplate><DataTemplate x:DataType="vm:TaggingRow">
+          <StackPanel Spacing="6" Margin="4,8">
+            <CheckBox Content="{Binding Name}" IsChecked="{Binding Included}" IsEnabled="{Binding CanEdit}" ToolTip.Tip="{Binding Path}"/>
+            <Grid ColumnDefinitions="*,70,*,*" RowDefinitions="Auto,Auto" RowSpacing="4" ColumnSpacing="8" IsEnabled="{Binding CanEdit}">
+              <TextBlock Text="Album / disc" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
+              <TextBlock Grid.Column="1" Text="Track" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
+              <TextBlock Grid.Column="2" Text="Artist" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
+              <TextBlock Grid.Column="3" Text="Title" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
+              <TextBox Grid.Row="1" Text="{Binding Album}" PlaceholderText="Album / disc" ToolTip.Tip="Album (karaoke disc identifier)"/>
+              <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Track}" PlaceholderText="Track" ToolTip.Tip="Numeric track"/>
+              <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding Artist}" PlaceholderText="Artist" ToolTip.Tip="Artist"/>
+              <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding Title}" PlaceholderText="Title" ToolTip.Tip="Title"/>
+            </Grid>
+            <TextBlock Text="{Binding Existing}" FontSize="{DynamicResource SmallTextSize}" Opacity="0.65" TextWrapping="Wrap"/>
+          </StackPanel>
+        </DataTemplate></ListBox.ItemTemplate>
+      </ListBox>
+    </Grid>
     <StackPanel Grid.Row="4" Spacing="5">
-      <TextBlock Text="{Binding RecoveryNotice}" TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}"/>
       <CheckBox Content="Fill empty fields only" IsChecked="{Binding FillEmptyOnly}" ToolTip.Tip="Keep existing Album, Track, Artist and Title when they are already populated."/>
       <CheckBox Content="Clear existing comments" IsChecked="{Binding ClearComments}"/>
       <CheckBox Content="Clear other descriptive tags" IsChecked="{Binding ClearOtherDescriptiveTags}"
@@ -40,17 +51,19 @@
       <TextBlock Text="Files are updated in place. Audio/video is not re-encoded; CDG is kept. ZIPs use your compression settings. Delete Originals does not apply."
                  TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
     </StackPanel>
-    <Grid Grid.Row="5" ColumnDefinitions="*,Auto" ColumnSpacing="16">
-      <DockPanel LastChildFill="True">
-        <ProgressBar DockPanel.Dock="Left" Width="72" Margin="0,0,10,0" VerticalAlignment="Center"
-                     IsVisible="{Binding PreviewProgress.IsVisible}" IsIndeterminate="{Binding PreviewProgress.IsIndeterminate}"
-                     Value="{Binding PreviewProgress.Percent, Mode=OneWay}"/>
-        <TextBlock Text="{Binding Status}" TextWrapping="Wrap" VerticalAlignment="Center"/>
-      </DockPanel>
-      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
-        <Button Content="Cancel" IsCancel="True" Click="Cancel_Click" MinWidth="90"/>
-        <Button Content="Apply Tags" IsEnabled="{Binding CanApply}" Click="Apply_Click" MinWidth="110"/>
-      </StackPanel>
-    </Grid>
+    <Border Grid.Row="5" Classes="windowFooter dialog">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{x:Static shared:WindowSpacing.StatusProgressGap}" VerticalAlignment="Center">
+          <shared:StatusBar Message="{Binding Status}" Kind="{Binding StatusSeverity}" VerticalAlignment="Center"/>
+          <ProgressBar Grid.Column="1" Width="{x:Static shared:WindowSpacing.StatusProgressWidth}" VerticalAlignment="Center"
+                       IsVisible="{Binding PreviewProgress.IsVisible}" IsIndeterminate="{Binding PreviewProgress.IsIndeterminate}"
+                       Value="{Binding PreviewProgress.Percent, Mode=OneWay}"/>
+        </Grid>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top" Spacing="{x:Static shared:WindowSpacing.FooterButtonGap}">
+          <Button Content="Cancel" IsCancel="True" Click="Cancel_Click" MinWidth="90"/>
+          <Button Content="Apply Tags" Classes.accent="{Binding CanApply}" IsEnabled="{Binding CanApply}" Click="Apply_Click" MinWidth="110"/>
+        </StackPanel>
+      </Grid>
+    </Border>
   </Grid>
 </Window>

@@ -1,5 +1,22 @@
 # Operation and setting definitions
 
+Use App's shared `WindowSpacing` values for the 24-DIP horizontal and 14-DIP
+vertical inset in dialogs and the main footer, and the 10-DIP gap between
+footer buttons.
+Use the shared `windowFooter` border style for the divider above bottom
+actions. Add the `dialog` class when the footer sits inside an inset dialog
+grid. Ordinary labels and controls inherit Fluent typography. Use the shared
+heading, small-text, caption and code styles for their respective roles.
+Use `Shared.StatusBar` for footer messages with an icon. Bind `Message` and
+`Kind` to the current text and severity. The supported kinds are Info,
+Warning, Failure and Success. Use `MaxMessageHeight` where the footer has
+limited vertical space.
+Put footer status and progress inside the footer divider. Place the progress
+bar to the right of its message using the shared `StatusProgressGap` and
+`StatusProgressWidth`.
+Use one status bar per window. Publish new feedback into its current message
+and severity instead of adding another bar.
+
 `KaraokeToolkit.App/Metadata` contains immutable presentation definitions. These
 belong to App because they describe the user interface; Core owns execution,
 format support and validation.
