@@ -1,5 +1,23 @@
 # Current handoff
 
+## Operation previews and batch feedback
+
+2026-11-17, `master` from base `f498bf3`, version 2026.11.17. Tagging and
+Track Grouping use the main workspace. Back keeps the input selection and
+confirms before discarding edits. The destination tree supports bulk expansion
+and a bounded issues divider. Update and Help use the shared footer.
+
+Recipe Builder combines the name field and saved recipe menu, gives new
+recipes instructive placeholders, and uses the shared Delete Recipe footer.
+Flattening reports failed empty-folder cleanup and continues. Desktop
+completion is red for recorded failures. The batch rule is in AGENTS.md and
+the crash recovery guide. TODO records favourites ordering, stem extraction,
+and undo for the last move or rename.
+
+`scripts/Test.ps1 -NoRestore` passed 749/749 with local test-host access.
+Next, visually check the in-window previews, divider limits and recipe menu.
+The original OneDrive access-denied case was not reproduced.
+
 ## Desktop status and tagging controls
 
 2026-11-17, `master` from base `2755ffe`, version 2026.11.17. This batch

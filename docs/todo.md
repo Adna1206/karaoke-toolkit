@@ -1,5 +1,18 @@
 # Planned features
 
+- [ ] **Undo Last Move or Rename** — keep one durable undo record across
+  restarts for flattening, alphabetical organization, track grouping moves,
+  and filename renames. Preview the reversal, verify affected paths and file
+  contents, and refuse to overwrite files created or changed since the run.
+  For a partially successful batch, reverse only completed changes. Defer
+  redo, longer history, and undo for conversions, tagging, and whole recipes.
+
+- [ ] **Reorder Favourites** — let users drag operations and recipes into their
+  preferred order or use keyboard-accessible **Move up** and **Move down**
+  actions. Save the order across launches. Offer **Reset order** in the list's
+  context menu, including on empty space, and in the Favourites heading menu.
+  Reset restores the default order while keeping every item favourited.
+
 - [ ] **Open multiple files from Windows Explorer** — make **Open in Karaoke
   Toolkit** accept the full Explorer selection and load it in one window.
   Use a shell handler that receives the selection as a batch. Preserve per-user
@@ -17,6 +30,13 @@
   PCM through SoundTouch.Net, then encode the result with the existing audio
   pipeline. Keep karaoke graphics in sync when tempo changes and review
   LGPL-2.1-or-later distribution requirements.
+
+- [ ] **Stem extraction** — separate a song locally into vocal and instrumental
+  WAV files for lyric timing and backing tracks. Preserve the original audio
+  and show progress with cancellation. Offer one model as an optional in-app
+  download with its size shown upfront. Verify the download and reuse the
+  installed model offline. Evaluate model redistribution terms, CPU runtime,
+  separation quality and output timing before choosing a model.
 
 - [ ] **Improve Clean Up Filenames** — let users choose which cleanup rules
   to apply and how characters are replaced. For example, allow underscores
