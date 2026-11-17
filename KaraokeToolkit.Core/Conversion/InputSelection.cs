@@ -44,7 +44,7 @@ public static class InputSelection
         Action.AudioGToBin or Action.AudioGToZip or Action.LosslessGToMp3G => [".cdg", .. KaraokeArchive.AudioExtensions],
         Action.KaraokeToVideo => [".bin", ".zip", ".cdg", .. KaraokeArchive.AudioExtensions],
         Action.ArchiveToZip => ArchiveZipConverter.Extensions,
-        Action.CleanUpFilenames or Action.CreateCueAndTextFiles => [],
+        Action.CleanUpFilenames or Action.AddTrackIdSeparator or Action.RemoveTrackIdSeparator or Action.CreateCueAndTextFiles => [],
         _ => throw new ArgumentOutOfRangeException(nameof(action))
     };
 

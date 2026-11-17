@@ -34,6 +34,8 @@ public static class McpOperationCatalog
         OperationId.KaraokeToVideo => Include(id),
         OperationId.ArchiveToZip => Include(id),
         OperationId.RepackZip => Include(id),
+        OperationId.AddTrackIdSeparator => Include(id),
+        OperationId.RemoveTrackIdSeparator => Include(id),
         OperationId.CleanUpFilenames => Include(id),
         OperationId.CreateCueAndTextFiles => Include(id),
         OperationId.ValidateKaraoke => Include(id, false),

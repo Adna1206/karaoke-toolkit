@@ -19,7 +19,9 @@ public class OperationSectionTests
         Assert.DoesNotContain(grouped, operation => !operation.Available);
         Assert.Equal(2, model.OperationSections.Single(section => section.Section == OperationSection.Archives).Operations.Count);
         var fileTools = model.OperationSections.Single(section => section.Section == OperationSection.FilesAndFolders).Operations;
-        Assert.Equal(7, fileTools.Count);
+        Assert.Equal(9, fileTools.Count);
+        Assert.Contains(fileTools, operation => operation.Definition.Operation == OperationId.AddTrackIdSeparator);
+        Assert.Contains(fileTools, operation => operation.Definition.Operation == OperationId.RemoveTrackIdSeparator);
         Assert.Contains(fileTools, operation => operation.Definition.Operation == OperationId.GroupByTrackId);
         Assert.Contains(model.OperationSections.Single(section => section.Section == OperationSection.FilesAndFolders).Operations, operation => operation.IsTagging);
         Assert.Equal(3, model.OperationSections.Single(section => section.Section == OperationSection.ValidationAndReports).Operations.Count);

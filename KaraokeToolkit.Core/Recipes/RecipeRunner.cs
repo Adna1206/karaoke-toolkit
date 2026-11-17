@@ -1,4 +1,5 @@
 using KaraokeToolkit.Core.Conversion;
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.FileOperations;
 using KaraokeToolkit.Core.Recovery;
 using KaraokeToolkit.Core.Reporting;
@@ -123,7 +124,9 @@ public sealed class RecipeRunner(IRecipeStepExecutor? executor = null, RecoveryS
                     throw new ArgumentException("This step requires folder inputs.");
                 if (!session.Data.StepStarted) session.StartStep();
                 // File-moving operations must not move an interrupted conversion's journal or sources.
-                bool movesFiles = operation.Id is "OrganizeFiles" or "OrganizeFolders" or "FlattenOneLayer" or "FlattenAllLayers" or "CleanUpFilenames";
+                bool movesFiles = operation.Operation is OperationId.OrganizeFiles or OperationId.OrganizeFolders
+                    or OperationId.FlattenOneLayer or OperationId.FlattenAllLayers
+                    || OperationCapabilities.RenamesFilenames(operation.Operation);
                 foreach (string folder in current.Select(path => Directory.Exists(path) ? path : Path.GetDirectoryName(path)!).Distinct(InputSelection.Paths))
                 {
                     token.ThrowIfCancellationRequested();

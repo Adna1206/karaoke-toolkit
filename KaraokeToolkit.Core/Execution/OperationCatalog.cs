@@ -31,6 +31,8 @@ public static class OperationCatalog
         OperationId.BinToAudioG => Conversion(id, "Extract and encode BIN audio with graphics"),
         OperationId.AudioGToBin => Conversion(id, "Combine matching audio and graphics into BIN"),
         OperationId.AudioGToZip => Conversion(id, "Package matching audio and graphics into ZIP"),
+        OperationId.AddTrackIdSeparator => Conversion(id, "Add the leading track ID hyphen", folders: true),
+        OperationId.RemoveTrackIdSeparator => Conversion(id, "Remove the leading track ID hyphen", folders: true),
         OperationId.CleanUpFilenames => Conversion(id, "Clean up filenames in selected folders", folders: true),
         OperationId.CreateCueAndTextFiles => Conversion(id, "Create CUE sheets and text listings", folders: true),
         OperationId.ArchiveToZip => Conversion(id, "Convert supported non-ZIP archives to ZIP"),

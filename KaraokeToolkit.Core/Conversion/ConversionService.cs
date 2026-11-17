@@ -68,7 +68,7 @@ public sealed class ConversionService
         }
         token.ThrowIfCancellationRequested();
         string[] folders = EnumerateFolders(Path.GetFullPath(request.Folder), request.Options.RecurseFolders).ToArray();
-        bool maintenance = request.Action is Action.CleanUpFilenames or Action.CreateCueAndTextFiles;
+        bool maintenance = OperationCapabilities.RenamesFilenames(request.Action) || request.Action == Action.CreateCueAndTextFiles;
         string extension = request.Action switch
         {
             Action.AudioGToBin or Action.AudioGToZip or Action.LosslessGToMp3G => ".cdg",
@@ -117,8 +117,8 @@ public sealed class ConversionService
                         throw new InvalidDataException("Input validation found no source group.");
                 }
                 ConversionFileResult result;
-                if (request.Action is Action.CleanUpFilenames)
-                    result = await FilenameCleanup.RunAsync(source, token);
+                if (OperationCapabilities.RenamesFilenames(request.Action))
+                    result = await FilenameCleanup.RunAsync(source, request.Action, token);
                 else if (request.Action == Action.CreateCueAndTextFiles)
                     result = await WriteMetadataAsync(source, request.Options, overwrite, token, resolveConflict,
                         writing: label => ReportWriting(0, source, label));

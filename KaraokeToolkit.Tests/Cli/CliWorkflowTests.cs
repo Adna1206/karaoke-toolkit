@@ -125,12 +125,16 @@ public class CliWorkflowTests
     [InlineData("flatten-one-layer")]
     [InlineData("flatten-all-layers")]
     [InlineData("cleanup-filenames")]
+    [InlineData("add-track-id-separator")]
+    [InlineData("remove-track-id-separator")]
     [InlineData("create-cue-and-text-files")]
     public async Task FolderToolDryRunsDoNotCreateOrMoveFiles(string operation)
     {
         string root = TestMediaFixture.NewFolder();
         string child = Directory.CreateDirectory(Path.Combine(root, "child")).FullName;
         TestMediaFixture.Seed(child, OperationId.AudioGToBin, "keep");
+        File.WriteAllText(Path.Combine(child, "ABC123 - Artist - Title.mp3"), "fixture");
+        File.WriteAllText(Path.Combine(child, "ABC-124 - Artist - Title.mp3"), "fixture");
         var before = Snapshot(root); string[] directories = Directory.GetDirectories(root, "*", SearchOption.AllDirectories);
         Assert.Equal(0, await App().RunAsync(["run", operation, root, "--dry-run", "--quiet"], new StringWriter(), new StringWriter()));
         Assert.Equal(before, Snapshot(root)); Assert.Equal(directories, Directory.GetDirectories(root, "*", SearchOption.AllDirectories));

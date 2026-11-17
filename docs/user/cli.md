@@ -190,6 +190,13 @@ Grouping, alphabetical organization and flattening accept
 `--no-batch-resume`. See [recovery verification](crash-recovery.md#verification-settings)
 for defaults and how interrupted runs are handled.
 
+## Track ID separator
+
+Run `karaoke-toolkit run add-track-id-separator <folder>` to change
+`ABC123 - Artist - Title` to `ABC-123 - Artist - Title`. Use
+`remove-track-id-separator` for the reverse. Both work in place on supported
+karaoke files and preserve the rest of each name. Use `--dry-run` to preview.
+
 ## Group by Track ID
 
 `run group-by-track-id PATH... --output FOLDER` accepts files and folders.

@@ -126,6 +126,13 @@ For grouping, alphabetical organization, and flattening, set
 review if interrupted. Defaults and recovery behavior are documented in
 [Recovery verification](crash-recovery.md#verification-settings).
 
+### Track ID separator
+
+Pass `AddTrackIdSeparator` or `RemoveTrackIdSeparator` as the request's
+`operationId`, with source folders in `inputs`. Use `plan_operation` to
+preview and `run_operation` with `confirmFileChanges: true` on a process
+launched with `--allow-writes` to apply.
+
 ### Group by Track ID
 
 Use `plan_operation` to inspect a grouping and `run_operation` to apply it. Both

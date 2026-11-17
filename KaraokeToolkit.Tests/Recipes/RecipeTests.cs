@@ -17,6 +17,27 @@ public class RecipeTests
         OverwritePolicy = OverwritePolicy.Fail
     };
     private static RecipeDefinition Recipe(params RecipeStep[] steps) => new() { Name = "My workflow", Steps = steps };
+
+    [Fact]
+    public async Task TrackIdSeparatorStepsRunInSequenceOnTheSameFolder()
+    {
+        string folder = TestMediaFixture.NewFolder();
+        string original = Path.Combine(folder, "ABC123 - Artist - Title.zip");
+        string hyphenated = Path.Combine(folder, "ABC-123 - Artist - Title.zip");
+        File.WriteAllText(original, "payload");
+        var recipe = Recipe(Step(nameof(Action.AddTrackIdSeparator)), Step(nameof(Action.RemoveTrackIdSeparator)));
+        var runner = new RecipeRunner(recovery: new RecoveryStore(TestMediaFixture.NewFolder()));
+
+        var result = await runner.RunAsync(recipe, [folder]);
+
+        Assert.Equal("", result.StopReason);
+        Assert.Equal(2, result.Steps.Count);
+        Assert.Equal(hyphenated, Assert.Single(Assert.Single(result.Steps[0].Result.Files).Outputs));
+        Assert.Equal(original, Assert.Single(Assert.Single(result.Steps[1].Result.Files).Outputs));
+        Assert.False(File.Exists(hyphenated));
+        Assert.Equal("payload", File.ReadAllText(original));
+    }
+
     private static string FileInput(string extension = ".zip")
     {
         string path = Path.Combine(TestMediaFixture.NewFolder(), "song" + extension);

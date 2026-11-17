@@ -45,6 +45,8 @@ public static class CliOperationCatalog
         OperationId.BinToAudioG => Include(id, "bin-to-audiog"),
         OperationId.AudioGToBin => Include(id, "audiog-to-bin"),
         OperationId.AudioGToZip => Include(id, "audiog-to-zip"),
+        OperationId.AddTrackIdSeparator => Include(id, "add-track-id-separator"),
+        OperationId.RemoveTrackIdSeparator => Include(id, "remove-track-id-separator"),
         OperationId.CleanUpFilenames => Include(id, "cleanup-filenames"),
         OperationId.CreateCueAndTextFiles => Include(id, "create-cue-and-text-files"),
         OperationId.ArchiveToZip => Include(id, "archive-to-zip"),

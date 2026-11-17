@@ -31,5 +31,7 @@ public enum OperationId
     DiscRip,
     RenameFilesFromInternet,
     PlayAudioG,
+    AddTrackIdSeparator,
+    RemoveTrackIdSeparator,
     CheckForUpdates
 }

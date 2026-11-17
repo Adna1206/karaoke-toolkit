@@ -140,7 +140,8 @@ public sealed record CliArguments(string Command, OperationRequest? Request, str
         if (tagging) _ = new FilenameTagPattern(pattern);
         var capability = OperationCatalog.Get(operation.Value);
         string outputFolder = options.TryGetValue("output", out var destination) ? Path.TrimEndingDirectorySeparator(Path.GetFullPath(destination!)) : "";
-        if (outputFolder.Length > 0 && (!capability.IsConversion || operation is OperationId.CleanUpFilenames or OperationId.CreateCueAndTextFiles))
+        if (outputFolder.Length > 0 && (!capability.IsConversion ||
+            OperationCapabilities.RenamesFilenames(capability.Id) || capability.Id == OperationId.CreateCueAndTextFiles))
             throw new CliUsageException("--output is available for media conversions only.");
         new ConversionRequest(capability.IsConversion ? capability.Id : OperationId.AudioGToZip, ".", processing) { OutputFolder = outputFolder }.Validate();
         return new(command, new(operation.Value, inputs.ToArray())

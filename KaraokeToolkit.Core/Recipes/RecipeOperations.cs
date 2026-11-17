@@ -33,6 +33,8 @@ public static class RecipeOperations
         new(OperationId.LosslessGToMp3G, RecipeInputKind.Folders | RecipeInputKind.AudioGraphics, RecipeInputKind.AudioGraphics, Action.LosslessGToMp3G),
         new(OperationId.KaraokeToVideo, RecipeInputKind.Folders | Karaoke, RecipeInputKind.Video, Action.KaraokeToVideo),
         new(OperationId.CreateCueAndTextFiles, RecipeInputKind.Folders, RecipeInputKind.None, Action.CreateCueAndTextFiles),
+        new(OperationId.AddTrackIdSeparator, RecipeInputKind.Folders, RecipeInputKind.None, Action.AddTrackIdSeparator),
+        new(OperationId.RemoveTrackIdSeparator, RecipeInputKind.Folders, RecipeInputKind.None, Action.RemoveTrackIdSeparator),
         new(OperationId.CleanUpFilenames, RecipeInputKind.Folders, RecipeInputKind.None, Action.CleanUpFilenames),
         new(OperationId.OrganizeFiles, RecipeInputKind.Folders | Karaoke | RecipeInputKind.Archive | RecipeInputKind.Video, RecipeInputKind.None),
         new(OperationId.OrganizeFolders, RecipeInputKind.Folders, RecipeInputKind.None),

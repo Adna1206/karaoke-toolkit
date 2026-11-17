@@ -23,7 +23,7 @@ public sealed partial class RecipeStepItem(RecipeStep step) : ObservableObject
     public string Summary => Step.OperationId switch
     {
         "OrganizeFiles" or "OrganizeFolders" or "FlattenOneLayer" or "FlattenAllLayers" => Definition.ShortDescription,
-        "ValidateKaraoke" or "CleanUpFilenames" or "CreateCueAndTextFiles"
+        "ValidateKaraoke" or "CleanUpFilenames" or "AddTrackIdSeparator" or "RemoveTrackIdSeparator" or "CreateCueAndTextFiles"
             => Step.Options.RecurseFolders ? "Includes subfolders" : "Selected inputs only",
         "KaraokeToVideo" => $"{Step.Options.VideoContainer} · {Step.Options.VideoResolution} · {Step.Options.VideoFrameRate} fps",
         "TagKaraoke" => $"{Step.TaggingPattern} · {(Step.Tagging.FillEmptyOnly ? "fill empty fields" : "replace tags")}",

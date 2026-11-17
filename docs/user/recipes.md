@@ -61,9 +61,9 @@ scope; organizing explicitly selected files passes their new locations onward.
 Outputs are written beside their inputs, using each existing engine's naming rules.
 
 The complete recipe is checked before execution for unknown operations, invalid
-settings and known format mismatches. Folder-wide filename cleanup and CUE/TXT
-creation require folders, so they can precede conversions but cannot consume a
-conversion's individual file outputs. Disc ripping, restoration and unavailable
+settings and known format mismatches. Filename cleanup, Add Track ID Separator,
+Remove Track ID Separator, and CUE/TXT creation require folders. Put them before
+conversions that pass individual file outputs to the next step. Disc ripping, restoration and unavailable
 online operations are not recipe steps. Detailed file/runtime checks remain with
 the engines: an advanced recipe is not a dry run or a guarantee of useful output.
 

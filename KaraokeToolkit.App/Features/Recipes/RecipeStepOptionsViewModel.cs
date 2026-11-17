@@ -31,17 +31,18 @@ public sealed class RecipeStepOptionsViewModel : SettingsViewModel
         ? step.Options with { AudioEncoder = AudioEncoder.MP3 } : step.Options)
     {
         var action = RecipeOperations.Get(step.OperationId).Action;
+        bool renamesFilenames = action is { } operation && OperationCapabilities.RenamesFilenames(operation);
         HasTaggingSettings = step.OperationId == "TagKaraoke";
         HasZipSettings = HasTaggingSettings || action is Action.AudioGToZip or Action.BinToZip or Action.ArchiveToZip or Action.RepackZip;
         HasAudioSettings = action is Action.BinToAudioG or Action.BinToZip or Action.LosslessGToMp3G;
         HasVideoSettings = action == Action.KaraokeToVideo;
         CanChooseEncoder = action != Action.LosslessGToMp3G;
-        CanDeleteOriginals = action != null && action is not (Action.CreateCueAndTextFiles or Action.CleanUpFilenames or Action.KaraokeToVideo);
-        HasMetadataSettings = action != null && action is not (Action.CleanUpFilenames or Action.ArchiveToZip or Action.RepackZip or Action.KaraokeToVideo);
-        HasOverwriteSettings = action != null && action != Action.CleanUpFilenames;
+        CanDeleteOriginals = action != null && !renamesFilenames && action is not (Action.CreateCueAndTextFiles or Action.KaraokeToVideo);
+        HasMetadataSettings = action != null && !renamesFilenames && action is not (Action.ArchiveToZip or Action.RepackZip or Action.KaraokeToVideo);
+        HasOverwriteSettings = action != null && !renamesFilenames;
         HasOrganizationSettings = step.OperationId == "OrganizeFiles";
         HasRecursionSettings = action != null || step.OperationId == "ValidateKaraoke" || HasTaggingSettings;
-        CanValidateInputs = action != null && action is not (Action.CleanUpFilenames or Action.CreateCueAndTextFiles or Action.ArchiveToZip or Action.RepackZip);
+        CanValidateInputs = action != null && !renamesFilenames && action is not (Action.CreateCueAndTextFiles or Action.ArchiveToZip or Action.RepackZip);
         CanAutoCreateMetadata = HasMetadataSettings && action != Action.CreateCueAndTextFiles;
         Overwrite = (int)step.OverwritePolicy;
         ValidateBeforeConversion = step.ValidateBeforeConversion;

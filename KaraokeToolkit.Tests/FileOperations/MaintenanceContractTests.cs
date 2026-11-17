@@ -11,6 +11,46 @@ public class MaintenanceContractTests
     private static ConversionService Service() => new(new RecoveryStore(TestMediaFixture.NewFolder()));
 
     [Theory]
+    [InlineData(Action.AddTrackIdSeparator, "AbC001", "AbC-001")]
+    [InlineData(Action.RemoveTrackIdSeparator, "AbC-001", "AbC001")]
+    public async Task TrackIdRenamesOnlyLeadingBoundaryAndKeepsCompanions(Action operation, string before, string after)
+    {
+        string folder = TestMediaFixture.NewFolder();
+        const string title = " - Artist-123 - Song";
+        foreach (string extension in new[] { ".MP3", ".cdg" })
+            File.WriteAllText(Path.Combine(folder, before + title + extension), extension);
+        string unrelated = Path.Combine(folder, "Artist - ABC123.mp3");
+        File.WriteAllText(unrelated, "unchanged");
+
+        var request = new ConversionRequest(operation, folder, new());
+        var result = await Service().RunAsync(request);
+        Assert.Equal(1, result.Succeeded);
+        foreach (string extension in new[] { ".MP3", ".cdg" })
+        {
+            Assert.False(File.Exists(Path.Combine(folder, before + title + extension)));
+            Assert.Equal(extension, File.ReadAllText(Path.Combine(folder, after + title + extension)));
+        }
+        Assert.Equal("unchanged", File.ReadAllText(unrelated));
+        Assert.Equal(1, (await Service().RunAsync(request)).Skipped);
+    }
+
+    [Fact]
+    public async Task TrackIdRenameCollisionLeavesTheWholeFolderUntouched()
+    {
+        string folder = TestMediaFixture.NewFolder();
+        string[] names = ["ABC123 - Song.mp3", "ABC123 - Song.cdg", "ABC-123 - Song.mp3"];
+        foreach (string name in names)
+            File.WriteAllText(Path.Combine(folder, name), name);
+
+        var result = await Service().RunAsync(new(Action.AddTrackIdSeparator, folder, new()), OverwritePolicy.Replace);
+
+        Assert.Equal(1, result.Failed);
+        Assert.Equal(names.Order(), Directory.GetFiles(folder).Select(Path.GetFileName).Order());
+        foreach (string name in names)
+            Assert.Equal(name, File.ReadAllText(Path.Combine(folder, name)));
+    }
+
+    [Theory]
     [InlineData(Action.CleanUpFilenames)]
     public async Task CleanupUsesSelectedFolderAndPreservesPairedPayloads(Action action)
     {

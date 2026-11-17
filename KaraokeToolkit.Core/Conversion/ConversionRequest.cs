@@ -29,7 +29,7 @@ public sealed record ConversionRequest(
         MetadataFileNames.Resolve(Options.CueSheetName, "Example folder", ".cue");
         if (!string.IsNullOrEmpty(OutputFolder))
         {
-            if (Action is OperationId.CleanUpFilenames or OperationId.CreateCueAndTextFiles)
+            if (OperationCapabilities.RenamesFilenames(Action) || Action == OperationId.CreateCueAndTextFiles)
                 throw new ArgumentException("Folder maintenance does not support a separate output folder.");
             if (Options.DeleteOldFiles)
                 throw new ArgumentException("A separate output folder requires keeping originals.");

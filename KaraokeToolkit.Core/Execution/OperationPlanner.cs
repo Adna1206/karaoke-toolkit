@@ -53,9 +53,9 @@ public sealed class OperationPlanner
             foreach (string source in batch.Sources)
             {
                 token.ThrowIfCancellationRequested();
-                if (request.OperationId == OperationId.CleanUpFilenames)
+                if (OperationCapabilities.RenamesFilenames(request.OperationId))
                 {
-                    var renamed = await FilenameCleanup.RunAsync(source, token, preview: true);
+                    var renamed = await FilenameCleanup.RunAsync(source, request.OperationId, token, preview: true);
                     entries.Add(new(source, "Planned", renamed.Message, renamed.Outputs)); continue;
                 }
                 string destination = string.IsNullOrEmpty(request.OutputFolder) ? batch.Folder : request.OutputFolder;
@@ -83,7 +83,7 @@ public sealed class OperationPlanner
             .GroupBy(p => p, InputSelection.Paths).Where(g => g.Count() > 1).Select(g => g.Key).ToHashSet(InputSelection.Paths);
         entries = entries.Select(e =>
         {
-            bool exists = request.OperationId != OperationId.CleanUpFilenames && e.Outputs.Any(p => !InputSelection.Paths.Equals(p, e.Source) && (File.Exists(p) || Directory.Exists(p)));
+            bool exists = !OperationCapabilities.RenamesFilenames(request.OperationId) && e.Outputs.Any(p => !InputSelection.Paths.Equals(p, e.Source) && (File.Exists(p) || Directory.Exists(p)));
             if (e.Outputs.Any(duplicates.Contains)) return e with { Status = "Blocked", Message = "Multiple inputs target the same output." };
             if (exists) return e with { Status = request.OverwritePolicy == OverwritePolicy.Fail ? "Blocked" : "Planned", Message = e.Message + " Existing outputs: " + request.OverwritePolicy + "." };
             return e;

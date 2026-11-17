@@ -1,12 +1,29 @@
 using KaraokeToolkit.Core.Archives;
 using KaraokeToolkit.Core.Conversion;
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.Recovery;
 using System.Globalization;
+using System.Text.RegularExpressions;
 namespace KaraokeToolkit.Core.FileOperations;
 
 /// <summary>Normalizes local karaoke filenames as a group, retaining audio/CDG basename pairing.</summary>
-internal static class FilenameCleanup
+internal static partial class FilenameCleanup
 {
+    [GeneratedRegex(@"^[A-Za-z]+(?<separator>-?)[0-9]+(?=$|[\s_.-])", RegexOptions.CultureInvariant)]
+    private static partial Regex LeadingTrackId();
+
+    internal static string FormatTrackId(string filename, bool addSeparator)
+    {
+        var match = LeadingTrackId().Match(Path.GetFileNameWithoutExtension(filename));
+        if (!match.Success)
+            return filename;
+
+        var separator = match.Groups["separator"];
+        if (addSeparator)
+            return separator.Length == 0 ? filename.Insert(separator.Index, "-") : filename;
+        return separator.Length == 0 ? filename : filename.Remove(separator.Index, separator.Length);
+    }
+
     internal static string Clean(string filename)
     {
         string extension = Path.GetExtension(filename).ToLowerInvariant();
@@ -18,15 +35,18 @@ internal static class FilenameCleanup
             throw new InvalidDataException("Filename has no usable title.");
         return stem + extension;
     }
-    internal static async Task<ConversionFileResult> RunAsync(string folder, CancellationToken token, bool preview = false)
+    internal static async Task<ConversionFileResult> RunAsync(string folder, OperationId operation, CancellationToken token, bool preview = false)
     {
         var files = Directory.GetFiles(folder).Where(p => KaraokeArchive.AudioExtensions.Concat([".cdg", ".bin", ".zip"]).Contains(Path.GetExtension(p), StringComparer.OrdinalIgnoreCase)).ToArray();
-        var destinations = files.Select(p => Path.Combine(folder, Clean(Path.GetFileName(p)))).ToArray();
+        var destinations = files.Select(p => Path.Combine(folder, Rename(Path.GetFileName(p)))).ToArray();
         if (destinations.Distinct(StringComparer.OrdinalIgnoreCase).Count() != destinations.Length)
             throw new IOException("Cleanup would give multiple files the same name; no files were renamed.");
         var changed = files.Select((p, i) => (Source: p, Destination: destinations[i])).Where(p => p.Source != p.Destination).ToArray();
         if (changed.Length == 0)
-            return new(folder, ConversionStatus.Skipped, [], "Names already clean.");
+            return new(folder, ConversionStatus.Skipped, [], operation == OperationId.CleanUpFilenames
+                ? "Names already clean." : "No filenames need a track ID separator change.");
+        if (changed.Any(pair => Directory.Exists(pair.Destination)))
+            throw new IOException("A rename destination is an existing folder; no files were renamed.");
         if (preview) return new(folder, ConversionStatus.Succeeded, changed.Select(p => p.Destination).ToArray(), $"Planned rename of {changed.Length} files.");
         using var transaction = new FileTransaction(folder);
         // Copy into separate input directory, then stage final names; this also handles case-only renames.
@@ -47,5 +67,13 @@ internal static class FilenameCleanup
         }
         var published = transaction.Commit(staged, changed.Select(p => p.Source).ToArray(), OverwritePolicy.Fail, token);
         return new(folder, ConversionStatus.Succeeded, published, $"Renamed {changed.Length} files.");
+
+        string Rename(string name) => operation switch
+        {
+            OperationId.CleanUpFilenames => Clean(name),
+            OperationId.AddTrackIdSeparator => FormatTrackId(name, addSeparator: true),
+            OperationId.RemoveTrackIdSeparator => FormatTrackId(name, addSeparator: false),
+            _ => throw new ArgumentOutOfRangeException(nameof(operation))
+        };
     }
 }
