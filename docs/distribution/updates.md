@@ -19,8 +19,12 @@ installation is needed. [Velopack update sources](https://docs.velopack.io/integ
 
 The manual check opens a dialog with an animated progress bar and shows the
 result in the same dialog. Closing it dismisses the status while the check
-finishes in the background. Downloads
-and apply/restart controls are planned. To verify availability end to end,
+finishes in the background. When a new version is available, **Update**
+appears beside **Close** and downloads the package with percentage progress.
+Closing the dialog during download requests cancellation. After the download,
+**Restart to update** applies the package and relaunches the app. You can close
+the dialog and run **Check for updates** again to install a prepared download.
+To verify availability end to end,
 install a build with the GitHub source and publish a newer GitHub Release with
 matching channel assets. Installations built with the old Flow source need the
 GitHub-enabled build installed first to see releases on GitHub. Applying updates

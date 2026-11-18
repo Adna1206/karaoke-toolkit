@@ -9,7 +9,8 @@ public class UpdateServiceTests
     public async Task DevelopmentBuildReportsThatItIsNotInstalled()
     {
         VelopackApp.Build().SetAutoApplyOnStartup(false).Run();
-        var (isInstalled, update) = await UpdateService.CheckForUpdatesAsync();
+        var (manager, isInstalled, update) = await UpdateService.CheckForUpdatesAsync();
+        Assert.False(manager.IsInstalled);
         Assert.False(isInstalled);
         Assert.Null(update);
     }

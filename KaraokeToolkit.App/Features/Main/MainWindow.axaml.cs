@@ -281,47 +281,118 @@ public partial class MainWindow : Window
         menuItem.Header = "Checking for updates…";
         var status = new TextBlock { Text = "Checking for updates…", TextWrapping = TextWrapping.Wrap };
         var progress = new ProgressBar { IsIndeterminate = true };
-        Window? dialog = manual ? CreateInfoDialog("Check for updates", status, progress) : null;
-        Task? dialogClosed = dialog == null ? null : ModalDialog.ShowAsync(dialog, this);
-        string message;
+        var updateButton = new Button { Content = "Update", Classes = { "accent" }, MinWidth = 85, IsVisible = false };
+        var dialog = CreateInfoDialog("Check for updates", status, progress, updateButton);
+        using var downloadCancellation = new CancellationTokenSource();
+        dialog.Closed += (_, _) => downloadCancellation.Cancel();
+        Task? dialogClosed = manual ? ModalDialog.ShowAsync(dialog, this) : null;
+        Task? download = null;
         try
         {
-            var (isInstalled, update) = await Task.Run(UpdateService.CheckForUpdatesAsync);
-            if (!manual && update == null) return;
-            message = (isInstalled, update) switch
+            try
             {
-                (false, _) => "Install Karaoke Toolkit with Velopack to check for updates.",
-                (true, null) => "No newer version is available.",
-                (true, { } available) => $"Version {available.TargetFullRelease.Version} is available."
-            };
-        }
-        catch (Exception error)
-        {
-            System.Diagnostics.Trace.TraceWarning("GitHub Releases update check failed: {0}", error);
-            if (!manual) return;
-            message = "Could not check for updates. Try again later.";
+                var (manager, isInstalled, update) = await Task.Run(UpdateService.CheckForUpdatesAsync);
+                if (downloadCancellation.IsCancellationRequested || !IsVisible ||
+                    (!manual && (update == null || DataContext is MainViewModel { IsBusy: true })))
+                    return;
+
+                status.Text = (isInstalled, update) switch
+                {
+                    (false, _) => "Install Karaoke Toolkit with Velopack to check for updates.",
+                    (true, null) => "No newer version is available.",
+                    (true, { } available) => $"Version {available.TargetFullRelease.Version} is available."
+                };
+                if (update != null)
+                {
+                    bool ready = manager.UpdatePendingRestart?.Version == update.TargetFullRelease.Version;
+                    void ShowReady()
+                    {
+                        status.Text = "Update downloaded. Restart Karaoke Toolkit to install it.";
+                        updateButton.Content = "Restart to update";
+                    }
+
+                    if (ready) ShowReady();
+                    updateButton.IsVisible = true;
+                    updateButton.Click += async (_, _) =>
+                    {
+                        if (DataContext is MainViewModel { IsBusy: true })
+                        {
+                            status.Text = "Wait for the current operation to finish before updating.";
+                            return;
+                        }
+
+                        if (ready)
+                        {
+                            try { manager.ApplyUpdatesAndRestart(update.TargetFullRelease, []); }
+                            catch (Exception error)
+                            {
+                                System.Diagnostics.Trace.TraceWarning("Could not apply update: {0}", error);
+                                status.Text = "Could not restart to install the update. Try again.";
+                            }
+                            return;
+                        }
+
+                        if (download is { IsCompleted: false }) return;
+                        download = DownloadAsync();
+                        await download;
+                    };
+
+                    async Task DownloadAsync()
+                    {
+                        updateButton.IsEnabled = false;
+                        status.Text = $"Downloading version {update.TargetFullRelease.Version}…";
+                        progress.IsIndeterminate = false;
+                        progress.Value = 0;
+                        progress.IsVisible = true;
+                        IProgress<int> report = new Progress<int>(percent =>
+                        {
+                            if (progress.IsVisible && !downloadCancellation.IsCancellationRequested)
+                                progress.Value = percent;
+                        });
+                        try
+                        {
+                            await Task.Run(() => manager.DownloadUpdatesAsync(update, report.Report, downloadCancellation.Token));
+                            if (downloadCancellation.IsCancellationRequested) return;
+                            ready = true;
+                            ShowReady();
+                        }
+                        catch (OperationCanceledException) when (downloadCancellation.IsCancellationRequested) { }
+                        catch (Exception error)
+                        {
+                            System.Diagnostics.Trace.TraceWarning("Could not download update: {0}", error);
+                            status.Text = "Could not download the update. Try again.";
+                        }
+                        finally
+                        {
+                            progress.IsVisible = false;
+                            updateButton.IsEnabled = true;
+                        }
+                    }
+                }
+            }
+            catch (Exception error)
+            {
+                System.Diagnostics.Trace.TraceWarning("GitHub Releases update check failed: {0}", error);
+                if (!manual) return;
+                status.Text = "Could not check for updates. Try again later.";
+            }
+
+            progress.IsVisible = false;
+            await (dialogClosed ?? ModalDialog.ShowAsync(dialog, this));
+            if (download != null) await download;
         }
         finally
         {
             menuItem.Header = header;
             menuItem.IsEnabled = true;
         }
-
-        status.Text = message;
-        if (dialogClosed != null)
-        {
-            progress.IsVisible = false;
-            await dialogClosed;
-        }
-        else if (IsVisible)
-            await ShowInfo("Check for updates", message);
     }
 
     private async void Help_Click(object? sender, RoutedEventArgs e) => await ShowInfo("Help", "Choose a category and operation, add source files or folders, then click Start. Add buttons and drag-and-drop accumulate selections; Clear removes them. Star operations to find them in Favourites. Disc ripping and restoration ask for their inputs after Start.\n\nUse Tools → Settings to configure recursion, deletion, compression, encoding and existing-file handling. Output files are written beside source files unless the operation asks for a destination.\n\nCancel discards unpublished work; completed files remain. Review the event log and View Last Run Report when processing finishes.");
     private Task ShowInfo(string title, string text) =>
         ModalDialog.ShowAsync(CreateInfoDialog(title, new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap }), this);
 
-    private static Window CreateInfoDialog(string title, TextBlock message, ProgressBar? progress = null)
+    private static Window CreateInfoDialog(string title, TextBlock message, ProgressBar? progress = null, Button? action = null)
     {
         var dialog = new Window { Title = WindowTitles.For(title), Width = 480, SizeToContent = SizeToContent.Height, CanResize = false, WindowStartupLocation = WindowStartupLocation.CenterOwner };
         var close = new Button { Content = "Close", MinWidth = 85, HorizontalAlignment = HorizontalAlignment.Right };
@@ -340,7 +411,13 @@ public partial class MainWindow : Window
                 Children = { message, progress }
             };
         }
-        var footer = new Border { Classes = { "windowFooter", "dialog" }, Child = close };
+        var actions = new StackPanel
+        {
+            Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right,
+            Spacing = WindowSpacing.FooterButtonGap, Children = { close }
+        };
+        if (action != null) actions.Children.Add(action);
+        var footer = new Border { Classes = { "windowFooter", "dialog" }, Child = actions };
         body.VerticalAlignment = VerticalAlignment.Center;
         var artwork = title == "Help" ? DialogArtwork.Help : DialogArtwork.Update;
         var content = new StackPanel { Margin = WindowSpacing.ContentInset, Spacing = 14, Children = { DialogArtwork.Beside(body, artwork), footer } };

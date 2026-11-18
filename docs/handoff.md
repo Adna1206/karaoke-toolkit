@@ -1,5 +1,15 @@
 # Current handoff
 
+## In-app updates
+
+2026-11-18, `master` from `a818a98`, version 2026.11.18. The updater adds
+**Update** beside **Close** and **Restart to update** after downloading.
+The published 2026.11.18 prerelease has the earlier check-only dialog.
+
+`scripts/Test.ps1 -NoRestore` passed 752/752 with local test-host access on
+retry after a concurrent settings-writer failure. Next, verify download,
+cancellation, restart and data preservation with two installed test versions.
+
 ## 2026.11.18 Windows x64 prerelease
 
 2026-11-18, `master` from base `5662a02`. See the

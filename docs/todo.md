@@ -64,10 +64,9 @@
   from an LGPL build configured for Toolkit's required codecs, filters and
   formats. Verify conversion workflows before replacing the current bundle.
 
-- [ ] **Add Velopack update downloads and installation** — verify that an
-  installed build detects a newer release on GitHub, then add download and
-  apply/restart prompts. Verify that applying updates waits for file operations
-  and preserves user data.
+- [ ] **Verify in-app Velopack updates** — test downloading and applying a newer
+  GitHub release from an installed build. Check that updates are blocked during
+  file operations and that settings, recipes and recovery data survive restart.
   See [updates](distribution/updates.md).
 
 - [ ] **macOS packaging via GitHub Actions** — consider macOS runners to publish
