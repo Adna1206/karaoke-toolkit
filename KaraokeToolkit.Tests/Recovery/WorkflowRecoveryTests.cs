@@ -164,11 +164,11 @@ public class WorkflowRecoveryTests
         Assert.Equal(RecoveryKind.Tagging, job.Kind); Assert.Equal(1, job.Completed);
         string firstHash = FileTransaction.Hash(first);
         var model = new MainViewModel(Path.Combine(settings, "settings.xml"));
-        model.ConfirmRecoveryAsync = _ => Task.FromResult(false);
+        model.ConfirmRecoveryAsync = _ => Task.FromResult(MainViewModel.RecoveryChoice.Later);
         Assert.True(await model.CheckForRecoveryAsync()); Assert.False(model.ShowProgress);
         Assert.Single(store.Find()); Assert.Equal(firstHash, FileTransaction.Hash(first));
         model.ConfigureTaggingAsync = _ => throw new InvalidOperationException("Recovery must not reopen the tagging configuration dialog.");
-        model.ConfirmRecoveryAsync = pending => { Assert.Equal(RecoveryKind.Tagging, pending.Kind); return Task.FromResult(true); };
+        model.ConfirmRecoveryAsync = pending => { Assert.Equal(RecoveryKind.Tagging, pending.Kind); return Task.FromResult(MainViewModel.RecoveryChoice.Resume); };
         Assert.True(await model.CheckForRecoveryAsync());
         Assert.Equal("Tagging Report", model.LastReport!.ReportType); Assert.Contains("2 updated", model.Status);
         Assert.True(model.ShowProgress); Assert.False(model.IsRecoveryMode); Assert.False(model.RecoveryAvailable);
@@ -184,7 +184,7 @@ public class WorkflowRecoveryTests
         TestMediaFixture.Seed(folder, Action.ZipToBin, "keep"); await Crash("between", folder, index);
         var model = new MainViewModel(Path.Combine(settings, "settings.xml"));
         Assert.Empty(model.RecipeChoices);
-        model.ConfirmRecoveryAsync = job => { Assert.Equal(RecoveryKind.Recipe, job.Kind); return Task.FromResult(true); };
+        model.ConfirmRecoveryAsync = job => { Assert.Equal(RecoveryKind.Recipe, job.Kind); return Task.FromResult(MainViewModel.RecoveryChoice.Resume); };
         Assert.True(await model.CheckForRecoveryAsync());
         Assert.Equal("Recipe Report", model.LastReport!.ReportType); Assert.Contains("2 steps completed", model.Status);
         Assert.False(model.RecoveryAvailable); Assert.False(model.IsBusy); Assert.True(File.Exists(Path.Combine(folder, "song.zip")));

@@ -9,13 +9,23 @@ grid. Ordinary labels and controls inherit Fluent typography. Use the shared
 heading, small-text, caption and code styles for their respective roles.
 Use `Shared.StatusBar` for footer messages with an icon. Bind `Message` and
 `Kind` to the current text and severity. The supported kinds are Info,
-Warning, Failure and Success. Use `MaxMessageHeight` where the footer has
-limited vertical space.
+Warning, Failure and Success. Messages that exceed the available width
+scroll horizontally, pausing at each end. New messages start at the beginning.
 Put footer status and progress inside the footer divider. Place the progress
 bar to the right of its message using the shared `StatusProgressGap` and
 `StatusProgressWidth`.
 Use one status bar per window. Publish new feedback into its current message
 and severity instead of adding another bar.
+
+Use a 16-DIP monochrome icon beside the label on main menu commands. Reuse
+the same geometry at 22 DIP next to the corresponding window heading.
+Use an icon badge for short message and confirmation dialogs, with warning
+color for destructive confirmations. Menu categories and settings tabs use
+text labels.
+
+Open app dialogs through `ModalDialog.ShowAsync` so Escape dismisses them
+after focused controls have had a chance to handle the key. Escape uses the
+normal window close path, including any close guards.
 
 `KaraokeToolkit.App/Metadata` contains immutable presentation definitions. These
 belong to App because they describe the user interface; Core owns execution,

@@ -13,7 +13,8 @@ public class OperationSectionTests
     {
         var model = new MainViewModel(Path.Combine(TestMediaFixture.NewFolder(), "settings.xml"));
         var grouped = model.OperationSections.SelectMany(section => section.Operations).ToArray();
-        Assert.Equal(model.Operations.Count(operation => operation.Available), grouped.Length);
+        Assert.Equal(model.Operations.Count(operation => operation.Available && !operation.IsRip), grouped.Length);
+        Assert.DoesNotContain(grouped, operation => operation.IsRip);
         Assert.Equal(grouped.Length, grouped.Distinct().Count());
         Assert.All(model.OperationSections, section => Assert.All(section.Operations, operation => Assert.Equal(section.Section, operation.Section)));
         Assert.DoesNotContain(grouped, operation => !operation.Available);

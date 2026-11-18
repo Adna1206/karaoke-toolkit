@@ -1,6 +1,6 @@
 # Crash recovery
 
-The app offers **Recover and resume** or **Later** when it starts and finds an
+The app offers **Recover and resume**, **Later**, and **Abandon interrupted run…** when it finds an
 interrupted run. When you start a file-based operation, the app checks the
 source folders for recovery, including nested folders when recursion is enabled.
 The status area shows “Checking for interrupted runs…” while the folder check runs.
@@ -44,6 +44,11 @@ Flattening records a failure and continues if it cannot inspect or remove a
 child folder during empty-folder cleanup. The folder stays in place and the
 failure appears in the run report. Move or verification failures that may
 leave a partially published group still stop the run for recovery.
+
+**Abandon interrupted run…** asks for confirmation, then removes the selected
+run from recovery prompts. The app keeps its journal and recovery files for
+manual inspection. File changes already made stay in place. A pending file
+transaction can still block writes to protect retained originals and backups.
 
 ## Verification settings
 

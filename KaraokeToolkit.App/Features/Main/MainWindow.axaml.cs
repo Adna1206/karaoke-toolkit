@@ -202,12 +202,14 @@ public partial class MainWindow : Window
         catch (Exception error) { model.StatusOutcome = RunStatus.Failure; model.Status = "Restore stopped: " + error.Message; }
         finally { model.IsBusy = false; }
     }
-    private async Task<bool> ConfirmActionAsync(string title, string text, string action)
+    private async Task<bool> ConfirmActionAsync(string title, string text, string action, Window? owner = null, bool destructive = false)
     {
         bool accepted = false;
         var dialog = new Window { Title = WindowTitles.For(title), Width = 610, SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner };
         var cancel = new Button { Content = "Cancel" };
         var proceed = new Button { Content = action };
+        if (destructive)
+            proceed.Classes.Add("destructive");
         cancel.Click += (_, _) => dialog.Close();
         proceed.Click += (_, _) => { accepted = true; dialog.Close(); };
         dialog.Content = new StackPanel
@@ -216,12 +218,16 @@ public partial class MainWindow : Window
             Spacing = 18,
             Children =
         {
-            new ScrollViewer { MaxHeight = 350, Content = new TextBlock { Text = text, TextWrapping = Avalonia.Media.TextWrapping.Wrap } },
-            new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 12, Children = { cancel, proceed } }
+            DialogArtwork.Beside(new ScrollViewer { MaxHeight = 350, Content = new TextBlock { Text = text, TextWrapping = Avalonia.Media.TextWrapping.Wrap } }, DialogArtwork.Warning, warning: destructive),
+            new Border
+            {
+                Classes = { "windowFooter", "dialog" },
+                Child = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = WindowSpacing.FooterButtonGap, Children = { cancel, proceed } }
+            }
         }
         };
         dialog.Opened += (_, _) => cancel.Focus();
-        await ModalDialog.ShowAsync(dialog, this);
+        await ModalDialog.ShowAsync(dialog, owner ?? this);
         return accepted;
     }
     private async void Results_Click(object? sender, RoutedEventArgs e)
@@ -335,37 +341,54 @@ public partial class MainWindow : Window
             };
         }
         var footer = new Border { Classes = { "windowFooter", "dialog" }, Child = close };
-        var content = new StackPanel { Margin = WindowSpacing.ContentInset, Spacing = 14, Children = { body, footer } };
+        body.VerticalAlignment = VerticalAlignment.Center;
+        var artwork = title == "Help" ? DialogArtwork.Help : DialogArtwork.Update;
+        var content = new StackPanel { Margin = WindowSpacing.ContentInset, Spacing = 14, Children = { DialogArtwork.Beside(body, artwork), footer } };
         dialog.Content = content;
         return dialog;
     }
-    private async Task<bool> ConfirmRecoveryAsync(RecoveryJob job)
+    private async Task<MainViewModel.RecoveryChoice> ConfirmRecoveryAsync(RecoveryJob job)
     {
         var dialog = new Window { Title = WindowTitles.For("Recovery"), Width = 580, SizeToContent = SizeToContent.Height, CanResize = false, WindowStartupLocation = WindowStartupLocation.CenterOwner };
-        bool resume = false;
-        var recover = new Button { Content = "Recover and resume", MinWidth = 160, IsEnabled = job.Problem == null };
+        var choice = MainViewModel.RecoveryChoice.Later;
+        var recover = new Button { Content = "Recover and resume", Classes = { "accent" }, MinWidth = 160, IsEnabled = job.Problem == null };
         var later = new Button { Content = "Later", MinWidth = 90 };
-        recover.Click += (_, _) => { resume = true; dialog.Close(); };
+        var abandon = new Button { Content = "Abandon interrupted run…", Classes = { "destructive" } };
+        recover.Click += (_, _) => { choice = MainViewModel.RecoveryChoice.Resume; dialog.Close(); };
         later.Click += (_, _) => dialog.Close();
+        abandon.Click += async (_, _) =>
+        {
+            if (await ConfirmActionAsync("Abandon interrupted run?",
+                $"The app will stop offering to resume this run. Any file changes already made will stay in place. Recovery files will be kept for manual inspection. A pending file transaction may still block changes in the affected folder.\n\n{job.Folder}",
+                "Abandon run", dialog, destructive: true))
+            {
+                choice = MainViewModel.RecoveryChoice.Abandon;
+                dialog.Close();
+            }
+        };
         dialog.Content = new StackPanel
         {
             Margin = WindowSpacing.ContentInset,
             Spacing = 18,
             Children =
             {
-                new TextBlock { Text = ApplicationInfo.Name + " did not finish this run.", FontWeight = Avalonia.Media.FontWeight.SemiBold },
+                DialogArtwork.Beside(new TextBlock { Text = "A previous run was interrupted.", FontWeight = Avalonia.Media.FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center }, DialogArtwork.Recovery),
                 new TextBlock { Text = $"{job.Folder}\n\n{job.Action}\n{job.Completed} of {job.Total} {(job.Kind == RecoveryKind.Recipe ? "recipe steps" : job.Kind == RecoveryKind.Tagging ? "files" : "source groups")} recorded.", TextWrapping = Avalonia.Media.TextWrapping.Wrap },
                 new TextBlock { Text = job.Problem ?? (job.Kind == RecoveryKind.Recipe
                     ? "Recovery uses the saved recipe snapshot, checks the interrupted step, and continues the remaining steps. Completed steps are kept, even if the recipe library has since changed."
                     : job.Kind == RecoveryKind.Tagging ? "Recovery checks the interrupted tag publication, then tags remaining files using the saved preview and options. Completed files are kept."
                     : job.Kind is RecoveryKind.TrackGrouping or RecoveryKind.FileMoves ? "Recovery checks interrupted copies or moves, then resumes the saved file plan. Completed groups are kept."
                     : "Recovery checks any interrupted file publication, then resumes unfinished work with the saved action and settings. Completed groups are kept.") + " If files have changed, recovery stops and retains the recovery files. Later leaves everything as it is.", TextWrapping = Avalonia.Media.TextWrapping.Wrap },
-                new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 10, Children = { later, recover } }
+                new Border
+                {
+                    Classes = { "windowFooter", "dialog" },
+                    Child = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = WindowSpacing.FooterButtonGap, Children = { abandon, later, recover } }
+                }
             }
         };
         dialog.Opened += (_, _) => later.Focus();
         await ModalDialog.ShowAsync(dialog, this);
-        return resume;
+        return choice;
     }
     private Task<ConflictDecision> ResolveConflictAsync(OutputConflict conflict, CancellationToken token)
         => ResolveConflictForOwnerAsync(this, conflict, token);

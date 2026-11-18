@@ -1,7 +1,7 @@
 # Experimental cdrdao CD+G reader
 
 Enable **Settings → CD+G Ripping → Enable experimental CD+G ripping**, then select
-**Disc Ripping → Rip CD+G (Experimental)** and press Start. Refresh the devices,
+**Tools → Rip CD+G (Experimental)…**. Refresh the devices,
 select tracks, an existing output folder and BIN, Audio+G or ZIP output.
 
 The application uses `NativeDiscReader`, a managed adapter that launches cdrdao

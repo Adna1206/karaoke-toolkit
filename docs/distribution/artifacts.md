@@ -27,7 +27,7 @@ dotnet build KaraokeToolkit.App/KaraokeToolkit.App.csproj -p:ArtifactBuildName=v
 dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj --logger trx
 ```
 
-Use `.scriptsTest.ps1` for routine serial verification. It reuses the
+Use `./scripts/Test.ps1` for routine serial verification. It reuses the
 StandaloneTests build output, writes a TRX report, and deletes successful
 run fixtures. Failed fixtures are retained for 14 days by default.
 Use `-KeepFixtures` to preserve a run for longer investigation. Raw
@@ -35,7 +35,7 @@ Use `-KeepFixtures` to preserve a run for longer investigation. Raw
 
 Successful publish staging is removed after packages and checksums are
 verified. Failed staging is marked for retention. The test wrapper also runs
-`.scriptsClean-Artifacts.ps1` to remove marked runs older than 14 days.
+`./scripts/Clean-Artifacts.ps1` to remove marked runs older than 14 days.
 Run that command manually with `-WhatIf` to preview cleanup, or with
 `-RetentionDays` to choose the cutoff. Unmarked runs, release packages,
 test reports, runtime caches and source evidence are outside its scope.

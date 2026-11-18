@@ -21,7 +21,10 @@ public class DefinitionTests
             Assert.False(string.IsNullOrWhiteSpace(definition.Label));
             Assert.False(string.IsNullOrWhiteSpace(definition.ShortDescription));
             Assert.False(string.IsNullOrWhiteSpace(definition.Description));
-            Assert.Contains(OperationDefinitions.Sections, section => section.Section == definition.Section);
+            if (definition.IsRip)
+                Assert.DoesNotContain(OperationDefinitions.Sections, section => section.Section == definition.Section);
+            else
+                Assert.Contains(OperationDefinitions.Sections, section => section.Section == definition.Section);
             if (definition.Action.HasValue) Assert.Equal(definition.Action.ToString(), definition.Id);
         });
         var settings = SettingsDefinitions.Instance.All;

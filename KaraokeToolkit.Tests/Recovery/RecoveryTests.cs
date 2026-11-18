@@ -289,12 +289,44 @@ public class RecoveryTests
         {
         }
         var before = Snapshot(folder);
-        var model = new MainViewModel(settings) { FolderPath = folder, ConfirmRecoveryAsync = _ => Task.FromResult(false) };
+        var model = new MainViewModel(settings) { FolderPath = folder };
+        model.ConfirmRecoveryAsync = _ =>
+        {
+            Assert.False(model.IsBusy);
+            Assert.False(model.ShowRecoveryCheckProgress);
+            return Task.FromResult(MainViewModel.RecoveryChoice.Later);
+        };
         await model.StartCommand.ExecuteAsync(null);
+        Assert.Contains("Recovery available", model.Status);
         Assert.True(model.RecoveryAvailable);
         Assert.False(model.IsBusy);
         Assert.Equal(before, Snapshot(folder));
     }
+    [Fact]
+    public async Task AbandonHidesRunFromDiscoveryAndKeepsItsJournal()
+    {
+        string folder = TestMediaFixture.NewFolder();
+        string settings = Path.Combine(TestMediaFixture.NewFolder(), "options.xmls");
+        var store = new RecoveryStore(Path.Combine(Path.GetDirectoryName(settings)!, "Recovery"));
+        string journal;
+        using (var run = new RunSession(store, new(Action.ZipToAudioG, folder, new()), OverwritePolicy.Fail, []))
+            journal = run.Journal;
+        var original = File.ReadAllBytes(journal);
+        var model = new MainViewModel(settings)
+        {
+            ConfirmRecoveryAsync = _ => Task.FromResult(MainViewModel.RecoveryChoice.Abandon)
+        };
+
+        Assert.True(await model.CheckForRecoveryAsync());
+
+        Assert.False(model.RecoveryAvailable);
+        Assert.Empty(store.Find());
+        Assert.Empty(store.Find(folder));
+        Assert.Equal(original, File.ReadAllBytes(journal));
+        Assert.Throws<IOException>(() => new RunSession(store, journal));
+        using var next = new RunSession(store, new(Action.ZipToAudioG, folder, new()), OverwritePolicy.Fail, []);
+    }
+
     [Fact]
     public async Task RecoveryModeIsVisibleAndSavedActionIsUsed()
     {
@@ -303,7 +335,7 @@ public class RecoveryTests
         using (var run = new RunSession(store, new(Action.ZipToAudioG, folder, new()), OverwritePolicy.Fail, []))
         {
         }
-        var model = new MainViewModel(settings) { ConfirmRecoveryAsync = _ => Task.FromResult(true) };
+        var model = new MainViewModel(settings) { ConfirmRecoveryAsync = _ => Task.FromResult(MainViewModel.RecoveryChoice.Resume) };
         bool observed = false;
         model.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(model.IsRecoveryMode) && model.IsRecoveryMode) observed = true; };
         Assert.True(await model.CheckForRecoveryAsync());

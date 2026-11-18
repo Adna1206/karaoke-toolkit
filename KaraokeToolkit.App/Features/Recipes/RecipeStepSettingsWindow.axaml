@@ -2,7 +2,10 @@
  x:Class="KaraokeToolkit.App.Features.Recipes.RecipeStepSettingsWindow" x:DataType="vm:RecipeStepOptionsViewModel"
  Width="650" Height="620" MinWidth="550" MinHeight="450" WindowStartupLocation="CenterOwner">
  <Grid Margin="{x:Static shared:WindowSpacing.ContentInset}" RowDefinitions="Auto,*,Auto,Auto" RowSpacing="14">
-  <TextBlock Text="Step Settings" Classes="heading1"/>
+  <StackPanel Orientation="Horizontal" Spacing="10">
+    <PathIcon Classes="headingGlyph" Data="{x:Static shared:DialogArtwork.Settings}"/>
+    <TextBlock Text="Step Settings" Classes="heading1"/>
+  </StackPanel>
   <TabControl Grid.Row="1">
    <TabItem Header="Processing"><ScrollViewer><StackPanel Margin="0,14" Spacing="10">
     <TextBlock Text="These settings belong to this step. General app settings are unchanged." TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}"/>

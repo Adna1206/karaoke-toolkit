@@ -44,17 +44,32 @@ public class HomeNavigationTests
     }
 
     [Fact]
-    public void DisablingRippingLeavesNoHiddenCategorySelected()
+    public async Task SavedRippingFavouriteStillLaunchesAndFollowsExperimentalSetting()
     {
-        var model = Model();
+        string settings = Path.Combine(TestMediaFixture.NewFolder(), "settings.xml");
+        var model = new MainViewModel(settings);
         model.SaveOptions(model.Options with { ExperimentalDiscRipping = true });
-        model.SelectedSection = model.VisibleSections.Single(section => section.Section == OperationSection.DiscRipping);
+        var ripping = model.Operations.Single(operation => operation.IsRip);
+        ripping.ToggleFavouriteCommand.Execute(null);
+        model = new MainViewModel(settings);
+        model.SelectedSection = model.VisibleSections.Single(section => section.Section == OperationSection.Favourites);
         Assert.True(model.SelectedOperation!.IsRip);
         Assert.False(model.NeedsSource);
         Assert.Contains("drive", model.SourceInstruction);
+        bool opened = false;
+        model.RipDiscAsync = () =>
+        {
+            opened = true;
+            return Task.FromResult<ConversionResult?>(null);
+        };
+        await model.StartCommand.ExecuteAsync(null);
+        Assert.True(opened);
         model.SaveOptions(model.Options with { ExperimentalDiscRipping = false });
         Assert.False(model.SelectedOperation!.IsRip);
         Assert.Contains(model.SelectedSection, model.VisibleSections);
+        Assert.DoesNotContain(model.FavouriteOperations, operation => operation.IsRip);
+        model.SaveOptions(model.Options with { ExperimentalDiscRipping = true });
+        Assert.Single(model.FavouriteOperations, operation => operation.IsRip);
     }
 
     [Fact]

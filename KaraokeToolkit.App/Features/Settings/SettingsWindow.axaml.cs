@@ -114,10 +114,6 @@ public partial class SettingsWindow : Window
             }
         };
         dialog.Opened += (_, _) => cancel.Focus();
-        dialog.KeyDown += (_, key) =>
-        {
-            if (key.Key == Avalonia.Input.Key.Escape) { key.Handled = true; dialog.Close(); }
-        };
         await ModalDialog.ShowAsync(dialog, this);
         if (confirmed) model.ResetToDefaults();
     }

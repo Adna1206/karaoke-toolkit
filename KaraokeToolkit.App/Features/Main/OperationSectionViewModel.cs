@@ -20,8 +20,7 @@ public partial class OperationSectionViewModel : ObservableObject
         _ => operations
     };
     public ActionChoice? SelectedOperation => owner.SelectedOperation;
-    public bool IsVisible => Section is OperationSection.Favourites or OperationSection.Recipes ? Operations.Count > 0
-        : Section != OperationSection.DiscRipping || owner.Options.ExperimentalDiscRipping;
+    public bool IsVisible => Section is not (OperationSection.Favourites or OperationSection.Recipes) || Operations.Count > 0;
     private bool ContainsSelection => owner.SelectedOperation != null && Operations.Contains(owner.SelectedOperation);
     [ObservableProperty] public partial bool IsExpanded { get; set; }
 
@@ -38,7 +37,6 @@ public partial class OperationSectionViewModel : ObservableObject
             if (ContainsSelection) IsExpanded = true;
             OnPropertyChanged(nameof(SelectedOperation));
         }
-        if (e.PropertyName == nameof(MainViewModel.Options)) OnPropertyChanged(nameof(IsVisible));
         if (e.PropertyName == nameof(MainViewModel.FavouriteOperations) && Section == OperationSection.Favourites)
         {
             if (ContainsSelection) IsExpanded = true;

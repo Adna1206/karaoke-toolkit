@@ -10,6 +10,43 @@ namespace KaraokeToolkit.Tests.FileOperations;
 public class FlattenFolderLayerTests
 {
     [Fact]
+    public async Task AllLayersRemovesEmptyReadOnlyFoldersOnWindows()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        string root = TestMediaFixture.NewFolder();
+        string parent = Path.Combine(root, "Batch");
+        string album = Path.Combine(parent, "Album");
+        Directory.CreateDirectory(album);
+        File.SetAttributes(parent, File.GetAttributes(parent) | FileAttributes.ReadOnly);
+        File.SetAttributes(album, File.GetAttributes(album) | FileAttributes.ReadOnly);
+
+        var result = await new FlattenFolderLayer().RunAsync([root], scope: FolderFlattenScope.AllLayers);
+
+        Assert.Equal(2, result.Succeeded);
+        Assert.False(Directory.Exists(parent));
+    }
+
+    [Fact]
+    public async Task AllLayersReportsLockedCleanupAndContinuesWithOtherFolders()
+    {
+        string root = TestMediaFixture.NewFolder();
+        string parent = Path.Combine(root, "Locked");
+        string child = Path.Combine(parent, "Empty");
+        string sibling = Path.Combine(root, "Other");
+        Directory.CreateDirectory(child);
+        Directory.CreateDirectory(sibling);
+        using var lease = FileTransaction.AcquireLease(parent);
+
+        var result = await new FlattenFolderLayer().RunAsync([root], scope: FolderFlattenScope.AllLayers);
+
+        Assert.Equal(1, result.Failed);
+        Assert.True(Directory.Exists(child));
+        Assert.False(Directory.Exists(sibling));
+    }
+
+    [Fact]
     public async Task SelectedFoldersLoseOneLayerWhileNestedFoldersAndRootFilesStayIntact()
     {
         string first = TestMediaFixture.NewFolder(), second = TestMediaFixture.NewFolder();
@@ -113,8 +150,15 @@ public class FlattenFolderLayerTests
         model.SelectedOperation = model.Operations.Single(operation => operation.FlattenScope == FolderFlattenScope.AllLayers);
         Assert.False(model.CanChooseFiles);
         model.SetInputs([root, deep, second]);
+        bool? processingViewDuringRecovery = null;
+        model.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(model.ShowRecoveryCheckProgress) && model.ShowRecoveryCheckProgress)
+                processingViewDuringRecovery = model.ShowProgress;
+        };
         await model.StartCommand.ExecuteAsync(null);
 
+        Assert.Equal(false, processingViewDuringRecovery);
         Assert.DoesNotContain(model.LastReport!.Entries, entry => entry.Status is "Failed" or "Skipped");
         Assert.Equal("audio", File.ReadAllText(Path.Combine(root, "song.mp3")));
         Assert.Equal("graphics", File.ReadAllText(Path.Combine(root, "song.cdg")));

@@ -21,10 +21,10 @@ public partial class App : Application
             window.Opened += (_, _) =>
             {
                 // Give the main window a render frame before loading the desktop state.
-                window.RequestAnimationFrame(_ => window.RequestAnimationFrame(async _ =>
+                window.RequestAnimationFrame(_ => window.RequestAnimationFrame(_ =>
                 {
                     if (window.IsVisible)
-                        await InitializeMainWindowAsync(desktop, window);
+                        InitializeMainWindow(desktop, window);
                 }));
             };
             desktop.MainWindow = window;
@@ -33,7 +33,7 @@ public partial class App : Application
         base.OnFrameworkInitializationCompleted();
     }
 
-    private static async System.Threading.Tasks.Task InitializeMainWindowAsync(
+    private static void InitializeMainWindow(
         IClassicDesktopStyleApplicationLifetime desktop, MainWindow window)
     {
         var model = new MainViewModel();
@@ -49,8 +49,15 @@ public partial class App : Application
             catch (System.Exception error) { model.Status = "Could not open selection: " + error.Message; }
 
         window.DataContext = model;
-        window.IsEnabled = true;
-        await window.CompleteStartupAsync(model);
+        // Submit the populated window's first frame before recovery can open a modal.
+        window.RequestAnimationFrame(_ => window.RequestAnimationFrame(async _ =>
+        {
+            if (!window.IsVisible)
+                return;
+
+            window.IsEnabled = true;
+            await window.CompleteStartupAsync(model);
+        }));
     }
 }
 

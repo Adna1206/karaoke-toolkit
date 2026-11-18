@@ -58,6 +58,7 @@ public sealed class RecoveryStore
                 catch (Exception e) when (e is IOException or UnauthorizedAccessException) { continue; }
                 using (workflowLease)
                 {
+                    if (IsAbandoned(path)) continue;
                     try
                     {
                         var workflow = WorkflowSession.Read(path);
@@ -86,12 +87,14 @@ public sealed class RecoveryStore
             catch (Exception e) when (e is IOException or UnauthorizedAccessException) { continue; }
             using (lease)
             {
+                if (IsAbandoned(path)) continue;
                 try
                 {
                     var data = RunSession.Read(path);
                     // A recipe owns continuation of its child runs; offer one prompt for the workflow.
                     if (data.OwnerWorkflow != null && File.Exists(data.OwnerWorkflow))
                     {
+                        if (IsAbandoned(data.OwnerWorkflow)) continue;
                         var owner = WorkflowSession.Read(data.OwnerWorkflow);
                         if (!owner.Finished && owner.Conversions?.Any(c => InputSelection.Paths.Equals(c.Journal, path)) == true)
                         {
@@ -100,6 +103,7 @@ public sealed class RecoveryStore
                             try
                             {
                                 using var ownerLease = RunSession.Lease(Path.GetDirectoryName(data.OwnerWorkflow)!);
+                                if (IsAbandoned(data.OwnerWorkflow)) continue;
                                 jobs.Add(new(data.OwnerWorkflow, owner.Roots[0], "Recipe — " + owner.Recipe!.Name, owner.Steps.Count, owner.Recipe.Steps.Count) { Kind = RecoveryKind.Recipe });
                             }
                             catch (IOException) { /* The parent is active; do not offer it or its child. */ }
@@ -118,6 +122,27 @@ public sealed class RecoveryStore
         }
         return jobs.DistinctBy(j => j.JournalPath, InputSelection.Paths).ToArray();
     }
+
+    public void Abandon(RecoveryJob job)
+    {
+        string journal = Path.GetFullPath(job.JournalPath);
+        string directory = Path.GetDirectoryName(journal)!;
+        string prefix = Path.GetFileName(journal) switch
+        {
+            "run.json" => ".karaoke-job-run-",
+            "workflow.json" => ".karaoke-job-workflow-",
+            _ => throw new IOException("Invalid recovery journal.")
+        };
+        if (!Path.GetFileName(directory).StartsWith(prefix, StringComparison.Ordinal) ||
+            RunSession.CheckPlainPath(journal) is not { } attributes || (attributes & FileAttributes.Directory) != 0)
+            throw new IOException("The recovery journal is missing or invalid.");
+
+        using var lease = RunSession.Lease(directory);
+        if (!IsAbandoned(journal))
+            DurableJson.Write(journal + ".abandoned", DateTimeOffset.UtcNow);
+    }
+
+    internal static bool IsAbandoned(string journal) => File.Exists(journal + ".abandoned");
 
     internal string IndexPath(string journal) => Path.Combine(IndexDirectory, Path.GetFileName(Path.GetDirectoryName(journal)) + ".json");
     private static string? MoveRecoveryProblem(WorkflowData workflow)
@@ -231,7 +256,7 @@ internal sealed class RunSession : IDisposable
         try
         {
             foreach (string existing in Directory.GetDirectories(request.Folder, ".karaoke-job-run-*"))
-                if (File.Exists(Path.Combine(existing, "run.json")) && !Read(Path.Combine(existing, "run.json")).Finished)
+                if (File.Exists(Path.Combine(existing, "run.json")) && !IsInactiveRun(Path.Combine(existing, "run.json")))
                     throw new IOException("Recovery required. Resume the interrupted run before starting another in this folder.");
         }
         catch { rootLease.Dispose(); throw; }
@@ -276,8 +301,18 @@ internal sealed class RunSession : IDisposable
         try
         {
             Data = Read(Journal);
+            if (RecoveryStore.IsAbandoned(Journal) ||
+                (Data.OwnerWorkflow is { } owner && RecoveryStore.IsAbandoned(owner)))
+                throw new IOException("This interrupted run was abandoned.");
         }
         catch { lease.Dispose(); rootLease.Dispose(); throw; }
+    }
+
+    private static bool IsInactiveRun(string journal)
+    {
+        if (RecoveryStore.IsAbandoned(journal)) return true;
+        var data = Read(journal);
+        return data.Finished || (data.OwnerWorkflow is { } owner && RecoveryStore.IsAbandoned(owner));
     }
 
     internal static RunData Read(string journal)

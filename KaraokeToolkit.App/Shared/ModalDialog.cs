@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Data;
+using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Threading;
 
@@ -15,10 +16,24 @@ internal static class ModalDialog
     private static readonly ConditionalWeakTable<Window, ModalOverlay> overlays = new();
 
     public static Task ShowAsync(Window dialog, Window owner) =>
-        RunAsync(owner, () => dialog.ShowDialog(owner));
+        ShowAsync<object?>(dialog, owner);
 
     public static Task<T> ShowAsync<T>(Window dialog, Window owner) =>
-        RunAsync(owner, () => dialog.ShowDialog<T>(owner));
+        RunAsync(owner, async () =>
+        {
+            dialog.KeyDown += CloseOnEscape;
+            try { return await dialog.ShowDialog<T>(owner); }
+            finally { dialog.KeyDown -= CloseOnEscape; }
+        });
+
+    private static void CloseOnEscape(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape || e.KeyModifiers != KeyModifiers.None || sender is not Window dialog)
+            return;
+
+        e.Handled = true;
+        dialog.Close();
+    }
 
     public static Task RunAsync(Window owner, Func<Task> show)
     {

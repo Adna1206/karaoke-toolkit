@@ -7,7 +7,6 @@ using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Avalonia.Layout;
 using Avalonia.Media;
-using Avalonia.Input;
 using KaraokeToolkit.App.Shared;
 using KaraokeToolkit.Core.Recipes;
 
@@ -80,7 +79,6 @@ public partial class RecipeBuilderWindow : Window
             }
         };
         dialog.Opened += (_, _) => cancel.Focus();
-        dialog.KeyDown += (_, key) => { if (key.Key == Key.Escape) { key.Handled = true; dialog.Close(); } };
         await ModalDialog.ShowAsync(dialog, this);
         return confirmed;
     }

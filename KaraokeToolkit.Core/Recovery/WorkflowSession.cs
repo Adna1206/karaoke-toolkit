@@ -87,7 +87,12 @@ internal sealed class WorkflowSession : IDisposable
         Data = Read(Journal);
         lease = RunSession.Lease(Path.GetDirectoryName(Journal)!);
         previous = Current.Value;
-        try { Data = Read(Journal); if (Data.Finished) throw new IOException("This workflow has already finished."); }
+        try
+        {
+            if (RecoveryStore.IsAbandoned(Journal)) throw new IOException("This interrupted workflow was abandoned.");
+            Data = Read(Journal);
+            if (Data.Finished) throw new IOException("This workflow has already finished.");
+        }
         catch { lease.Dispose(); throw; }
     }
 

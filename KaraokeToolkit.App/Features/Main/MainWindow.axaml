@@ -31,18 +31,36 @@
    </StackPanel>
    <Menu x:Name="MainMenu" Grid.ColumnSpan="3">
     <MenuItem Header="_File">
-     <MenuItem Header="View Last Run _Report…" Click="Results_Click" IsEnabled="{Binding CanViewReport}"/>
+     <MenuItem Header="View Last Run _Report…" Click="Results_Click" IsEnabled="{Binding CanViewReport}">
+      <MenuItem.Icon><PathIcon Classes="menuGlyph" Data="{x:Static shared:DialogArtwork.Report}"/></MenuItem.Icon>
+     </MenuItem>
      <Separator/>
-     <MenuItem Header="E_xit" Click="Exit_Click" IsEnabled="{Binding CanEdit}"/>
+     <MenuItem Header="E_xit" Click="Exit_Click" IsEnabled="{Binding CanEdit}">
+      <MenuItem.Icon><PathIcon Classes="menuGlyph" Data="{x:Static shared:DialogArtwork.Exit}"/></MenuItem.Icon>
+     </MenuItem>
     </MenuItem>
     <MenuItem Header="_Tools">
-     <MenuItem Header="_Recipe Builder (Experimental)…" Click="Recipes_Click" IsEnabled="{Binding CanEdit}"/>
-     <MenuItem Header="_Settings…" Click="Options_Click" IsEnabled="{Binding CanEdit}"/>
+     <MenuItem Header="_Recipe Builder (Experimental)…" Click="Recipes_Click" IsEnabled="{Binding CanEdit}">
+      <MenuItem.Icon><PathIcon Classes="menuGlyph" Data="{x:Static shared:DialogArtwork.Recipe}"/></MenuItem.Icon>
+     </MenuItem>
+     <MenuItem Header="Rip _CD+G (Experimental)…" Command="{Binding RunDiscRipCommand}"
+               IsVisible="{Binding Options.ExperimentalDiscRipping}">
+      <MenuItem.Icon><PathIcon Classes="menuGlyph" Data="{x:Static shared:DialogArtwork.DiscRip}"/></MenuItem.Icon>
+     </MenuItem>
+     <MenuItem Header="_Settings…" Click="Options_Click" IsEnabled="{Binding CanEdit}">
+      <MenuItem.Icon><PathIcon Classes="menuGlyph" Data="{x:Static shared:DialogArtwork.Settings}"/></MenuItem.Icon>
+     </MenuItem>
     </MenuItem>
     <MenuItem Header="_Help">
-     <MenuItem Header="_Help" Click="Help_Click"/>
-     <MenuItem x:Name="CheckForUpdatesMenuItem" Header="Check for _updates…" Click="CheckForUpdates_Click"/>
-     <MenuItem Header="_About…" Click="About_Click"/>
+     <MenuItem Header="_Help" Click="Help_Click">
+      <MenuItem.Icon><PathIcon Classes="menuGlyph" Data="{x:Static shared:DialogArtwork.Help}"/></MenuItem.Icon>
+     </MenuItem>
+     <MenuItem x:Name="CheckForUpdatesMenuItem" Header="Check for _updates…" Click="CheckForUpdates_Click">
+      <MenuItem.Icon><PathIcon Classes="menuGlyph" Data="{x:Static shared:DialogArtwork.Update}"/></MenuItem.Icon>
+     </MenuItem>
+     <MenuItem Header="_About…" Click="About_Click">
+      <MenuItem.Icon><PathIcon Classes="menuGlyph" Data="{x:Static shared:DialogArtwork.About}"/></MenuItem.Icon>
+     </MenuItem>
     </MenuItem>
    </Menu>
    <Border x:Name="TitleBarDragArea" Grid.Column="2" Background="Transparent" IsVisible="False"/>
@@ -87,7 +105,7 @@
      <Grid ColumnDefinitions="*,Auto"
            ColumnSpacing="{x:Static shared:WindowSpacing.StatusProgressGap}" VerticalAlignment="Center">
       <shared:StatusBar Message="{Binding FooterStatusMessage, FallbackValue='Starting Karaoke Toolkit…'}"
-                        Kind="{Binding FooterStatusKind}" MaxMessageHeight="42" VerticalAlignment="Center"/>
+                        Kind="{Binding FooterStatusKind}" VerticalAlignment="Center"/>
       <ProgressBar Grid.Column="1" IsVisible="{Binding ShowRecoveryCheckProgress}" IsIndeterminate="True"
                    Width="{x:Static shared:WindowSpacing.StatusProgressWidth}" VerticalAlignment="Center"/>
      </Grid>

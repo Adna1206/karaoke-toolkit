@@ -83,20 +83,23 @@ internal static class WorkflowMoves
                                 "Processing: " + move.Source, clock.Elapsed.ToString(@"hh\:mm\:ss"))
                                 { ActivitySource = move.Source, ActivityLabel = "Processing" });
                         string sourceParent = Path.GetDirectoryName(move.Source)!;
-                        using var lease = session.Data.Kind == RecoveryKind.TrackGrouping &&
-                            InputSelection.Paths.Equals(sourceParent, session.Data.Roots[0])
-                            ? null : FileTransaction.AcquireLease(sourceParent);
+                        bool parentAlreadyLocked = trackGrouping && InputSelection.Paths.Equals(sourceParent, session.Data.Roots[0]);
                         if (move.Target == null)
                         {
-                            RunSession.CheckPlainPath(move.Source);
                             try
                             {
-                                if (Directory.Exists(move.Source) && Directory.EnumerateFileSystemEntries(move.Source).Any())
+                                using var cleanupLease = parentAlreadyLocked ? null : FileTransaction.AcquireLease(sourceParent);
+                                if (RunSession.CheckPlainPath(move.Source) is { } attributes)
                                 {
-                                    results.Add(new(move.Source, ConversionStatus.Skipped, [], "Child folder still contains items that could not be moved."));
-                                    continue;
+                                    if ((attributes & FileAttributes.Directory) == 0)
+                                        throw new IOException("The child folder was replaced by a file.");
+                                    if (Directory.EnumerateFileSystemEntries(move.Source).Any())
+                                    {
+                                        results.Add(new(move.Source, ConversionStatus.Skipped, [], "Child folder still contains items that could not be moved."));
+                                        continue;
+                                    }
+                                    DeleteEmptyFolder(move.Source, attributes);
                                 }
-                                if (Directory.Exists(move.Source)) Directory.Delete(move.Source);
                             }
                             catch (Exception error) when (error is IOException or UnauthorizedAccessException)
                             {
@@ -110,6 +113,7 @@ internal static class WorkflowMoves
                         }
                         else
                         {
+                            using var lease = parentAlreadyLocked ? null : FileTransaction.AcquireLease(sourceParent);
                             Directory.CreateDirectory(Path.GetDirectoryName(move.Target)!);
                             if (Exists(move.Source))
                             {
@@ -136,5 +140,27 @@ internal static class WorkflowMoves
         return new(groups.Where(g => g.Results != null).SelectMany(g => g.Results!).ToArray(), token.IsCancellationRequested) { Found = found, Elapsed = clock.Elapsed };
     }
     internal static bool Exists(string path) => File.Exists(path) || Directory.Exists(path);
+
+    private static void DeleteEmptyFolder(string path, FileAttributes attributes)
+    {
+        if (!OperatingSystem.IsWindows() || (attributes & FileAttributes.ReadOnly) == 0)
+        {
+            Directory.Delete(path);
+            return;
+        }
+
+        File.SetAttributes(path, attributes & ~FileAttributes.ReadOnly);
+        try
+        {
+            Directory.Delete(path);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            if (RunSession.CheckPlainPath(path) is { } remaining && (remaining & FileAttributes.Directory) != 0)
+                File.SetAttributes(path, remaining | FileAttributes.ReadOnly);
+            throw;
+        }
+    }
+
     internal static string Hash(string path, bool directory, RecoveryVerificationMode mode) => directory ? WorkflowSession.TreeHash(path, mode) : RecoveryFingerprint.Hash(path, mode);
 }

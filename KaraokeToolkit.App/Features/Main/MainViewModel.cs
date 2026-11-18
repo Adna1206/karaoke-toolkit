@@ -186,6 +186,7 @@ public partial class MainViewModel : ViewModelBase
     partial void OnIsBusyChanged(bool value)
     {
         if (value) StatusOutcome = RunStatus.Neutral;
+        RunDiscRipCommand.NotifyCanExecuteChanged();
         ValidateCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(CanRetry));
         OnPropertyChanged(nameof(CanViewReport));
@@ -195,7 +196,9 @@ public partial class MainViewModel : ViewModelBase
         ClearInputsCommand.NotifyCanExecuteChanged();
     }
 
-    public Func<RecoveryJob, Task<bool>>? ConfirmRecoveryAsync
+    public enum RecoveryChoice { Later, Resume, Abandon }
+
+    public Func<RecoveryJob, Task<RecoveryChoice>>? ConfirmRecoveryAsync
     {
         get; set;
     }
@@ -431,11 +434,35 @@ public partial class MainViewModel : ViewModelBase
         ThemeChanged?.Invoke(theme);
         BackdropChanged?.Invoke(backdrop);
         OnPropertyChanged(nameof(Options));
+        RunDiscRipCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(FavouriteOperations));
         if (!options.ExperimentalDiscRipping && SelectedOperation?.IsRip == true) SelectedOperation = Operations.Single(operation => operation.Action == Action.AudioGToZip);
         RefreshNavigation();
         StartCommand.NotifyCanExecuteChanged();
     }
+    public bool CanRunDiscRip => !IsBusy && Options.ExperimentalDiscRipping;
+
+    [RelayCommand(CanExecute = nameof(CanRunDiscRip))]
+    private async Task RunDiscRipAsync()
+    {
+        if (!CanRunDiscRip)
+            return;
+        IsBusy = true;
+        try
+        {
+            if (RipDiscAsync == null) { StatusOutcome = RunStatus.Failure; Status = "The disc ripping dialog is unavailable."; return; }
+            var result = await RipDiscAsync();
+            if (result != null)
+            {
+                LastReport = CompletionReport.FromConversion("Experimental CD+G ripping", result);
+                StatusOutcome = RunStatusSummary.From(result);
+                Status = $"Ripping: {result.Succeeded} succeeded, {result.Skipped} skipped, {result.Failed} failed.";
+            }
+        }
+        catch (Exception error) { StatusOutcome = RunStatus.Failure; Status = error.Message; }
+        finally { IsBusy = false; }
+    }
+
     [RelayCommand(CanExecute = nameof(CanStart))]
     private async Task StartAsync()
     {
@@ -448,20 +475,7 @@ public partial class MainViewModel : ViewModelBase
         }
         if (SelectedOperation?.IsRip == true)
         {
-            IsBusy = true;
-            try
-            {
-                if (RipDiscAsync == null) { StatusOutcome = RunStatus.Failure; Status = "The disc ripping dialog is unavailable."; return; }
-                var result = await RipDiscAsync();
-                if (result != null)
-                {
-                    LastReport = CompletionReport.FromConversion("Experimental CD+G ripping", result);
-                    StatusOutcome = RunStatusSummary.From(result);
-                    Status = $"Ripping: {result.Succeeded} succeeded, {result.Skipped} skipped, {result.Failed} failed.";
-                }
-            }
-            catch (Exception error) { StatusOutcome = RunStatus.Failure; Status = error.Message; }
-            finally { IsBusy = false; }
+            await RunDiscRipAsync();
             return;
         }
         if (SelectedOperation?.IsRestore == true)
@@ -494,6 +508,12 @@ public partial class MainViewModel : ViewModelBase
         }
         if (SelectedOperation is { IsOrganizer: true } or { IsFlatten: true })
         {
+            foreach (string input in CurrentInputs)
+            {
+                string folder = Directory.Exists(input) ? input : Path.GetDirectoryName(Path.GetFullPath(input))!;
+                if (await CheckForRecoveryAsync(folder, recurse: true))
+                    return;
+            }
             await RunFileOperationAsync();
             return;
         }
@@ -512,7 +532,7 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private async Task CheckRecoveryAsync() => await CheckForRecoveryAsync();
 
-    public async Task<bool> CheckForRecoveryAsync(string? folder = null)
+    public async Task<bool> CheckForRecoveryAsync(string? folder = null, bool? recurse = null)
     {
         if (IsBusy)
             return true;
@@ -521,16 +541,33 @@ public partial class MainViewModel : ViewModelBase
         try
         {
             ShowRecoveryCheckProgress = folder != null;
-            var jobs = await Task.Run(() => recovery.Find(folder, Options.RecurseFolders));
+            var jobs = await Task.Run(() => recovery.Find(folder, recurse ?? Options.RecurseFolders));
             ShowRecoveryCheckProgress = false;
+            // The modal owns input while the user decides. Show the normal
+            // workspace behind it now that discovery has finished.
+            IsBusy = false;
             RecoveryAvailable = jobs.Count > 0;
             RecoveryMessage = RecoveryAvailable ? $"Recovery available: {jobs.Count} interrupted run(s)." : "";
             if (!RecoveryAvailable)
                 return false;
             StatusOutcome = RunStatus.Warning;
             Status = RecoveryMessage;
-            if (ConfirmRecoveryAsync != null && await ConfirmRecoveryAsync(jobs[0]))
-                resume = jobs[0];
+            if (ConfirmRecoveryAsync != null)
+            {
+                var choice = await ConfirmRecoveryAsync(jobs[0]);
+                if (choice == RecoveryChoice.Resume)
+                    resume = jobs[0];
+                if (choice == RecoveryChoice.Abandon)
+                {
+                    IsBusy = true;
+                    await Task.Run(() => recovery.Abandon(jobs[0]));
+                    RecoveryAvailable = await Task.Run(() => recovery.Find().Count > 0);
+                    RecoveryMessage = RecoveryAvailable ? "Other interrupted runs are available for recovery." : "";
+                    StatusOutcome = RunStatus.Warning;
+                    Status = "Interrupted run abandoned. Recovery files were kept.";
+                    return true;
+                }
+            }
         }
         catch (Exception error) { StatusOutcome = RunStatus.Failure; Status = "Could not inspect recovery files: " + error.Message; return true; }
         finally
@@ -734,13 +771,6 @@ public partial class MainViewModel : ViewModelBase
         }
         try
         {
-            // Avoid moving an interrupted conversion's recovery data or its input folders.
-            foreach (string input in CurrentInputs)
-            {
-                string folder = Directory.Exists(input) ? input : Path.GetDirectoryName(Path.GetFullPath(input))!;
-                if (recovery.Find(folder, true).Count > 0)
-                    throw new IOException("Recover the interrupted conversion before moving files: " + folder);
-            }
             var result = SelectedOperation!.IsFlatten
                 ? await new FlattenFolderLayer().RunAsync(CurrentInputs, run.Progress, run.Token, SelectedOperation.FlattenScope!.Value, RecoveryVerification, SaveResumableRun)
                 : await new AlphabeticalOrganizer().RunAsync(CurrentInputs, SelectedOperation.OrganizeMode!.Value, run.Progress, run.Token,

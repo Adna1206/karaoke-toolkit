@@ -4,7 +4,10 @@
         Width="900" Height="620" MinWidth="750" MinHeight="480" WindowStartupLocation="CenterOwner">
  <Grid Margin="{x:Static shared:WindowSpacing.ContentInset}" RowDefinitions="Auto,Auto,*,Auto,Auto" RowSpacing="14">
   <StackPanel Spacing="6">
-   <TextBlock Text="Recipe Builder (Experimental)" Classes="heading1"/>
+   <StackPanel Orientation="Horizontal" Spacing="10">
+     <PathIcon Classes="headingGlyph" Data="{x:Static shared:DialogArtwork.Recipe}"/>
+     <TextBlock Text="Recipe Builder (Experimental)" Classes="heading1"/>
+   </StackPanel>
    <TextBlock Text="Experimental: review each step's settings before running. Completed changes cannot be undone as a whole recipe, and interrupted recipes do not automatically resume." TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.75"/>
   </StackPanel>
   <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8">

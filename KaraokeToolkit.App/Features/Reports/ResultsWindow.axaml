@@ -2,7 +2,10 @@
  xmlns:vm="using:KaraokeToolkit.App.Features.Reports" x:Class="KaraokeToolkit.App.Features.Reports.ResultsWindow" x:DataType="vm:ResultsViewModel"
  Title="{x:Static shared:WindowTitles.LastRunReport}" Width="980" Height="650" MinWidth="800" MinHeight="520" WindowStartupLocation="CenterOwner">
  <Grid Margin="{x:Static shared:WindowSpacing.ContentInset}" RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="12">
-  <TextBlock Text="{Binding Title}" Classes="heading1"/>
+  <StackPanel Orientation="Horizontal" Spacing="10">
+    <PathIcon Classes="headingGlyph" Data="{x:Static shared:DialogArtwork.Report}"/>
+    <TextBlock Text="{Binding Title}" Classes="heading1"/>
+  </StackPanel>
   <TextBlock Grid.Row="1" Text="{Binding HeaderSummary}" TextWrapping="Wrap"/>
   <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="12">
    <TextBlock Text="Show" VerticalAlignment="Center"/>

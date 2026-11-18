@@ -113,7 +113,6 @@ public static class OperationDefinitions
         new(OperationSection.Archives, "Archive Tools"),
         new(OperationSection.FilesAndFolders, "File & Folder Tools"),
         new(OperationSection.ValidationAndReports, "Validation & Reports"),
-        new(OperationSection.Recipes, "Recipes (Experimental)"),
-        new(OperationSection.DiscRipping, "Disc Ripping")
+        new(OperationSection.Recipes, "Recipes (Experimental)")
     ]);
 }

@@ -38,9 +38,12 @@
     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
       <Path Classes="statusIcon" Width="16" Height="16" Stretch="Uniform" StrokeThickness="1.4"
             Stroke="{Binding #Surface.BorderBrush}" VerticalAlignment="Center" IsHitTestVisible="False"/>
-      <TextBlock Grid.Column="1" Text="{Binding #Root.Message}" TextWrapping="Wrap"
-                 MaxHeight="{Binding #Root.MaxMessageHeight}" VerticalAlignment="Center"
-                 FontSize="{DynamicResource SmallTextSize}"/>
+      <ScrollViewer x:Name="MessageScroll" Grid.Column="1" VerticalAlignment="Center"
+                    VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Hidden"
+                    IsHitTestVisible="False" Focusable="False" ScrollChanged="OnMessageScrollChanged">
+        <TextBlock Text="{Binding #Root.Message}" TextWrapping="NoWrap"
+                   FontSize="{DynamicResource SmallTextSize}"/>
+      </ScrollViewer>
     </Grid>
   </Border>
 </UserControl>

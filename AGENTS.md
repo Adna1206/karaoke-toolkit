@@ -78,7 +78,7 @@ dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj -c Release
 In the agent sandbox, the established test command is:
 
 ```powershell
-.scriptsTest.ps1
+.\scripts\Test.ps1
 ```
 
 - Tests include deterministic media, native FFmpeg integration and disposable

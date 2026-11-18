@@ -23,8 +23,8 @@ internal static class GroupingRename
         else throw new PlatformNotSupportedException("Atomic grouping publication is unavailable on this platform.");
 
         int error = Marshal.GetLastPInvokeError();
-        throw new IOException($"Cannot publish '{source}' to '{target}'. Grouping moves require the same volume.",
-            new Win32Exception(error));
+        var cause = new Win32Exception(error);
+        throw new IOException($"Cannot move '{source}' to '{target}': {cause.Message}", cause);
     }
 
     [DllImport("kernel32.dll", EntryPoint = "MoveFileExW", CharSet = CharSet.Unicode, SetLastError = true)]
