@@ -26,7 +26,7 @@ public class SharedSettingsTests
     }
 
     [Fact]
-    public void ReleaseValuesApplyInMemoryAndAreCommittedExactlyOnce()
+    public void CleanupPreservesAnExplicitSha256Preference()
     {
         string path = Path.Combine(TestMediaFixture.NewFolder(), "settings.xml");
         const string original = """
@@ -41,11 +41,9 @@ public class SharedSettingsTests
         File.WriteAllText(path, original);
         var store = new SharedSettingsStore(path);
 
-        Assert.Equal(RecoveryVerificationMode.XxHash128, store.Load().RecoveryVerification);
+        Assert.Equal(RecoveryVerificationMode.Sha256, store.Load().RecoveryVerification);
         Assert.Equal(original, File.ReadAllText(path));
         store.ApplyMigrations();
-        Assert.Equal(RecoveryVerificationMode.XxHash128, new SettingsStore(path).LoadRecoveryPreferences().Mode);
-        store.Set("recovery.verification", "Sha256", SettingsClient.Cli);
         string updated = File.ReadAllText(path);
 
         store.ApplyMigrations();
@@ -54,7 +52,8 @@ public class SharedSettingsTests
         Assert.False(store.Load().SaveResumableRun);
         var root = XDocument.Load(path).Root!;
         Assert.Equal("Dark", root.Element("Desktop")!.Element("Theme")!.Value);
-        Assert.Equal(2, root.Element("AppliedSettingsMigrations")!.Elements("Id").Count());
+        Assert.Equal("2026-11-remove-options-xmls",
+            Assert.Single(root.Element("AppliedSettingsMigrations")!.Elements("Id")).Value);
     }
 
     [Fact]
@@ -140,7 +139,7 @@ public class SharedSettingsTests
         var store = WithCleanup(path, [oldFile]);
 
         using (var held = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.Read))
-            Assert.Throws<IOException>(store.ApplyMigrations);
+            Assert.Throws<IOException>(() => store.Set("files.recurse", "false", SettingsClient.Cli));
 
         Assert.Equal(profile, File.ReadAllText(path));
         Assert.Equal("keep", File.ReadAllText(oldFile));

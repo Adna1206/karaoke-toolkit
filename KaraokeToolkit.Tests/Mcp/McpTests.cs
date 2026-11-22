@@ -28,7 +28,7 @@ public class McpTests
         var tools = new McpTools(writer, writable, profile);
         var sha = JsonSerializer.SerializeToElement("Sha256");
 
-        Assert.Equal(RecoveryVerificationMode.XxHash128, readOnly.GetSetting("recovery.verification").Value);
+        Assert.Equal(RecoveryVerificationMode.Sha256, readOnly.GetSetting("recovery.verification").Value);
         string original = File.ReadAllText(path);
         Assert.Throws<McpException>(() => readOnly.SetSetting("recovery.verification", sha, true));
         Assert.Throws<McpException>(() => tools.SetSetting("recovery.verification", sha));

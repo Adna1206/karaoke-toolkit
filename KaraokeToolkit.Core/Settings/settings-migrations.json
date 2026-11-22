@@ -1,12 +1,6 @@
 {
   "migrations": [
     {
-      "id": "2026-11-recovery-verification-xxhash128",
-      "set": {
-        "recovery.verification": "XxHash128"
-      }
-    },
-    {
       "id": "2026-11-remove-options-xmls",
       "deleteAppDataFile": "options.xmls"
     }
