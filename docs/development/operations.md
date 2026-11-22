@@ -22,6 +22,30 @@ or excludes it with a reason. Core still validates execution capabilities indepe
 MCP has its own explicit `McpOperationCatalog` over these identities, with the same
 CS8509 compiler guard. Its decisions also apply to recipe/recovery calls. See [MCP](../user/mcp.md).
 
+## Shared processing settings
+
+Register shared settings in Core's `SharedSettingCatalog` with a stable ID,
+typed default, validator and explicit CLI and MCP access. Persist the ID in
+the `Processing` section of `settings.xml` through `SettingsXml`.
+The settings commands and tools use the registry for discovery and persistence.
+Desktop presentation preferences stay in App. Resolve the processing profile
+when building a request so overrides, portable recipe snapshots and saved
+recovery journals retain their established scope.
+
+See [settings format and migrations](settings-format.md) for the profile
+format and the rules for changing it.
+
+Bundle release migrations in
+[`settings-migrations.json`](../../KaraokeToolkit.Core/Settings/settings-migrations.json).
+Entries apply in file order. Keep shipped IDs and values in later releases so
+profiles can skip releases safely. Give any new enforcement a new ID. Core
+saves edits and applied IDs together in the profile's atomic write. Desktop
+commits pending entries at startup. CLI and MCP reads apply them in memory,
+and an explicit settings write commits them for the shared profile. A new
+profile starts with built-in defaults and records value migration IDs on its
+first write. The one-time old profile cleanup runs after the new profile exists
+and records its own ID after deletion succeeds.
+
 ## Adding an operation
 
 1. Add a new `OperationId`; persist its name, never its numeric value.

@@ -3,8 +3,9 @@
 The app offers **Recover and resume**, **Later**, and **Abandon interrupted run…** when it finds an
 interrupted run. When you start a file-based operation, the app checks the
 source folders for recovery, including nested folders when recursion is enabled.
-The status area shows “Checking for interrupted runs…” while the folder check runs.
-The **Recover…** button returns to pending recovery. Nothing resumes automatically.
+The status area shows “Checking for interrupted runs…” and an animated bar
+while searching selected folders or checking the saved-run index at startup
+or through **Recover…**. Nothing resumes automatically.
 
 During recovery the main window explicitly shows **Recovery mode** and prefixes the
 operation title with **Recovery**. The saved action, conversion options, overwrite
@@ -12,6 +13,8 @@ policy and source list are used, even if current settings have since changed.
 Completed, failed and skipped source groups are not attempted again. The interrupted
 group and remaining groups continue; automatic CUE/TXT generation also has checkpoints.
 New files added after the original scan are left for a subsequent run.
+The footer bar animates while the app checks saved files and interrupted
+publication before item processing resumes.
 
 Recipes and tagging use the same startup/Recover prompt. A recipe checkpoint stores
 its complete definition/settings snapshot, completed-step reports, next input scope
@@ -40,6 +43,12 @@ group and finishes publication using the saved paths. It does not rescan the
 input selection. Desktop, CLI and MCP can resume these jobs. Plan revalidation
 and source hashing happen before the first item is published. Standalone flattening and alphabetical organization also hash their move plans and save a recovery journal before moving items. Recipe steps save their plan in the recipe journal.
 
+The desktop footer shows an animated bar during “Preparing recovery.” With
+content verification, preparing the move plan reads every source file,
+including audio and graphics sidecars. It then saves the plan to disk.
+Preparation time depends on total bytes and storage speed. The number of
+tracks alone does not predict the wait.
+
 Flattening records a failure and continues if it cannot inspect or remove a
 child folder during empty-folder cleanup. The folder stays in place and the
 failure appears in the run report. Move or verification failures that may
@@ -52,11 +61,14 @@ transaction can still block writes to protect retained originals and backups.
 
 ## Verification settings
 
-**Settings → Recovery** controls new standalone Track Grouping, Alphabetical
-Organization and Flatten runs. Choose **SHA-256** (default), **xxHash128**,
-**Metadata only**, or **No verification**. Metadata checks compare file size
+The shared **Settings → Recovery** preferences control new standalone Track Grouping, Alphabetical
+Organization and Flatten runs. Choose **xxHash128** (default), **SHA-256**,
+**Metadata only**, or **No verification**. A saved verification choice takes
+precedence over the default. Metadata checks compare file size
 and last-write time. Directory metadata checks also compare the paths in
-the tree. No verification keeps path and transaction checks.
+the tree. No verification keeps path and transaction checks. The update
+migrates existing profiles to xxHash128 once. You can change the setting
+afterward in Desktop, [CLI](cli.md#commands-and-settings), or [MCP](mcp.md#requests-and-settings).
 
 Turning off **Allow batch resume** leaves interrupted move records available
 for manual review. Metadata-only or unverified interrupted runs also require

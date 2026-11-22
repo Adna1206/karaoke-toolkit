@@ -26,8 +26,9 @@ the current checkout. [Planned work](todo.md) is a backlog, not implemented beha
 | [Core structure](development/core-structure.md) | Processing responsibilities and namespace organization |
 | [Group by Track ID](user/track-grouping.md) | Numeric ranges, masked folders and automatic parents |
 | [Operation contracts](development/operations.md) | Shared identities, capabilities, interface registrations and compatibility |
+| [Settings format and migrations](development/settings-format.md) | Canonical profile, migration rules and upgrade compatibility |
 | [Activity table messages](development/activity-messages.md) | Item labels, progress and summaries |
-| [UI definitions](development/ui-definitions.md) | Operation/setting metadata and presentation preferences |
+| [Desktop UI guidelines](development/ui-definitions.md) | Dialog design, shared presentation, operation and setting metadata |
 | [Test structure](development/test-structure.md) | Shared suite, fixtures, coverage and commands |
 | [Audio runtime](distribution/audio-runtime.md) | FFmpeg preparation, format checks and opt-in benchmarks |
 | [Artifacts](distribution/artifacts.md) | Generated output locations and cleanup |

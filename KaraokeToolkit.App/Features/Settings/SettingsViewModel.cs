@@ -79,7 +79,7 @@ public partial class SettingsViewModel : ViewModelBase
         get; set;
     }
     [ObservableProperty] public partial bool IgnoreLeadingTheForFileOrganization { get; set; }
-    [ObservableProperty] public partial int RecoveryVerification { get; set; }
+    [ObservableProperty] public partial int RecoveryVerification { get; set; } = (int)OperationCapabilities.DefaultFileMoveRecoveryVerification;
     [ObservableProperty] public partial bool SaveResumableRun { get; set; } = true;
     [ObservableProperty] public partial bool CheckForUpdatesOnStartup { get; set; }
     [ObservableProperty] public partial bool RememberInputFolder { get; set; }
@@ -226,7 +226,7 @@ public partial class SettingsViewModel : ViewModelBase
         Overwrite = (int)OverwritePolicy.Ask;
         ValidateBeforeConversion = false;
         IgnoreLeadingTheForFileOrganization = false;
-        RecoveryVerification = 0;
+        RecoveryVerification = (int)OperationCapabilities.DefaultFileMoveRecoveryVerification;
         SaveResumableRun = true;
         CheckForUpdatesOnStartup = false;
         RememberInputFolder = false;

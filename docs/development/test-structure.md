@@ -40,7 +40,7 @@ Integration and contract suites exercise the following behaviours:
 | Ten ZIP create/extract scenarios | Archives/BatchZipContractTests: supported audio extensions, member names/payloads, Store/Deflate, recursion, deletion, metadata, overwrite, empty input and cancellation |
 | File maintenance | FileOperations/MaintenanceContractTests: filename cleanup, CUE/TXT generation and readable WMA |
 | Operation capabilities | Conversion/CapabilityContractTests: all catalog actions, deferred features and unverified optical operations |
-| Settings compatibility | Settings/SettingsTests: pinned defaults, previous-schema XML, escaped values, partial/empty entries and accepted boolean representations |
+| Settings compatibility | Settings/SettingsTests and SharedSettingsTests: pinned defaults, versioned XML, escaped values, partial entries and retryable preview cleanup |
 | Native processes and recovery | Conversion callback-failure recovery plus DiscRipping/CdrdaoProcessTests and CdrdaoReaderTests: errors, missing/malformed captures, bounded pipe draining, cancellation/timeout and child reaping |
 
 Ambiguous same-named audio pairs are rejected and left intact rather than silently

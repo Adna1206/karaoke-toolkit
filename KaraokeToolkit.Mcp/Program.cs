@@ -7,6 +7,7 @@ using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using KaraokeToolkit.Core;
 using KaraokeToolkit.Core.Execution;
+using KaraokeToolkit.Core.Settings;
 
 namespace KaraokeToolkit.Mcp;
 
@@ -26,6 +27,8 @@ public static class Program
         builder.Logging.AddConsole(o => o.LogToStandardErrorThreshold = LogLevel.Trace);
         builder.Logging.SetMinimumLevel(LogLevel.Warning);
         builder.Services.AddSingleton(new McpAccessPolicy(args.Contains("--allow-writes")));
+        var profile = SharedSettingsStore.ForCurrentUser();
+        builder.Services.AddSingleton(profile);
         builder.Services.AddSingleton<OperationExecutionService>();
         builder.Services.AddSingleton<IOperationExecutor>(s => s.GetRequiredService<OperationExecutionService>());
         builder.Services.AddSingleton<McpOperationsService>();
@@ -44,4 +47,5 @@ public static class Program
         TypeInfoResolver = new System.Text.Json.Serialization.Metadata.DefaultJsonTypeInfoResolver(),
         Converters = { new McpConversionOptionsConverter(), new McpOperationIdConverter(), new JsonStringEnumConverter(allowIntegerValues: false) }
     };
+
 }

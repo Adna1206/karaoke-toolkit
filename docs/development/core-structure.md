@@ -29,11 +29,11 @@ Conversion rather than sharing a settings namespace.
 
 Desktop preferences belong to `KaraokeToolkit.App/Features/Settings`: appearance, favourite
 operations, expanded sections, tagging-pattern history and settings-window dimensions. The App settings
-store composes them with Core's processing settings in the existing XML file,
+store composes them with Core's processing settings in versioned `settings.xml`,
 using a single atomic transaction. Readers ignore unknown keys and use defaults
-for unsupported saved values. Desktop saves remove unknown keys from its settings
-sections. Core-only saves preserve caller-owned entries. Core remains
-usable without App or Avalonia. Saved XML names remain unchanged.
+for unsupported saved values. Both Core and Desktop saves preserve unknown
+entries in supported profiles. Core remains usable without App or Avalonia.
+See [settings format and migrations](settings-format.md).
 
 Keep serialized setting names, recovery fields and persisted operation values
 stable when reorganizing folders. Tests use deterministic media fixtures and

@@ -23,7 +23,14 @@ public class ValidationWorkflowTests
         File.WriteAllText(Path.Combine(folder, "bad.bin"), "bad");
         var model = new MainViewModel(Path.Combine(TestMediaFixture.NewFolder(), "options.xmls"));
         model.SetInputs([folder]);
+        var footerProgress = new List<bool>();
+        model.PropertyChanged += (_, change) =>
+        {
+            if (change.PropertyName == nameof(MainViewModel.ShowFooterProgress))
+                footerProgress.Add(model.ShowFooterProgress);
+        };
         await model.ValidateCommand.ExecuteAsync(null);
+        Assert.Equal(new[] { true, false }, footerProgress);
         Assert.True(model.HasReport);
         Assert.False(model.IsBusy);
         Assert.False(model.CanRetry);

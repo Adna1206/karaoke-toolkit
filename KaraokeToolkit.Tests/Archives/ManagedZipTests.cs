@@ -76,13 +76,13 @@ public class ManagedZipTests
     [InlineData(7, ZipCompression.Level7)]
     [InlineData(8, ZipCompression.Level8)]
     [InlineData(9, ZipCompression.SmallestSize)]
-    public void LegacySettingsAndRecoveryMigrate(int level, ZipCompression expected)
+    public void NumericRecoveryLevelsRoundTripInSettings(int level, ZipCompression expected)
     {
         var options = JsonSerializer.Deserialize<ConversionOptions>("{\"ZipCompressionLevel\":" + level + "}")!;
         Assert.Equal(expected, options.ZipCompression);
         Assert.Equal(options, JsonSerializer.Deserialize<ConversionOptions>(JsonSerializer.Serialize(options)));
         string path = Path.Combine(TestMediaFixture.NewFolder(), "settings.xmls");
-        File.WriteAllText(path, $"<profile><section name='Options'><entry name='ZipCompressionLevel'>{level}</entry></section></profile>");
+        File.WriteAllText(path, $"<KaraokeToolkit schemaVersion='1'><Processing><Setting id='zip.level'>{level}</Setting></Processing></KaraokeToolkit>");
         var store = new SettingsStore(path);
         Assert.Equal(expected, store.Load().ZipCompression);
         store.Save(options);
@@ -137,9 +137,6 @@ public class ManagedZipTests
     {
         var options = JsonSerializer.Deserialize<ConversionOptions>("{\"ZipCompression\":\"" + preset + "\"}")!;
         Assert.Equal(level, (int)options.ZipCompression);
-        string path = Path.Combine(TestMediaFixture.NewFolder(), "settings.xmls");
-        File.WriteAllText(path, $"<profile><KaraokeToolkit><ZipCompression>{preset}</ZipCompression></KaraokeToolkit></profile>");
-        Assert.Equal(level, (int)new SettingsStore(path).Load().ZipCompression);
     }
 
     [Theory]

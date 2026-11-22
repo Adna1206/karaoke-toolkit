@@ -1,4 +1,26 @@
-# Operation and setting definitions
+# Desktop UI guidelines
+
+## Dialog design
+
+Use modal dialogs for decisions that block the current task, important
+acknowledgements, and explicit requests to open a tool or reference window.
+Show routine feedback in the status bar or beside the relevant control.
+
+- Start with a visible heading that names the task, decision, or outcome. Use
+  `heading2` for short prompts and `heading1` for larger tool windows.
+- Keep the body focused on what the user needs to decide or do. Summarize the
+  immediate consequence and put long file lists in a bounded scrolling area.
+  Use labelled sections, tabs, or field help for larger forms.
+- Use a shared footer. Place dismissal to the left of the primary action
+  and give each action a label that describes the result. Use a single Close
+  or acknowledgement button when there is no decision.
+- Enable confirmation when the required choice or input is ready. Focus the
+  safe action when a confirmation opens and use the shared red
+  `destructive` style for actions that discard, delete, or overwrite.
+
+Design reference. [Povio, Dos and Don'ts of Product Design: Dialogs](https://povio.com/blog/product-design-dialogs)
+
+## Shared presentation
 
 Use App's shared `WindowSpacing` values for the 24-DIP horizontal and 14-DIP
 vertical inset in dialogs and the main footer, and the 10-DIP gap between
@@ -26,6 +48,10 @@ text labels.
 Open app dialogs through `ModalDialog.ShowAsync` so Escape dismisses them
 after focused controls have had a chance to handle the key. Escape uses the
 normal window close path, including any close guards.
+Use `Shared.PromptDialog` for short app-owned prompts. Native pickers use the
+platform's layout and a task-specific title.
+
+## Operation and setting definitions
 
 `KaraokeToolkit.App/Metadata` contains immutable presentation definitions. These
 belong to App because they describe the user interface; Core owns execution,

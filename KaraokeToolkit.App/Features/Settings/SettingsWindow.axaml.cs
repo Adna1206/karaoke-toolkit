@@ -1,3 +1,4 @@
+using KaraokeToolkit.App.Features.Settings.Dialogs;
 using KaraokeToolkit.App.Shared;
 using KaraokeToolkit.App.Services;
 using KaraokeToolkit.Core.Conversion;
@@ -85,37 +86,10 @@ public partial class SettingsWindow : Window
     private async void ResetDefaults_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not SettingsViewModel model) return;
-        var dialog = new Window
+        if (await ResetSettingsDialog.ShowAsync(this))
         {
-            Title = WindowTitles.For("Reset Settings"), Width = 470, CanResize = false,
-            SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner
-        };
-        var cancel = new Button { Content = "Cancel" };
-        var reset = new Button { Content = "Reset to Defaults" };
-        bool confirmed = false;
-        cancel.Click += (_, _) => dialog.Close();
-        reset.Click += (_, _) => { confirmed = true; dialog.Close(); };
-        dialog.Content = new StackPanel
-        {
-            Margin = WindowSpacing.ContentInset, Spacing = 18,
-            Children =
-            {
-                new TextBlock
-                {
-                    Text = "Reset all settings in this window to their defaults? This also clears the custom cdrdao path and resets each encoder's bitrate.\n\nUse Apply or OK to save the reset. Explorer integration and your files will not be changed.",
-                    TextWrapping = Avalonia.Media.TextWrapping.Wrap
-                },
-                new StackPanel
-                {
-                    Orientation = Avalonia.Layout.Orientation.Horizontal,
-                    HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right, Spacing = 10,
-                    Children = { cancel, reset }
-                }
-            }
-        };
-        dialog.Opened += (_, _) => cancel.Focus();
-        await ModalDialog.ShowAsync(dialog, this);
-        if (confirmed) model.ResetToDefaults();
+            model.ResetToDefaults();
+        }
     }
     private void Save_Click(object? sender, RoutedEventArgs e)
     {

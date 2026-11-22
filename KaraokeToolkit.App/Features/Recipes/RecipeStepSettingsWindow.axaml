@@ -1,14 +1,13 @@
 <Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:shared="using:KaraokeToolkit.App.Shared" xmlns:vm="using:KaraokeToolkit.App.Features.Recipes"
  x:Class="KaraokeToolkit.App.Features.Recipes.RecipeStepSettingsWindow" x:DataType="vm:RecipeStepOptionsViewModel"
  Width="650" Height="620" MinWidth="550" MinHeight="450" WindowStartupLocation="CenterOwner">
- <Grid Margin="{x:Static shared:WindowSpacing.ContentInset}" RowDefinitions="Auto,*,Auto,Auto" RowSpacing="14">
+ <Grid Margin="{x:Static shared:WindowSpacing.ContentInset}" RowDefinitions="Auto,*,Auto" RowSpacing="14">
   <StackPanel Orientation="Horizontal" Spacing="10">
     <PathIcon Classes="headingGlyph" Data="{x:Static shared:DialogArtwork.Settings}"/>
-    <TextBlock Text="Step Settings" Classes="heading1"/>
+    <TextBlock Text="Recipe Step Settings" Classes="heading1"/>
   </StackPanel>
   <TabControl Grid.Row="1">
    <TabItem Header="Processing"><ScrollViewer><StackPanel Margin="0,14" Spacing="10">
-    <TextBlock Text="These settings belong to this step. General app settings are unchanged." TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}"/>
     <CheckBox Content="{Binding Definitions.RecurseFolders.Label}" IsChecked="{Binding RecurseFolders}" IsVisible="{Binding HasRecursionSettings}" ToolTip.Tip="{Binding Definitions.RecurseFolders.Description}"/>
     <CheckBox Content="{Binding Definitions.DeleteOriginals.Label}" IsChecked="{Binding DeleteOriginals}" IsVisible="{Binding CanDeleteOriginals}" ToolTip.Tip="{Binding Definitions.DeleteOriginals.Description}"/>
     <CheckBox Content="{Binding Definitions.AutoCreateCueText.Label}" IsChecked="{Binding AutoCreateCueText}" IsVisible="{Binding CanAutoCreateMetadata}" ToolTip.Tip="{Binding Definitions.AutoCreateCueText.Description}"/>
@@ -22,11 +21,11 @@
    <TabItem Header="Tagging" IsVisible="{Binding HasTaggingSettings}"><ScrollViewer><StackPanel Margin="0,14" Spacing="10">
     <TextBlock Text="Filename pattern" FontWeight="SemiBold"/>
     <TextBox Text="{Binding TaggingPattern}" ToolTip.Tip="Use %DISC%, %TRACK%, %ARTIST% and %TITLE% with your own separators. DISC is stored as Album; TRACK allows zero."/>
-    <TextBlock Text="Tags are derived from filenames. No preview dialog opens during the recipe. ZIPs update their audio; BIN and unpaired CDG files cannot be tagged." TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}"/>
+    <TextBlock Text="The recipe updates supported audio tags from filenames without a review step." TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}"
+               ToolTip.Tip="ZIP updates the audio member. BIN and unpaired CDG files cannot be tagged."/>
     <CheckBox Content="Fill empty tags only" IsChecked="{Binding FillEmptyTagsOnly}" ToolTip.Tip="Keep existing Album, Track, Artist and Title values when present."/>
     <CheckBox Content="Clear comments" IsChecked="{Binding ClearTagComments}"/>
     <CheckBox Content="Clear other descriptive tags" IsChecked="{Binding ClearOtherTags}" ToolTip.Tip="Remove descriptive fields outside Album, Track, Artist and Title while preserving media and technical metadata."/>
-    <TextBlock Text="Files are updated in place without re-encoding. ZIP compression uses this step's ZIP settings." TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}"/>
    </StackPanel></ScrollViewer></TabItem>
    <TabItem Header="ZIP" IsVisible="{Binding HasZipSettings}"><ScrollViewer><StackPanel Margin="0,14" Spacing="10">
     <TextBlock Text="{Binding Definitions.Algorithm.Label}" FontWeight="SemiBold"/>
@@ -51,11 +50,14 @@
     <TextBlock Text="{Binding Definitions.VideoAudioBitrateKbps.Label}" FontWeight="SemiBold"/><ComboBox ItemsSource="{Binding VideoAudioBitrates}" SelectedItem="{Binding VideoAudioBitrateKbps}" HorizontalAlignment="Stretch"/>
    </StackPanel></ScrollViewer></TabItem>
   </TabControl>
-  <shared:StatusBar Grid.Row="2" Message="{Binding Error}" Kind="Failure"/>
-  <Border Grid.Row="3" Classes="windowFooter dialog">
-    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="{x:Static shared:WindowSpacing.FooterButtonGap}">
-     <Button Content="Cancel" Click="Cancel_Click"/><Button Content="OK" Click="Save_Click"/>
-    </StackPanel>
+  <Border Grid.Row="2" Classes="windowFooter dialog">
+    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{x:Static shared:WindowSpacing.FooterButtonGap}">
+     <shared:StatusBar Message="{Binding Error}" Kind="Failure" VerticalAlignment="Center"/>
+     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{x:Static shared:WindowSpacing.FooterButtonGap}">
+      <Button Content="Cancel" Click="Cancel_Click"/>
+      <Button Content="Apply to step" Classes="accent" Click="Save_Click"/>
+     </StackPanel>
+    </Grid>
   </Border>
  </Grid>
 </Window>

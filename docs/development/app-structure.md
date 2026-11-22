@@ -23,6 +23,20 @@ manifest stay at the project root. Code used by one feature belongs inside that
 feature; code used by several features belongs in an appropriate shared folder.
 Core continues to own processing and remains independent of App and Avalonia.
 
+Keep each app-owned dialog in its own named file. Standalone XAML dialogs use
+the feature's `*Window.axaml` and code-behind pair. Put short, code-built
+prompts in the owning feature's `Dialogs/` folder as `*Dialog.cs` files. Keep
+the prompt's wording and controls there, and call it from the view that owns
+the workflow. Reuse `Shared.PromptDialog` for their common layout. Each
+prompt supplies its own footer buttons. Use `ConfirmAsync` for Cancel and
+confirm, or `Create` when a prompt needs a different set of actions.
+Configure native pickers at the call site through `Shared.ModalDialog`.
+
+Use `Shared.BusyNavigation` for Close and Back from a window with active work.
+It checks the owning view model's `IsBusy`, prompts asynchronously, and
+waits for the operation to settle before leaving. Supply the existing
+cancellation action where the workflow supports it.
+
 `Shared/Typography.axaml` defines the `heading1`, `heading2`, and `heading3`
 classes for page, section, and subsection headings. It also defines the size
 for small text and the font family and size for Windows captions. Content

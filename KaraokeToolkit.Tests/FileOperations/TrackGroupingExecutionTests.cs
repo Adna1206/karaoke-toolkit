@@ -1,6 +1,9 @@
+using System.Text.Json.Nodes;
+using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.FileOperations;
 using KaraokeToolkit.Core.Recovery;
+using KaraokeToolkit.Tests.Support;
 
 namespace KaraokeToolkit.Tests.FileOperations;
 
@@ -50,10 +53,34 @@ public class TrackGroupingExecutionTests
             Grouping = new() { Move = true }
         };
         var service = new OperationExecutionService(new RecoveryStore(Path.Combine(root, "index")));
+        var plan = TrackGroupingPlanner.Plan(request.Inputs, output, request.Grouping);
+        var events = new List<ConversionProgress>();
 
-        var result = await service.ExecuteAsync(request);
+        var progress = new SynchronousProgress<ConversionProgress>(update =>
+        {
+            events.Add(update);
+            if (update.ActivityLabel == "Processing")
+            {
+                string workspace = Assert.Single(Directory.GetDirectories(output, ".karaoke-job-workflow-*"));
+                Assert.Equal(RecoveryVerificationMode.XxHash128, WorkflowSession.Read(Path.Combine(workspace, "workflow.json")).VerificationMode);
+            }
+        });
+        var result = await service.ExecuteGroupingAsync(request, plan, progress);
 
         Assert.False(result.HasIssues);
+        Assert.Collection(events.Take(2),
+            progress =>
+            {
+                Assert.StartsWith("Checking grouping plan", progress.Message);
+                Assert.True(progress.IsIndeterminate);
+            },
+            progress =>
+            {
+                Assert.StartsWith("Preparing recovery", progress.Message);
+                Assert.True(progress.IsIndeterminate);
+            });
+        Assert.DoesNotContain(events.Skip(2), progress => progress.IsIndeterminate);
+        Assert.Equal(100, events[^1].TotalPercent);
         Assert.False(File.Exists(source));
         Assert.Equal("track", File.ReadAllText(Path.Combine(output, "BKD-336xx", "BKD-33601.zip")));
     }
@@ -124,6 +151,12 @@ public class TrackGroupingExecutionTests
             }
         }
 
+        if (move)
+        {
+            var legacy = JsonNode.Parse(File.ReadAllText(journal))!.AsObject();
+            Assert.True(legacy.Remove("VerificationMode"));
+            File.WriteAllText(journal, legacy.ToJsonString());
+        }
         Assert.Equal(RecoveryKind.TrackGrouping, Assert.Single(store.Find()).Kind);
         var result = await new OperationExecutionService(store).ResumeAsync(journal);
 

@@ -9,16 +9,18 @@ namespace KaraokeToolkit.App.Features.Tagging;
 public sealed partial class TaggingPreviewView : UserControl
 {
     private TaggingViewModel Model => (TaggingViewModel)DataContext!;
-    private readonly Func<Task<bool>>? confirmDiscard;
+    private readonly Func<bool, bool, Task<bool>>? confirmBack;
     private readonly TaskCompletionSource<TaggingRequest?> decision = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     public TaggingPreviewView() => InitializeComponent();
 
-    internal TaggingPreviewView(TaggingViewModel model, Func<Task<bool>> confirmDiscard) : this()
+    internal TaggingPreviewView(TaggingViewModel model, Func<bool, bool, Task<bool>> confirmBack) : this()
     {
-        this.confirmDiscard = confirmDiscard;
+        this.confirmBack = confirmBack;
         DataContext = model;
     }
+
+    internal void CancelPreview() => decision.TrySetResult(null);
 
     internal async Task<TaggingRequest?> ReviewAsync()
     {
@@ -39,8 +41,8 @@ public sealed partial class TaggingPreviewView : UserControl
 
     private async void Back_Click(object? sender, RoutedEventArgs args)
     {
-        if (!Model.HasEdits || confirmDiscard != null && await confirmDiscard())
-            decision.TrySetResult(null);
+        if (confirmBack == null ? !Model.HasEdits : await confirmBack(Model.PreviewProgress.IsVisible, Model.HasEdits))
+            CancelPreview();
     }
 
     private void Apply_Click(object? sender, RoutedEventArgs args)

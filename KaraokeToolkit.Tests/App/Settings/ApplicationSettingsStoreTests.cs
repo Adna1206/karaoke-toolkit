@@ -2,23 +2,36 @@ using KaraokeToolkit.App.Features.Settings;
 using System.Xml;
 using System.Xml.Linq;
 using KaraokeToolkit.Core.Settings;
+using KaraokeToolkit.Core.Recovery;
 
 namespace KaraokeToolkit.Tests.App.Settings;
 
 public class ApplicationSettingsStoreTests
 {
     [Fact]
+    public void RecoveryVerificationDefaultsToXxHash128AndHonorsSavedSha256()
+    {
+        string path = Path.Combine(TestMediaFixture.NewFolder(), "settings.xml");
+        var app = new ApplicationSettingsStore(path);
+        app.Save(new());
+        Assert.Equal((RecoveryVerificationMode.XxHash128, true), app.LoadRecoveryPreferences());
+
+        app.Save(new(), recoveryVerification: RecoveryVerificationMode.Sha256, saveResumableRun: false);
+        Assert.Equal((RecoveryVerificationMode.Sha256, false), new ApplicationSettingsStore(path).LoadRecoveryPreferences());
+    }
+
+    [Fact]
     public void ExistingUiPreferencesSurviveHeadlessProcessingUpdates()
     {
         string path = Path.Combine(TestMediaFixture.NewFolder(), "settings.xml");
-        // Reproduce the schema written before presentation preferences moved to App.
+        // Include unknown entries written by a later compatible version.
         File.WriteAllText(path, """
-            <profile><KaraokeToolkit>
+            <KaraokeToolkit schemaVersion="1"><Desktop>
               <Theme>Dark</Theme><OperationSections><FilesAndFolders>false</FilesAndFolders><FutureSection>true</FutureSection></OperationSections>
               <FavouriteOperations><Operation>ZipToBin</Operation></FavouriteOperations>
               <SettingsWindowWidth>920.5</SettingsWindowWidth><SettingsWindowHeight>730.25</SettingsWindowHeight>
               <FuturePreference>keep</FuturePreference>
-            </KaraokeToolkit><section name="Options"><entry name="FutureOption">keep</entry></section></profile>
+            </Desktop><Processing><Setting id="future.option">keep</Setting></Processing></KaraokeToolkit>
             """);
         var core = new SettingsStore(path);
         core.Save(core.Load() with { AutoCreateCueText = false });
@@ -28,11 +41,11 @@ public class ApplicationSettingsStoreTests
         Assert.Equal(["ZipToBin"], app.LoadFavouriteOperations());
         Assert.Equal(new SettingsWindowSize(920.5, 730.25), app.LoadSettingsWindowSize());
         Assert.False(app.Load().AutoCreateCueText);
-        Assert.Equal("keep", XDocument.Load(path).Root!.Element("KaraokeToolkit")!.Element("FuturePreference")!.Value);
+        Assert.Equal("keep", XDocument.Load(path).Root!.Element("Desktop")!.Element("FuturePreference")!.Value);
         app.Save(app.Load(), theme: ApplicationTheme.Light);
         var root = XDocument.Load(path).Root!;
-        Assert.Null(root.Element("KaraokeToolkit")!.Element("FuturePreference"));
-        Assert.DoesNotContain(root.Element("section")!.Elements("entry"), entry => (string?)entry.Attribute("name") == "FutureOption");
+        Assert.Equal("keep", root.Element("Desktop")!.Element("FuturePreference")!.Value);
+        Assert.Contains(root.Element("Processing")!.Elements("Setting"), entry => (string?)entry.Attribute("id") == "future.option");
         Assert.False(app.LoadOperationSections().ContainsKey("FutureSection"));
         Assert.False(app.LoadOperationSections()["FilesAndFolders"]);
         Assert.Equal(["ZipToBin"], app.LoadFavouriteOperations());

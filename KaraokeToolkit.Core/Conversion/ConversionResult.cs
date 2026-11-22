@@ -38,6 +38,7 @@ public sealed record ConversionProgress(int FilePercent, int TotalPercent, int F
     public string? ActivityLabel { get; init; }
     public string? ActivityDetail { get; init; }
     public bool ShowInActivity { get; init; } = true;
+    public bool IsIndeterminate { get; init; }
 }
 
 

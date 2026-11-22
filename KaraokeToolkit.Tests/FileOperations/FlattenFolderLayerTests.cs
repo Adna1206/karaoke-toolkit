@@ -4,11 +4,28 @@ using KaraokeToolkit.Core.DiscRipping;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.App.Features.Main;
 using KaraokeToolkit.Core.FileOperations;
+using KaraokeToolkit.Tests.Support;
 
 namespace KaraokeToolkit.Tests.FileOperations;
 
 public class FlattenFolderLayerTests
 {
+    [Fact]
+    public async Task ReportsRecoveryPreparationBeforeMoveProgress()
+    {
+        string root = TestMediaFixture.NewFolder();
+        string child = Directory.CreateDirectory(Path.Combine(root, "Batch")).FullName;
+        File.WriteAllText(Path.Combine(child, "song.mp3"), "audio");
+        var events = new List<ConversionProgress>();
+
+        var result = await new FlattenFolderLayer().RunAsync([root], new SynchronousProgress<ConversionProgress>(events.Add));
+
+        Assert.Equal(2, result.Succeeded);
+        Assert.True(events[0].IsIndeterminate);
+        Assert.DoesNotContain(events.Skip(1), progress => progress.IsIndeterminate);
+        Assert.Equal(100, events[^1].TotalPercent);
+    }
+
     [Fact]
     public async Task AllLayersRemovesEmptyReadOnlyFoldersOnWindows()
     {

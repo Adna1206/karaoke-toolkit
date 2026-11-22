@@ -28,16 +28,15 @@ public class VideoPreferenceTests
         Assert.Equal(smoothing, loaded.VideoGraphicsSmoothing);
         Assert.Equal(resolution, loaded.VideoResolution);
         Assert.Equal(loaded, JsonSerializer.Deserialize<ConversionOptions>(JsonSerializer.Serialize(loaded)));
-        // Modern-only entries must not leak into the original Options section.
-        Assert.DoesNotContain(XDocument.Load(path).Root!.Elements("section").Elements("entry"),
-            entry => (string?)entry.Attribute("name") == nameof(ConversionOptions.VideoGraphicsSmoothing));
+        Assert.Contains(XDocument.Load(path).Root!.Element("Processing")!.Elements("Setting"),
+            entry => (string?)entry.Attribute("id") == "video.graphics-smoothing");
     }
 
     [Fact]
-    public void OldSettingsAndResetDefaultsPreserveUnsmoothedHdRendering()
+    public void MissingSmoothingAndResetDefaultsPreserveUnsmoothedHdRendering()
     {
         string path = Path.Combine(TestMediaFixture.NewFolder(), "settings.xml");
-        File.WriteAllText(path, "<profile><KaraokeToolkit><VideoResolution>HD</VideoResolution></KaraokeToolkit></profile>");
+        File.WriteAllText(path, "<KaraokeToolkit schemaVersion='1'><Processing><Setting id='video.resolution'>HD</Setting></Processing></KaraokeToolkit>");
         var loaded = new SettingsStore(path).Load();
         Assert.Equal(VideoGraphicsSmoothing.None, loaded.VideoGraphicsSmoothing);
         Assert.Equal("neighbor", VideoOptions.ScalingAlgorithm(loaded.VideoGraphicsSmoothing));
@@ -57,7 +56,8 @@ public class VideoPreferenceTests
         Assert.Throws<ArgumentOutOfRangeException>(() => store.Save(new() { VideoGraphicsSmoothing = (VideoGraphicsSmoothing)99 }));
         Assert.Equal(before, File.ReadAllText(path));
         var xml = XDocument.Load(path);
-        xml.Root!.Element("KaraokeToolkit")!.SetElementValue("VideoGraphicsSmoothing", "Unsupported");
+        xml.Root!.Element("Processing")!.Elements("Setting")
+            .Single(field => (string?)field.Attribute("id") == "video.graphics-smoothing").Value = "Unsupported";
         xml.Save(path);
         Assert.Equal(VideoGraphicsSmoothing.None, store.Load().VideoGraphicsSmoothing);
     }

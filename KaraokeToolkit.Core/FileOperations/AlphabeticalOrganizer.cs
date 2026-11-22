@@ -13,7 +13,8 @@ public sealed class AlphabeticalOrganizer
     private static readonly StringComparer Paths = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
 
     public Task<ConversionResult> RunAsync(IEnumerable<string> inputs, AlphabeticalOrganizeScope scope,
-        IProgress<ConversionProgress>? progress = null, CancellationToken token = default, bool ignoreLeadingThe = false, RecoveryVerificationMode verificationMode = RecoveryVerificationMode.Sha256, bool saveResumableRun = true)
+        IProgress<ConversionProgress>? progress = null, CancellationToken token = default, bool ignoreLeadingThe = false,
+        RecoveryVerificationMode verificationMode = OperationCapabilities.DefaultFileMoveRecoveryVerification, bool saveResumableRun = true)
         => Task.Run(() => Run(inputs, scope, progress, token, ignoreLeadingThe, verificationMode: verificationMode, saveResumableRun: saveResumableRun), token);
 
     public Task<ConversionResult> PreviewAsync(IEnumerable<string> inputs, AlphabeticalOrganizeScope scope,
@@ -21,7 +22,8 @@ public sealed class AlphabeticalOrganizer
         => Task.Run(() => Run(inputs, scope, null, token, ignoreLeadingThe, true), token);
 
     private static ConversionResult Run(IEnumerable<string> inputs, AlphabeticalOrganizeScope scope, IProgress<ConversionProgress>? progress,
-        CancellationToken token, bool ignoreLeadingThe, bool preview = false, RecoveryVerificationMode verificationMode = RecoveryVerificationMode.Sha256, bool saveResumableRun = true)
+        CancellationToken token, bool ignoreLeadingThe, bool preview = false,
+        RecoveryVerificationMode verificationMode = OperationCapabilities.DefaultFileMoveRecoveryVerification, bool saveResumableRun = true)
     {
         if (!Enum.IsDefined(scope)) throw new ArgumentOutOfRangeException(nameof(scope));
 
@@ -83,7 +85,7 @@ public sealed class AlphabeticalOrganizer
             return new(planned.Select(p => conflicts.Contains(p.Outputs[0]) ? p with { Status = ConversionStatus.Failed, Message = "Multiple inputs target the same path." } : p).ToArray(), false) { Found = planned.Length };
         }
         if (token.IsCancellationRequested) return new([], true);
-        progress?.Report(new(0, 0, 0, 0, "Preparing recovery for file moves…", "00:00:00"));
+        progress?.Report(new(0, 0, 0, 0, "Preparing recovery for file moves…", "00:00:00") { IsIndeterminate = true });
         {
             var mode = WorkflowSession.Current.Value?.Data.VerificationMode ?? verificationMode;
             var plan = new List<WorkflowMoveGroup>();

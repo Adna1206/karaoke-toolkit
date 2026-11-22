@@ -3,9 +3,23 @@ namespace KaraokeToolkit.Core.Settings;
 /// <summary>Resolves per-user data independently of the Windows Setup installation directory.</summary>
 public static class UserDataPaths
 {
+    internal const string RetiredOptionsFileName = "options.xmls";
+
     private static string LocalData => Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
     public static string DesktopSettingsPath() => DesktopSettingsPath(LocalData, OperatingSystem.IsWindows());
+    public static string SharedSettingsPath() => Path.Combine(DataRoot(LocalData, OperatingSystem.IsWindows()), "settings.xml");
+
+    internal static IReadOnlyList<string> RetiredOptionsFilesFor(string profilePath) =>
+        string.Equals(Path.GetFullPath(profilePath), SharedSettingsPath(),
+            OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)
+            ? RetiredOptionsFiles(LocalData, OperatingSystem.IsWindows()) : [];
+
+    internal static IReadOnlyList<string> RetiredOptionsFiles(string localData, bool windows)
+    {
+        string previous = Path.Combine(DataRoot(localData, windows), RetiredOptionsFileName);
+        return windows ? [previous, Path.Combine(DataRoot(localData, windows: false), RetiredOptionsFileName)] : [previous];
+    }
 
     internal static string DesktopSettingsPath(string localData, bool windows)
     {
@@ -16,12 +30,11 @@ public static class UserDataPaths
             string marker = Path.Combine(root, ".desktop-migrated");
             if (Directory.Exists(legacy) && !File.Exists(marker))
             {
-                CopyIfMissing(Path.Combine(legacy, "options.xmls"), Path.Combine(root, "options.xmls"));
                 CopyDirectory(Path.Combine(legacy, "Recipes"), Path.Combine(root, "Recipes"));
                 MarkMigrated(marker);
             }
         }
-        return Path.Combine(root, "options.xmls");
+        return Path.Combine(root, "settings.xml");
     }
 
     internal static string RecoveryDirectory() => RecoveryDirectory(LocalData, OperatingSystem.IsWindows());

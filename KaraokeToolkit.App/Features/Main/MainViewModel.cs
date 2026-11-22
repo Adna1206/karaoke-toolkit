@@ -26,10 +26,11 @@ public sealed record ActivityEntry(string Time, string Message);
 /// <summary>Coordinates main-screen selection, preferences, commands and presentation of processing results.</summary>
 /// <remarks>Core services own file processing and recovery guarantees. ProcessingRun owns each run's
 /// cancellation and progress lifetime; this viewmodel owns the corresponding busy state and reports.</remarks>
-public partial class MainViewModel : ViewModelBase
+public partial class MainViewModel : ViewModelBase, IBusyViewModel
 {
     private ProcessingRun? activeRun;
     private readonly ApplicationSettingsStore store;
+    private readonly SharedSettingsStore? sharedProfile;
     private bool sectionsReady;
     public IReadOnlyList<OperationSectionViewModel> OperationSections { get; }
     public IReadOnlyList<OperationSectionViewModel> VisibleSections => OperationSections.Where(section => section.IsVisible).ToArray();
@@ -64,7 +65,7 @@ public partial class MainViewModel : ViewModelBase
     public bool CanRetry => !IsBusy && retryRequests.Count > 0;
     public IReadOnlyList<string> SelectedInputs => selectedInputs;
     public string[] CurrentInputs => selectedInputs.Length > 0 ? selectedInputs : [FolderPath];
-    internal RecoveryVerificationMode RecoveryVerification { get; private set; }
+    internal RecoveryVerificationMode RecoveryVerification { get; private set; } = OperationCapabilities.DefaultFileMoveRecoveryVerification;
     internal bool SaveResumableRun { get; private set; } = true;
     internal bool CheckForUpdatesOnStartup { get; private set; }
     public bool RememberInputFolder { get; private set; }
@@ -130,7 +131,7 @@ public partial class MainViewModel : ViewModelBase
 
         try
         {
-            store.Save(Options, lastInputFolder: folder);
+            store.Save(lastInputFolder: folder);
             lastInputFolder = folder;
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or System.Xml.XmlException)
@@ -213,8 +214,11 @@ public partial class MainViewModel : ViewModelBase
         get; set;
     }
     [ObservableProperty] public partial string RecoveryMessage { get; set; } = "";
-    [ObservableProperty, NotifyPropertyChangedFor(nameof(FooterStatusMessage)), NotifyPropertyChangedFor(nameof(FooterStatusKind))]
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(FooterStatusMessage)), NotifyPropertyChangedFor(nameof(FooterStatusKind)),
+        NotifyPropertyChangedFor(nameof(ShowFooterProgress))]
     public partial bool ShowRecoveryCheckProgress { get; private set; }
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(ShowFooterProgress))]
+    public partial bool IsRunProgressIndeterminate { get; internal set; }
     private string lastMessage = "";
     private string? activityRoot;
     public OverwritePolicy OverwritePolicy { get; private set; } = OverwritePolicy.Ask;
@@ -304,6 +308,7 @@ public partial class MainViewModel : ViewModelBase
     public partial string Status { get; set; } = "Choose an operation and its inputs, then click Start.";
     [ObservableProperty, NotifyPropertyChangedFor(nameof(FooterStatusKind))]
     public partial RunStatus StatusOutcome { get; set; }
+    public bool ShowFooterProgress => ShowRecoveryCheckProgress || IsRunProgressIndeterminate;
     public string FooterStatusMessage => ShowRecoveryCheckProgress ? "Checking for interrupted runs…" : Status;
     public StatusKind FooterStatusKind => ShowRecoveryCheckProgress ? StatusKind.Info : StatusOutcome switch
     {
@@ -333,19 +338,23 @@ public partial class MainViewModel : ViewModelBase
             GetSourceError(CurrentInputs) == null &&
             (SelectedOperation.Recipe == null || KaraokeToolkit.Core.Recipes.RecipeOperations.CanAcceptInputs(SelectedOperation.Recipe, CurrentInputs)));
     public bool CanCancel => IsBusy && !CancelRequested;
+    internal bool CanCancelActiveRun => activeRun != null && CanCancel;
     public MainViewModel() : this(UserDataPaths.DesktopSettingsPath(), new RecoveryStore()) { }
     public MainViewModel(string settingsPath) : this(settingsPath, null) { }
 
     private MainViewModel(string settingsPath, RecoveryStore? recoveryStore)
     {
         RecipeDirectory = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(settingsPath))!, "Recipes");
-        store = new(settingsPath, persistRenameBins: true);
+        bool isSharedProfile = recoveryStore != null;
+        sharedProfile = isSharedProfile ? new SharedSettingsStore(settingsPath) : null;
+        store = new(settingsPath, persistRenameBins: true, applyReleaseMigrations: isSharedProfile);
         OperationSections = OperationDefinitions.Sections.Select(group => new OperationSectionViewModel(this, group.Section, group.Header,
             Operations.Where(operation => operation.Available && operation.Section == group.Section).ToArray())).ToArray();
         recovery = recoveryStore ?? new(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(settingsPath))!, "Recovery"));
         SelectedOperation = Operations.Single(operation => operation.Action == Action.AudioGToZip);
         try
         {
+            sharedProfile?.ApplyMigrations();
             Options = store.Load();
             (RecoveryVerification, SaveResumableRun) = store.LoadRecoveryPreferences();
             CheckForUpdatesOnStartup = store.LoadCheckForUpdatesOnStartup();
@@ -381,9 +390,8 @@ public partial class MainViewModel : ViewModelBase
         if (!sectionsReady) return;
         try
         {
-            store.Save(Options, OverwritePolicy, Theme, ValidateBeforeConversion, IgnoreLeadingTheForFileOrganization, AudioBitrates,
-                OperationSections.ToDictionary(group => group.Section.ToString(), group => group.IsExpanded),
-                Operations.Concat(RecipeChoices).Where(operation => operation.Available && operation.IsFavourite).Select(operation => operation.Id).ToArray());
+            store.Save(operationSections: OperationSections.ToDictionary(group => group.Section.ToString(), group => group.IsExpanded),
+                favouriteOperations: Operations.Concat(RecipeChoices).Where(operation => operation.Available && operation.IsFavourite).Select(operation => operation.Id).ToArray());
         }
         catch (Exception error) { Status = "Could not save operation sections: " + error.Message; }
     }
@@ -393,8 +401,7 @@ public partial class MainViewModel : ViewModelBase
         OptionsTabIndex = Math.Max(0, tabIndex);
         if (!size.IsValid || size == OptionsWindowSize) return;
         OptionsWindowSize = size;
-        try { store.Save(Options, OverwritePolicy, Theme, ValidateBeforeConversion, IgnoreLeadingTheForFileOrganization,
-            AudioBitrates, settingsWindowSize: size); }
+        try { store.Save(settingsWindowSize: size); }
         catch (Exception error) { Status = "Could not save settings window size: " + error.Message; }
     }
     public void SaveOptions(ConversionOptions options) => SaveOptions(options, OverwritePolicy);
@@ -442,10 +449,33 @@ public partial class MainViewModel : ViewModelBase
     }
     public bool CanRunDiscRip => !IsBusy && Options.ExperimentalDiscRipping;
 
+    internal bool RefreshSharedSettings()
+    {
+        if (sharedProfile == null) return true;
+        try
+        {
+            var settings = sharedProfile.Load();
+            Options = settings.Options;
+            AudioBitrates = settings.AudioBitrates;
+            OverwritePolicy = settings.Overwrite;
+            ValidateBeforeConversion = settings.ValidateBeforeConversion;
+            IgnoreLeadingTheForFileOrganization = settings.IgnoreLeadingThe;
+            RecoveryVerification = settings.RecoveryVerification;
+            SaveResumableRun = settings.SaveResumableRun;
+            return true;
+        }
+        catch (Exception error)
+        {
+            StatusOutcome = RunStatus.Failure;
+            Status = "Could not load shared settings: " + error.Message;
+            return false;
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanRunDiscRip))]
     private async Task RunDiscRipAsync()
     {
-        if (!CanRunDiscRip)
+        if (!CanRunDiscRip || !RefreshSharedSettings())
             return;
         IsBusy = true;
         try
@@ -466,7 +496,7 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanStart))]
     private async Task StartAsync()
     {
-        if (!CanStart)
+        if (!CanStart || !RefreshSharedSettings())
             return;
         if (SelectedOperation?.Recipe is { } recipe)
         {
@@ -540,7 +570,7 @@ public partial class MainViewModel : ViewModelBase
         RecoveryJob? resume = null;
         try
         {
-            ShowRecoveryCheckProgress = folder != null;
+            ShowRecoveryCheckProgress = true;
             var jobs = await Task.Run(() => recovery.Find(folder, recurse ?? Options.RecurseFolders));
             ShowRecoveryCheckProgress = false;
             // The modal owns input while the user decides. Show the normal
@@ -589,7 +619,7 @@ public partial class MainViewModel : ViewModelBase
     }
 
     /// <summary>Starts a processing lifetime and resets the shared busy, progress and report presentation.</summary>
-    private ProcessingRun BeginRun(string title, string status)
+    private ProcessingRun BeginRun(string title, string status, bool isIndeterminate = false)
     {
         if (activeRun != null) throw new InvalidOperationException("A processing run is already active.");
         var run = new ProcessingRun(Report);
@@ -609,6 +639,7 @@ public partial class MainViewModel : ViewModelBase
             ValidationFindings = [];
             retryRequests = [];
             Progress = TotalProgress = FoundFiles = 0;
+            IsRunProgressIndeterminate = isIndeterminate;
             Elapsed = "00:00:00";
             Status = status;
             return run;
@@ -625,6 +656,7 @@ public partial class MainViewModel : ViewModelBase
     {
         run?.Dispose();
         activeRun = null;
+        IsRunProgressIndeterminate = false;
         IsBusy = false;
         IsRecoveryMode = false;
     }
@@ -645,7 +677,8 @@ public partial class MainViewModel : ViewModelBase
         var runOptions = action == Action.LosslessGToMp3G
             ? Options with { AudioBitrate = AudioBitrates.Mp3 }
             : Options;
-        var run = BeginRun((recoveryJob != null ? "Recovery — " : "") + selected.Label, "Starting conversion…");
+        var run = BeginRun((recoveryJob != null ? "Recovery — " : "") + selected.Label,
+            recoveryJob != null ? "Checking interrupted conversion…" : "Finding source files…", isIndeterminate: true);
         IsRecoveryMode = recoveryJob != null;
         RecoveryAvailable = IsRecoveryMode;
         RecoveryMessage = IsRecoveryMode ? "Recovery mode — checking interrupted publication and resuming unfinished work." : "";
@@ -743,13 +776,14 @@ public partial class MainViewModel : ViewModelBase
     private async Task RunFileOperationAsync(RecoveryJob? job = null)
     {
         var run = BeginRun(job == null ? SelectedOperation?.Label ?? "File Operation" : "Recovery — " + job.Action,
-            "Preparing file moves…");
+            job == null ? "Preparing file moves…" : "Checking interrupted file moves…", isIndeterminate: true);
         IsRecoveryMode = job != null;
         if (job != null)
         {
             try
             {
-                var resumed = await new OperationExecutionService(recovery).ResumeAsync(job.JournalPath, run.Progress, run.Token);
+                var service = new OperationExecutionService(recovery);
+                var resumed = await Task.Run(() => service.ResumeAsync(job.JournalPath, run.Progress, run.Token));
                 run.StopProgress();
                 LastReport = resumed.Report;
                 FoundFiles = resumed.Found;
@@ -802,7 +836,7 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanValidate))]
     private async Task ValidateAsync()
     {
-        var run = BeginRun("Validate Karaoke Files", "Scanning files without changing them...");
+        var run = BeginRun("Validate Karaoke Files", "Finding files to validate…", isIndeterminate: true);
         try
         {
             var result = await new ValidationService().ScanAsync(CurrentInputs, Options.RecurseFolders, run.Progress, run.Token);
@@ -831,11 +865,17 @@ public partial class MainViewModel : ViewModelBase
 
     private void Report(ConversionProgress report)
     {
+        bool preparationFinished = IsRunProgressIndeterminate && !report.IsIndeterminate;
+        IsRunProgressIndeterminate = report.IsIndeterminate;
         Progress = report.FilePercent;
         TotalProgress = report.TotalPercent;
         FoundFiles = report.Found;
         Elapsed = report.Elapsed;
-        if (!report.ShowInActivity || IsRoutineSkip(report.ActivityLabel, report.ActivityDetail)) return;
+        if (!report.ShowInActivity || IsRoutineSkip(report.ActivityLabel, report.ActivityDetail))
+        {
+            if (preparationFinished) Status = report.Message;
+            return;
+        }
         Status = report is { ActivityLabel: { } label, ActivitySource: { } source }
             ? FormatActivityMessage(label, source, report.ActivityDetail) : report.Message;
         if (lastMessage != Status)

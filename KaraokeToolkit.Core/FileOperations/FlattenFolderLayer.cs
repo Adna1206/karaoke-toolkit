@@ -15,11 +15,13 @@ public sealed class FlattenFolderLayer
 
     public Task<ConversionResult> RunAsync(IEnumerable<string> folders,
         IProgress<ConversionProgress>? progress = null, CancellationToken token = default,
-        FolderFlattenScope scope = FolderFlattenScope.OneLayer, RecoveryVerificationMode verificationMode = RecoveryVerificationMode.Sha256, bool saveResumableRun = true) =>
+        FolderFlattenScope scope = FolderFlattenScope.OneLayer,
+        RecoveryVerificationMode verificationMode = OperationCapabilities.DefaultFileMoveRecoveryVerification, bool saveResumableRun = true) =>
         Task.Run(() => Run(folders, progress, token, scope, verificationMode: verificationMode, saveResumableRun: saveResumableRun), token);
 
     private static ConversionResult Run(IEnumerable<string> folders, IProgress<ConversionProgress>? progress, CancellationToken token,
-        FolderFlattenScope scope, bool preview = false, RecoveryVerificationMode verificationMode = RecoveryVerificationMode.Sha256, bool saveResumableRun = true)
+        FolderFlattenScope scope, bool preview = false,
+        RecoveryVerificationMode verificationMode = OperationCapabilities.DefaultFileMoveRecoveryVerification, bool saveResumableRun = true)
     {
         if (!Enum.IsDefined(scope)) throw new ArgumentOutOfRangeException(nameof(scope));
 
@@ -63,7 +65,7 @@ public sealed class FlattenFolderLayer
                 ? p with { Status = ConversionStatus.Failed, Message = "Destination collision; move will be blocked." } : p).ToArray(), false) { Found = planned.Length };
         }
         if (token.IsCancellationRequested) return new([], true);
-        progress?.Report(new(0, 0, 0, 0, "Preparing recovery for file moves…", "00:00:00"));
+        progress?.Report(new(0, 0, 0, 0, "Preparing recovery for file moves…", "00:00:00") { IsIndeterminate = true });
         {
             var mode = WorkflowSession.Current.Value?.Data.VerificationMode ?? verificationMode;
             var plan = new List<WorkflowMoveGroup>();

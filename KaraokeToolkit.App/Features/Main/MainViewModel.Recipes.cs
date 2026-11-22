@@ -69,7 +69,8 @@ public partial class MainViewModel
         try { FolderPath = launchInputs.FirstOrDefault() ?? ""; selectedInputs = launchInputs; }
         finally { settingInputs = false; }
         InputSummary = string.Join("; ", launchInputs);
-        var run = BeginRun((job == null ? "Recipe — " : "Recovery — ") + recipe.Name, "Starting recipe…");
+        var run = BeginRun((job == null ? "Recipe — " : "Recovery — ") + recipe.Name,
+            job == null ? "Starting recipe…" : "Checking interrupted recipe…", isIndeterminate: job != null);
         IsRecoveryMode = job != null;
         RecoveryMessage = job == null ? "" : "Recovery mode — resuming the saved recipe and its remaining steps.";
         try

@@ -8,9 +8,9 @@
      <PathIcon Classes="headingGlyph" Data="{x:Static shared:DialogArtwork.Recipe}"/>
      <TextBlock Text="Recipe Builder (Experimental)" Classes="heading1"/>
    </StackPanel>
-   <TextBlock Text="Experimental: review each step's settings before running. Completed changes cannot be undone as a whole recipe, and interrupted recipes do not automatically resume." TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.75"/>
+   <TextBlock Text="Review each step’s settings before running. Completed changes cannot be undone as a whole recipe." TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.75"/>
   </StackPanel>
-  <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+  <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
    <TextBox x:Name="RecipeNameField" Text="{Binding Name}" MaxLength="200" PlaceholderText="Name your recipe" AutomationProperties.Name="Recipe name">
     <TextBox.InnerRightContent>
      <Button Theme="{DynamicResource FluentTextBoxButton}" Focusable="True" Click="OpenSavedRecipes_Click"
@@ -21,10 +21,9 @@
     </TextBox.InnerRightContent>
    </TextBox>
    <Button Grid.Column="1" Content="New" Command="{Binding NewRecipeCommand}"/>
-   <Button Grid.Column="2" Content="Save" Click="Save_Click" IsEnabled="{Binding CanSave}"/>
-   <Button Grid.Column="3" Content="Delete Recipe…" Click="Delete_Click" IsEnabled="{Binding CanDeleteRecipe}"/>
-   <Button Grid.Column="4" Content="Import…" Click="Import_Click"/>
-   <Button Grid.Column="5" Content="Export…" Click="Export_Click" IsEnabled="{Binding CanSave}"/>
+   <Button Grid.Column="2" Content="Delete Recipe…" Click="Delete_Click" IsEnabled="{Binding CanDeleteRecipe}"/>
+   <Button Grid.Column="3" Content="Import…" Click="Import_Click"/>
+   <Button Grid.Column="4" Content="Export…" Click="Export_Click" IsEnabled="{Binding CanSave}"/>
   </Grid>
   <Grid Grid.Row="2" RowDefinitions="Auto,*,Auto,Auto" RowSpacing="12">
    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
@@ -45,11 +44,14 @@
    </StackPanel>
    <TextBlock Grid.Row="3" Text="{Binding StepDescription}" TextWrapping="Wrap" MaxHeight="55" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
   </Grid>
-  <TextBlock Grid.Row="3" Text="Save your recipe, then select it under Recipes (Experimental) on the home screen to choose inputs and run it. Each step uses its saved settings." TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
+  <TextBlock Grid.Row="3" Text="Run saved recipes from Recipes (Experimental) on the home screen." TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
   <Border Grid.Row="4" Classes="windowFooter dialog">
-    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{x:Static shared:WindowSpacing.FooterButtonGap}">
      <shared:StatusBar Message="{Binding Error}" Kind="{Binding StatusSeverity}" VerticalAlignment="Center"/>
-     <Button Grid.Column="1" Content="Close" Click="Close_Click"/>
+     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{x:Static shared:WindowSpacing.FooterButtonGap}">
+      <Button Content="Close" Click="Close_Click"/>
+      <Button Content="Save recipe" Classes="accent" Click="Save_Click" IsEnabled="{Binding CanSave}"/>
+     </StackPanel>
     </Grid>
   </Border>
  </Grid>

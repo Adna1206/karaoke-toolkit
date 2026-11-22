@@ -40,7 +40,7 @@ internal static class TrackGroupingExecution
     {
         string output = Path.TrimEndingDirectorySeparator(Path.GetFullPath(request.OutputFolder));
         using var lease = FileTransaction.AcquireLease(output);
-        progress?.Report(new(0, 0, approved?.Items.Count ?? 0, 0, "Checking grouping plan…", "00:00:00"));
+        progress?.Report(new(0, 0, approved?.Items.Count ?? 0, 0, "Checking grouping plan…", "00:00:00") { IsIndeterminate = true });
         var plan = Plan(request, token);
         if (approved != null && (!plan.Items.SequenceEqual(approved.Items) || !plan.Issues.SequenceEqual(approved.Issues)))
             throw new IOException("The grouping plan changed. Review a fresh preview before applying it.");
@@ -52,7 +52,7 @@ internal static class TrackGroupingExecution
             if (recovery.Find(root, true).Count > 0)
                 throw new IOException("Recover interrupted work before grouping items in: " + root);
 
-        progress?.Report(new(0, 0, plan.Items.Count, 0, "Preparing recovery for grouped items…", "00:00:00"));
+        progress?.Report(new(0, 0, plan.Items.Count, 0, "Preparing recovery for grouped items…", "00:00:00") { IsIndeterminate = true });
         var groups = plan.Items.GroupBy(i => Path.GetDirectoryName(i.Source), InputSelection.Paths)
             .SelectMany(directory => directory.GroupBy(i => i.IsDirectory
                 ? "folder:" + Path.GetFileName(i.Source)

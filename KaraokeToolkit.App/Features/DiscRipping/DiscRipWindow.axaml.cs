@@ -9,7 +9,8 @@ public partial class DiscRipWindow : Window
     public DiscRipWindow()
     {
         InitializeComponent();
-        Closing += (_, e) => { if (DataContext is DiscRipViewModel { IsBusy: true }) e.Cancel = true; };
+        _ = new BusyNavigation(this, getCancellation: () =>
+            DataContext is DiscRipViewModel model ? () => model.CancelCommand.Execute(null) : null);
         Opened += async (_, _) => { if (DataContext is DiscRipViewModel model) await model.RefreshCommand.ExecuteAsync(null); };
     }
     private async void Browse_Click(object? sender, RoutedEventArgs e)

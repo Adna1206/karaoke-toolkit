@@ -8,6 +8,9 @@ The preview animates its progress bar while scanning and preparing the preview.
 It shows item counts during grouping and item destination checks.
 The preview opens in the main workspace. **Back** returns to the selected
 operation and inputs, with confirmation if you changed the grouping settings.
+After you select **Move** or **Copy**, the footer shows an animated bar while
+the app checks the approved plan and prepares recovery. Once item processing
+begins, the item and total progress bars show completion percentages.
 
 - **Number ranges** uses a configurable range size and origin. With 50 starting
   at 1, `ABC33601` and `ABC-33650` go in `ABC-33601 to ABC-33650` when the

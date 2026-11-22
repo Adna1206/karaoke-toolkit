@@ -83,26 +83,26 @@ public class PreferenceTests
     {
         string path = Path.Combine(TestMediaFixture.NewFolder(), "settings.xmls");
         File.WriteAllText(path, """
-            <settings>
-              <section name="Options">
-                <entry name="AudioEncoder">999</entry>
-                <entry name="AutoCreateCueText">unknown</entry>
-                <entry name="RecurseFolders">False</entry>
-                <entry name="FutureOption">anything</entry>
-              </section>
-              <KaraokeToolkit>
-                <ZipCompression>future</ZipCompression>
-                <VideoResolution>future</VideoResolution>
-                <VideoFrameRate>120</VideoFrameRate>
-                <VideoBitrateKbps>6000</VideoBitrateKbps>
-                <Mp3Bitrate>999</Mp3Bitrate>
-                <OggBitrate>128</OggBitrate>
-                <OverwritePolicy>future</OverwritePolicy>
+            <KaraokeToolkit schemaVersion="1">
+              <Processing>
+                <Setting id="audio.encoder">999</Setting>
+                <Setting id="metadata.create-cue-text">unknown</Setting>
+                <Setting id="files.recurse">false</Setting>
+                <Setting id="future.option">anything</Setting>
+                <Setting id="zip.level">future</Setting>
+                <Setting id="video.resolution">future</Setting>
+                <Setting id="video.frame-rate">120</Setting>
+                <Setting id="video.bitrate">6000</Setting>
+                <Setting id="audio.mp3-bitrate">999</Setting>
+                <Setting id="audio.ogg-bitrate">128</Setting>
+                <Setting id="files.overwrite">future</Setting>
+              </Processing>
+              <Desktop>
                 <Theme>future</Theme>
                 <Backdrop>Solid</Backdrop>
                 <FavouriteOperations><Operation>AudioGToZip</Operation></FavouriteOperations>
-              </KaraokeToolkit>
-            </settings>
+              </Desktop>
+            </KaraokeToolkit>
             """);
 
         var model = new MainViewModel(path);
@@ -165,7 +165,7 @@ public class PreferenceTests
         var draft=new SettingsViewModel(reopened.Options){Theme=(int)ApplicationTheme.Dark,Overwrite=(int)OverwritePolicy.Replace,AutoCreateCueText=true};
         Assert.Equal(theme,new MainViewModel(path).Theme);Assert.False(new MainViewModel(path).Options.AutoCreateCueText);
     }
-    [Fact] public void LegacySettingsDefaultToSystemThemeAndAsk()
+    [Fact] public void MissingPreferencesDefaultToSystemThemeAndAsk()
     {
         string path=Path.Combine(TestMediaFixture.NewFolder(),"settings.xmls");new SettingsStore(path).Save(new());
         var store=new ApplicationSettingsStore(path);Assert.Equal(ApplicationTheme.System,store.LoadTheme());Assert.Equal(OverwritePolicy.Ask,store.LoadOverwritePolicy());
@@ -203,7 +203,7 @@ public class PreferenceTests
         next.Encoder=(int)AudioEncoder.AAC;Assert.Equal(224,next.Bitrate);
     }
     [Fact]
-    public void ExistingSettingsMigrateCurrentEncoderBitrate()
+    public void CurrentEncoderBitrateIsSharedWithDesktop()
     {
         string path=Path.Combine(TestMediaFixture.NewFolder(),"settings.xmls");
         new SettingsStore(path).Save(new ConversionOptions {AudioEncoder=AudioEncoder.OGG,AudioBitrate=224});

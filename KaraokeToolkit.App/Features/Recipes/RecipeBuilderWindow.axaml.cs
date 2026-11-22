@@ -1,12 +1,10 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
-using Avalonia.Layout;
-using Avalonia.Media;
+using KaraokeToolkit.App.Features.Recipes.Dialogs;
 using KaraokeToolkit.App.Shared;
 using KaraokeToolkit.Core.Recipes;
 
@@ -46,41 +44,12 @@ public partial class RecipeBuilderWindow : Window
         if (Model.SelectedSavedRecipe is not { } recipe) return;
         try
         {
-            if (await ConfirmDeleteAsync(recipe.Name)) Model.DeleteSavedRecipe(recipe.Id);
+            if (await DeleteRecipeDialog.ShowAsync(this, recipe.Name))
+            {
+                Model.DeleteSavedRecipe(recipe.Id);
+            }
         }
         catch (Exception error) { Model.SetStatus("Could not delete recipe: " + error.Message, StatusKind.Failure); }
-    }
-    private async Task<bool> ConfirmDeleteAsync(string name)
-    {
-        var dialog = new Window
-        {
-            Title = WindowTitles.For("Delete Recipe"), Width = 470, CanResize = false,
-            SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner
-        };
-        bool confirmed = false;
-        var cancel = new Button { Content = "Cancel" };
-        var delete = new Button { Content = "Delete Recipe" };
-        cancel.Click += (_, _) => dialog.Close();
-        delete.Click += (_, _) => { confirmed = true; dialog.Close(); };
-        var actions = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            HorizontalAlignment = HorizontalAlignment.Right,
-            Spacing = WindowSpacing.FooterButtonGap,
-            Children = { cancel, delete }
-        };
-        dialog.Content = new StackPanel
-        {
-            Margin = WindowSpacing.ContentInset, Spacing = 14,
-            Children =
-            {
-                new TextBlock { Text = $"Delete “{name}” from your saved recipes?\n\nUnsaved edits to this recipe will be discarded. Karaoke files and exported recipe copies will not be deleted.", TextWrapping = TextWrapping.Wrap },
-                new Border { Classes = { "windowFooter", "dialog" }, Child = actions }
-            }
-        };
-        dialog.Opened += (_, _) => cancel.Focus();
-        await ModalDialog.ShowAsync(dialog, this);
-        return confirmed;
     }
     private static FilePickerFileType RecipeFile => new("Karaoke Toolkit recipe") { Patterns = ["*.json"] };
     private async void Import_Click(object? sender, RoutedEventArgs e)

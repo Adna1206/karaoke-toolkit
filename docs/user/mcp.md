@@ -58,6 +58,8 @@ protocol initialization/tool discovery and propagates cancellation notifications
 | --- | --- |
 | `get_operations` | All Core IDs, explicit inclusion/exclusion, reasons and file-change requirements |
 | `get_settings` | Per-call safe defaults and named encoding/compression/video choices |
+| `list_settings`, `get_setting` | Effective shared processing preferences, their types and available values |
+| `set_setting` | Update a shared preference by ID with owner-enabled writes and per-call confirmation |
 | `validate_karaoke` | Read-only structural, pairing and ZIP integrity checks |
 | `preview_tags` | Existing and filename-derived metadata, without writing |
 | `plan_operation` | Read-only scope, candidate outputs and detectable conflicts |
@@ -104,7 +106,11 @@ use names. ZIP levels accept current levels 0-9 (numbers/strings) or current enu
 names; `Balanced` means 5. Omitted deletion preferences **always keep originals**,
 even when an options object is supplied. Flags/options files from CLI are not used.
 
-Desktop preferences are never loaded. For media conversions, `outputFolder` follows Core's
+Omitted processing values inherit the shared per-user profile. A saved **Ask**
+overwrite preference uses **Fail** for unattended runs. `set_setting` takes an
+ID and scalar value, for example `recovery.verification` and `XxHash128`. It
+requires `--allow-writes` and `confirmFileChanges: true`. For media conversions,
+`outputFolder` follows Core's
 separate-destination constraints: keep originals, destination outside selected
 input folders, collision protection, and `--no-cue-text`'s equivalent
 `autoCreateCueText: false` when multiple source folders share a listing destination.
@@ -120,9 +126,9 @@ lookup or enabled updater is exposed by MCP.
 
 ### File move recovery settings
 
-For grouping, alphabetical organization, and flattening, set
-`recoveryVerification` on the operation request to `Sha256`, `XxHash128`,
-`MetadataOnly`, or `None`. Set `saveResumableRun` to `false` to require manual
+For grouping, alphabetical organization, and flattening, `recoveryVerification`
+defaults to `XxHash128`. You can also set it to `Sha256`, `MetadataOnly`, or
+`None`. Set `saveResumableRun` to `false` to require manual
 review if interrupted. Defaults and recovery behavior are documented in
 [Recovery verification](crash-recovery.md#verification-settings).
 

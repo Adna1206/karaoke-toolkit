@@ -18,7 +18,7 @@ public sealed record ReportRow(ReportEntry Entry, ValidationFinding? Finding)
     public bool CanMove => Finding?.CanMove == true && Entry.Status == Finding.Status.ToString();
 }
 
-public partial class ResultsViewModel(MainViewModel owner) : ViewModelBase
+public partial class ResultsViewModel(MainViewModel owner) : ViewModelBase, IBusyViewModel
 {
     public CompletionReport Report => owner.LastReport!;
     public string Title => Report.Operation;

@@ -6,7 +6,8 @@
    <PathIcon Classes="headingGlyph" Data="{x:Static shared:DialogArtwork.DiscRip}"/>
    <TextBlock Text="CD+G ripping (experimental)" Classes="heading1" VerticalAlignment="Center"/>
   </StackPanel>
-  <TextBlock Grid.Row="1" Text="Uses cdrdao (bundled on Windows; install separately on Linux/macOS). Physical drive reading has not been hardware-tested. This requires a drive that supports CD+G subchannels. Interrupted reads must be restarted; completed tracks are retained." TextWrapping="Wrap"/>
+  <TextBlock Grid.Row="1" Text="Choose a CD+G-capable drive, tracks and an output folder. Restart interrupted reads to finish the remaining tracks." TextWrapping="Wrap"
+             ToolTip.Tip="Physical drive reading is experimental. Windows bundles cdrdao; install it separately on Linux or macOS."/>
   <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="8" IsEnabled="{Binding CanEdit}">
    <ComboBox ItemsSource="{Binding Drives}" SelectedItem="{Binding SelectedDrive}" HorizontalAlignment="Stretch"/>
    <Button Grid.Column="1" Content="Refresh" Command="{Binding RefreshCommand}"/>
@@ -21,7 +22,7 @@
     <TextBlock Text="Disc name:" VerticalAlignment="Center"/><TextBox Grid.Column="1" Text="{Binding DiscName}"/>
     <TextBlock Grid.Column="2" Text="Output:" VerticalAlignment="Center"/><ComboBox Grid.Column="3" ItemsSource="{Binding Formats}" SelectedIndex="{Binding Format}"/>
    </Grid>
-   <TextBlock Text="Audio encoding, ZIP compression and overwrite settings come from Settings. Disc data is never deleted. CUE/TXT files can be created afterwards using File Tools." TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
+   <TextBlock Text="Ripping uses the audio, ZIP and overwrite options from Settings." TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
   </StackPanel>
   <Border Grid.Row="5" Classes="windowFooter dialog">
     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
@@ -31,8 +32,9 @@
                      Value="{Binding Progress}" Maximum="100" IsIndeterminate="{Binding IsDetectingDrives}"/>
       </Grid>
       <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top" Spacing="{x:Static shared:WindowSpacing.FooterButtonGap}">
-        <Button Content="Start" Command="{Binding StartCommand}"/><Button Content="Cancel" Command="{Binding CancelCommand}"/>
-        <Button Content="Close" IsEnabled="{Binding CanEdit}" Click="Close_Click"/>
+        <Button Content="Close" Click="Close_Click"/>
+        <Button Content="Rip tracks" Classes="accent" Command="{Binding StartCommand}" IsVisible="{Binding CanEdit}"/>
+        <Button Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}"/>
       </StackPanel>
     </Grid>
   </Border>

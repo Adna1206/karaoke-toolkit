@@ -15,7 +15,8 @@ internal sealed record WorkflowData
 {
     public int Version { get; set; } = 2;
     public bool SaveResumableRun { get; set; } = true;
-    public RecoveryVerificationMode VerificationMode { get; set; }
+    // Journals written before this field was added contain SHA-256 fingerprints.
+    public RecoveryVerificationMode VerificationMode { get; set; } = RecoveryVerificationMode.Sha256;
     public RecoveryKind Kind { get; set; }
     public string[] Roots { get; set; } = [];
     public string[] Inputs { get; set; } = [];

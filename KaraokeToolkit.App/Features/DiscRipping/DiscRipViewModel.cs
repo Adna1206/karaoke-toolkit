@@ -17,7 +17,7 @@ public partial class RipTrackViewModel(DiscTrack track) : ObservableObject
     public string Label => Track.ToString();
     [ObservableProperty] public partial bool Selected { get; set; } = true;
 }
-public partial class DiscRipViewModel : ViewModelBase
+public partial class DiscRipViewModel : ViewModelBase, IBusyViewModel
 {
     private readonly IDiscReader reader;
     private readonly ConversionOptions options;

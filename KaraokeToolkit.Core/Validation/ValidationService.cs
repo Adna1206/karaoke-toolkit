@@ -25,6 +25,8 @@ public sealed class ValidationService
         {
             var watch = System.Diagnostics.Stopwatch.StartNew();
             var media = InputSelection.Media(inputs, recurse).ToArray();
+            progress?.Report(new(0, 0, media.Length, 0, "Validating karaoke files…", watch.Elapsed.ToString(@"hh\:mm\:ss"))
+                { ShowInActivity = false });
             var visited = new HashSet<string>(InputSelection.Paths);
             var findings = new List<ValidationFinding>();
             bool cancelled = false;

@@ -35,7 +35,7 @@
       <MenuItem.Icon><PathIcon Classes="menuGlyph" Data="{x:Static shared:DialogArtwork.Report}"/></MenuItem.Icon>
      </MenuItem>
      <Separator/>
-     <MenuItem Header="E_xit" Click="Exit_Click" IsEnabled="{Binding CanEdit}">
+     <MenuItem Header="E_xit" Click="Exit_Click">
       <MenuItem.Icon><PathIcon Classes="menuGlyph" Data="{x:Static shared:DialogArtwork.Exit}"/></MenuItem.Icon>
      </MenuItem>
     </MenuItem>
@@ -106,13 +106,14 @@
            ColumnSpacing="{x:Static shared:WindowSpacing.StatusProgressGap}" VerticalAlignment="Center">
       <shared:StatusBar Message="{Binding FooterStatusMessage, FallbackValue='Starting Karaoke Toolkit…'}"
                         Kind="{Binding FooterStatusKind}" VerticalAlignment="Center"/>
-      <ProgressBar Grid.Column="1" IsVisible="{Binding ShowRecoveryCheckProgress}" IsIndeterminate="True"
-                   Width="{x:Static shared:WindowSpacing.StatusProgressWidth}" VerticalAlignment="Center"/>
+      <ProgressBar Grid.Column="1" IsVisible="{Binding ShowFooterProgress}" IsIndeterminate="True"
+                   Width="{x:Static shared:WindowSpacing.StatusProgressWidth}" VerticalAlignment="Center"
+                   AutomationProperties.Name="Preparation progress"/>
      </Grid>
      <Button Grid.Column="1" Content="Recover…" Command="{Binding CheckRecoveryCommand}" IsVisible="{Binding RecoveryAvailable}"
              IsEnabled="{Binding CanEdit}" ToolTip.Tip="{Binding RecoveryMessage}"/>
      <Button Grid.Column="2" Content="View Last Run Report…" Click="Results_Click" IsEnabled="{Binding CanViewReport}"/>
-     <Button Grid.Column="3" Content="Back" Click="Back_Click" IsVisible="{Binding ShowProgress, FallbackValue=False}" IsEnabled="{Binding CanEdit}"/>
+     <Button Grid.Column="3" Content="Back" Click="Back_Click" IsVisible="{Binding ShowProgress, FallbackValue=False}"/>
      <Grid Grid.Column="4">
       <Button Content="Start" Command="{Binding StartCommand}" IsVisible="{Binding !IsBusy, FallbackValue=True}" MinWidth="105" Classes="accent"/>
       <Button Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy, FallbackValue=False}" MinWidth="105"/>

@@ -7,6 +7,7 @@ using KaraokeToolkit.Core.Audio;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.Recovery;
+using KaraokeToolkit.Core.Settings;
 using KaraokeToolkit.Core.Reporting;
 using KaraokeToolkit.Core.Tagging;
 using KaraokeToolkit.Core.Video;
@@ -15,6 +16,26 @@ namespace KaraokeToolkit.Tests.Cli;
 
 public class CliTests
 {
+    [Fact]
+    public async Task SettingsCommandsAndExplicitRunOptionsShareTheProfile()
+    {
+        string root = TestMediaFixture.NewFolder();
+        var profile = new SharedSettingsStore(Path.Combine(root, "options.xmls"));
+        var executor = new FakeExecutor();
+        var cli = new CliApplication(executor, profile: profile);
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+
+        Assert.Equal(0, await cli.RunAsync(["settings", "set", "recovery.verification", "Sha256"], output, error));
+        Assert.Equal("Sha256", profile.Get("recovery.verification", SettingsClient.Mcp).Value.ToString());
+        Assert.Equal(0, await cli.RunAsync(["run", "organize-files", root], output, error));
+        Assert.Equal(RecoveryVerificationMode.Sha256, executor.Request!.RecoveryVerification);
+        Assert.Equal(0, await cli.RunAsync(["run", "organize-files", root, "--recovery-verification", "metadata"], output, error));
+        Assert.Equal(RecoveryVerificationMode.MetadataOnly, executor.Request!.RecoveryVerification);
+        Assert.False(executor.Request.Options.DeleteOldFiles);
+        Assert.Empty(error.ToString().Replace("[50%] Working", "").Trim());
+    }
+
     [Theory]
     [InlineData("FutureUnknownOperation", "Unregistered CLI operation")]
     [InlineData("PlayAudioG", "Playback is deferred")]
@@ -39,6 +60,19 @@ public class CliTests
             if (Cancel) throw new OperationCanceledException(token);
             return Task.FromResult(Result);
         }
+    }
+
+    [Theory]
+    [InlineData(null, RecoveryVerificationMode.XxHash128)]
+    [InlineData("sha256", RecoveryVerificationMode.Sha256)]
+    public async Task FileMoveUsesDefaultOrExplicitVerification(string? option, RecoveryVerificationMode expected)
+    {
+        var executor = new FakeExecutor();
+        string[] args = option is null ? ["run", "organize-files", "folder"]
+            : ["run", "organize-files", "folder", "--recovery-verification", option];
+
+        Assert.Equal(0, await new CliApplication(executor).RunAsync(args, new StringWriter(), new StringWriter()));
+        Assert.Equal(expected, executor.Request!.RecoveryVerification);
     }
 
     [Fact]

@@ -4,11 +4,12 @@ using KaraokeToolkit.Core.DiscRipping;
 using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.Recipes;
 using KaraokeToolkit.Core.Reporting;
+using KaraokeToolkit.Core.Settings;
 
 namespace KaraokeToolkit.Cli;
 
 /// <summary>Workflow and hardware commands adapt Core services; they do not implement media processing.</summary>
-internal sealed class CliAdvancedCommands(OperationExecutionService service, IDiscReader? discReader)
+internal sealed class CliAdvancedCommands(OperationExecutionService service, IDiscReader? discReader, Func<SharedSettingsSnapshot>? loadProfile)
 {
     internal async Task<int?> TryRunAsync(string[] args, TextWriter output, TextWriter error, CancellationToken token)
     {
@@ -31,7 +32,7 @@ internal sealed class CliAdvancedCommands(OperationExecutionService service, IDi
         if (command == "quarantine")
         {
             CheckFlags(args[1..], ["json", "quiet", "report", "dry-run", "input", "recurse", "no-recurse"]);
-            var parsed = CliArguments.Parse(["validate", .. args[1..]]);
+            var parsed = CliArguments.Parse(["validate", .. args[1..]], loadProfile);
             var result = await service.QuarantineAsync(parsed.Inputs, parsed.Request!.Options.RecurseFolders,
                 parsed.Quiet ? null : new CliApplication.ConsoleProgress(error), token, parsed.DryRun);
             return await CliApplication.WriteResultAsync(parsed, result, output, error);
@@ -54,7 +55,7 @@ internal sealed class CliAdvancedCommands(OperationExecutionService service, IDi
         if (!Enum.TryParse<RipFormat>(formatText, true, out var format) || !Enum.IsDefined(format) || int.TryParse(formatText, out _)) throw new CliUsageException("--format must be Bin, AudioG or Zip.");
         string tracksText = Take(rest, "tracks") ?? "all";
         if (!rest.Remove("--experimental")) throw new CliUsageException("Pass --experimental to acknowledge experimental physical CD+G capture.");
-        var parsedRip = CliArguments.Parse(["run", "bin-to-audiog", ".", .. rest]);
+        var parsedRip = CliArguments.Parse(["run", "bin-to-audiog", ".", .. rest], loadProfile);
         if (parsedRip.Inputs.Length != 1 || parsedRip.Inputs[0] != ".") throw new CliUsageException("disc-rip takes --device and --output, not positional input paths.");
         var options = parsedRip.Request!.Options with { ExperimentalDiscRipping = true, CdrdaoExecutablePath = executable ?? parsedRip.Request.Options.CdrdaoExecutablePath };
         reader = discReader ?? new NativeDiscReader(options.CdrdaoExecutablePath);

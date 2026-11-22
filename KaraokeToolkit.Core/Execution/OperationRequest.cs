@@ -9,6 +9,8 @@ namespace KaraokeToolkit.Core.Execution;
 /// are not part of the execution request. No desktop settings are read or modified.</summary>
 public sealed record OperationRequest(OperationId OperationId, IReadOnlyList<string> Inputs)
 {
+    private RecoveryVerificationMode? recoveryVerification;
+
     public ConversionOptions Options { get; init; } = new() { DeleteOldFiles = false };
     public OverwritePolicy OverwritePolicy { get; init; } = OverwritePolicy.Fail;
     public bool ValidateBeforeConversion { get; init; }
@@ -16,7 +18,11 @@ public sealed record OperationRequest(OperationId OperationId, IReadOnlyList<str
     public string TaggingPattern { get; init; } = FilenameTagPattern.Default;
     public TaggingOptions Tagging { get; init; } = new();
     public bool SaveResumableRun { get; init; } = true;
-    public RecoveryVerificationMode RecoveryVerification { get; init; }
+    public RecoveryVerificationMode RecoveryVerification
+    {
+        get => recoveryVerification ?? OperationCapabilities.DefaultRecoveryVerification(OperationId);
+        init => recoveryVerification = value;
+    }
     public TrackGroupingOptions Grouping { get; init; } = new();
     public string OutputFolder { get; init; } = "";
 }

@@ -1,5 +1,6 @@
 using KaraokeToolkit.App.Shared;
 using KaraokeToolkit.App.Features.Main;
+using KaraokeToolkit.App.Features.Reports.Dialogs;
 using KaraokeToolkit.Core.FileOperations;
 using KaraokeToolkit.Core.Reporting;
 using System;
@@ -9,7 +10,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Layout;
 using Avalonia.Platform.Storage;
 using KaraokeToolkit.App.Services;
 using KaraokeToolkit.Core;
@@ -25,7 +25,7 @@ public partial class ResultsWindow : Window
     public ResultsWindow()
     {
         InitializeComponent();
-        Closing += (_, e) => { if (DataContext is ResultsViewModel { IsBusy: true }) e.Cancel = true; };
+        _ = new BusyNavigation(this);
     }
     public ResultsWindow(MainViewModel model) : this() => DataContext = new ResultsViewModel(model);
     private void Close_Click(object? sender, RoutedEventArgs e) => Close();
@@ -89,7 +89,7 @@ public partial class ResultsWindow : Window
             return;
         }
         string files = string.Join("\n", selection.SelectMany(f => f.Files).Select(f => f.Path));
-        if (!await ConfirmAsync("Move to Damaged", "Move these files into a unique batch beneath their source root's Damaged folder? Matching partners are kept together. Nothing is overwritten. A restore manifest is saved.\n\n" + files, "Move files"))
+        if (!await MoveFilesToDamagedDialog.ShowAsync(this, files))
             return;
         model.IsBusy = true;
         model.MessageSeverity = StatusKind.Info;
@@ -106,27 +106,5 @@ public partial class ResultsWindow : Window
         }
         catch (Exception error) { model.MessageSeverity = StatusKind.Failure; model.Message = error.Message; }
         finally { model.IsBusy = false; }
-    }
-    private async Task<bool> ConfirmAsync(string title, string text, string action)
-    {
-        bool accepted = false;
-        var dialog = new Window { Title = WindowTitles.For(title), Width = 610, SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner };
-        var cancel = new Button { Content = "Cancel" };
-        var proceed = new Button { Content = action };
-        cancel.Click += (_, _) => dialog.Close();
-        proceed.Click += (_, _) => { accepted = true; dialog.Close(); };
-        dialog.Content = new StackPanel
-        {
-            Margin = WindowSpacing.ContentInset,
-            Spacing = 18,
-            Children =
-        {
-            new ScrollViewer { MaxHeight = 350, Content = new TextBlock { Text = text, TextWrapping = Avalonia.Media.TextWrapping.Wrap } },
-            new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 12, Children = { cancel, proceed } }
-        }
-        };
-        dialog.Opened += (_, _) => cancel.Focus();
-        await ModalDialog.ShowAsync(dialog, this);
-        return accepted;
     }
 }

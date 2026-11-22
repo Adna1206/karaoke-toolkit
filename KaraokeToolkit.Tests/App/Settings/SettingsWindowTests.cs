@@ -36,7 +36,7 @@ public class SettingsWindowTests
     public void InvalidSavedDimensionsFallBackToDefaults(string width, string height)
     {
         string path = Path.Combine(TestMediaFixture.NewFolder(), "settings.xml");
-        File.WriteAllText(path, $"<profile><KaraokeToolkit><SettingsWindowWidth>{width}</SettingsWindowWidth><SettingsWindowHeight>{height}</SettingsWindowHeight></KaraokeToolkit></profile>");
+        File.WriteAllText(path, $"<KaraokeToolkit schemaVersion='1'><Desktop><SettingsWindowWidth>{width}</SettingsWindowWidth><SettingsWindowHeight>{height}</SettingsWindowHeight></Desktop></KaraokeToolkit>");
         Assert.Equal(new SettingsWindowSize(), new ApplicationSettingsStore(path).LoadSettingsWindowSize());
     }
 

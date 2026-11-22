@@ -2,8 +2,8 @@
 
 `KaraokeToolkit.Cli` is a .NET 10 console project referencing Core, with no Avalonia
 or Velopack runtime dependency. The executable is `karaoke-toolkit` (`.exe` on
-Windows). It does not launch the GUI, run in the background, load desktop preferences
-or modify saved app settings. Recipes, explicit quarantine and experimental physical
+Windows). It reads the shared per-user processing profile. Use `settings set`
+to update a saved preference. Recipes, explicit quarantine and experimental physical
 disc capture use the existing Core services.
 
 ## Running
@@ -33,6 +33,17 @@ The desktop app handles update checks. Linux packages require native runtime tes
 
 For complete workflows, see [CLI examples](cli-examples.md). Run `--help` for the
 flag reference and `operations --json` for machine-readable discovery.
+
+```powershell
+karaoke-toolkit settings list
+karaoke-toolkit settings get recovery.verification
+karaoke-toolkit settings set recovery.verification XxHash128
+```
+
+For new runs, command flags override an explicit options file, which overrides
+the shared profile. Unattended conversions keep originals unless explicitly
+requested per run. A saved **Ask** overwrite preference uses **Fail** in
+unattended runs. Recipes and recovery continue to use their own saved settings.
 
 `operations` lists supported names and Core IDs. Use `run NAME` for conversions,
 archive tools, folder tools and manifest restoration. Stable IDs such as
@@ -185,9 +196,9 @@ Quarantine is never an automatic side effect of `validate`.
 
 ## File move recovery settings
 
-Grouping, alphabetical organization and flattening accept
+Grouping, alphabetical organization and flattening default to xxHash128 and accept
 `--recovery-verification sha256|xxhash128|metadata|none` and
-`--no-batch-resume`. See [recovery verification](crash-recovery.md#verification-settings)
+`--batch-resume` or `--no-batch-resume`. See [recovery verification](crash-recovery.md#verification-settings)
 for defaults and how interrupted runs are handled.
 
 ## Track ID separator

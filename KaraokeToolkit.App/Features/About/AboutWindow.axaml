@@ -31,7 +31,6 @@
               <TextBlock Text="Avalonia · Community Toolkit · Inter&#10;FFMpegCore · SharpCompress · TagLibSharp · SkiaSharp · HarfBuzzSharp" TextWrapping="Wrap" Opacity="0.8"/>
               <TextBlock Text="FFmpeg provides audio and video processing. cdrdao provides disc reading." TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.8"/>
               <TextBlock Text="Velopack provides installation and update support." TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.8"/>
-              <TextBlock Text="Full licence texts and bundled component notices are available under Third-party notices." TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.65"/>
             </StackPanel>
           </StackPanel>
         </ScrollViewer>
@@ -42,9 +41,7 @@
                  ScrollViewer.VerticalScrollBarVisibility="Auto"/>
       </TabItem>
       <TabItem Header="Third-party notices">
-        <Grid Margin="0,16,0,0" RowDefinitions="Auto,*" RowSpacing="12">
-          <TextBlock Text="Acknowledgements, licence texts and bundled tool notices" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7" TextWrapping="Wrap"/>
-          <Grid Grid.Row="1" ColumnDefinitions="235,*" ColumnSpacing="12">
+        <Grid Margin="0,16,0,0" ColumnDefinitions="235,*" ColumnSpacing="12">
             <ListBox ItemsSource="{Binding Notices}" SelectedItem="{Binding SelectedNotice}">
               <ListBox.ItemTemplate><DataTemplate x:DataType="vm:ThirdPartyNotice">
                 <TextBlock Text="{Binding Name}" TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Margin="0,4"/>
@@ -53,7 +50,6 @@
             <TextBox Grid.Column="1" Text="{Binding NoticeText, Mode=OneWay}" IsReadOnly="True"
                      AcceptsReturn="True" TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}"
                      ScrollViewer.VerticalScrollBarVisibility="Auto"/>
-          </Grid>
         </Grid>
       </TabItem>
     </TabControl>

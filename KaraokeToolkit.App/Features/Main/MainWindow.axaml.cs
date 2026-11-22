@@ -1,15 +1,13 @@
 using KaraokeToolkit.App.Shared;
-using KaraokeToolkit.App.Services;
 using KaraokeToolkit.App.Features.Settings;
+using KaraokeToolkit.App.Features.Main.Dialogs;
 using KaraokeToolkit.App.Features.Reports;
 using KaraokeToolkit.App.Features.DiscRipping;
 using KaraokeToolkit.App.Features.About;
 using KaraokeToolkit.App.Features.Recipes;
 using KaraokeToolkit.App.Features.Tagging;
 using KaraokeToolkit.App.Features.TrackGrouping;
-using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.FileOperations;
-using KaraokeToolkit.Core.Recovery;
 using System;
 using System.Linq;
 using Avalonia.Input;
@@ -18,7 +16,6 @@ using Avalonia.Controls.Chrome;
 using Avalonia.Media;
 using Avalonia.Threading;
 using KaraokeToolkit.Core;
-using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
@@ -27,6 +24,9 @@ namespace KaraokeToolkit.App.Features.Main;
 
 public partial class MainWindow : Window
 {
+    private readonly BusyNavigation navigation;
+    private Action? cancelPreview;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -34,7 +34,7 @@ public partial class MainWindow : Window
         DragDrop.SetAllowDrop(this, true);
         AddHandler(DragDrop.DragOverEvent, OnDragOver, RoutingStrategies.Bubble, handledEventsToo: true);
         AddHandler(DragDrop.DropEvent, OnDrop, RoutingStrategies.Bubble, handledEventsToo: true);
-        Closing += (_, e) => { if (DataContext is MainViewModel { IsBusy: true }) e.Cancel = true; };
+        navigation = new(this, "Exit", GetNavigationCancellation, GetNavigationOperation);
     }
 
     internal async Task CompleteStartupAsync(MainViewModel model)
@@ -42,7 +42,7 @@ public partial class MainWindow : Window
         model.RipDiscAsync = async () =>
         {
             var dialog = new DiscRipWindow();
-            var rip = new DiscRipViewModel(model.Options, model.OverwritePolicy, resolve: (conflict, token) => ResolveConflictForOwnerAsync(dialog, conflict, token));
+            var rip = new DiscRipViewModel(model.Options, model.OverwritePolicy, resolve: (conflict, token) => OutputConflictDialog.ShowAsync(dialog, conflict, token));
             dialog.DataContext = rip;
             await ModalDialog.ShowAsync(dialog, this);
             return rip.Result;
@@ -50,16 +50,16 @@ public partial class MainWindow : Window
         model.RestoreQuarantinedFilesAsync = RestoreQuarantinedFilesAsync;
         model.ConfigureTaggingAsync = viewModel =>
         {
-            var preview = new TaggingPreviewView(viewModel, ConfirmDiscardPreviewAsync);
-            return ShowPreviewAsync(preview, preview.ReviewAsync);
+            var preview = new TaggingPreviewView(viewModel, ConfirmPreviewBackAsync);
+            return ShowPreviewAsync(preview, preview.ReviewAsync, preview.CancelPreview);
         };
         model.ConfigureTrackGroupingAsync = viewModel =>
         {
-            var preview = new TrackGroupingPreviewView(viewModel, ConfirmDiscardPreviewAsync);
-            return ShowPreviewAsync(preview, preview.ReviewAsync);
+            var preview = new TrackGroupingPreviewView(viewModel, ConfirmPreviewBackAsync);
+            return ShowPreviewAsync(preview, preview.ReviewAsync, preview.CancelPreview);
         };
-        model.ResolveConflictAsync = ResolveConflictAsync;
-        model.ConfirmRecoveryAsync = ConfirmRecoveryAsync;
+        model.ResolveConflictAsync = (conflict, token) => OutputConflictDialog.ShowAsync(this, conflict, token);
+        model.ConfirmRecoveryAsync = job => InterruptedRunDialog.ShowAsync(this, job);
         await model.CheckForRecoveryAsync();
         // Recovery briefly disables editing; focus once the home list is ready.
         if (!model.ShowProgress)
@@ -74,22 +74,40 @@ public partial class MainWindow : Window
         }
     }
 
-    private async Task<T?> ShowPreviewAsync<T>(Control preview, Func<Task<T?>> review) where T : class
+    private async Task<T?> ShowPreviewAsync<T>(Control preview, Func<Task<T?>> review, Action cancel) where T : class
     {
+        cancelPreview = cancel;
         OperationPreview.Content = preview;
         OperationWorkspace.IsVisible = false;
         OperationPreview.IsVisible = true;
         try { return await review(); }
         finally
         {
+            cancelPreview = null;
             OperationPreview.IsVisible = false;
             OperationPreview.Content = null;
             OperationWorkspace.IsVisible = true;
         }
     }
 
-    private Task<bool> ConfirmDiscardPreviewAsync() =>
-        ConfirmActionAsync("Discard preview edits?", "Going back will discard your edits to this preview.", "Discard edits");
+    private Task<bool> ConfirmPreviewBackAsync(bool isPreparing, bool hasEdits) =>
+        isPreparing ? BusyOperationDialog.ShowAsync(this, "Go back", canCancel: true, isPreview: true)
+            : hasEdits ? DiscardPreviewEditsDialog.ShowAsync(this) : Task.FromResult(true);
+
+    private Action? GetNavigationCancellation() =>
+        cancelPreview ?? (DataContext is MainViewModel { CanCancelActiveRun: true } model
+            ? () => model.CancelCommand.Execute(null) : null);
+
+    private Task? GetNavigationOperation()
+    {
+        if (DataContext is not MainViewModel model)
+            return null;
+        return new[]
+        {
+            model.StartCommand.ExecutionTask, model.CheckRecoveryCommand.ExecutionTask,
+            model.ValidateCommand.ExecutionTask, model.RunDiscRipCommand.ExecutionTask
+        }.FirstOrDefault(task => task is { IsCompleted: false });
+    }
 
     private void ConfigureWindowsTitleBar()
     {
@@ -190,9 +208,11 @@ public partial class MainWindow : Window
             }));
             if (files.Count == 0 || files[0].TryGetLocalPath() is not { } path)
                 return;
-            if (!await ConfirmActionAsync("Restore Quarantined Files", "Restore the files listed in this Damaged manifest to their original paths? Existing files will never be replaced.\n\n" + path, "Restore"))
+            if (!await RestoreQuarantinedFilesDialog.ShowAsync(this, path))
                 return;
             model.IsBusy = true;
+            model.Status = "Checking fingerprints and restoring files…";
+            model.IsRunProgressIndeterminate = true;
             await new QuarantineService().RestoreAsync(path);
             if (model.LastReport is not null)
                 new ResultsViewModel(model).Replace(model.LastReport.Entries.Where(r => r.Outputs.Contains(path)).Select(r => r with { Status = "Restored", Message = "Files restored to their original paths. Scan again before further action.", Outputs = [] }).ToArray());
@@ -200,35 +220,11 @@ public partial class MainWindow : Window
             model.StatusOutcome = RunStatus.Success;
         }
         catch (Exception error) { model.StatusOutcome = RunStatus.Failure; model.Status = "Restore stopped: " + error.Message; }
-        finally { model.IsBusy = false; }
-    }
-    private async Task<bool> ConfirmActionAsync(string title, string text, string action, Window? owner = null, bool destructive = false)
-    {
-        bool accepted = false;
-        var dialog = new Window { Title = WindowTitles.For(title), Width = 610, SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner };
-        var cancel = new Button { Content = "Cancel" };
-        var proceed = new Button { Content = action };
-        if (destructive)
-            proceed.Classes.Add("destructive");
-        cancel.Click += (_, _) => dialog.Close();
-        proceed.Click += (_, _) => { accepted = true; dialog.Close(); };
-        dialog.Content = new StackPanel
+        finally
         {
-            Margin = WindowSpacing.ContentInset,
-            Spacing = 18,
-            Children =
-        {
-            DialogArtwork.Beside(new ScrollViewer { MaxHeight = 350, Content = new TextBlock { Text = text, TextWrapping = Avalonia.Media.TextWrapping.Wrap } }, DialogArtwork.Warning, warning: destructive),
-            new Border
-            {
-                Classes = { "windowFooter", "dialog" },
-                Child = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = WindowSpacing.FooterButtonGap, Children = { cancel, proceed } }
-            }
+            model.IsRunProgressIndeterminate = false;
+            model.IsBusy = false;
         }
-        };
-        dialog.Opened += (_, _) => cancel.Focus();
-        await ModalDialog.ShowAsync(dialog, owner ?? this);
-        return accepted;
     }
     private async void Results_Click(object? sender, RoutedEventArgs e)
     {
@@ -243,7 +239,7 @@ public partial class MainWindow : Window
     }
     private async void Options_Click(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is MainViewModel { IsBusy: false } model)
+        if (DataContext is MainViewModel { IsBusy: false } model && model.RefreshSharedSettings())
         {
             var dialog = new SettingsWindow(model.Options, model.OverwritePolicy, model.Theme, model.ValidateBeforeConversion,
                 model.IgnoreLeadingTheForFileOrganization, model.AudioBitrates, model.SaveOptions, model.Backdrop, model.RememberInputFolder, model.RecoveryVerification, model.SaveResumableRun, model.CheckForUpdatesOnStartup);
@@ -263,123 +259,25 @@ public partial class MainWindow : Window
         }
         catch (Exception error) { model.StatusOutcome = RunStatus.Failure; model.Status = "Could not start recipe: " + error.Message; }
     }
-    private void Back_Click(object? sender, RoutedEventArgs e)
+    private async void Back_Click(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is MainViewModel { IsBusy: false } model)
-            model.ShowProgress = false;
+        if (DataContext is MainViewModel model)
+            await navigation.GoBackAsync(() => model.ShowProgress = false);
     }
     private void Exit_Click(object? sender, RoutedEventArgs e) => Close();
     private async void About_Click(object? sender, RoutedEventArgs e) => await ModalDialog.ShowAsync(new AboutWindow(), this);
     private async void CheckForUpdates_Click(object? sender, RoutedEventArgs e) => await CheckForUpdatesAsync(manual: true);
 
-    private async System.Threading.Tasks.Task CheckForUpdatesAsync(bool manual)
+    private async Task CheckForUpdatesAsync(bool manual)
     {
         var menuItem = CheckForUpdatesMenuItem;
         if (!menuItem.IsEnabled) return;
         var header = menuItem.Header;
         menuItem.IsEnabled = false;
         menuItem.Header = "Checking for updates…";
-        var status = new TextBlock { Text = "Checking for updates…", TextWrapping = TextWrapping.Wrap };
-        var progress = new ProgressBar { IsIndeterminate = true };
-        var updateButton = new Button { Content = "Update", Classes = { "accent" }, MinWidth = 85, IsVisible = false };
-        var dialog = CreateInfoDialog("Check for updates", status, progress, updateButton);
-        using var downloadCancellation = new CancellationTokenSource();
-        dialog.Closed += (_, _) => downloadCancellation.Cancel();
-        Task? dialogClosed = manual ? ModalDialog.ShowAsync(dialog, this) : null;
-        Task? download = null;
         try
         {
-            try
-            {
-                var (manager, isInstalled, update) = await Task.Run(UpdateService.CheckForUpdatesAsync);
-                if (downloadCancellation.IsCancellationRequested || !IsVisible ||
-                    (!manual && (update == null || DataContext is MainViewModel { IsBusy: true })))
-                    return;
-
-                status.Text = (isInstalled, update) switch
-                {
-                    (false, _) => "Install Karaoke Toolkit with Velopack to check for updates.",
-                    (true, null) => "No newer version is available.",
-                    (true, { } available) => $"Version {available.TargetFullRelease.Version} is available."
-                };
-                if (update != null)
-                {
-                    bool ready = manager.UpdatePendingRestart?.Version == update.TargetFullRelease.Version;
-                    void ShowReady()
-                    {
-                        status.Text = "Update downloaded. Restart Karaoke Toolkit to install it.";
-                        updateButton.Content = "Restart to update";
-                    }
-
-                    if (ready) ShowReady();
-                    updateButton.IsVisible = true;
-                    updateButton.Click += async (_, _) =>
-                    {
-                        if (DataContext is MainViewModel { IsBusy: true })
-                        {
-                            status.Text = "Wait for the current operation to finish before updating.";
-                            return;
-                        }
-
-                        if (ready)
-                        {
-                            try { manager.ApplyUpdatesAndRestart(update.TargetFullRelease, []); }
-                            catch (Exception error)
-                            {
-                                System.Diagnostics.Trace.TraceWarning("Could not apply update: {0}", error);
-                                status.Text = "Could not restart to install the update. Try again.";
-                            }
-                            return;
-                        }
-
-                        if (download is { IsCompleted: false }) return;
-                        download = DownloadAsync();
-                        await download;
-                    };
-
-                    async Task DownloadAsync()
-                    {
-                        updateButton.IsEnabled = false;
-                        status.Text = $"Downloading version {update.TargetFullRelease.Version}…";
-                        progress.IsIndeterminate = false;
-                        progress.Value = 0;
-                        progress.IsVisible = true;
-                        IProgress<int> report = new Progress<int>(percent =>
-                        {
-                            if (progress.IsVisible && !downloadCancellation.IsCancellationRequested)
-                                progress.Value = percent;
-                        });
-                        try
-                        {
-                            await Task.Run(() => manager.DownloadUpdatesAsync(update, report.Report, downloadCancellation.Token));
-                            if (downloadCancellation.IsCancellationRequested) return;
-                            ready = true;
-                            ShowReady();
-                        }
-                        catch (OperationCanceledException) when (downloadCancellation.IsCancellationRequested) { }
-                        catch (Exception error)
-                        {
-                            System.Diagnostics.Trace.TraceWarning("Could not download update: {0}", error);
-                            status.Text = "Could not download the update. Try again.";
-                        }
-                        finally
-                        {
-                            progress.IsVisible = false;
-                            updateButton.IsEnabled = true;
-                        }
-                    }
-                }
-            }
-            catch (Exception error)
-            {
-                System.Diagnostics.Trace.TraceWarning("GitHub Releases update check failed: {0}", error);
-                if (!manual) return;
-                status.Text = "Could not check for updates. Try again later.";
-            }
-
-            progress.IsVisible = false;
-            await (dialogClosed ?? ModalDialog.ShowAsync(dialog, this));
-            if (download != null) await download;
+            await SoftwareUpdatesDialog.CheckAsync(this, manual, () => DataContext is MainViewModel { IsBusy: true });
         }
         finally
         {
@@ -388,124 +286,5 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void Help_Click(object? sender, RoutedEventArgs e) => await ShowInfo("Help", "Choose a category and operation, add source files or folders, then click Start. Add buttons and drag-and-drop accumulate selections; Clear removes them. Star operations to find them in Favourites. Disc ripping and restoration ask for their inputs after Start.\n\nUse Tools → Settings to configure recursion, deletion, compression, encoding and existing-file handling. Output files are written beside source files unless the operation asks for a destination.\n\nCancel discards unpublished work; completed files remain. Review the event log and View Last Run Report when processing finishes.");
-    private Task ShowInfo(string title, string text) =>
-        ModalDialog.ShowAsync(CreateInfoDialog(title, new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap }), this);
-
-    private static Window CreateInfoDialog(string title, TextBlock message, ProgressBar? progress = null, Button? action = null)
-    {
-        var dialog = new Window { Title = WindowTitles.For(title), Width = 480, SizeToContent = SizeToContent.Height, CanResize = false, WindowStartupLocation = WindowStartupLocation.CenterOwner };
-        var close = new Button { Content = "Close", MinWidth = 85, HorizontalAlignment = HorizontalAlignment.Right };
-        close.Click += (_, _) => dialog.Close();
-        Control body = message;
-        if (progress != null)
-        {
-            message.VerticalAlignment = VerticalAlignment.Center;
-            progress.Width = WindowSpacing.StatusProgressWidth;
-            progress.VerticalAlignment = VerticalAlignment.Center;
-            Grid.SetColumn(progress, 1);
-            body = new Grid
-            {
-                ColumnDefinitions = new ColumnDefinitions("*,Auto"),
-                ColumnSpacing = WindowSpacing.StatusProgressGap,
-                Children = { message, progress }
-            };
-        }
-        var actions = new StackPanel
-        {
-            Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right,
-            Spacing = WindowSpacing.FooterButtonGap, Children = { close }
-        };
-        if (action != null) actions.Children.Add(action);
-        var footer = new Border { Classes = { "windowFooter", "dialog" }, Child = actions };
-        body.VerticalAlignment = VerticalAlignment.Center;
-        var artwork = title == "Help" ? DialogArtwork.Help : DialogArtwork.Update;
-        var content = new StackPanel { Margin = WindowSpacing.ContentInset, Spacing = 14, Children = { DialogArtwork.Beside(body, artwork), footer } };
-        dialog.Content = content;
-        return dialog;
-    }
-    private async Task<MainViewModel.RecoveryChoice> ConfirmRecoveryAsync(RecoveryJob job)
-    {
-        var dialog = new Window { Title = WindowTitles.For("Recovery"), Width = 580, SizeToContent = SizeToContent.Height, CanResize = false, WindowStartupLocation = WindowStartupLocation.CenterOwner };
-        var choice = MainViewModel.RecoveryChoice.Later;
-        var recover = new Button { Content = "Recover and resume", Classes = { "accent" }, MinWidth = 160, IsEnabled = job.Problem == null };
-        var later = new Button { Content = "Later", MinWidth = 90 };
-        var abandon = new Button { Content = "Abandon interrupted run…", Classes = { "destructive" } };
-        recover.Click += (_, _) => { choice = MainViewModel.RecoveryChoice.Resume; dialog.Close(); };
-        later.Click += (_, _) => dialog.Close();
-        abandon.Click += async (_, _) =>
-        {
-            if (await ConfirmActionAsync("Abandon interrupted run?",
-                $"The app will stop offering to resume this run. Any file changes already made will stay in place. Recovery files will be kept for manual inspection. A pending file transaction may still block changes in the affected folder.\n\n{job.Folder}",
-                "Abandon run", dialog, destructive: true))
-            {
-                choice = MainViewModel.RecoveryChoice.Abandon;
-                dialog.Close();
-            }
-        };
-        dialog.Content = new StackPanel
-        {
-            Margin = WindowSpacing.ContentInset,
-            Spacing = 18,
-            Children =
-            {
-                DialogArtwork.Beside(new TextBlock { Text = "A previous run was interrupted.", FontWeight = Avalonia.Media.FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center }, DialogArtwork.Recovery),
-                new TextBlock { Text = $"{job.Folder}\n\n{job.Action}\n{job.Completed} of {job.Total} {(job.Kind == RecoveryKind.Recipe ? "recipe steps" : job.Kind == RecoveryKind.Tagging ? "files" : "source groups")} recorded.", TextWrapping = Avalonia.Media.TextWrapping.Wrap },
-                new TextBlock { Text = job.Problem ?? (job.Kind == RecoveryKind.Recipe
-                    ? "Recovery uses the saved recipe snapshot, checks the interrupted step, and continues the remaining steps. Completed steps are kept, even if the recipe library has since changed."
-                    : job.Kind == RecoveryKind.Tagging ? "Recovery checks the interrupted tag publication, then tags remaining files using the saved preview and options. Completed files are kept."
-                    : job.Kind is RecoveryKind.TrackGrouping or RecoveryKind.FileMoves ? "Recovery checks interrupted copies or moves, then resumes the saved file plan. Completed groups are kept."
-                    : "Recovery checks any interrupted file publication, then resumes unfinished work with the saved action and settings. Completed groups are kept.") + " If files have changed, recovery stops and retains the recovery files. Later leaves everything as it is.", TextWrapping = Avalonia.Media.TextWrapping.Wrap },
-                new Border
-                {
-                    Classes = { "windowFooter", "dialog" },
-                    Child = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = WindowSpacing.FooterButtonGap, Children = { abandon, later, recover } }
-                }
-            }
-        };
-        dialog.Opened += (_, _) => later.Focus();
-        await ModalDialog.ShowAsync(dialog, this);
-        return choice;
-    }
-    private Task<ConflictDecision> ResolveConflictAsync(OutputConflict conflict, CancellationToken token)
-        => ResolveConflictForOwnerAsync(this, conflict, token);
-    private static async Task<ConflictDecision> ResolveConflictForOwnerAsync(Window owner, OutputConflict conflict, CancellationToken token)
-    {
-        return await Dispatcher.UIThread.InvokeAsync(async () =>
-        {
-            token.ThrowIfCancellationRequested();
-            var dialog = new Window
-            {
-                Title = WindowTitles.For("Output Conflict"),
-                Width = 570,
-                SizeToContent = SizeToContent.Height,
-                CanResize = false,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner
-            };
-            var decision = ConflictDecision.Cancel;
-            var skip = new Button { Content = "Skip", MinWidth = 90 };
-            var replace = new Button { Content = "Replace", MinWidth = 90 };
-            var cancel = new Button { Content = "Cancel conversion", MinWidth = 140 };
-            skip.Click += (_, _) => { decision = ConflictDecision.Skip; dialog.Close(); };
-            replace.Click += (_, _) => { decision = ConflictDecision.Replace; dialog.Close(); };
-            cancel.Click += (_, _) => dialog.Close();
-            dialog.Content = new StackPanel
-            {
-                Margin = WindowSpacing.ContentInset,
-                Spacing = 18,
-                Children ={
-                new TextBlock {Text="These output files already exist:",FontWeight=Avalonia.Media.FontWeight.SemiBold},
-                new ScrollViewer {MaxHeight=220,Content=new TextBlock {Text=string.Join("\n",conflict.ExistingFiles),TextWrapping=Avalonia.Media.TextWrapping.Wrap}},
-                new TextBlock {Text="Skip keeps the existing files and the source. Replace updates this output group. Change the default under Options → General.",TextWrapping=Avalonia.Media.TextWrapping.Wrap},
-                new StackPanel {Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Right,Spacing=10,Children={skip,replace,cancel}}
-            }
-            };
-            dialog.Opened += (_, _) => skip.Focus();
-            using var registration = token.Register(() => Dispatcher.UIThread.Post(() => dialog.Close()));
-            await ModalDialog.ShowAsync(dialog, owner);
-            return decision;
-        });
-    }
+    private async void Help_Click(object? sender, RoutedEventArgs e) => await OperationHelpDialog.ShowAsync(this);
 }
-
-

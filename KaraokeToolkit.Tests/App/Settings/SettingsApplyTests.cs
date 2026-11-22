@@ -4,6 +4,7 @@ using KaraokeToolkit.Core.Archives;
 using KaraokeToolkit.App.Features.Settings;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Settings;
+using KaraokeToolkit.Core.Recovery;
 using KaraokeToolkit.Core;
 using Xunit;
 
@@ -28,7 +29,8 @@ public class SettingsApplyTests
         var model = new SettingsViewModel(original, new AudioBitratePreferences(320, 320, 320, 320))
         {
             Theme = (int)ApplicationTheme.Dark, Overwrite = (int)OverwritePolicy.Replace,
-            ValidateBeforeConversion = true, IgnoreLeadingTheForFileOrganization = true
+            ValidateBeforeConversion = true, IgnoreLeadingTheForFileOrganization = true,
+            RecoveryVerification = (int)RecoveryVerificationMode.Sha256
         };
         model.MarkApplied();
         model.ResetToDefaults();
@@ -36,6 +38,7 @@ public class SettingsApplyTests
         Assert.Equal(new ConversionOptions() with { LastOutputFolder = original.LastOutputFolder, LastDiscNumber = original.LastDiscNumber }, model.ToOptions());
         Assert.Equal((int)ApplicationTheme.System, model.Theme);
         Assert.Equal((int)OverwritePolicy.Ask, model.Overwrite);
+        Assert.Equal((int)RecoveryVerificationMode.XxHash128, model.RecoveryVerification);
         Assert.False(model.ValidateBeforeConversion);
         Assert.False(model.IgnoreLeadingTheForFileOrganization);
         // A new window still receives the unchanged saved preferences if reset is cancelled.

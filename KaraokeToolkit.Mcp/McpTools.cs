@@ -3,13 +3,14 @@ using System.Text.Json;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.Recipes;
+using KaraokeToolkit.Core.Settings;
 using ModelContextProtocol;
 using ModelContextProtocol.Server;
 
 namespace KaraokeToolkit.Mcp;
 
 [McpServerToolType]
-public sealed class McpTools(McpOperationsService service, McpAccessPolicy policy)
+public sealed class McpTools(McpOperationsService service, McpAccessPolicy policy, SharedSettingsStore profile)
 {
     [McpServerTool(Name = "get_operations", ReadOnly = true, OpenWorld = false, UseStructuredContent = true)]
     [Description("Discover every Core operation, its explicit MCP exposure decision, file-change requirement and exclusion reason.")]
@@ -20,7 +21,7 @@ public sealed class McpTools(McpOperationsService service, McpAccessPolicy polic
     };
 
     [McpServerTool(Name = "get_settings", ReadOnly = true, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Discover per-call defaults, encoding choices and track grouping styles. Desktop preferences are never loaded. Use named enum values; ZIP levels are strings 0-9.")]
+    [Description("Discover built-in defaults, encoding choices and track grouping styles. Use list_settings to read the shared processing profile.")]
     public object GetSettings() => new
     {
         Defaults = new OperationRequest(OperationId.ValidateKaraoke, []),
@@ -33,30 +34,65 @@ public sealed class McpTools(McpOperationsService service, McpAccessPolicy polic
         AudioBitrates = new[] { 64, 96, 128, 160, 192, 224, 256, 320 },
         OverwritePolicies = new[] { "Fail", "Skip", "Replace" },
         RecoveryVerificationModes = Enum.GetNames<KaraokeToolkit.Core.Recovery.RecoveryVerificationMode>(),
+        OperationCapabilities.DefaultFileMoveRecoveryVerification,
         TrackGroupingMasks = new[] { "x", "X", "#", "s" },
         Notes = "Paths are local absolute paths. Originals are kept by default. Media conversions with OutputFolder keep originals. GroupByTrackId requires OutputFolder and accepts Grouping settings. Recipes use saved per-step settings; Ask is unsupported. Read-only mode is not an OS filesystem sandbox."
     };
 
+    [McpServerTool(Name = "list_settings", ReadOnly = true, OpenWorld = false, UseStructuredContent = true)]
+    [Description("List exposed shared processing preferences, types, choices and effective values.")]
+    public object ListSettings() => new { Settings = ReadSettings(() => profile.List(SettingsClient.Mcp)) };
+
+    [McpServerTool(Name = "get_setting", ReadOnly = true, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Read one effective setting by its stable ID from list_settings.")]
+    public SettingValue GetSetting(string id) => ReadSettings(() => profile.Get(id, SettingsClient.Mcp));
+
+    [McpServerTool(Name = "set_setting", ReadOnly = false, Destructive = true, OpenWorld = false, UseStructuredContent = true)]
+    [Description("Save a shared setting by ID with a typed JSON value. Requires --allow-writes and confirmFileChanges=true after user authorization.")]
+    public SettingValue SetSetting(string id, JsonElement value, bool confirmFileChanges = false) =>
+        ReadSettings(() =>
+        {
+            policy.RequireFileChanges(confirmFileChanges);
+            return profile.Set(id, value, SettingsClient.Mcp);
+        });
+
+    private static T ReadSettings<T>(Func<T> read)
+    {
+        try { return read(); }
+        catch (Exception error) when (error is ArgumentException or IOException or UnauthorizedAccessException or System.Xml.XmlException or JsonException)
+        { throw new McpException(error.Message, error); }
+    }
+
     [McpServerTool(Name = "validate_karaoke", ReadOnly = true, OpenWorld = false, UseStructuredContent = true)]
     [Description("Check local karaoke structure, pairing and ZIP integrity without moving or rewriting files. Not a playback or audio-quality test.")]
-    public Task<ExecutionResult> Validate(string[] inputs, IProgress<ProgressNotificationValue> progress, CancellationToken cancellationToken, bool recurse = true)
-        => service.RunAsync(new(OperationId.ValidateKaraoke, inputs) { Options = new() { DeleteOldFiles = false, RecurseFolders = recurse } }, false, progress, cancellationToken);
+    public Task<ExecutionResult> Validate(string[] inputs, IProgress<ProgressNotificationValue> progress, CancellationToken cancellationToken, bool? recurse = null)
+    {
+        var request = ReadSettings(profile.Load).ForUnattendedOperation(OperationId.ValidateKaraoke, inputs);
+        return service.RunAsync(request with { Options = request.Options with { RecurseFolders = recurse ?? request.Options.RecurseFolders } }, false, progress, cancellationToken);
+    }
 
     [McpServerTool(Name = "preview_tags", ReadOnly = true, OpenWorld = false, UseStructuredContent = true)]
     [Description("Read existing tags and preview filename-derived metadata without writing. Pattern tokens: %DISC%, %TRACK%, %ARTIST%, %TITLE%.")]
     public Task<ExecutionResult> PreviewTags(string[] inputs, IProgress<ProgressNotificationValue> progress, CancellationToken cancellationToken,
-        string pattern = KaraokeToolkit.Core.Tagging.FilenameTagPattern.Default, bool recurse = true)
-        => service.RunAsync(new(OperationId.PreviewTags, inputs) { TaggingPattern = pattern, Options = new() { DeleteOldFiles = false, RecurseFolders = recurse } }, false, progress, cancellationToken);
+        string? pattern = null, bool? recurse = null)
+    {
+        var request = ReadSettings(profile.Load).ForUnattendedOperation(OperationId.PreviewTags, inputs);
+        return service.RunAsync(request with
+        {
+            TaggingPattern = pattern ?? request.TaggingPattern,
+            Options = request.Options with { RecurseFolders = recurse ?? request.Options.RecurseFolders }
+        }, false, progress, cancellationToken);
+    }
 
     [McpServerTool(Name = "plan_operation", ReadOnly = true, OpenWorld = false, UseStructuredContent = true)]
     [Description("Read-only plan of an included operation's scope, outputs and detectable collisions. Does not guarantee decoding or encoding success. No source/output files or reports are written.")]
-    public Task<ExecutionResult> PlanOperation(OperationRequest request, CancellationToken cancellationToken)
-        => service.PlanAsync(request, cancellationToken);
+    public Task<ExecutionResult> PlanOperation(McpOperationRequest request, CancellationToken cancellationToken)
+        => service.PlanAsync(ReadSettings(() => request.Resolve(profile.Load())), cancellationToken);
 
     [McpServerTool(Name = "run_operation", ReadOnly = false, Destructive = true, OpenWorld = false, UseStructuredContent = true)]
     [Description("Run an explicitly included Core operation with per-call settings. File changes require owner startup --allow-writes and confirmFileChanges=true after user authorization. Returns a completion report; does not launch CLI or shell scripts.")]
-    public Task<ExecutionResult> RunOperation(OperationRequest request, IProgress<ProgressNotificationValue> progress, CancellationToken cancellationToken, bool confirmFileChanges = false)
-        => service.RunAsync(request, confirmFileChanges, progress, cancellationToken);
+    public Task<ExecutionResult> RunOperation(McpOperationRequest request, IProgress<ProgressNotificationValue> progress, CancellationToken cancellationToken, bool confirmFileChanges = false)
+        => service.RunAsync(ReadSettings(() => request.Resolve(profile.Load())), confirmFileChanges, progress, cancellationToken);
 
     [McpServerTool(Name = "run_recipe", ReadOnly = false, Destructive = true, OpenWorld = false, UseStructuredContent = true)]
     [Description("Run a supplied portable recipe with its saved step settings through Core. Every step must be MCP-included and use Fail/Skip/Replace. Requires startup --allow-writes and user-authorized confirmFileChanges=true; no arbitrary script steps.")]

@@ -10,16 +10,18 @@ namespace KaraokeToolkit.App.Features.TrackGrouping;
 public sealed partial class TrackGroupingPreviewView : UserControl
 {
     private TrackGroupingViewModel Model => (TrackGroupingViewModel)DataContext!;
-    private readonly Func<Task<bool>>? confirmDiscard;
+    private readonly Func<bool, bool, Task<bool>>? confirmBack;
     private readonly TaskCompletionSource<TrackGroupingSubmission?> decision = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     public TrackGroupingPreviewView() => InitializeComponent();
 
-    internal TrackGroupingPreviewView(TrackGroupingViewModel model, Func<Task<bool>> confirmDiscard) : this()
+    internal TrackGroupingPreviewView(TrackGroupingViewModel model, Func<bool, bool, Task<bool>> confirmBack) : this()
     {
-        this.confirmDiscard = confirmDiscard;
+        this.confirmBack = confirmBack;
         DataContext = model;
     }
+
+    internal void CancelPreview() => decision.TrySetResult(null);
 
     internal async Task<TrackGroupingSubmission?> ReviewAsync()
     {
@@ -53,8 +55,8 @@ public sealed partial class TrackGroupingPreviewView : UserControl
 
     private async void Back_Click(object? sender, RoutedEventArgs args)
     {
-        if (!Model.HasEdits || confirmDiscard != null && await confirmDiscard())
-            decision.TrySetResult(null);
+        if (confirmBack == null ? !Model.HasEdits : await confirmBack(Model.PreviewProgress.IsVisible, Model.HasEdits))
+            CancelPreview();
     }
 
     private async void Refresh_Click(object? sender, RoutedEventArgs args)

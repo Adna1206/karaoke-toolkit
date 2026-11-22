@@ -36,7 +36,8 @@ public partial class MainViewModel
                 SetInputs([job.Folder], suggestOperation: false);
             }
 
-            run = BeginRun(job != null ? "Recovery — " + title : title, job != null ? "Checking interrupted grouping…" : "Checking grouping plan…");
+            run = BeginRun(job != null ? "Recovery — " + title : title,
+                job != null ? "Checking interrupted grouping…" : "Checking grouping plan…", isIndeterminate: true);
             IsRecoveryMode = job != null;
             if (job != null)
             {

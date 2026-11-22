@@ -4,7 +4,7 @@
  <Grid Margin="{x:Static shared:WindowSpacing.ContentInset}" RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="12">
   <StackPanel Orientation="Horizontal" Spacing="10">
     <PathIcon Classes="headingGlyph" Data="{x:Static shared:DialogArtwork.Report}"/>
-    <TextBlock Text="{Binding Title}" Classes="heading1"/>
+    <TextBlock Text="{Binding Title, StringFormat='{}{0} report'}" Classes="heading1"/>
   </StackPanel>
   <TextBlock Grid.Row="1" Text="{Binding HeaderSummary}" TextWrapping="Wrap"/>
   <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="12">
@@ -28,9 +28,14 @@
   </ListBox>
   <Border Grid.Row="4" Classes="windowFooter dialog">
     <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="{x:Static shared:WindowSpacing.FooterButtonGap}">
-     <shared:StatusBar Message="{Binding Message}" Kind="{Binding MessageSeverity}" VerticalAlignment="Center"/>
+     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{x:Static shared:WindowSpacing.StatusProgressGap}" VerticalAlignment="Center">
+      <shared:StatusBar Message="{Binding Message}" Kind="{Binding MessageSeverity}" VerticalAlignment="Center"/>
+      <ProgressBar Grid.Column="1" IsVisible="{Binding IsBusy}" IsIndeterminate="True"
+                   Width="{x:Static shared:WindowSpacing.StatusProgressWidth}" VerticalAlignment="Center"
+                   AutomationProperties.Name="Quarantine progress"/>
+     </Grid>
      <Button Grid.Column="1" Content="Move Selected to Damaged…" Click="Move_Click" IsVisible="{Binding IsValidation}" IsEnabled="{Binding CanEdit}"/>
-     <Button Grid.Column="2" Content="Close" Click="Close_Click" IsEnabled="{Binding CanEdit}" MinWidth="85"/>
+     <Button Grid.Column="2" Content="Close" Click="Close_Click" MinWidth="85"/>
     </Grid>
   </Border>
  </Grid>

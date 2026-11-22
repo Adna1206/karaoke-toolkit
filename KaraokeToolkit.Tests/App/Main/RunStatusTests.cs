@@ -6,6 +6,22 @@ namespace KaraokeToolkit.Tests.App.Main;
 
 public class RunStatusTests
 {
+    [Fact]
+    public async Task CheckingTheSavedRecoveryIndexShowsFooterProgress()
+    {
+        var model = new MainViewModel(Path.Combine(TestMediaFixture.NewFolder(), "options.xmls"));
+        var footerProgress = new List<bool>();
+        model.PropertyChanged += (_, change) =>
+        {
+            if (change.PropertyName == nameof(MainViewModel.ShowFooterProgress))
+                footerProgress.Add(model.ShowFooterProgress);
+        };
+
+        await model.CheckRecoveryCommand.ExecuteAsync(null);
+
+        Assert.Equal(new[] { true, false }, footerProgress);
+    }
+
     [Theory]
     [InlineData(1, 0, 0, false, RunStatus.Success)]
     [InlineData(1, 1, 0, false, RunStatus.Warning)]

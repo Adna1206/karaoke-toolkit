@@ -2,6 +2,7 @@ using System.Text.Json;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.Recovery;
+using KaraokeToolkit.Core.Settings;
 using KaraokeToolkit.Mcp;
 using ModelContextProtocol;
 using ModelContextProtocol.Client;
@@ -12,11 +13,51 @@ namespace KaraokeToolkit.Tests.Mcp;
 /// <summary>Checks MCP exposure and write policy with fakes, plus schemas, reports and recovery through real stdio children.</summary>
 public class McpTests
 {
+    [Fact]
+    public async Task SharedSettingsWritesRequirePermissionAndRunOverridesWin()
+    {
+        string path = Path.Combine(TestMediaFixture.NewFolder(), "options.xmls");
+        File.WriteAllText(path, "<KaraokeToolkit schemaVersion='1'><Processing><Setting id='recovery.verification'>Sha256</Setting></Processing></KaraokeToolkit>");
+        var profile = new SharedSettingsStore(path);
+        var blocked = new McpAccessPolicy(false);
+        using var reader = new McpOperationsService(blocked, new FakeExecutor(), new());
+        var readOnly = new McpTools(reader, blocked, profile);
+        var writable = new McpAccessPolicy(true);
+        var executor = new FakeExecutor();
+        using var writer = new McpOperationsService(writable, executor, new());
+        var tools = new McpTools(writer, writable, profile);
+        var sha = JsonSerializer.SerializeToElement("Sha256");
+
+        Assert.Equal(RecoveryVerificationMode.XxHash128, readOnly.GetSetting("recovery.verification").Value);
+        string original = File.ReadAllText(path);
+        Assert.Throws<McpException>(() => readOnly.SetSetting("recovery.verification", sha, true));
+        Assert.Throws<McpException>(() => tools.SetSetting("recovery.verification", sha));
+        Assert.Equal(original, File.ReadAllText(path));
+        Assert.Throws<McpException>(() => tools.SetSetting("files.recurse", JsonSerializer.SerializeToElement("false"), true));
+        tools.SetSetting("recovery.verification", sha, true);
+        tools.SetSetting("files.recurse", JsonSerializer.SerializeToElement(false), true);
+
+        var sink = new ProgressSink();
+        await tools.RunOperation(JsonSerializer.Deserialize<McpOperationRequest>(
+            """{"operationId":"OrganizeFiles","inputs":["input"]}""", Program.JsonOptions)!, sink, default, true);
+        var inherited = executor.LastRequest!;
+        await tools.RunOperation(JsonSerializer.Deserialize<McpOperationRequest>(
+            """{"operationId":"OrganizeFiles","inputs":["input"],"recoveryVerification":"XxHash128","options":{"RecurseFolders":true}}""", Program.JsonOptions)!, sink, default, true);
+        var overridden = executor.LastRequest!;
+        Assert.Equal(RecoveryVerificationMode.Sha256, inherited.RecoveryVerification);
+        Assert.False(inherited.Options.RecurseFolders);
+        Assert.Equal(RecoveryVerificationMode.XxHash128, overridden.RecoveryVerification);
+        Assert.True(overridden.Options.RecurseFolders);
+        Assert.False(overridden.Options.DeleteOldFiles);
+    }
+
     private sealed class FakeExecutor : IOperationExecutor
     {
         internal int Calls;
+        internal OperationRequest? LastRequest;
         public Task<ExecutionResult> ExecuteAsync(OperationRequest request, IProgress<ConversionProgress>? progress, CancellationToken token)
         {
+            LastRequest = request;
             Calls++; token.ThrowIfCancellationRequested();
             progress?.Report(new(20, 20, 1, 0, "First", "0")); progress?.Report(new(10, 10, 1, 0, "Second", "0"));
             return Task.FromResult(new ExecutionResult(new("Test", DateTimeOffset.Now, false, []), 1, false));
@@ -107,6 +148,7 @@ public class McpTests
         var executor = new OperationExecutionService(new(TestMediaFixture.NewFolder()));
         using var writable = new McpOperationsService(new(true), executor, executor);
         var request = JsonSerializer.Deserialize<OperationRequest>(JsonSerializer.Serialize(arguments["request"]), Program.JsonOptions)!;
+        Assert.Equal(KaraokeToolkit.Core.Recovery.RecoveryVerificationMode.XxHash128, request.RecoveryVerification);
         await Assert.ThrowsAsync<McpException>(() => writable.RunAsync(request, false, null, default));
         Assert.Empty(Directory.EnumerateFileSystemEntries(destination));
         var result = await writable.RunAsync(request, true, null, default);
@@ -121,13 +163,17 @@ public class McpTests
         await using var client = await Connect();
         var tools = await client.ListToolsAsync();
         Assert.Contains(tools, t => t.Name == "run_operation"); Assert.Contains(tools, t => t.Name == "get_settings");
+        Assert.Contains(tools, t => t.Name == "list_settings");
+        Assert.Contains(tools, t => t.Name == "get_setting");
+        Assert.Contains(tools, t => t.Name == "set_setting");
         var schema = tools.Single(t => t.Name == "run_operation").JsonSchema.GetRawText();
-        Assert.Contains("request", schema); Assert.Contains("confirmFileChanges", schema);
+        Assert.Contains("request", schema); Assert.Contains("operationId", schema); Assert.Contains("confirmFileChanges", schema);
         using var operations = Json(await client.CallToolAsync("get_operations"));
         Assert.False(operations.RootElement.GetProperty("allowFileChanges").GetBoolean());
         Assert.Equal(Enum.GetValues<OperationId>().Length, operations.RootElement.GetProperty("operations").GetArrayLength());
         using var settings = Json(await client.CallToolAsync("get_settings"));
         Assert.Equal(320, settings.RootElement.GetProperty("defaults").GetProperty("options").GetProperty("audioBitrate").GetInt32());
+        Assert.Equal("XxHash128", settings.RootElement.GetProperty("defaultFileMoveRecoveryVerification").GetString());
         string root = TestMediaFixture.NewFolder(); TestMediaFixture.Seed(root, OperationId.ZipToBin, "keep");
         var result = await client.CallToolAsync("run_operation", new Dictionary<string, object?>
         { ["request"] = new { operationId = "ZipToAudioG", inputs = new[] { root } }, ["confirmFileChanges"] = true });

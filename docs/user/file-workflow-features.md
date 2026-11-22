@@ -148,6 +148,10 @@ reopening the app.
 
 Start is disabled while showing the completed/cancelled results screen. Use **Back**
 to choose the next operation; **Retry failed** remains an explicit results action.
+During processing, **Back** or **Exit** asks whether to keep working or cancel
+and leave. The operation continues while you decide. After confirmation, the
+app waits for a safe stopping point. For work without cancellation, it offers
+to leave after the operation finishes.
 
 ## Remember the last input folder
 
@@ -201,6 +205,10 @@ a separate main-panel button. It reports:
 | Unsupported | The archive layout or feature is unsupported; extra files may be usable. |
 | Unreadable | Access failed or files changed during the scan. |
 
+Validation and conversion show an animated footer bar while finding source
+files. Once the source count is known, the item and total progress bars show
+processing progress.
+
 ZIP checks read entries and verify CRCs without extracting. BIN/CDG checks verify
 sector/packet structure. Validation does not decode audio, listen to tracks, render
 graphics or certify sync/quality. Non-ZIP archives are reported as unsupported and
@@ -217,7 +225,8 @@ enabled regardless. The preference persists and is retained for retries and cras
 No result causes an automatic move. In Results, explicitly select issues and choose
 **Move selected to Damaged…**, then review the file list and confirm. Both members of
 a matching pair move together. Valid/unreadable findings cannot be moved this way.
-Files are fingerprinted again before moving; changed files are refused.
+Files are fingerprinted again before moving; changed files are refused. The
+footer shows an animated bar while moving files to Damaged or restoring them.
 
 Each group goes to `source-root/Damaged/<unique-batch>/files/<original-relative-path>`.
 The unique batch prevents name collisions. A `manifest.json` is written before the

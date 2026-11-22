@@ -5,11 +5,12 @@ using KaraokeToolkit.Core;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.DiscRipping;
+using KaraokeToolkit.Core.Settings;
 
 namespace KaraokeToolkit.Cli;
 
 /// <summary>Console adapter only. All file-processing rules remain in Core.</summary>
-public sealed class CliApplication(IOperationExecutor? executor = null, IDiscReader? discReader = null)
+public sealed class CliApplication(IOperationExecutor? executor = null, IDiscReader? discReader = null, SharedSettingsStore? profile = null)
 {
     private readonly IOperationExecutor executor = executor ?? new OperationExecutionService();
     public static JsonSerializerOptions JsonOptions { get; } = new() { WriteIndented = true, Converters = { new JsonStringEnumConverter() } };
@@ -19,9 +20,12 @@ public sealed class CliApplication(IOperationExecutor? executor = null, IDiscRea
         bool json = args.TakeWhile(a => a != "--").Contains("--json");
         try
         {
-            var advanced = await new CliAdvancedCommands(executor as OperationExecutionService ?? new(), discReader).TryRunAsync(args, output, error, token);
+            if (args.Length > 0 && args[0] == "settings")
+                return await RunSettingsAsync(args[1..], output, token);
+            Func<SharedSettingsSnapshot>? loadProfile = profile == null ? null : profile.Load;
+            var advanced = await new CliAdvancedCommands(executor as OperationExecutionService ?? new(), discReader, loadProfile).TryRunAsync(args, output, error, token);
             if (advanced is { } advancedCode) return advancedCode;
-            var parsed = CliArguments.Parse(args); json = parsed.Json;
+            var parsed = CliArguments.Parse(args, loadProfile); json = parsed.Json;
             if (parsed.Command == "help") { await output.WriteLineAsync(CliHelp.For(parsed.HelpTopic)); return 0; }
             if (parsed.Command == "version") { await output.WriteLineAsync(ApplicationInfo.Version); return 0; }
             if (parsed.Command == "operations")
@@ -56,6 +60,32 @@ public sealed class CliApplication(IOperationExecutor? executor = null, IDiscRea
         { await Failure(output, error, json, failure.Message, 2); return 2; }
         catch (Exception failure)
         { await Failure(output, error, json, failure.Message, 1); return 1; }
+    }
+
+    private async Task<int> RunSettingsAsync(string[] args, TextWriter output, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        var store = profile ?? SharedSettingsStore.ForCurrentUser();
+        switch (args)
+        {
+            case [] or ["--help"] or ["-h"]:
+                await output.WriteLineAsync("Usage: karaoke-toolkit settings list | get ID | set ID VALUE");
+                break;
+            case ["list"]:
+                foreach (var setting in store.List(SettingsClient.Cli))
+                    await output.WriteLineAsync($"{setting.Id} = {setting.Value} ({setting.Type})");
+                break;
+            case ["get", var id]:
+                await output.WriteLineAsync(store.Get(id, SettingsClient.Cli).Value.ToString());
+                break;
+            case ["set", var id, var value]:
+                var saved = store.Set(id, value, SettingsClient.Cli);
+                await output.WriteLineAsync($"{saved.Id} = {saved.Value}");
+                break;
+            default:
+                throw new CliUsageException("Use settings list, settings get ID, or settings set ID VALUE.");
+        }
+        return 0;
     }
 
     internal static async Task<int> WriteResultAsync(CliArguments parsed, ExecutionResult result, TextWriter output, TextWriter error)
@@ -108,6 +138,7 @@ public sealed class CliApplication(IOperationExecutor? executor = null, IDiscRea
           karaoke-toolkit disc-rip --device DEVICE --output FOLDER --disc-name NAME --experimental
           karaoke-toolkit completion powershell|bash|zsh
           karaoke-toolkit path powershell|bash|zsh
+          karaoke-toolkit settings list | get ID | set ID VALUE
           karaoke-toolkit help [COMMAND|OPERATION]
           karaoke-toolkit --version
 
@@ -121,21 +152,21 @@ public sealed class CliApplication(IOperationExecutor? executor = null, IDiscRea
         Processing:
           --dry-run                    Read-only plan; not an encoding guarantee
           --output FOLDER              Media conversions and Group by Track ID
-          --options FILE.json          Typed ConversionOptions; flags override the file
-          --overwrite fail|skip|replace (default fail; Ask is unsupported)
+          --options FILE.json          Override shared processing settings; flags override the file
+          --overwrite fail|skip|replace (saved Ask uses fail)
           --delete-originals | --keep-originals (default keep)
           --recurse | --no-recurse      (default recurse)
           --cue-text | --no-cue-text    (default generate where applicable)
-          --validate-inputs            Additional source validation
+          --validate-inputs | --no-validate-inputs
           --encoder MP3|OGG|WMA|WAV|FLAC|AAC   --bitrate KBPS (default MP3, 320)
           --zip-algorithm Deflate|BZip2|LZMA   --zip-level 0..9 (default 5)
-          --ignore-leading-the         Organize Files bucket rule
+          --ignore-leading-the | --no-ignore-leading-the (Organize Files)
           Deflate is the default; legacy karaoke software generally prefers it.
           Shared processing settings apply where supported by the chosen operation.
           Organize Files always recurses; Organize Folders groups immediate children.
           Flatten depth is chosen by the operation, independently of --no-recurse.
-          --recovery-verification sha256|xxhash128|metadata|none (file organization and grouping)
-          --no-batch-resume            Retain interrupted file move records for manual review
+          --recovery-verification sha256|xxhash128|metadata|none (default xxhash128 for file moves and grouping)
+          --batch-resume | --no-batch-resume  Override the saved file move preference
           See help group-by-track-id for track grouping and folder naming options.
         Tagging:
           --pattern "%DISC%-%TRACK% - %ARTIST% - %TITLE%"

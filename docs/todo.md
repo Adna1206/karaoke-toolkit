@@ -69,6 +69,15 @@
   file operations and that settings, recipes and recovery data survive restart.
   See [updates](distribution/updates.md).
 
+- [ ] **Programmatic tool calling and long-running MCP jobs** — test client-side
+  composition of existing typed tools and compare it with a single `run_recipe`
+  call for a fixed workflow. Separately prototype opt-in task handles for long
+  batches and recipes using the official [.NET Tasks extension](https://csharp.sdk.modelcontextprotocol.io/v2/concepts/tasks/tasks.html).
+  Verify client support, polling, cancellation, final reports, stdio disconnects,
+  and the fallback to ordinary calls with progress. Preserve per-call write
+  confirmation and Core recovery journals. Keep the server client-launched
+  and local and keep program execution on the client side.
+
 - [ ] **macOS packaging via GitHub Actions** — consider macOS runners to publish
   Apple Silicon builds and run Velopack's macOS packaging tools, with
   downloadable workflow artifacts. Review native dependency availability and

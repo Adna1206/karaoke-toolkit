@@ -31,9 +31,13 @@ GitHub-enabled build installed first to see releases on GitHub. Applying updates
 must wait for file operations to finish.
 
 On Windows, settings and favourites, saved recipes, and the recovery index now
-live in `%LOCALAPPDATA%\KaraokeToolkitData`. Startup copies surviving files from
-the old `%LOCALAPPDATA%\KaraokeToolkit` directory into missing destinations.
-The installed app and the CLI/MCP use the same recovery index location.
+live in `%LOCALAPPDATA%\KaraokeToolkitData`. The toolkit starts from defaults in
+`settings.xml` and removes the former `options.xmls` once the new profile is
+ready. To retain the old preferences for a downgrade, copy `options.xmls`
+before starting the new version. Startup copies surviving recipes and recovery
+entries from the old `%LOCALAPPDATA%\KaraokeToolkit` directory into missing
+destinations. The installed app and the CLI/MCP use the same recovery index
+location.
 
 Before upgrading from a version that stores data in the install directory,
 close the installed app and launch the new portable Windows build once. This

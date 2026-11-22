@@ -13,10 +13,15 @@ public sealed class McpConversionOptionsConverter : JsonConverter<ConversionOpti
     public override ConversionOptions Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         using var document = JsonDocument.ParseValue(ref reader);
-        if (document.RootElement.ValueKind != JsonValueKind.Object) throw new JsonException("Options must be an object.");
-        var result = new ConversionOptions { DeleteOldFiles = false };
+        return ReadOptions(document.RootElement, new ConversionOptions { DeleteOldFiles = false }, options);
+    }
+
+    internal static ConversionOptions ReadOptions(JsonElement document, ConversionOptions defaults, JsonSerializerOptions options)
+    {
+        if (document.ValueKind != JsonValueKind.Object) throw new JsonException("Options must be an object.");
+        var result = defaults with { };
         var seen = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var field in document.RootElement.EnumerateObject())
+        foreach (var field in document.EnumerateObject())
         {
             var property = Properties.SingleOrDefault(p => field.Name == p.Name || field.Name == JsonNamingPolicy.CamelCase.ConvertName(p.Name))
                 ?? throw new JsonException("Unknown conversion option: " + field.Name);

@@ -34,7 +34,7 @@ public sealed partial class OperationExecutionService(RecoveryStore? recovery = 
         if (request.OperationId == Action.GroupByTrackId)
             return await ExecuteGroupingAsync(request, null, progress, token);
         if ((request.RecoveryVerification != RecoveryVerificationMode.Sha256 || !request.SaveResumableRun) &&
-            request.OperationId is not (Action.OrganizeFiles or Action.OrganizeFolders or Action.FlattenOneLayer or Action.FlattenAllLayers))
+            !OperationCapabilities.SupportsFileMoveRecoveryOptions(request.OperationId))
             throw new ArgumentException("This operation does not support a recovery verification override.");
         var operation = OperationCatalog.Get(request.OperationId);
         if (!operation.CanRunUnattended) throw new NotSupportedException("This operation has no unattended execution contract: " + operation.Identifier);

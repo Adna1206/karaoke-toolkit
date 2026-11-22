@@ -5,7 +5,7 @@ namespace KaraokeToolkit.Tests.Settings;
 public class UserDataPathsTests
 {
     [Fact]
-    public void WindowsCopiesUserDataOutOfSetupDirectoryWithoutReplacingNewSettings()
+    public void WindowsCopiesRecipesAndRecoveryWithoutReplacingSettings()
     {
         string localData = TestMediaFixture.NewFolder();
         string legacy = Path.Combine(localData, "KaraokeToolkit");
@@ -14,14 +14,14 @@ public class UserDataPathsTests
         Directory.CreateDirectory(Path.Combine(legacy, "Recovery"));
         Directory.CreateDirectory(data);
         File.WriteAllText(Path.Combine(legacy, "options.xmls"), "legacy options");
-        File.WriteAllText(Path.Combine(data, "options.xmls"), "new options");
+        File.WriteAllText(Path.Combine(data, "settings.xml"), "new options");
         File.WriteAllText(Path.Combine(legacy, "Recipes", "recipe.json"), "recipe");
         File.WriteAllText(Path.Combine(legacy, "Recovery", "job.json"), "index");
 
         string settings = UserDataPaths.DesktopSettingsPath(localData, windows: true);
         string recovery = UserDataPaths.RecoveryDirectory(localData, windows: true);
 
-        Assert.Equal(Path.Combine(data, "options.xmls"), settings);
+        Assert.Equal(Path.Combine(data, "settings.xml"), settings);
         Assert.Equal("new options", File.ReadAllText(settings));
         Assert.Equal("legacy options", File.ReadAllText(Path.Combine(legacy, "options.xmls")));
         Assert.Equal("recipe", File.ReadAllText(Path.Combine(data, "Recipes", "recipe.json")));
@@ -35,7 +35,7 @@ public class UserDataPathsTests
     [Theory]
     [InlineData(true, "KaraokeToolkitData")]
     [InlineData(false, "KaraokeToolkit")]
-    public void LegacyOptionsSurviveAtTheResolvedPath(bool windows, string folder)
+    public void ResolvingTheNewProfileDoesNotImportLegacyOptions(bool windows, string folder)
     {
         string localData = TestMediaFixture.NewFolder();
         string legacy = Path.Combine(localData, "KaraokeToolkit");
@@ -44,7 +44,8 @@ public class UserDataPathsTests
 
         string path = UserDataPaths.DesktopSettingsPath(localData, windows);
 
-        Assert.Equal(Path.Combine(localData, folder, "options.xmls"), path);
-        Assert.Equal("existing preferences", File.ReadAllText(path));
+        Assert.Equal(Path.Combine(localData, folder, "settings.xml"), path);
+        Assert.False(File.Exists(path));
+        Assert.Equal("existing preferences", File.ReadAllText(Path.Combine(legacy, "options.xmls")));
     }
 }

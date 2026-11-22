@@ -30,8 +30,9 @@ public partial class MainViewModel
                 if (request == null) return;
             }
             // Remember only combinations accepted by the user, preserving processing settings atomically.
-            if (request != null) store.Save(Options, taggingPatterns: store.LoadTaggingPatterns().Append(request.Pattern).Distinct(StringComparer.Ordinal).ToArray(), lastTaggingPattern: request.Pattern);
-            run = BeginRun(job == null ? "Tag Karaoke Files" : "Recovery — Tag Karaoke Files", "Applying tags…");
+            if (request != null) store.Save(taggingPatterns: store.LoadTaggingPatterns().Append(request.Pattern).Distinct(StringComparer.Ordinal).ToArray(), lastTaggingPattern: request.Pattern);
+            run = BeginRun(job == null ? "Tag Karaoke Files" : "Recovery — Tag Karaoke Files",
+                job == null ? "Applying tags…" : "Checking interrupted tagging…", isIndeterminate: job != null);
             IsRecoveryMode = job != null;
             RecoveryMessage = job == null ? "" : "Recovery mode — resuming the saved tagging preview and remaining files.";
             if (job != null) SelectedOperation = Operations.Single(o => o.IsTagging);
