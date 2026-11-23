@@ -1,6 +1,6 @@
 # Group by Track ID
 
-In **File & Folder Tools**, select files or folders and open **Group by Track
+In **Folder Tools**, select files or folders and open **Group by Track
 ID**. Choose whether to scan folders for files, with optional recursion, or
 group each selected folder as a whole. Whole folders keep their contents and
 names. Files keep their names and matching audio and graphics are grouped together.

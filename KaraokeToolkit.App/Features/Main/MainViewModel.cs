@@ -85,7 +85,7 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
         var normalized = SelectedOperation?.IsTagging == true ? KaraokeToolkit.Core.Tagging.KaraokeTaggingService.NormalizeInputs(paths)
             : SelectedOperation?.Recipe is { } recipe
             ? KaraokeToolkit.Core.Recipes.RecipeOperations.NormalizeInputs(recipe, paths)
-            : SelectedOperation is { IsOrganizer: true } or { IsFlatten: true } or { IsTrackGrouping: true }
+            : SelectedOperation is { IsOrganizer: true } or { IsFlatten: true } or { IsTrackGrouping: true } or { IsAudioAdjustment: true }
             ? paths.Select(p => Path.TrimEndingDirectorySeparator(Path.GetFullPath(p))).Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal).ToArray()
             : InputSelection.Normalize(paths);
         if (normalized.Length == 0 || normalized.Any(p => !File.Exists(p) && !Directory.Exists(p)))
@@ -103,7 +103,7 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
         InputSummary = normalized.Length == 1 ? "Selected: " + normalized[0] : normalized.Length + " selected inputs: " + string.Join("; ", normalized.Select(Path.GetFileName));
         var extensions = normalized.Where(File.Exists).Select(p => Path.GetExtension(p).ToLowerInvariant()).Distinct().ToArray();
         if (suggestOperation && SelectedOperation is not { IsOrganizer: true } and not { IsFlatten: true } and not { IsRecipe: true } and
-            not { IsTagging: true } and not { IsTrackGrouping: true } and not { IsFilenameRename: true } && normalized.All(File.Exists))
+            not { IsTagging: true } and not { IsTrackGrouping: true } and not { IsFilenameRename: true } and not { IsAudioAdjustment: true } && normalized.All(File.Exists))
         {
             if (extensions.All(e => e == ".zip") && SelectedOperation?.Action != Action.RepackZip)
                 SelectedOperation = Operations.First(x => x.Action == Action.ZipToAudioG);
@@ -384,8 +384,12 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
             foreach (var operation in Operations) operation.IsFavourite = operation.Available && favouriteIds.Contains(operation.Id);
             var sections = store.LoadOperationSections();
             foreach (var group in OperationSections)
+            {
+                bool defaultExpanded = group.Section is not (OperationSection.FileTools or OperationSection.FolderTools) ||
+                    sections.GetValueOrDefault(ApplicationSettingsStore.LegacyFileAndFolderSectionKey, true);
                 group.IsExpanded = group.Section == SelectedOperation?.Section ||
-                    !sections.TryGetValue(group.Section.ToString(), out bool expanded) || expanded;
+                    sections.GetValueOrDefault(group.Section.ToString(), defaultExpanded);
+            }
         }
         catch (Exception e) { Status = "Could not load options: " + e.Message; }
         foreach (var operation in Operations)
@@ -548,6 +552,11 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
             await RunTaggingAsync();
             return;
         }
+        if (SelectedOperation?.IsAudioAdjustment == true)
+        {
+            await RunAudioGainAsync();
+            return;
+        }
         if (SelectedOperation?.IsTrackGrouping == true)
         {
             await RunTrackGroupingAsync();
@@ -648,6 +657,7 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
             else if (resume.Kind == RecoveryKind.Tagging) await RunTaggingAsync(resume);
             else if (resume.Kind == RecoveryKind.FileMoves) await RunFileOperationAsync(resume);
             else if (resume.Kind == RecoveryKind.TrackGrouping) await RunTrackGroupingAsync(resume);
+            else if (resume.Kind == RecoveryKind.AudioGain) await RunAudioGainAsync(resume);
             else await ExecuteAsync(resume);
         }
         catch (Exception error) { StatusOutcome = RunStatus.Failure; Status = "Recovery stopped: " + error.Message; }

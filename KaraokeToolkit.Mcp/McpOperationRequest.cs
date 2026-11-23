@@ -26,11 +26,19 @@ public sealed record McpOperationRequest
     public RecoveryVerificationMode? RecoveryVerification { get; init; }
     public FileCheckTiming? CheckTiming { get; init; }
     public TrackGroupingOptions? Grouping { get; init; }
+    [Description("normalize-audio-gain settings. Mode is Loudness, Peak or Offset. TargetLufs defaults to -16 and PeakCeilingDbtp defaults to -1.")]
+    public AudioGainOptions? AudioGain { get; init; }
+    [Description("change-audio-key settings. Use signed whole Semitones from -12 to +12.")]
+    public AudioKeyOptions? AudioKey { get; init; }
     public string? OutputFolder { get; init; }
 
     internal OperationRequest Resolve(SharedSettingsSnapshot profile)
     {
         var request = profile.ForUnattendedOperation(OperationId, Inputs);
+        if (AudioGain != null && OperationId != OperationId.NormalizeAudioGain)
+            throw new ArgumentException("AudioGain settings require normalize-audio-gain.");
+        if (AudioKey != null && OperationId != OperationId.ChangeAudioKey)
+            throw new ArgumentException("AudioKey settings require change-audio-key.");
         var processing = Options is { } explicitOptions
             ? McpConversionOptionsConverter.ReadOptions(explicitOptions, request.Options, Program.JsonOptions)
             : request.Options;
@@ -44,6 +52,8 @@ public sealed record McpOperationRequest
         {
             Options = processing,
             Grouping = Grouping ?? request.Grouping,
+            AudioGain = AudioGain ?? request.AudioGain,
+            AudioKey = AudioKey,
             OverwritePolicy = OverwritePolicy ?? request.OverwritePolicy,
             ValidateBeforeConversion = ValidateBeforeConversion ?? request.ValidateBeforeConversion,
             IgnoreLeadingThe = IgnoreLeadingThe ?? request.IgnoreLeadingThe,

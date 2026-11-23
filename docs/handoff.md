@@ -1,5 +1,92 @@
 # Current handoff
 
+## Audio tools checkpoint
+
+2026-11-23, `master`, version 2026.11.18. The commit containing this checkpoint
+records the work after `addb2d7`: batch audio gain and key changes in Desktop,
+CLI and MCP, single-track karaoke ZIP support, and the File Tools and Folder
+Tools split. The version stays at 2026.11.18.
+See [Audio gain and key changes](user/audio-gain.md).
+
+The final StandaloneTests Release build passed without warnings, and the
+serial Windows test run below passed 888/888. The final key-change preview
+was rendered at minimum desktop width. The two-version updater check is
+the next open verification. Native Linux and macOS checks remain open.
+
+## Change Audio Key
+
+2026-11-23, `master` at `addb2d7`, version 2026.11.18. Uncommitted changes
+add **File Tools → Change Audio Key** and `change-audio-key` for CLI and MCP.
+The desktop uses the shared grouping-style preview. The FFmpeg wrapper shifts
+pitch by whole semitones from −12 to +12 and retains the decoded track length
+before encoding. The operation applies no gain or peak adjustment. It
+publishes copies of loose audio and single-track karaoke ZIPs, keeps CDG
+payloads intact, and saves the approved shift for recovery.
+See [Change Audio Key](user/audio-gain.md#change-audio-key).
+
+The StandaloneTests Release rebuild passed without warnings. With local
+test-host access, `dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj
+-c Release --no-build --no-restore -p:UsedAvaloniaProducts=
+-p:ArtifactBuildName=StandaloneTests --blame-hang-timeout 25s
+--blame-hang-dump-type none --results-directory artifacts/tests/results
+-- xUnit.ParallelizeTestCollections=false` passed 888/888. Tests checked pitch,
+decoded WAV length, cue timing, ZIP and loose CDG bytes, recovery, and that a
+loud MP3 succeeds without the gain tool's ceiling. An isolated Avalonia render
+checked the final preview at minimum desktop width. Native Linux and macOS
+checks and the two-version updater check remain open.
+
+## Audio gain for karaoke ZIPs
+
+2026-11-23, `master` at `addb2d7`, version 2026.11.18. Uncommitted changes
+let Desktop, CLI and MCP measure and adjust a single audio/CDG pair in a
+karaoke ZIP. Core rebuilds and verifies the archive in the existing destination
+transaction. CDG and extra entry payloads are preserved. See
+[Normalize Audio Gain](user/audio-gain.md).
+
+The StandaloneTests Release build passed without warnings. The local test-host
+run with `--filter 'FullyQualifiedName~AudioGain|FullyQualifiedName~Tests.Archives'`
+passed 100/100. The broader run hit a stalled MKV probe and truncated WebM
+probe JSON in existing tagging tests. A separate
+`--filter 'FullyQualifiedName~KaraokeTaggingTests' --blame-hang-timeout 25s`
+rerun passed 25/25. The ZIP picker filter was covered by a desktop view-model
+test. Live ZIP UI interaction and non-Windows runtime checks remain open.
+
+## File Tools and Folder Tools
+
+2026-11-23, `master` at `addb2d7`, version 2026.11.18. Uncommitted desktop
+changes split the combined category. File Tools contains filename changes,
+tagging, and audio gain. Folder Tools contains grouping and flattening. The
+two categories inherit the legacy expansion preference until saved separately.
+Operation IDs and favourites keep their existing keys.
+
+The StandaloneTests Release rebuild passed without warnings. The serial
+Windows `dotnet test` run with local test-host access and
+`--filter 'FullyQualifiedName~Tests.App|FullyQualifiedName~OptInPersistsAndIsHiddenByDefault'`
+passed 175/175. The category split was verified by desktop view-model tests.
+The two-version updater check remains open.
+
+## Normalize Audio Gain
+
+2026-11-23, `master` at `addb2d7`, version 2026.11.18. Uncommitted
+changes add a grouping-style desktop preview and the `normalize-audio-gain`
+operation in CLI and MCP. Core uses the existing FFMpegCore wrapper for
+integrated loudness and true-peak measurements and constant gain. It stages
+adjusted MP3, AAC, ALAC, WAV, FLAC, WMA and Ogg Vorbis copies with any matching
+CDG. The saved plan lets interrupted runs resume from verified copies.
+See [Normalize Audio Gain](user/audio-gain.md).
+
+The StandaloneTests Release build passed without warnings. With local test-host
+access, `dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj -c Release
+--no-build --no-restore -p:UsedAvaloniaProducts= -p:ArtifactBuildName=StandaloneTests
+-- xUnit.ParallelizeTestCollections=false` passed 877/877, including fixed gain
+and true-peak output for eight format variants. An isolated Avalonia render
+at the desktop minimum width showed two measured tracks and the Apply Gain
+action. The desktop entry moved to File & Folder Tools. The Release rebuild
+passed without warnings, and the same test command with
+`--filter 'FullyQualifiedName~App.Metadata|FullyQualifiedName~AudioGainViewModelTests'`
+passed 5/5. Native Linux and macOS runs remain unverified. Next, run the open
+two-version updater check.
+
 ## Commit checkpoint
 
 2026-11-23, `master`, version 2026.11.18. The recovery, hashing, desktop

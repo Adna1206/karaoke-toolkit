@@ -7,6 +7,7 @@ using KaraokeToolkit.App.Features.DiscRipping;
 using KaraokeToolkit.App.Features.About;
 using KaraokeToolkit.App.Features.Recipes;
 using KaraokeToolkit.App.Features.Tagging;
+using KaraokeToolkit.App.Features.AudioGain;
 using KaraokeToolkit.App.Features.FilenameRename;
 using KaraokeToolkit.App.Features.TrackGrouping;
 using KaraokeToolkit.Core.FileOperations;
@@ -55,6 +56,12 @@ public partial class MainWindow : Window
             var preview = new TaggingPreviewView(viewModel, ConfirmPreviewBackAsync);
             return ShowPreviewAsync(preview, preview.ReviewAsync, preview.CancelPreview);
         };
+        model.PickAudioGainDestinationAsync = PickAudioGainDestinationAsync;
+        model.ConfigureAudioGainAsync = viewModel =>
+        {
+            var preview = new AudioGainPreviewView(viewModel, ConfirmPreviewBackAsync, PickAudioGainDestinationAsync);
+            return ShowPreviewAsync(preview, preview.ReviewAsync, preview.CancelPreview);
+        };
         model.ConfigureTrackGroupingAsync = viewModel =>
         {
             var preview = new TrackGroupingPreviewView(viewModel, ConfirmPreviewBackAsync);
@@ -95,6 +102,17 @@ public partial class MainWindow : Window
             await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
             if (IsVisible) await CheckForUpdatesAsync(manual: false);
         }
+    }
+
+    private async Task<string?> PickAudioGainDestinationAsync()
+    {
+        var folders = await ModalDialog.RunAsync(this, () => StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Choose a folder for the adjusted audio copies",
+            AllowMultiple = false
+        }));
+        using var folder = folders.FirstOrDefault();
+        return folder?.TryGetLocalPath();
     }
 
     private async Task<T?> ShowPreviewAsync<T>(Control preview, Func<Task<T?>> review, Action cancel) where T : class

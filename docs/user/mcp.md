@@ -182,6 +182,45 @@ review destinations before applying the move with `run_operation`.
 
 Use Desktop for **Rename by Filename Pattern** previews and runs.
 
+### Normalize Audio Gain
+
+Pass the following arguments to `plan_operation` to measure audio and receive
+`audioGainPreview` rows. Use the same request with `run_operation` on an
+owner-enabled `--allow-writes` server and add `"confirmFileChanges": true`
+after the user authorizes writing copies.
+
+```json
+{
+  "request": {
+    "operationId": "normalize-audio-gain",
+    "inputs": ["D:\\Karaoke"],
+    "outputFolder": "D:\\Adjusted",
+    "audioGain": {
+      "mode": "Loudness",
+      "targetLufs": -16,
+      "peakCeilingDbtp": -1
+    },
+    "options": { "recurseFolders": true }
+  }
+}
+```
+
+`audioGain.mode` accepts `Loudness`, `Peak` or `Offset`. Peak uses
+`peakCeilingDbtp` as the target. Offset uses the signed `offsetDb` adjustment.
+The output folder must already exist and be separate from the selected source
+folders. `overwritePolicy` defaults to `Fail`. Only output copies can be
+replaced. Inputs can be loose audio files, single-track karaoke ZIPs, or
+folders. See [Normalize Audio Gain](audio-gain.md).
+
+### Change Audio Key
+
+Send a `plan_operation` request with `operationId` set to `change-audio-key`,
+the local `inputs`, an existing `outputFolder`, and
+`"audioKey": { "semitones": -2 }`. The response
+includes `audioKeyPreview` rows. The same request works with `run_operation`
+when the server starts with `--allow-writes` and the user authorizes the
+call with `confirmFileChanges: true`. See [Change Audio Key](audio-gain.md#change-audio-key).
+
 ## Exposure and permissions
 
 `McpOperationCatalog` has one explicit include/exclude switch arm for every

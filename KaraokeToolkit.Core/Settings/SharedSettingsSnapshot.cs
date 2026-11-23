@@ -24,8 +24,9 @@ public sealed record SharedSettingsSnapshot(
         return new(id, inputs)
         {
             Options = Options with { DeleteOldFiles = false },
-            OverwritePolicy = id == OperationId.GroupByTrackId || Overwrite == OverwritePolicy.Ask ? OverwritePolicy.Fail : Overwrite,
-            ValidateBeforeConversion = ValidateBeforeConversion,
+            OverwritePolicy = id is OperationId.GroupByTrackId or OperationId.NormalizeAudioGain or OperationId.ChangeAudioKey || Overwrite == OverwritePolicy.Ask
+                ? OverwritePolicy.Fail : Overwrite,
+            ValidateBeforeConversion = id is not (OperationId.NormalizeAudioGain or OperationId.ChangeAudioKey) && ValidateBeforeConversion,
             IgnoreLeadingThe = id == OperationId.OrganizeFiles && IgnoreLeadingThe,
             TaggingPattern = TaggingPattern,
             RecoveryVerification = supportsRecoveryOptions ? RecoveryVerification : RecoveryVerificationMode.Sha256,

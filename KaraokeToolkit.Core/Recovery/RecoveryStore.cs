@@ -77,6 +77,10 @@ public sealed class RecoveryStore
                             jobs.Add(new(path, workflow.Roots[0], workflow.Kind == RecoveryKind.TrackGrouping ? "Group by Track ID" : workflow.OperationId!.Value.ToString(),
                                 workflow.Moves!.Count(g => g.Results != null), workflow.Moves!.Count, MoveRecoveryProblem(workflow))
                             { Kind = workflow.Kind, ContinueBatchAfterRecovery = workflow.SaveResumableRun });
+                        else if (!workflow.Finished && workflow.Kind == RecoveryKind.AudioGain)
+                            jobs.Add(new(path, workflow.Roots[0], workflow.OperationId == OperationId.ChangeAudioKey ? "Change Audio Key" : "Normalize Audio Gain",
+                                workflow.GainResults.Count, workflow.GainRows!.Length)
+                            { Kind = workflow.Kind });
                         else if (!workflow.Finished)
                             jobs.Add(new(path, workflow.Roots[0], workflow.Kind == RecoveryKind.Recipe ? "Recipe — " + workflow.Recipe!.Name : "Tag Karaoke Files",
                                 workflow.Kind == RecoveryKind.Recipe ? workflow.Steps.Count : workflow.TagResults.Count,

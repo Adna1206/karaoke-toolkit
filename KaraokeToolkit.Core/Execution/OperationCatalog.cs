@@ -41,6 +41,8 @@ public static class OperationCatalog
         OperationId.RepackZip => Conversion(id, "Repack ZIP with selected compression settings"),
         OperationId.ValidateKaraoke => Local(id, "Check karaoke structure, pairing and ZIP integrity"),
         OperationId.TagKaraoke => Local(id, "Apply filename-derived metadata without re-encoding"),
+        OperationId.NormalizeAudioGain => Local(id, "Measure track loudness and write gain-adjusted audio or karaoke ZIP copies"),
+        OperationId.ChangeAudioKey => Local(id, "Shift the key of audio files and karaoke ZIPs while keeping tempo"),
         OperationId.PreviewTags => Local(id, "Preview filename-derived and existing tags without writing"),
         OperationId.OrganizeFiles => Local(id, "Organize files recursively into A-Z/# folders"),
         OperationId.OrganizeFolders => Local(id, "Organize immediate child folders into A-Z/# folders", folders: true),

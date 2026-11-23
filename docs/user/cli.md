@@ -238,6 +238,32 @@ broader trailing-digit groups automatically. `--max-parent-levels N` limits the
 depth (0 means all). `--keep-single-child-parents` preserves levels that would
 otherwise be collapsed.
 
+## Normalize Audio Gain
+
+```powershell
+karaoke-toolkit run normalize-audio-gain 'D:\Karaoke' --output 'D:\Adjusted' --target-lufs -16 --peak-ceiling -1 --dry-run
+karaoke-toolkit run normalize-audio-gain 'D:\Karaoke\ABC-001.mp3' --output 'D:\Adjusted' --mode offset --gain-db -3
+karaoke-toolkit run normalize-audio-gain 'D:\Karaoke\ABC-002.zip' --output 'D:\Adjusted' --mode peak --peak-ceiling -2
+```
+
+Use `--mode peak` to use `--peak-ceiling` as a true-peak target. The output
+folder must already exist and be separate from the selected source folders.
+`--dry-run` measures the audio without publishing. With `--json`, the result
+includes `AudioGainPreview` with the measured levels, estimates, planned gains
+and statuses. Remove `--dry-run` to write copies. `--overwrite` accepts
+`fail` (default), `skip` and `replace`. `--recurse` and `--no-recurse`
+control folder scanning. See [Normalize Audio Gain](audio-gain.md).
+
+## Change Audio Key
+
+```powershell
+karaoke-toolkit run change-audio-key 'D:\Karaoke\ABC-001.zip' --output 'D:\Adjusted' --semitones -2 --dry-run
+```
+
+`--semitones` takes a whole number from −12 to +12. Remove `--dry-run` to
+publish copies. With `--json`, planning returns `AudioKeyPreview` rows.
+See [Change Audio Key](audio-gain.md#change-audio-key).
+
 ## Disc commands
 
 Use `disc-list [--cdrdao EXECUTABLE] [--json]` to discover exact device addresses.

@@ -14,6 +14,68 @@ namespace KaraokeToolkit.Tests.Mcp;
 public class McpTests
 {
     [Fact]
+    public async Task AudioKeyPlansAreReadOnlyAndWritesRequireConfirmation()
+    {
+        string source = Path.Combine(TestMediaFixture.NewFolder(), "ABC-001.wav");
+        Benchmarks.AudioBenchmarks.WriteWave(source, 2);
+        string output = TestMediaFixture.NewFolder();
+        var profile = new SharedSettingsStore(Path.Combine(TestMediaFixture.NewFolder(), "options.xmls"));
+        var request = JsonSerializer.Deserialize<McpOperationRequest>(JsonSerializer.Serialize(new
+        {
+            operationId = "change-audio-key", inputs = new[] { source }, outputFolder = output,
+            audioKey = new { semitones = 3 }
+        }), Program.JsonOptions)!;
+        var readOnly = new McpAccessPolicy(false);
+        var executor = new FakeExecutor();
+        var progress = new ProgressSink();
+        using var reader = new McpOperationsService(readOnly, executor, new());
+        var tools = new McpTools(reader, readOnly, profile);
+        Assert.Equal(3, Assert.Single((await tools.PlanOperation(request, default)).AudioKeyPreview!).Semitones);
+        await Assert.ThrowsAsync<McpException>(() => tools.RunOperation(request, progress, default, true));
+        Assert.Empty(Directory.GetFileSystemEntries(output));
+
+        var writes = new McpAccessPolicy(true);
+        using var writer = new McpOperationsService(writes, executor, new());
+        var writeTools = new McpTools(writer, writes, profile);
+        await Assert.ThrowsAsync<McpException>(() => writeTools.RunOperation(request, progress, default));
+        Assert.Equal(0, executor.Calls);
+        await writeTools.RunOperation(request, progress, default, true);
+        Assert.Equal(OperationId.ChangeAudioKey, executor.LastRequest!.OperationId);
+        Assert.Equal(3, executor.LastRequest.AudioKey!.Semitones);
+    }
+
+    [Fact]
+    public async Task AudioGainPlanningIsReadOnlyAndApplyingRequiresBothPermissions()
+    {
+        string source = Path.Combine(TestMediaFixture.NewFolder(), "ABC-001.wav");
+        Benchmarks.AudioBenchmarks.WriteWave(source, 2);
+        string output = TestMediaFixture.NewFolder();
+        var profile = new SharedSettingsStore(Path.Combine(TestMediaFixture.NewFolder(), "options.xmls"));
+        var requestJson = JsonSerializer.Serialize(new
+        {
+            operationId = "normalize-audio-gain", inputs = new[] { source }, outputFolder = output,
+            audioGain = new { mode = "Offset", offsetDb = -4.5 }
+        });
+        var request = JsonSerializer.Deserialize<McpOperationRequest>(requestJson, Program.JsonOptions)!;
+        var readOnly = new McpAccessPolicy(false);
+        var executor = new FakeExecutor();
+        using var reader = new McpOperationsService(readOnly, executor, new());
+        var tools = new McpTools(reader, readOnly, profile);
+        var progress = new ProgressSink();
+        Assert.Equal(-4.5, Assert.Single((await tools.PlanOperation(request, default)).AudioGainPreview!).GainDb);
+        await Assert.ThrowsAsync<McpException>(() => tools.RunOperation(request, progress, default, true));
+        Assert.Empty(Directory.GetFileSystemEntries(output));
+        var writes = new McpAccessPolicy(true);
+        using var writer = new McpOperationsService(writes, executor, new());
+        var writeTools = new McpTools(writer, writes, profile);
+        await Assert.ThrowsAsync<McpException>(() => writeTools.RunOperation(request, progress, default));
+        Assert.Equal(0, executor.Calls);
+        await writeTools.RunOperation(request, progress, default, true);
+        Assert.Equal(OperationId.NormalizeAudioGain, executor.LastRequest!.OperationId);
+        Assert.Equal(-4.5, executor.LastRequest.AudioGain.OffsetDb);
+    }
+
+    [Fact]
     public async Task SharedSettingsWritesRequirePermissionAndRunOverridesWin()
     {
         string path = Path.Combine(TestMediaFixture.NewFolder(), "options.xmls");

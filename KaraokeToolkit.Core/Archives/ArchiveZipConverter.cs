@@ -7,6 +7,8 @@ using SharpCompress.Readers;
 using SharpCompress.Writers.Zip;
 namespace KaraokeToolkit.Core.Archives;
 
+internal sealed record ZipMemberReplacement(string Name, string Path);
+
 /// <summary>Streams supported archive contents into a verified ZIP, without extracting archive paths to disk.</summary>
 public static class ArchiveZipConverter
 {
@@ -21,9 +23,11 @@ public static class ArchiveZipConverter
     }
 
     internal static async Task ConvertAsync(string source, string destination, ConversionOptions options, CancellationToken token,
-        bool repackZip = false, RecoveryVerificationMode verification = RecoveryVerificationMode.Sha256)
+        bool repackZip = false, RecoveryVerificationMode verification = RecoveryVerificationMode.Sha256,
+        ZipMemberReplacement? replacement = null)
     {
         token.ThrowIfCancellationRequested();
+        if (replacement != null && !repackZip) throw new ArgumentException("A ZIP member can only be replaced when repacking a ZIP.");
         // Streams intentionally prevent auto-discovery of unselected archive volumes.
         await using var input = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read, 65536, useAsync: true);
         await using var archive = Path.GetExtension(source).Equals(".7z", StringComparison.OrdinalIgnoreCase)
@@ -38,6 +42,7 @@ public static class ArchiveZipConverter
         var expected = new Dictionary<string, MemberFingerprint?>(StringComparer.OrdinalIgnoreCase);
         var fileNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var directoryNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        bool replaced = false;
         await using (var output = new FileStream(destination, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 65536, useAsync: true))
         await using (var writer = await ZipWriter.OpenAsyncWriter(output, KaraokeZipWriter.CreateOptions(options.ZipCompression, options.ZipAlgorithm), token))
         {
@@ -70,21 +75,26 @@ public static class ArchiveZipConverter
                 }
                 if (directoryNames.Contains(canonical)) throw new InvalidDataException("Conflicting archive paths: " + name);
                 fileNames.Add(canonical);
+                bool replaceMember = replacement != null && name.Equals(replacement.Name, StringComparison.Ordinal);
                 long advertisedSize = entry.Size;
                 long advertisedCrc = entry.Crc;
+                await using var member = replaceMember ? File.OpenRead(replacement!.Path) :
+                    repackZip ? await zipEntries!.Current.OpenEntryStreamAsync(token) : await reader!.OpenEntryStreamAsync(token);
+                if (replaceMember) advertisedSize = member.Length;
                 if (advertisedSize >= uint.MaxValue) throw new NotSupportedException("Archive members must be smaller than 4 GiB.");
-                await using var member = repackZip ? await zipEntries!.Current.OpenEntryStreamAsync(token) : await reader!.OpenEntryStreamAsync(token);
                 using var hash = RecoveryFingerprint.IsContentVerified(verification) ? RecoveryFingerprint.CreateContentHash(verification) : null;
                 using var verified = new VerifyingMemberStream(member, advertisedSize, hash);
                 await writer.WriteAsync(name, verified, entry.LastModifiedTime, token);
                 if ((repackZip || advertisedSize > 0) && verified.BytesRead != advertisedSize) throw new InvalidDataException("Truncated archive member.");
                 // TAR has header checksums, not payload CRCs. Some formats omit a per-member CRC.
-                if (repackZip ? verified.Crc != advertisedCrc || verified.Crc != entry.Crc :
-                    reader!.Type is ArchiveType.Rar or ArchiveType.SevenZip && advertisedCrc != 0 && verified.Crc != advertisedCrc)
+                if (!replaceMember && (repackZip ? verified.Crc != advertisedCrc || verified.Crc != entry.Crc :
+                    reader!.Type is ArchiveType.Rar or ArchiveType.SevenZip && advertisedCrc != 0 && verified.Crc != advertisedCrc))
                     throw new InvalidDataException("Archive member CRC check failed.");
+                replaced |= replaceMember;
                 expected[name] = new(verified.BytesRead, verified.Crc, hash?.GetHex());
             }
         }
+        if (replacement != null && !replaced) throw new InvalidDataException("The audio member was missing when rebuilding the ZIP.");
         if (expected.Count == 0) throw new InvalidDataException("Archive contains no entries.");
         await using var zip = await ZipArchive.OpenAsyncArchive(destination, cancellationToken: token);
         var entries = await zip.EntriesAsync.ToArrayAsync(token);
@@ -151,7 +161,7 @@ public static class ArchiveZipConverter
         public override void Flush() => throw new NotSupportedException();
     }
 
-    private static string SafeName(string name, bool directory)
+    internal static string SafeName(string name, bool directory)
     {
         name = name.Replace('\\', '/');
         if (name.StartsWith('/') || name.Contains(':') || name.Any(char.IsControl))

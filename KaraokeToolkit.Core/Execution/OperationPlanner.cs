@@ -18,6 +18,17 @@ public sealed class OperationPlanner
     {
         if (request.OperationId == OperationId.GroupByTrackId)
             return TrackGroupingExecution.Preview(request, token);
+        if (request.OperationId is OperationId.NormalizeAudioGain or OperationId.ChangeAudioKey)
+        {
+            var plan = await OperationExecutionService.PlanAudioGainAsync(new AudioGainService(), request, null, token);
+            bool key = request.OperationId == OperationId.ChangeAudioKey;
+            var audioEntries = plan.Rows.Select(row => new ReportEntry(row.Source, row.Status.ToString(),
+                key ? DescribeKey(row) : DescribeGain(row), AudioGainService.Outputs(row))).ToArray();
+            return new(new(key ? "Change Audio Key" : "Normalize Audio Gain", DateTimeOffset.Now, false, audioEntries)
+                { ReportType = key ? "Audio Key Preview" : "Audio Gain Preview" },
+                audioEntries.Length, plan.Rows.Any(row => row.Status == AudioGainStatus.Blocked))
+                { AudioGainPreview = key ? null : plan.Rows, AudioKeyPreview = key ? plan.Rows : null };
+        }
         var operation = OperationCatalog.Get(request.OperationId);
         if (!operation.CanRunUnattended) throw new NotSupportedException("This operation has no file plan.");
         if (request.Inputs.Count == 0) throw new ArgumentException("Select at least one input.");
@@ -90,6 +101,17 @@ public sealed class OperationPlanner
         }).ToList();
         return new(new(operation.Identifier, DateTimeOffset.Now, false, entries) { ReportType = "Dry Run Report" }, entries.Count, entries.Any(e => e.Status == "Blocked"));
     }
+
+    private static string DescribeGain(AudioGainRow row)
+    {
+        static string Level(double? value, string unit) => value is double level ? FormattableString.Invariant($"{level:0.00} {unit}") : "—";
+        return $"{Level(row.CurrentLufs, "LUFS")} → {Level(row.EstimatedLufs, "LUFS")}, " +
+            $"{Level(row.CurrentPeakDbtp, "dBTP")} → {Level(row.EstimatedPeakDbtp, "dBTP")}, " +
+            $"gain {Level(row.GainDb, "dB")}. {row.Message}";
+    }
+
+    private static string DescribeKey(AudioGainRow row) => row.Semitones is int shift
+        ? FormattableString.Invariant($"Key shift {shift:+0;-0;0} semitones. {row.Message}") : row.Message;
 
     private static async Task<string[]> ZipOutputsAsync(string source, string stem, CancellationToken token)
     {

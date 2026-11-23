@@ -16,7 +16,9 @@ namespace KaraokeToolkit.App.Features.Settings;
 public sealed class ApplicationSettingsStore(string path, bool persistRenameBins = false, bool applyReleaseMigrations = false)
 {
     private readonly SettingsStore processing = new(path, persistRenameBins, applyReleaseMigrations);
-    private static readonly HashSet<XName> SectionKeys = Enum.GetNames<OperationSection>().Select(name => XName.Get(name)).ToHashSet();
+    internal const string LegacyFileAndFolderSectionKey = "FilesAndFolders";
+    private static readonly HashSet<XName> SectionKeys = Enum.GetNames<OperationSection>()
+        .Append(LegacyFileAndFolderSectionKey).Select(name => XName.Get(name)).ToHashSet();
 
     public ConversionOptions Load() => processing.Load();
     public OverwritePolicy LoadOverwritePolicy() => processing.LoadOverwritePolicy();

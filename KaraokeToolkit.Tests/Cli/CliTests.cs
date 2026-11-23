@@ -16,6 +16,45 @@ namespace KaraokeToolkit.Tests.Cli;
 
 public class CliTests
 {
+    [Fact]
+    public async Task AudioKeyDryRunReportsSignedSemitonesWithoutPublishing()
+    {
+        string source = Path.Combine(TestMediaFixture.NewFolder(), "ABC-001.wav");
+        Benchmarks.AudioBenchmarks.WriteWave(source, 2);
+        string folder = TestMediaFixture.NewFolder();
+        var profile = new SharedSettingsStore(Path.Combine(TestMediaFixture.NewFolder(), "options.xmls"));
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+        var cli = new CliApplication(profile: profile);
+        Assert.Equal(0, await cli.RunAsync(["run", "change-audio-key", source, "--output", folder,
+            "--semitones", "-3", "--dry-run", "--json"], output, error));
+        using var json = JsonDocument.Parse(output.ToString());
+        Assert.Equal(-3, json.RootElement.GetProperty("AudioKeyPreview")[0].GetProperty("Semitones").GetInt32());
+        Assert.Empty(Directory.GetFileSystemEntries(folder));
+        Assert.Throws<CliUsageException>(() => CliArguments.Parse(["run", "change-audio-key", source, "--output", folder]));
+        Assert.Throws<CliUsageException>(() => CliArguments.Parse(["run", "change-audio-key", source, "--output", folder, "--gain-db", "-3"]));
+        Assert.Throws<CliUsageException>(() => CliArguments.Parse(["run", "change-audio-key", source, "--output", folder, "--peak-ceiling", "-3"]));
+    }
+
+    [Fact]
+    public async Task AudioGainDryRunReturnsMeasuredRowsWithoutPublishing()
+    {
+        string source = Path.Combine(TestMediaFixture.NewFolder(), "ABC-001.wav");
+        Benchmarks.AudioBenchmarks.WriteWave(source, 2);
+        string folder = TestMediaFixture.NewFolder();
+        var profile = new SharedSettingsStore(Path.Combine(TestMediaFixture.NewFolder(), "options.xmls"));
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+        var cli = new CliApplication(profile: profile);
+        Assert.Equal(0, await cli.RunAsync(["run", "normalize-audio-gain", source, "--output", folder,
+            "--mode", "offset", "--gain-db", "-4.5", "--dry-run", "--json"], output, error));
+        using var json = JsonDocument.Parse(output.ToString());
+        Assert.Equal(-4.5, json.RootElement.GetProperty("AudioGainPreview")[0].GetProperty("GainDb").GetDouble());
+        Assert.Empty(Directory.GetFileSystemEntries(folder));
+        Assert.Throws<CliUsageException>(() => CliArguments.Parse(["run", "normalize-audio-gain", source, "--mode", "offset"]));
+        Assert.Throws<CliUsageException>(() => CliArguments.Parse(["run", "validate-karaoke-files", source, "--gain-db", "-4.5"]));
+    }
+
     [Theory]
     [InlineData("validate-karaoke-files", "validate", OperationId.ValidateKaraoke)]
     [InlineData("tag-karaoke-files", "tag", OperationId.TagKaraoke)]

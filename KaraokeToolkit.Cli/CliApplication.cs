@@ -101,7 +101,11 @@ public sealed class CliApplication(IOperationExecutor? executor = null, IDiscRea
                 await writer.WriteAsync(text);
             }
             int exitCode = result.Report.Cancelled ? 130 : result.HasIssues ? 1 : result.Found == 0 ? 3 : 0;
-            if (json) await output.WriteLineAsync(JsonSerializer.Serialize(new { ExitCode = exitCode, result.Found, result.HasIssues, result.Report, result.TagPreview }, JsonOptions));
+            if (json && result.AudioKeyPreview != null)
+                await output.WriteLineAsync(JsonSerializer.Serialize(new { ExitCode = exitCode, result.Found, result.HasIssues, result.Report, result.AudioKeyPreview }, JsonOptions));
+            else if (json && result.AudioGainPreview != null)
+                await output.WriteLineAsync(JsonSerializer.Serialize(new { ExitCode = exitCode, result.Found, result.HasIssues, result.Report, result.AudioGainPreview }, JsonOptions));
+            else if (json) await output.WriteLineAsync(JsonSerializer.Serialize(new { ExitCode = exitCode, result.Found, result.HasIssues, result.Report, result.TagPreview }, JsonOptions));
             else
             {
                 await output.WriteLineAsync(result.Report.ToText());

@@ -43,6 +43,8 @@ public static class McpOperationCatalog
         OperationId.CreateCueAndTextFiles => Include(id),
         OperationId.ValidateKaraoke => Include(id, false),
         OperationId.TagKaraoke => Include(id),
+        OperationId.NormalizeAudioGain => Include(id),
+        OperationId.ChangeAudioKey => Include(id),
         OperationId.PreviewTags => Include(id, false),
         OperationId.OrganizeFiles => Include(id),
         OperationId.OrganizeFolders => Include(id),

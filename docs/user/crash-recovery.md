@@ -33,6 +33,12 @@ recipe still existing in the library. A tagging checkpoint stores the accepted
 preview (including manual corrections) and run options, skips completed files and
 continues the batch without asking for a new pattern.
 
+[Normalize Audio Gain](audio-gain.md) and [Change Audio Key](audio-gain.md#change-audio-key)
+save their measured plans under the output folder. Recovery checks the staged
+publication and resumes the remaining copies using the saved adjustments and
+source fingerprints. Audio and any matching CDG file publish as a group.
+The source files are kept.
+
 If saving a completed recipe step fails, the previous checkpoint and its
 operation records remain available through **Recover**. Once the filesystem
 problem is resolved, recovery uses those records to recognize work already

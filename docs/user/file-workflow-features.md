@@ -1,10 +1,13 @@
 # File workflow features
 
 The home screen has a category sidebar and an operation list for Karaoke Conversion,
-Archive Tools, File & Folder Tools, and Validation & Reports. Disc Ripping appears
+Archive Tools, File Tools, Folder Tools, and Validation & Reports. Disc Ripping appears
 when its experimental setting is enabled, and Recipes appears when saved recipes
 exist. Selecting an operation keeps its category synchronized. Unavailable online
 renaming is hidden. Category selection is session state, not an expander preference.
+
+**File Tools** includes filename cleanup, renaming, tagging, audio gain and key changes.
+**Folder Tools** includes Track ID grouping, alphabetical grouping and flattening.
 
 Each operation has a star button to add or remove it from Favourites. This section
 appears at the top only when it has visible operations. Favourites use the same
@@ -109,7 +112,7 @@ Cancellation, failed-item retry and crash recovery use the standard conversion w
 
 ## Group files and folders
 
-Choose **File & Folder Tools → Group by Alphabet** and select a mode in the
+Choose **Folder Tools → Group by Alphabet** and select a mode in the
 preview. **Files** groups selected files and files inside selected folders and
 their subfolders into A–Z and `#` folders. **Folders** moves the immediate
 subfolders of each selected folder into those groups with their contents.
@@ -126,7 +129,7 @@ range and trailing-digit grouping.
 
 ## Rename by Filename Pattern
 
-Select karaoke files or folders and choose **File & Folder Tools → Rename by
+Select karaoke files or folders and choose **File Tools → Rename by
 Filename Pattern**. Pick a **Source pattern** that describes the current names
 and a **Destination pattern** that describes the new names. Both fields accept
 built-in patterns and custom text. The preview updates as you change the
@@ -155,7 +158,7 @@ renames use [file move recovery](crash-recovery.md). Start a new rename in Deskt
 
 ## Flatten One Folder Level
 
-Select one or more folders and choose **File & Folder Tools → Flatten One Folder Level**. For each
+Select one or more folders and choose **Folder Tools → Flatten One Folder Level**. For each
 selected folder, the operation moves the immediate contents of its child folders into
 the selected folder, then removes child folders that became empty. A deeper folder is
 moved intact, so one run removes only one layer. Files already in the selected folder

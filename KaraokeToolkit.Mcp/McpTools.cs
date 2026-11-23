@@ -38,7 +38,9 @@ public sealed class McpTools(McpOperationsService service, McpAccessPolicy polic
         OperationCapabilities.DefaultFileMoveCheckTiming,
         OperationCapabilities.DefaultFileMoveRecoveryVerification,
         TrackGroupingMasks = new[] { "x", "X", "#", "s" },
-        Notes = "Use the name from get_operations as operationId. Paths are local absolute paths. Originals are kept by default. Media conversions with OutputFolder keep originals. group-by-track-id requires OutputFolder and accepts Grouping settings. Recipes use Core IDs and saved per-step settings. Ask is unsupported. Read-only mode is not an OS filesystem sandbox."
+        AudioGainModes = Enum.GetNames<KaraokeToolkit.Core.Audio.AudioGainMode>(),
+        AudioGainExtensions = KaraokeToolkit.Core.Audio.AudioGainService.Extensions,
+        Notes = "Use the name from get_operations as operationId. Paths are local absolute paths. Originals are kept by default. Media conversions with OutputFolder keep originals. group-by-track-id requires OutputFolder and accepts Grouping settings. normalize-audio-gain and change-audio-key require OutputFolder and accept AudioGain and AudioKey settings respectively. Recipes use Core IDs and saved per-step settings. Ask is unsupported. Read-only mode is not an OS filesystem sandbox."
     };
 
     [McpServerTool(Name = "list_settings", ReadOnly = true, OpenWorld = false, UseStructuredContent = true)]
@@ -102,7 +104,7 @@ public sealed class McpTools(McpOperationsService service, McpAccessPolicy polic
         => service.RecipeAsync(recipe, inputs, confirmFileChanges, progress, cancellationToken);
 
     [McpServerTool(Name = "list_recovery", ReadOnly = true, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Discover pending local conversion, tagging, track grouping or recipe journals. Optional folders limit discovery; omitted folders use the local recovery index. Does not resume anything.")]
+    [Description("Discover pending local conversion, audio gain, tagging, track grouping or recipe journals. Optional folders limit discovery; omitted folders use the local recovery index. Does not resume anything.")]
     public object ListRecovery(string[]? folders = null) => service.ListRecovery(folders ?? []);
 
     [McpServerTool(Name = "recover", ReadOnly = false, Destructive = true, OpenWorld = false, UseStructuredContent = true)]

@@ -20,6 +20,8 @@ public enum OperationId
     CreateCueAndTextFiles,
     ValidateKaraoke,
     TagKaraoke,
+    NormalizeAudioGain,
+    ChangeAudioKey,
     PreviewTags,
     OrganizeFiles,
     OrganizeFolders,

@@ -1,4 +1,5 @@
 using KaraokeToolkit.Core.Conversion;
+using KaraokeToolkit.Core.Audio;
 using KaraokeToolkit.Core.Tagging;
 using KaraokeToolkit.Core.FileOperations;
 using KaraokeToolkit.Core.Recovery;
@@ -31,5 +32,8 @@ public sealed record OperationRequest(OperationId OperationId, IReadOnlyList<str
         init => recoveryVerification = value;
     }
     public TrackGroupingOptions Grouping { get; init; } = new();
+    public AudioGainOptions AudioGain { get; init; } = new();
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public AudioKeyOptions? AudioKey { get; init; }
     public string OutputFolder { get; init; } = "";
 }

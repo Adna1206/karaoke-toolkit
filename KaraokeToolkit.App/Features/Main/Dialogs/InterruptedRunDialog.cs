@@ -17,7 +17,7 @@ internal static class InterruptedRunDialog
         var units = job.Kind switch
         {
             RecoveryKind.Recipe => "recipe steps",
-            RecoveryKind.Tagging => "files",
+            RecoveryKind.Tagging or RecoveryKind.AudioGain => "files",
             _ => "source groups"
         };
         var body = new StackPanel

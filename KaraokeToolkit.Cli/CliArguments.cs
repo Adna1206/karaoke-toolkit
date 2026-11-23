@@ -23,6 +23,7 @@ public sealed record CliArguments(string Command, OperationRequest? Request, str
     internal static readonly string[] GroupingFlags = ["whole-folders", "move", "create-parents", "keep-single-child-parents"];
     internal static readonly string[] GroupingValues = ["trailing-digits", "range-size", "range-start", "id-separator",
         "range-separator", "mask", "max-parent-levels"];
+    private static readonly string[] AudioEditValues = ["mode", "target-lufs", "peak-ceiling", "gain-db", "semitones"];
     private static readonly HashSet<string> Flags = ["json", "quiet", "recurse", "no-recurse", "delete-originals", "keep-originals", "cue-text", "no-cue-text",
         "validate-inputs", "no-validate-inputs", "ignore-leading-the", "no-ignore-leading-the", "fill-empty-only", "preserve-comments", "preserve-other-tags", "video-audio-fallback-only", "dry-run", "batch-resume", "no-batch-resume"];
     private static readonly HashSet<string> Values = ["input", "options", "overwrite", "encoder", "bitrate", "zip-level", "zip-algorithm", "pattern", "report",
@@ -62,7 +63,7 @@ public sealed record CliArguments(string Command, OperationRequest? Request, str
             if (!argument.StartsWith("--")) throw new CliUsageException("Unknown option: " + argument);
             string[] pair = argument[2..].Split('=', 2); string name = pair[0]; string? value = pair.Length == 2 ? pair[1] : null;
             bool isFlag = Flags.Contains(name) || GroupingFlags.Contains(name);
-            bool isValue = Values.Contains(name) || GroupingValues.Contains(name);
+            bool isValue = Values.Contains(name) || GroupingValues.Contains(name) || AudioEditValues.Contains(name);
             if (!isFlag && !isValue) throw new CliUsageException("Unknown option: --" + name);
             if (isFlag && value != null) throw new CliUsageException("--" + name + " is a flag, not a value option.");
             if (isValue && value == null)
@@ -100,6 +101,11 @@ public sealed record CliArguments(string Command, OperationRequest? Request, str
         if (inputs.Count == 0) throw new CliUsageException("At least one input path is required. Use --input PATH or positional paths.");
         var profile = loadProfile?.Invoke();
         var defaults = profile?.ForUnattendedOperation(operation.Value, inputs) ?? new OperationRequest(operation.Value, inputs);
+        if (operation is OperationId.NormalizeAudioGain or OperationId.ChangeAudioKey)
+            return new(command, ParseAudioEdit(options, defaults), inputs.ToArray(), null, json, quiet, report)
+            { DryRun = options.ContainsKey("dry-run") };
+        if (options.Keys.Any(AudioEditValues.Contains))
+            throw new CliUsageException("Audio adjustment settings require normalize-audio-gain or change-audio-key.");
         bool saveResumableRun = options.ContainsKey("batch-resume") || defaults.SaveResumableRun && !options.ContainsKey("no-batch-resume");
         var recoveryVerification = options.GetValueOrDefault("recovery-verification") switch
         {
@@ -180,6 +186,64 @@ public sealed record CliArguments(string Command, OperationRequest? Request, str
             IgnoreLeadingThe = !options.ContainsKey("no-ignore-leading-the") && (options.ContainsKey("ignore-leading-the") || defaults.IgnoreLeadingThe), TaggingPattern = pattern,
             Tagging = new(options.ContainsKey("fill-empty-only"), !options.ContainsKey("preserve-comments"), !options.ContainsKey("preserve-other-tags"))
         }, inputs.ToArray(), null, json, quiet, report) { DryRun = options.ContainsKey("dry-run") };
+    }
+
+    private static OperationRequest ParseAudioEdit(Dictionary<string, string?> options, OperationRequest defaults)
+    {
+        bool key = defaults.OperationId == OperationId.ChangeAudioKey;
+        string operation = OperationCommandNames.Get(defaults.OperationId);
+        foreach (string name in options.Keys)
+            if (name is not ("json" or "quiet" or "report" or "dry-run" or "output" or "recurse" or "no-recurse" or "overwrite") &&
+                !(key ? name == "semitones" : AudioEditValues.Contains(name) && name != "semitones"))
+                throw new CliUsageException($"--{name} does not apply to {operation}.");
+        string output = options.GetValueOrDefault("output") ?? throw new CliUsageException($"{operation} requires --output FOLDER.");
+        var request = defaults with
+        {
+            OutputFolder = Path.GetFullPath(output),
+            OverwritePolicy = options.GetValueOrDefault("overwrite") switch
+            {
+                null or "fail" => OverwritePolicy.Fail,
+                "skip" => OverwritePolicy.Skip,
+                "replace" => OverwritePolicy.Replace,
+                _ => throw new CliUsageException("--overwrite expects fail, skip or replace.")
+            },
+            Options = defaults.Options with
+            {
+                RecurseFolders = options.ContainsKey("recurse") || defaults.Options.RecurseFolders && !options.ContainsKey("no-recurse")
+            }
+        };
+        if (key)
+        {
+            if (!int.TryParse(options.GetValueOrDefault("semitones"), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out int semitones))
+                throw new CliUsageException("Use --semitones with a signed whole number.");
+            var audioKey = new AudioKeyOptions { Semitones = semitones };
+            audioKey.Validate();
+            return request with { AudioKey = audioKey };
+        }
+        var mode = options.GetValueOrDefault("mode") switch
+        {
+            null or "loudness" => AudioGainMode.Loudness,
+            "peak" => AudioGainMode.Peak,
+            "offset" => AudioGainMode.Offset,
+            _ => throw new CliUsageException("--mode expects loudness, peak or offset.")
+        };
+        if (options.ContainsKey("gain-db") != (mode == AudioGainMode.Offset))
+            throw new CliUsageException("Use --gain-db with --mode offset.");
+        if (options.ContainsKey("target-lufs") && mode != AudioGainMode.Loudness)
+            throw new CliUsageException("--target-lufs requires loudness mode.");
+        double Read(string name, double fallback)
+        {
+            string? value = options.GetValueOrDefault(name);
+            if (value == null) return fallback;
+            if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double number) && double.IsFinite(number))
+                return number;
+            throw new CliUsageException($"--{name} expects a number.");
+        }
+        var gain = new AudioGainOptions();
+        gain = gain with { Mode = mode, TargetLufs = Read("target-lufs", gain.TargetLufs),
+            PeakCeilingDbtp = Read("peak-ceiling", gain.PeakCeilingDbtp), OffsetDb = Read("gain-db", gain.OffsetDb) };
+        gain.Validate();
+        return request with { AudioGain = gain };
     }
 
     private static OperationRequest ParseGrouping(Dictionary<string, string?> options, List<string> inputs)

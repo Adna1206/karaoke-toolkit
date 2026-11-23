@@ -1,4 +1,5 @@
 using KaraokeToolkit.Core.Conversion;
+using KaraokeToolkit.Core.Audio;
 using KaraokeToolkit.Core.FileOperations;
 using KaraokeToolkit.Core.Recovery;
 using KaraokeToolkit.Core.Reporting;
@@ -12,6 +13,10 @@ namespace KaraokeToolkit.Core.Execution;
 public sealed record ExecutionResult(CompletionReport Report, int Found, bool HasIssues)
 {
     public IReadOnlyList<TaggingPreview>? TagPreview { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<AudioGainRow>? AudioGainPreview { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<AudioGainRow>? AudioKeyPreview { get; init; }
 }
 
 /// <summary>Executes a typed operation without requiring a desktop UI or reading its preferences.</summary>
@@ -33,6 +38,23 @@ public sealed partial class OperationExecutionService(RecoveryStore? recovery = 
     {
         if (request.OperationId == Action.GroupByTrackId)
             return await ExecuteGroupingAsync(request, null, progress, token);
+        if (request.OperationId is Action.NormalizeAudioGain or Action.ChangeAudioKey)
+        {
+            var service = new AudioGainService(recovery);
+            var analyze = progress == null ? null : new SelectionConversionService.InlineProgress(p =>
+                progress.Report(p with { TotalPercent = p.TotalPercent / 2 }));
+            var apply = progress == null ? null : new SelectionConversionService.InlineProgress(p =>
+                progress.Report(p with { TotalPercent = 50 + p.TotalPercent / 2 }));
+            var plan = await PlanAudioGainAsync(service, request, analyze, token);
+            var applied = await service.ApplyAsync(plan, apply, token);
+            bool key = request.OperationId == Action.ChangeAudioKey;
+            var audioResult = FromConversion(key ? "Change Audio Key" : "Normalize Audio Gain", applied);
+            return audioResult with
+            {
+                Report = audioResult.Report with { ReportType = key ? "Audio Key Report" : "Audio Gain Report" },
+                AudioGainPreview = key ? null : plan.Rows, AudioKeyPreview = key ? plan.Rows : null
+            };
+        }
         if (!Enum.IsDefined(request.CheckTiming))
             throw new ArgumentException("Unknown file check timing.");
         if (request.RecoveryVerification != RecoveryVerificationMode.Sha256 &&
@@ -146,6 +168,8 @@ public sealed partial class OperationExecutionService(RecoveryStore? recovery = 
             return FromConversion("Recovery — " + job.Action, await Task.Run(() => WorkflowMoves.Resume(recovery, job, progress, token), token));
         if (job.Kind == RecoveryKind.TrackGrouping)
             return await Task.Run(() => TrackGroupingExecution.Resume(recovery, job, progress, token), token);
+        if (job.Kind == RecoveryKind.AudioGain)
+            return FromConversion("Recovery — " + job.Action, await new AudioGainService(recovery).ResumeAsync(job, progress, token));
         if (job.Kind == RecoveryKind.Recipe)
         {
             var recipe = RecipeRunner.ReadRecoveryRecipe(job);
@@ -156,6 +180,26 @@ public sealed partial class OperationExecutionService(RecoveryStore? recovery = 
             ? await new KaraokeTaggingService(recovery).ResumeAsync(job, progress, token)
             : await new ConversionService(recovery).ResumeAsync(job, progress, token);
         return FromConversion("Recovery — " + job.Action, result);
+    }
+
+    internal static async Task<AudioGainPlan> PlanAudioGainAsync(AudioGainService service, OperationRequest request,
+        IProgress<ConversionProgress>? progress, CancellationToken token)
+    {
+        bool key = request.OperationId == Action.ChangeAudioKey;
+        if (key != (request.AudioKey != null))
+            throw new ArgumentException(key ? "Specify audio key settings." : "Audio key settings require Change Audio Key.");
+        if (key) request.AudioKey!.Validate();
+        else request.AudioGain.Validate();
+        if (request.Options.DeleteOldFiles || request.ValidateBeforeConversion || request.CheckTiming != FileCheckTiming.BeforeBatch ||
+            request.RecoveryVerification != RecoveryVerificationMode.Sha256 || !request.SaveResumableRun)
+            throw new ArgumentException("This audio operation uses its own copy, verification and recovery settings.");
+        if (request.OverwritePolicy is not (OverwritePolicy.Fail or OverwritePolicy.Skip or OverwritePolicy.Replace))
+            throw new ArgumentException("Choose overwrite fail, skip or replace for the output copies.");
+        if (string.IsNullOrWhiteSpace(request.OutputFolder) || !Path.IsPathFullyQualified(request.OutputFolder) || !Directory.Exists(request.OutputFolder))
+            throw new ArgumentException("Choose an existing absolute output folder.");
+        var scan = await service.ScanAsync(request.Inputs, request.Options.RecurseFolders, progress, token);
+        return key ? service.PlanKey(scan, request.AudioKey!, request.OutputFolder, request.OverwritePolicy) :
+            service.Plan(scan, request.AudioGain, request.OutputFolder, request.OverwritePolicy);
     }
 
     private static ExecutionResult FromConversion(string operation, ConversionResult result)

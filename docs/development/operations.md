@@ -74,6 +74,20 @@ applying. CLI and MCP use the same options and require an explicit output path.
 The operation is directly available in all three interfaces. Recipe steps do
 not currently include it. See [Group by Track ID](../user/track-grouping.md).
 
+## Normalize Audio Gain
+
+`NormalizeAudioGain` uses `OperationRequest.AudioGain` and an existing
+`OutputFolder`. Desktop, CLI and MCP use the Core measurement and publication
+service. Desktop applies the measured preview. CLI dry runs and MCP planning
+return typed gain rows. Execution uses a workflow checkpoint and a destination
+file transaction. Recipe steps do not include this operation.
+See [Normalize Audio Gain](../user/audio-gain.md).
+
+`ChangeAudioKey` uses `OperationRequest.AudioKey` and shares the measured
+preview layout, supported formats, ZIP staging, and recovery workflow.
+Its saved operation identity distinguishes key changes from gain jobs.
+See [Change Audio Key](../user/audio-gain.md#change-audio-key).
+
 ## Rename by Filename Pattern
 
 `RenameByPattern` uses a typed `FilenameRenameRequest` and an approved

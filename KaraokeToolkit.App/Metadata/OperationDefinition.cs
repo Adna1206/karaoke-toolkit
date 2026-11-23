@@ -5,7 +5,7 @@ using Action = KaraokeToolkit.Core.Execution.OperationId;
 
 namespace KaraokeToolkit.App.Metadata;
 
-public enum OperationSection { KaraokeConversion, Archives, FilesAndFolders, ValidationAndReports, DiscRipping, Favourites, Recipes }
+public enum OperationSection { KaraokeConversion, Archives, FileTools, FolderTools, ValidationAndReports, DiscRipping, Favourites, Recipes }
 public enum OperationInputKind { None, FilesAndFolders, Folders, SingleManifest, SingleDisc }
 
 /// <summary>Immutable UI metadata and routing for one operation. Core remains responsible for format validation.</summary>
@@ -23,13 +23,15 @@ public sealed record OperationDefinition(string Id, Action? Action, string Label
     public bool IsRestore => Inputs == OperationInputKind.SingleManifest;
     public bool IsTagging { get; init; }
     public bool IsTrackGrouping => Operation == OperationId.GroupByTrackId;
+    public bool IsAudioGain => Operation == OperationId.NormalizeAudioGain;
+    public bool IsAudioKey => Operation == OperationId.ChangeAudioKey;
     public bool IsFilenameRename => Operation == OperationId.RenameByPattern;
     // The Core allowlist is authoritative for both the builder and imported recipes.
     public bool CanUseInRecipes => KaraokeToolkit.Core.Recipes.RecipeOperations.Supports(Id);
     public AlphabeticalOrganizeScope? OrganizeMode { get; init; }
     public FolderFlattenScope? FlattenScope { get; init; }
     public bool IsValidation => Section != OperationSection.Recipes && Action == null && !IsRip && !IsRestore && !IsTagging &&
-        !IsTrackGrouping && !IsFilenameRename && OrganizeMode == null && FlattenScope == null;
+        !IsTrackGrouping && !IsAudioGain && !IsAudioKey && !IsFilenameRename && OrganizeMode == null && FlattenScope == null;
 }
 
 public sealed record OperationSectionDefinition(OperationSection Section, string Header);

@@ -5,6 +5,7 @@ using KaraokeToolkit.App.Metadata;
 using KaraokeToolkit.Core.FileOperations;
 using KaraokeToolkit.Core.Recipes;
 using KaraokeToolkit.Core.Archives;
+using KaraokeToolkit.Core.Audio;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Tagging;
 using System.Collections.Generic;
@@ -35,6 +36,9 @@ public partial class ActionChoice(OperationDefinition definition, RecipeDefiniti
     public bool IsRip => Definition.IsRip;
     public bool IsRestore => Definition.IsRestore;
     public bool IsTagging => Definition.IsTagging;
+    public bool IsAudioGain => Definition.IsAudioGain;
+    public bool IsAudioKey => Definition.IsAudioKey;
+    public bool IsAudioAdjustment => IsAudioGain || IsAudioKey;
     public bool IsTrackGrouping => Definition.IsTrackGrouping;
     public bool IsFilenameRename => Definition.IsFilenameRename;
     public AlphabeticalOrganizeScope? OrganizeMode => Definition.OrganizeMode;
@@ -48,6 +52,7 @@ public partial class ActionChoice(OperationDefinition definition, RecipeDefiniti
         Recipe is { } recipe ? RecipeOperations.FileExtensions(recipe.Steps[0].OperationId) :
         IsOrganizer || IsTrackGrouping ? null :
         IsTagging ? KaraokeTaggingService.InputExtensions :
+        IsAudioAdjustment ? AudioGainService.Extensions :
         IsFilenameRename ? FilenameRenameService.Extensions :
         Action is { } action && OperationCapabilities.IsConversion(action) ? InputSelection.ConversionFileExtensions(action) :
         InputSelection.Extensions.Concat(ArchiveZipConverter.Extensions).ToArray();

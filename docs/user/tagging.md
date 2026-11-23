@@ -1,6 +1,6 @@
 # Karaoke tagging
 
-Choose **File & Folder Tools → Tag Karaoke Files**, select media or folders and
+Choose **File Tools → Tag Karaoke Files**, select media or folders and
 click Start. The main workspace previews filename-derived tags, shows current values,
 and lets you correct fields or exclude rows before **Apply Tags**. Changing the
 pattern recalculates the proposed tags from the last scan. Use **Refresh** to

@@ -5,10 +5,11 @@ using OperationIdValue = KaraokeToolkit.Core.Execution.OperationId;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Recipes;
 using KaraokeToolkit.Core.Tagging;
+using KaraokeToolkit.Core.Audio;
 
 namespace KaraokeToolkit.Core.Recovery;
 
-public enum RecoveryKind { Conversion, Recipe, Tagging, TrackGrouping, FileMoves }
+public enum RecoveryKind { Conversion, Recipe, Tagging, TrackGrouping, FileMoves, AudioGain }
 
 internal sealed record WorkflowData
 {
@@ -40,6 +41,19 @@ internal sealed record WorkflowData
     public ConversionOptions Processing { get; set; } = new();
     public Dictionary<string, ConversionFileResult> TagResults { get; set; } = new(InputSelection.Paths);
     public string? TagCurrent { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AudioGainItem[]? GainItems { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AudioGainRow[]? GainRows { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AudioGainOptions? GainOptions { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AudioKeyOptions? KeyOptions { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public OverwritePolicy GainPolicy { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? GainCurrent { get; set; }
+    public Dictionary<string, ConversionFileResult> GainResults { get; set; } = new(InputSelection.Paths);
     public string? Workspace { get; set; }
     public bool Finished { get; set; }
 }
@@ -114,7 +128,7 @@ internal sealed class WorkflowSession : IDisposable
         RunSession.CheckPlainPath(journal);
         var data = JsonSerializer.Deserialize<WorkflowData>(File.ReadAllText(journal), DurableJson.Settings) ?? throw new IOException("Empty workflow journal.");
         if (data.Version != 2 || !Enum.IsDefined(data.VerificationMode) || !Enum.IsDefined(data.CheckTiming) ||
-            data.Kind is not (RecoveryKind.Recipe or RecoveryKind.Tagging or RecoveryKind.TrackGrouping or RecoveryKind.FileMoves) || data.Roots is not { Length: > 0 } ||
+            data.Kind is not (RecoveryKind.Recipe or RecoveryKind.Tagging or RecoveryKind.TrackGrouping or RecoveryKind.FileMoves or RecoveryKind.AudioGain) || data.Roots is not { Length: > 0 } ||
             data.Inputs == null || data.CurrentInputs == null || data.Steps == null || data.Expected == null || data.TagFiles == null || data.TagResults == null ||
             !InputSelection.Paths.Equals(Path.GetDirectoryName(directory), data.Roots[0])) throw new IOException("Invalid workflow checkpoint.");
         if (data.SkipUnavailableMoveGroups && !(data.Kind == RecoveryKind.TrackGrouping || data.Kind == RecoveryKind.FileMoves &&
@@ -208,6 +222,8 @@ internal sealed class WorkflowSession : IDisposable
             if (data.Steps.Count > data.Recipe!.Steps.Count || data.Steps.Where((s, i) => s.Number != i + 1 || s.OperationId != data.Recipe.Steps[i].OperationId).Any())
                 throw new IOException("Invalid completed recipe steps.");
         }
+        if (data.Kind == RecoveryKind.AudioGain)
+            AudioGainRecovery.Validate(data);
         data.Expected = new(data.Expected, InputSelection.Paths);
         data.TagResults = new(data.TagResults, InputSelection.Paths);
         return data;
@@ -287,6 +303,13 @@ internal sealed class WorkflowSession : IDisposable
         foreach (string path in outputs) Data.Expected[path] = RecoveryFingerprint.Hash(path, Data.VerificationMode);
         if ((Data.Kind == RecoveryKind.Tagging || Data.TagStepStarted) && Data.TagCurrent != null)
             Data.TagResults[Data.TagCurrent] = new(Data.TagCurrent, ConversionStatus.Succeeded, outputs, "Tags verified and published.");
+        if (Data.Kind == RecoveryKind.AudioGain && Data.GainCurrent != null)
+        {
+            var row = Data.GainRows!.Single(r => InputSelection.Paths.Equals(r.Source, Data.GainCurrent));
+            if (!outputs.SequenceEqual(AudioGainService.Outputs(row), InputSelection.Paths) || removed.Except(outputs, InputSelection.Paths).Any())
+                throw new IOException("Publication differs from the saved audio gain plan.");
+            Data.GainResults[row.Source] = new(row.Source, ConversionStatus.Succeeded, outputs, AudioGainService.GainMessage(row));
+        }
         Save();
     }
     /// <summary>Resolves the attached transaction and records its publication before deleting disposable files.</summary>
@@ -296,6 +319,8 @@ internal sealed class WorkflowSession : IDisposable
         if (Data.Workspace == null || !Directory.Exists(Data.Workspace)) return;
         string path = Path.Combine(Data.Workspace, "recovery.json");
         var journal = File.Exists(path) ? JsonSerializer.Deserialize<TransactionJournal>(File.ReadAllText(path)) : null;
+        if (Data.Kind == RecoveryKind.AudioGain && journal != null)
+            AudioGainRecovery.ValidateTransaction(Data, journal);
         var outputs = FileTransactionRecovery.Recover(Data.Workspace);
         if (outputs != null)
             Published(outputs, journal!.Backups.Select(b => Path.Combine(Path.GetDirectoryName(Data.Workspace)!, b.Name)).ToArray());

@@ -55,6 +55,8 @@ public static class CliOperationCatalog
         OperationId.RepackZip => Include(id),
         OperationId.ValidateKaraoke => Include(id),
         OperationId.TagKaraoke => Include(id),
+        OperationId.NormalizeAudioGain => Include(id),
+        OperationId.ChangeAudioKey => Include(id),
         OperationId.PreviewTags => Include(id),
         OperationId.OrganizeFiles => Include(id),
         OperationId.OrganizeFolders => Include(id),

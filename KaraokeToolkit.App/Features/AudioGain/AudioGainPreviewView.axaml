@@ -1,0 +1,84 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:KaraokeToolkit.App.Features.AudioGain" xmlns:shared="using:KaraokeToolkit.App.Shared"
+             x:Class="KaraokeToolkit.App.Features.AudioGain.AudioGainPreviewView" x:DataType="vm:AudioGainViewModel">
+  <shared:OperationPreviewLayout Title="{Binding Title}" PreviewTitle="{Binding PreviewTitle}" SettingsWidth="240"
+                                 Status="{Binding Status}" StatusSeverity="{Binding StatusSeverity}" Progress="{Binding PreviewProgress}">
+    <shared:OperationPreviewLayout.SettingsContent>
+      <StackPanel Spacing="12">
+        <StackPanel Spacing="5" IsVisible="{Binding !IsKeyChange}">
+          <TextBlock Text="Gain mode"/>
+          <ComboBox ItemsSource="{Binding Modes}" SelectedItem="{Binding SelectedMode}" HorizontalAlignment="Stretch"
+                    AutomationProperties.Name="Gain mode"/>
+        </StackPanel>
+        <StackPanel Spacing="5" IsVisible="{Binding IsKeyChange}">
+          <TextBlock Text="Key shift (semitones)"/>
+          <NumericUpDown Value="{Binding Semitones}" Minimum="-12" Maximum="12" Increment="1" FormatString="+0;-0;0"
+                         AutomationProperties.Name="Key shift (semitones)"/>
+        </StackPanel>
+        <StackPanel Spacing="5" IsVisible="{Binding IsLoudness}">
+          <TextBlock Text="Target loudness (LUFS)"/>
+          <NumericUpDown Value="{Binding TargetLufs}" Minimum="-70" Maximum="-5" Increment="0.5" FormatString="0.0"
+                         AutomationProperties.Name="Target loudness (LUFS)"/>
+        </StackPanel>
+        <StackPanel Spacing="5" IsVisible="{Binding IsOffset}">
+          <TextBlock Text="Gain change (dB)"/>
+          <NumericUpDown Value="{Binding OffsetDb}" Minimum="-60" Maximum="60" Increment="0.5" FormatString="0.0"
+                         AutomationProperties.Name="Gain change (dB)"/>
+        </StackPanel>
+        <StackPanel Spacing="5" IsVisible="{Binding !IsKeyChange}">
+          <TextBlock Text="{Binding PeakLabel}"/>
+          <NumericUpDown Value="{Binding PeakCeiling}" Minimum="-30" Maximum="0" Increment="0.5" FormatString="0.0"
+                         AutomationProperties.Name="{Binding PeakLabel}"/>
+        </StackPanel>
+        <StackPanel Spacing="5">
+          <TextBlock Text="Output folder"/>
+          <TextBlock Text="{Binding OutputFolder}" TextWrapping="Wrap" Opacity="0.8"/>
+          <Button Content="Browse…" Click="Browse_Click"/>
+        </StackPanel>
+        <StackPanel Spacing="5">
+          <TextBlock Text="Existing output files"/>
+          <ComboBox ItemsSource="{Binding OverwritePolicies}" SelectedItem="{Binding Overwrite}"
+                    HorizontalAlignment="Stretch" AutomationProperties.Name="Existing output files"/>
+        </StackPanel>
+        <TextBlock Text="{Binding Help}"
+                   TextWrapping="Wrap" Opacity="0.8" FontSize="{DynamicResource SmallTextSize}"/>
+      </StackPanel>
+    </shared:OperationPreviewLayout.SettingsContent>
+    <shared:OperationPreviewLayout.PreviewActions>
+      <Button Content="Refresh" Command="{Binding ScanCommand}"/>
+    </shared:OperationPreviewLayout.PreviewActions>
+    <shared:OperationPreviewLayout.PreviewContent>
+      <Grid RowDefinitions="Auto,*" RowSpacing="6">
+        <Grid Margin="12,0,15,0" ColumnDefinitions="2*,93,93,73,2*" ColumnSpacing="6">
+          <TextBlock Text="File"/>
+          <TextBlock Grid.Column="1" Text="{Binding CurrentLabel}"/>
+          <TextBlock Grid.Column="2" Text="{Binding EstimatedLabel}"/>
+          <TextBlock Grid.Column="3" Text="{Binding ChangeLabel}"/>
+          <TextBlock Grid.Column="4" Text="Status"/>
+        </Grid>
+        <ListBox Grid.Row="1" ItemsSource="{Binding Rows}">
+          <ListBox.Styles>
+            <Style Selector="ListBoxItem"><Setter Property="HorizontalContentAlignment" Value="Stretch"/></Style>
+          </ListBox.Styles>
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:GainPreviewRow">
+              <Grid ColumnDefinitions="2*,93,93,73,2*" ColumnSpacing="6" ToolTip.Tip="{Binding Row.Source}">
+                <TextBlock Text="{Binding FileName}" TextTrimming="CharacterEllipsis"/>
+                <TextBlock Grid.Column="1" Text="{Binding Current}"/>
+                <TextBlock Grid.Column="2" Text="{Binding Estimated}"/>
+                <TextBlock Grid.Column="3" Text="{Binding Change}"/>
+                <TextBlock Grid.Column="4" Text="{Binding Row.Message}" TextWrapping="Wrap"/>
+              </Grid>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </Grid>
+    </shared:OperationPreviewLayout.PreviewContent>
+    <shared:OperationPreviewLayout.FooterActions>
+      <StackPanel Orientation="Horizontal" Spacing="{x:Static shared:WindowSpacing.FooterButtonGap}">
+        <Button Content="Back" Click="Back_Click" MinWidth="90"/>
+        <Button Content="{Binding ApplyLabel}" Click="Apply_Click" Classes.accent="{Binding CanApply}" IsEnabled="{Binding CanApply}" MinWidth="110"/>
+      </StackPanel>
+    </shared:OperationPreviewLayout.FooterActions>
+  </shared:OperationPreviewLayout>
+</UserControl>

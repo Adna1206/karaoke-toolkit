@@ -191,8 +191,7 @@ public class DiscRipTests
         var store = new SettingsStore(path);
         Assert.False(store.Load().ExperimentalDiscRipping);
         var main = new MainViewModel(path);
-        var tools = main.OperationSections.Single(x => x.Section == OperationSection.FilesAndFolders);
-        Assert.DoesNotContain(tools.Operations, operation => operation.IsRip);
+        Assert.DoesNotContain(main.VisibleSections.SelectMany(section => section.Operations), operation => operation.IsRip);
         Assert.False(main.RunDiscRipCommand.CanExecute(null));
         var draft = new SettingsViewModel(main.Options) { ExperimentalDiscRipping = true };
         Assert.True(draft.HasChanges);
@@ -200,9 +199,9 @@ public class DiscRipTests
         Assert.True(store.Load().ExperimentalDiscRipping);
         Assert.True(main.RunDiscRipCommand.CanExecute(null));
         Assert.DoesNotContain(main.VisibleSections, section => section.Section == OperationSection.DiscRipping);
-        Assert.DoesNotContain(tools.Operations, operation => operation.IsRip);
+        Assert.DoesNotContain(main.VisibleSections.SelectMany(section => section.Operations), operation => operation.IsRip);
         main.SaveOptions(main.Options with { ExperimentalDiscRipping = false });
-        Assert.DoesNotContain(tools.Operations, operation => operation.IsRip);
+        Assert.DoesNotContain(main.VisibleSections.SelectMany(section => section.Operations), operation => operation.IsRip);
         Assert.False(main.RunDiscRipCommand.CanExecute(null));
     }
 }

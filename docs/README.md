@@ -14,6 +14,8 @@ the current checkout. [Planned work](todo.md) is a backlog, not implemented beha
 | [MCP](user/mcp.md) | Local stdio tools, client setup, operation exposure and file-change policy |
 | [CLI examples](user/cli-examples.md) | Practical conversion, tagging, video, folder and scripting workflows |
 | [Tagging](user/tagging.md) | Filename patterns, editable previews, supported formats and tag verification |
+| [Normalize Audio Gain](user/audio-gain.md) | Batch loudness matching, peak normalization, fixed gain and output copies |
+| [Change Audio Key](user/audio-gain.md#change-audio-key) | Shift karaoke audio in semitones while preserving tempo |
 | [Recipes](user/recipes.md) | Saved multi-step operations, step settings, chaining and execution |
 | [Crash recovery](user/crash-recovery.md) | Saved runs, workflow continuation, transaction guarantees and limits |
 | [Disc ripping](user/disc-ripping.md) | Experimental cdrdao reader, configuration and hardware-test limits |

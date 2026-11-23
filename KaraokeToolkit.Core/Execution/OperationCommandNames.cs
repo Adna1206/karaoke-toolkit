@@ -31,6 +31,8 @@ public static class OperationCommandNames
         OperationId.CreateCueAndTextFiles => "create-cue-txt-files",
         OperationId.ValidateKaraoke => "validate-karaoke-files",
         OperationId.TagKaraoke => "tag-karaoke-files",
+        OperationId.NormalizeAudioGain => "normalize-audio-gain",
+        OperationId.ChangeAudioKey => "change-audio-key",
         OperationId.PreviewTags => "preview-tags",
         OperationId.OrganizeFiles => "group-by-alphabet-files",
         OperationId.OrganizeFolders => "group-by-alphabet-folders",

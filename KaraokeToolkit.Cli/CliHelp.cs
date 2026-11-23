@@ -13,6 +13,26 @@ internal static class CliHelp
         {
             var operation = CliOperationCatalog.Resolve(topic);
             var description = OperationCatalog.Get(operation.OperationId);
+            if (operation.OperationId == OperationId.ChangeAudioKey)
+                return """
+                    Usage: karaoke-toolkit run change-audio-key PATH... --output EXISTING_FOLDER --semitones NUMBER [options]
+                    Shifts pitch while preserving tempo. Accepts loose audio, single-track karaoke ZIPs and folders.
+                    --semitones NUMBER         Whole number from -12 to +12. Zero skips the tracks.
+                    --dry-run                 Inspect the planned shift without publishing adjusted copies.
+                    Other options: --recurse, --no-recurse, --overwrite fail|skip|replace, --input PATH, --json, --quiet, --report NEW.json|NEW.txt.
+                    """;
+            if (operation.OperationId == OperationId.NormalizeAudioGain)
+                return """
+                    Usage: karaoke-toolkit run normalize-audio-gain PATH... --output EXISTING_FOLDER [options]
+                    Accepts loose audio, single-track karaoke ZIPs, and folders.
+                    Writes gain-adjusted copies and matching CDG companions. The output folder must be outside the sources.
+                    --mode loudness|peak|offset (default loudness)
+                    --target-lufs NUMBER        Integrated loudness (default -16).
+                    --peak-ceiling NUMBER      True-peak ceiling or peak-mode target in dBTP (default -1).
+                    --gain-db NUMBER           Signed gain adjustment, required in offset mode.
+                    --dry-run                  Measure tracks and preview gain without writing.
+                    Other options: --recurse, --no-recurse, --overwrite fail|skip|replace, --input PATH, --json, --quiet, --report NEW.json|NEW.txt.
+                    """;
             if (operation.OperationId == OperationId.GroupByTrackId)
                 return """
                     Usage: karaoke-toolkit run group-by-track-id PATH... --output FOLDER [options]
