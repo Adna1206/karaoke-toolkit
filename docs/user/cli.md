@@ -13,7 +13,7 @@ From the repository root:
 ```powershell
 dotnet run --project KaraokeToolkit.Cli -- --help
 dotnet run --project KaraokeToolkit.Cli -- operations
-dotnet run --project KaraokeToolkit.Cli -- validate "D:\Karaoke" --json --quiet
+dotnet run --project KaraokeToolkit.Cli -- validate-karaoke-files "D:\Karaoke" --json --quiet
 ```
 
 Builds prepare the appropriate bundled FFmpeg runtime. `scripts/Publish.ps1`
@@ -45,20 +45,20 @@ the shared profile. Unattended conversions keep originals unless explicitly
 requested per run. A saved **Ask** overwrite preference uses **Fail** in
 unattended runs. Recipes and recovery continue to use their own saved settings.
 
-`operations` lists supported names and Core IDs. Use `run NAME` for conversions,
-archive tools, folder tools and manifest restoration. Stable IDs such as
-`ZipToAudioG` are accepted too. `validate`, `tag` and `tag-preview` have direct
-shortcuts. Use positional paths, repeated `--input PATH`, or both. Quote paths with
-spaces; use `--` before positional paths that begin with a dash.
+`operations` lists the command names shared with MCP and their internal Core
+IDs. Use `run NAME` for conversions, archive tools, folder tools and manifest
+restoration. `validate-karaoke-files`, `tag-karaoke-files` and `preview-tags`
+also run directly. Use positional paths, repeated `--input PATH`, or both.
+Quote paths with spaces. Use `--` before positional paths that begin with a dash.
 
 ```powershell
 .\karaoke-toolkit.exe run zip-to-audiog "D:\Incoming" --no-cue-text
 .\karaoke-toolkit.exe run audiog-to-zip --input "D:\Disc One" --input "D:\Disc Two" --zip-level 5
-.\karaoke-toolkit.exe run repack-zip "D:\Incoming" --zip-algorithm Deflate --delete-originals
-.\karaoke-toolkit.exe run organize-files "D:\Karaoke" --ignore-leading-the
-.\karaoke-toolkit.exe run flatten-one-layer "D:\Incoming"
-.\karaoke-toolkit.exe tag-preview "D:\Karaoke" --pattern "%ARTIST% - %TITLE%" --json --quiet
-.\karaoke-toolkit.exe tag "D:\Karaoke" --pattern "%ARTIST% - %TITLE%" --fill-empty-only
+.\karaoke-toolkit.exe run repack-zip-for-compatibility "D:\Incoming" --zip-algorithm Deflate --delete-originals
+.\karaoke-toolkit.exe run group-by-alphabet-files "D:\Karaoke" --ignore-leading-the
+.\karaoke-toolkit.exe run flatten-one-folder-level "D:\Incoming"
+.\karaoke-toolkit.exe preview-tags "D:\Karaoke" --pattern "%ARTIST% - %TITLE%" --json --quiet
+.\karaoke-toolkit.exe tag-karaoke-files "D:\Karaoke" --pattern "%ARTIST% - %TITLE%" --fill-empty-only
 ```
 
 New conversion runs **keep originals** and **fail on existing outputs** by default.
@@ -67,7 +67,7 @@ Choose `--delete-originals` explicitly to request source deletion, and
 a GUI prompt. Tagging updates metadata in place without re-encoding, regardless
 of delete/overwrite preferences. Tagging pattern/media errors are reported as
 failures; BIN and orphan CDG inputs are skipped because they have no tag fields.
-`tag-preview` is read-only and prints parsed plus existing metadata in JSON output.
+`preview-tags` is read-only and prints parsed plus existing metadata in JSON output.
 Tagging takes a fresh fingerprinted preview when it runs.
 
 Commands and named enum choices ignore case. Option names and JSON property names
@@ -77,9 +77,9 @@ Only `--input` can repeat; contradictory flags such as `--recurse --no-recurse`
 are rejected.
 
 `--recurse` is the default for conversions. Group by Track ID scans immediate files
-unless `--recurse` is supplied. Organize Files always recurses; Organize Folders acts on
-immediate child folders; flatten depth is selected by the operation. These folder
-operations keep their established scope regardless of the recursion preference.
+unless `--recurse` is supplied. `group-by-alphabet-files` always recurses through
+selected folders. `group-by-alphabet-folders` moves only their immediate subfolders.
+Choose the flatten command for the depth you want.
 
 `--help` documents encoding, video, compression, validation and tag cleanup flags.
 `--options FILE.json` supplies typed `ConversionOptions`; explicit command flags
@@ -91,8 +91,8 @@ Defaults are MP3 at 320 kbps, Deflate at level 5, recursion and CUE/TXT generati
 enabled where applicable. Optional input validation is off; the engines retain
 their required output checks. Shared flags apply only where the engine uses them:
 extracting a ZIP does not re-encode its audio. Video flags require
-`run karaoke-to-video`; `--ignore-leading-the` requires `run organize-files`;
-tagging flags require `tag` or `tag-preview` (or their `run` equivalents).
+`run karaoke-to-video`; `--ignore-leading-the` requires `run group-by-alphabet-files`;
+tagging flags require `tag-karaoke-files` or `preview-tags` (or their `run` equivalents).
 
 Video defaults are MP4, HD (1280x720), no smoothing, 30 fps and 2000 kbps video.
 Audio matches the detected source bitrate with a 192 kbps fallback.
@@ -181,7 +181,8 @@ No script runner or recipe editing UI is introduced.
 `--dry-run` plans file conversions, folder moves/renames, track grouping, restoration and quarantine
 without changing inputs or creating outputs/journals. Plans list candidate targets
 and detectable collisions, not guarantees that content will encode successfully.
-`tag --dry-run` uses tagging preview; `validate --dry-run` remains a read-only check.
+`tag-karaoke-files --dry-run` uses tagging preview. `validate-karaoke-files --dry-run`
+runs a read-only check.
 Recipe dry runs inspect the first step and list later steps as deferred: their
 actual scope depends on outputs that do not exist yet. Disc dry runs scan the disc
 and report tracks, without reading its full image or publishing tracks.
@@ -192,7 +193,7 @@ files may change after a plan was printed.
 moves only eligible failures into Damaged with restoration manifests. Valid files
 remain in place; unreadable/nonmovable findings are reported as issues. Use
 `--dry-run` first, and `run restore-quarantined-files MANIFEST` to restore a group.
-Quarantine is never an automatic side effect of `validate`.
+Quarantine is an explicit step after running `validate-karaoke-files`.
 
 ## File move recovery settings
 
@@ -231,10 +232,10 @@ otherwise be collapsed.
 ## Disc commands
 
 Use `disc-list [--cdrdao EXECUTABLE] [--json]` to discover exact device addresses.
-`disc-rip --device DEVICE --output FOLDER --disc-name NAME --experimental`
+`rip-cdg --device DEVICE --output FOLDER --disc-name NAME --experimental`
 accepts `--tracks all|1,2,4-6`, `--format Bin|AudioG|Zip`, `--cdrdao EXECUTABLE`,
 normal encoding/compression/CUE preferences, overwrite policy and output/report flags.
-Use `disc-rip --help` for the command's syntax; `run disc-rip` is deliberately rejected.
+Use `rip-cdg --help` for the command's syntax; `run rip-cdg` is deliberately rejected.
 BIN is the default output. Capture uses Core's cdrdao reader and track publication,
 including disc identity checks, cancellation and verified output transactions.
 Windows cdrdao is bundled with the app/CLI package. Linux/macOS resolve an
@@ -258,7 +259,7 @@ selector for all copied commands, and initially collapses Command examples and S
 setup. Brief hints appear only when relevant; longer explanations live in tooltips.
 
 `help OPERATION` and `run OPERATION --help` show operation-specific guidance.
-`help recipe`, `help disc-rip` and other dedicated-command topics show their syntax.
+`help recipe`, `help rip-cdg` and other dedicated-command topics show their syntax.
 `operations --json` identifies dedicated commands and hardware-unverified support.
 
 `completion powershell|bash|zsh` prints completion registration for commands and flags;

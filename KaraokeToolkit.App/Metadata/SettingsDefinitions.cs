@@ -44,14 +44,6 @@ public sealed class SettingsDefinitions
         "OverwritePolicy", "Existing output files (including CUE/TXT)", "Ask prompts before replacing existing files.",
         "Keep and report a failure, skip, replace, or ask when an output already exists. Includes CUE and TXT files.",
         SettingCategory.General, Array.AsReadOnly<string>(["Fail — keep existing files", "Skip existing outputs", "Replace existing outputs", "Ask each time"]));
-    public SettingDefinition AutoRenameZip { get; } = new(
-        "AutoRenameZip", "Auto-rename ZIP files online", "Auto-rename ZIP files online",
-        "Saved for older setups. Online ZIP renaming is unavailable.",
-        SettingCategory.Legacy);
-    public SettingDefinition RenameBins { get; } = new(
-        "RenameBins", "Rename BIN files online", "Rename BIN files online",
-        "Saved for older setups. The online BIN database has closed.",
-        SettingCategory.Legacy);
     public SettingDefinition NamingFormat { get; } = new(
         "NamingFormat", "Legacy naming format", "Legacy naming format",
         "Naming template saved for older setups.",
@@ -108,8 +100,6 @@ public sealed class SettingsDefinitions
         "VideoAudioBitrateKbps", "Fallback audio bitrate (kbps)", "Fallback audio bitrate (kbps)",
         "Use this bitrate when source matching is off or the source has no usable bitrate.",
         SettingCategory.Video, Array.AsReadOnly<int>([128, 192, 256, 320]));
-    public HelpDefinition OnlineRenaming { get; } = new(
-        "Online renaming is unavailable.", "These saved preferences are for older versions.");
     public HelpDefinition ExplorerOverview { get; } = new(
         "Open karaoke files and folders from their right-click menu.", "Add a command to open selected files or folders in Karaoke Toolkit for your Windows account. You choose when to start processing.");
     public HelpDefinition ExplorerLocation { get; } = new(
@@ -128,6 +118,6 @@ public sealed class SettingsDefinitions
     public HelpDefinition Cancel { get; } = new("Cancel", "Close without saving pending changes. Settings already saved with Apply remain in effect.");
     public HelpDefinition Apply { get; } = new("Apply", "Save pending settings and keep this window open.");
     public IReadOnlyList<SettingDefinition> All => Array.AsReadOnly<SettingDefinition>([
-        Theme, RecurseFolders, IgnoreLeadingTheForFileOrganization, DeleteOriginals, ValidateBeforeConversion, AutoCreateCueText, Overwrite, AutoRenameZip, RenameBins, NamingFormat, Algorithm, CompressionLevel, Encoder, Bitrate, ExperimentalDiscRipping, CdrdaoExecutablePath, VideoContainer, VideoResolution, VideoGraphicsSmoothing, VideoFrameRate, VideoBitrateKbps, VideoAudioMatchSourceBitrate, VideoAudioBitrateKbps
+        Theme, RecurseFolders, IgnoreLeadingTheForFileOrganization, DeleteOriginals, ValidateBeforeConversion, AutoCreateCueText, Overwrite, NamingFormat, Algorithm, CompressionLevel, Encoder, Bitrate, ExperimentalDiscRipping, CdrdaoExecutablePath, VideoContainer, VideoResolution, VideoGraphicsSmoothing, VideoFrameRate, VideoBitrateKbps, VideoAudioMatchSourceBitrate, VideoAudioBitrateKbps
     ]);
 }

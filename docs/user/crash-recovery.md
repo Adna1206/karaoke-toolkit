@@ -16,6 +16,12 @@ New files added after the original scan are left for a subsequent run.
 The footer bar animates while the app checks saved files and interrupted
 publication before item processing resumes.
 
+For standalone desktop conversions using **Ask each time**, conflicting outputs wait in
+disposable staging until the batch review. An interruption before publication
+leaves those source and destination files in place. Recovery can regenerate
+the unpublished outputs and review the remaining conflicts again. Published
+groups retain their existing receipts and are skipped on resume.
+
 Recipes and tagging use the same startup/Recover prompt. A recipe checkpoint stores
 its complete definition/settings snapshot, completed-step reports, next input scope
 and current child conversion or move plans. Recovery offers one parent recipe,
@@ -41,7 +47,11 @@ stages and verifies a full group on the destination volume before publishing.
 Move uses a same-volume rename without replacement. Resume verifies a partial
 group and finishes publication using the saved paths. It does not rescan the
 input selection. Desktop, CLI and MCP can resume these jobs. Plan revalidation
-and source hashing happen before the first item is published. Standalone flattening and alphabetical organization also hash their move plans and save a recovery journal before moving items. Recipe steps save their plan in the recipe journal.
+and source hashing happen before the first item is published. Standalone flattening
+and alphabetical organization also hash their move plans and save a recovery
+journal before moving items. Rename by Filename Pattern saves its approved
+same-folder paths and can finish a partially renamed audio/CDG pair. Recipe
+steps save their plan in the recipe journal.
 
 The desktop footer shows an animated bar during “Preparing recovery.” With
 content verification, preparing the move plan reads every source file,
@@ -61,14 +71,13 @@ transaction can still block writes to protect retained originals and backups.
 
 ## Verification settings
 
-The shared **Settings → Recovery** preferences control new standalone Track Grouping, Alphabetical
-Organization and Flatten runs. Choose **xxHash128** (default), **SHA-256**,
+The shared **Settings → Recovery** preferences control new standalone Group by Track ID,
+Group by Alphabet, Flatten and Rename by Filename Pattern runs. Choose **xxHash128** (default), **SHA-256**,
 **Metadata only**, or **No verification**. A saved verification choice takes
 precedence over the default. Metadata checks compare file size
 and last-write time. Directory metadata checks also compare the paths in
-the tree. No verification keeps path and transaction checks. The update
-migrates existing profiles to xxHash128 once. You can change the setting
-afterward in Desktop, [CLI](cli.md#commands-and-settings), or [MCP](mcp.md#requests-and-settings).
+the tree. No verification keeps path and transaction checks. Change the shared
+setting in Desktop, [CLI](cli.md#commands-and-settings), or [MCP](mcp.md#requests-and-settings).
 
 Turning off **Allow batch resume** leaves interrupted move records available
 for manual review. Metadata-only or unverified interrupted runs also require

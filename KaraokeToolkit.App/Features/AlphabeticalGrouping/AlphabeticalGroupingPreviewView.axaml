@@ -1,0 +1,65 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:KaraokeToolkit.App.Features.AlphabeticalGrouping"
+             xmlns:shared="using:KaraokeToolkit.App.Shared" x:Class="KaraokeToolkit.App.Features.AlphabeticalGrouping.AlphabeticalGroupingPreviewView"
+             x:DataType="vm:AlphabeticalGroupingViewModel">
+  <shared:OperationPreviewLayout Title="Group by Alphabet" PreviewTitle="Destination preview"
+                                 Status="{Binding Status}" StatusSeverity="{Binding StatusSeverity}"
+                                 Progress="{Binding PreviewProgress}" HasIssues="{Binding HasIssues}">
+    <shared:OperationPreviewLayout.SettingsContent>
+      <StackPanel Spacing="8" IsEnabled="{Binding CanPreview}">
+        <TextBlock Text="Group"/>
+        <ComboBox SelectedIndex="{Binding ScopeIndex}" HorizontalAlignment="Stretch" AutomationProperties.Name="Group files or folders">
+          <ComboBoxItem Content="Files"/>
+          <ComboBoxItem Content="Folders"/>
+        </ComboBox>
+        <TextBlock IsVisible="{Binding OrganizeFiles}" Text="Includes files in selected folders and their subfolders."
+                   TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.8"/>
+        <TextBlock IsVisible="{Binding !OrganizeFiles}" Text="Moves immediate subfolders as whole folders."
+                   TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.8"/>
+        <CheckBox Content="Ignore leading ‘The’" IsChecked="{Binding IgnoreLeadingThe}" IsVisible="{Binding OrganizeFiles}"/>
+      </StackPanel>
+    </shared:OperationPreviewLayout.SettingsContent>
+    <shared:OperationPreviewLayout.PreviewActions>
+      <Button Content="Refresh" Command="{Binding RefreshCommand}" IsEnabled="{Binding CanPreview}"/>
+    </shared:OperationPreviewLayout.PreviewActions>
+    <shared:OperationPreviewLayout.PreviewContent>
+      <ListBox ItemsSource="{Binding Moves}" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+               AutomationProperties.Name="Current and proposed paths">
+        <ListBox.Styles>
+          <Style Selector="ListBoxItem">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+          </Style>
+        </ListBox.Styles>
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:AlphabeticalPreviewRow">
+            <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="8">
+              <TextBlock Text="{Binding SourceName}" ToolTip.Tip="{Binding File.Source}" TextTrimming="CharacterEllipsis"/>
+              <TextBlock Grid.Column="1" Text="→"/>
+              <TextBlock Grid.Column="2" Text="{Binding TargetName}" ToolTip.Tip="{Binding Target}"
+                         TextTrimming="CharacterEllipsis" FontWeight="SemiBold"/>
+            </Grid>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </shared:OperationPreviewLayout.PreviewContent>
+    <shared:OperationPreviewLayout.IssuesContent>
+      <ListBox ItemsSource="{Binding Issues}" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+               AutomationProperties.Name="Skipped items and conflicts">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:AlphabeticalPreviewRow">
+            <StackPanel Spacing="2">
+              <TextBlock Text="{Binding SourceName}" ToolTip.Tip="{Binding File.Source}" TextTrimming="CharacterEllipsis" FontWeight="SemiBold"/>
+              <TextBlock Text="{Binding File.Message}" ToolTip.Tip="{Binding Target}" TextWrapping="Wrap"/>
+            </StackPanel>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </shared:OperationPreviewLayout.IssuesContent>
+    <shared:OperationPreviewLayout.FooterActions>
+      <StackPanel Orientation="Horizontal" Spacing="{x:Static shared:WindowSpacing.FooterButtonGap}">
+        <Button Content="Back" Click="Back_Click"/>
+        <Button Content="Move items" Click="Apply_Click" Classes.accent="{Binding CanApply}" IsEnabled="{Binding CanApply}"/>
+      </StackPanel>
+    </shared:OperationPreviewLayout.FooterActions>
+  </shared:OperationPreviewLayout>
+</UserControl>

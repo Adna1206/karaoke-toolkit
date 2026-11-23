@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Text.Json;
 using KaraokeToolkit.Core.Audio;
 using KaraokeToolkit.Core.Conversion;
@@ -12,6 +13,7 @@ namespace KaraokeToolkit.Mcp;
 /// <summary>Keeps omitted request fields distinct from explicit values until the profile is resolved.</summary>
 public sealed record McpOperationRequest
 {
+    [Description("Use the name returned by get_operations, such as group-by-alphabet-files.")]
     public required OperationId OperationId { get; init; }
     public required IReadOnlyList<string> Inputs { get; init; }
     public JsonElement? Options { get; init; }

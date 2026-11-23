@@ -1,27 +1,24 @@
 using KaraokeToolkit.Core.Archives;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Execution;
+using KaraokeToolkit.Core.Naming;
 using KaraokeToolkit.Core.Recovery;
 using System.Globalization;
-using System.Text.RegularExpressions;
 namespace KaraokeToolkit.Core.FileOperations;
 
 /// <summary>Normalizes local karaoke filenames as a group, retaining audio/CDG basename pairing.</summary>
-internal static partial class FilenameCleanup
+internal static class FilenameCleanup
 {
-    [GeneratedRegex(@"^[A-Za-z]+(?<separator>-?)[0-9]+(?=$|[\s_.-])", RegexOptions.CultureInvariant)]
-    private static partial Regex LeadingTrackId();
-
     internal static string FormatTrackId(string filename, bool addSeparator)
     {
-        var match = LeadingTrackId().Match(Path.GetFileNameWithoutExtension(filename));
-        if (!match.Success)
+        if (LeadingTrackId.Parse(Path.GetFileNameWithoutExtension(filename)) is not { } id ||
+            id.Separator is not ("" or "-"))
             return filename;
 
-        var separator = match.Groups["separator"];
+        bool hasSeparator = id.Separator.Length != 0;
         if (addSeparator)
-            return separator.Length == 0 ? filename.Insert(separator.Index, "-") : filename;
-        return separator.Length == 0 ? filename : filename.Remove(separator.Index, separator.Length);
+            return hasSeparator ? filename : filename.Insert(id.SeparatorIndex, "-");
+        return hasSeparator ? filename.Remove(id.SeparatorIndex, id.Separator.Length) : filename;
     }
 
     internal static string Clean(string filename)

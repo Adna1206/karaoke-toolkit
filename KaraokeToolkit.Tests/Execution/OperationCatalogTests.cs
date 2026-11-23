@@ -121,15 +121,20 @@ public class OperationCatalogTests
             {
                 Assert.Null(registration.ExclusionReason); Assert.False(string.IsNullOrWhiteSpace(registration.Name));
                 Assert.True(OperationCapabilities.CanRunUnattended(registration.OperationId));
+                Assert.Equal(OperationCommandNames.Get(registration.OperationId), registration.Name);
                 Assert.Equal(registration, CliOperationCatalog.Resolve(registration.Name!));
             }
             else
             {
                 Assert.Null(registration.Name); Assert.False(string.IsNullOrWhiteSpace(registration.ExclusionReason));
-                Assert.Throws<CliUsageException>(() => CliOperationCatalog.Resolve(registration.OperationId.ToString()));
+                Assert.Throws<CliUsageException>(() => CliOperationCatalog.Resolve(OperationCommandNames.Get(registration.OperationId)));
             }
         }
         Assert.Equal("restore-quarantined-files", CliOperationCatalog.Get(OperationId.RestoreQuarantined).Name);
+        Assert.Equal("group-by-alphabet-files", CliOperationCatalog.Get(OperationId.OrganizeFiles).Name);
+        Assert.Equal("group-by-alphabet-folders", CliOperationCatalog.Get(OperationId.OrganizeFolders).Name);
+        Assert.Equal(Enum.GetValues<OperationId>().Length, Enum.GetValues<OperationId>().Select(OperationCommandNames.Get)
+            .Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
 
     [Fact]

@@ -3,146 +3,110 @@
         xmlns:vm="using:KaraokeToolkit.App.Features.TrackGrouping"
         x:Class="KaraokeToolkit.App.Features.TrackGrouping.TrackGroupingPreviewView"
         x:DataType="vm:TrackGroupingViewModel">
-  <Grid Margin="{x:Static shared:WindowSpacing.ContentInset}" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="14">
-    <TextBlock Classes="heading1" Text="Group by Track ID"/>
-    <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
-      <TextBox Text="{Binding OutputFolder}" PlaceholderText="Destination folder"
-               AutomationProperties.Name="Destination folder"/>
-      <Button Grid.Column="1" Content="Browse…" Click="Browse_Click"/>
-    </Grid>
-    <Grid Grid.Row="2" ColumnDefinitions="310,*" ColumnSpacing="18" ClipToBounds="True">
-      <ScrollViewer>
-        <StackPanel Spacing="6" Margin="0,0,8,0">
-          <TextBlock Text="Selected folders"/>
-          <ComboBox HorizontalAlignment="Stretch" SelectedIndex="{Binding FolderHandling}" AutomationProperties.Name="Selected folders">
-            <ComboBoxItem Content="Group files inside folders"/>
-            <ComboBoxItem Content="Group selected folders as items"/>
-          </ComboBox>
-          <CheckBox IsVisible="{Binding ScanFolders}" IsChecked="{Binding Recurse}" Content="Include subfolders"/>
-          <Separator Margin="0,4"/>
-          <TextBlock Text="Grouping"/>
-          <ComboBox HorizontalAlignment="Stretch" SelectedIndex="{Binding GroupingMode}" AutomationProperties.Name="Grouping">
-            <ComboBoxItem Content="Trailing digits"/>
-            <ComboBoxItem Content="Number ranges"/>
-          </ComboBox>
-          <StackPanel Spacing="6" IsVisible="{Binding UsesTrailingDigits}">
-            <TextBlock Text="Trailing digits"/>
-            <NumericUpDown Value="{Binding TrailingDigits}" Minimum="1" Maximum="8" FormatString="0"
-                           AutomationProperties.Name="Trailing digits"/>
-            <TextBlock Text="Folder style"/>
-            <ComboBox HorizontalAlignment="Stretch" SelectedIndex="{Binding MaskStyle}" AutomationProperties.Name="Folder style">
-              <ComboBoxItem Content="Lowercase x"/>
-              <ComboBoxItem Content="Uppercase X"/>
-              <ComboBoxItem Content="Number signs (#)"/>
-              <ComboBoxItem Content="Range start with s"/>
-            </ComboBox>
-            <CheckBox IsChecked="{Binding CreateParents}" Content="Create parent folders"/>
-            <StackPanel Spacing="6" Margin="20,0,0,0" IsVisible="{Binding CreateParents}">
-              <TextBlock Text="Maximum parent levels (0 for all)"/>
-              <NumericUpDown Value="{Binding MaxParentLevels}" Minimum="0" Maximum="8" FormatString="0"
-                             AutomationProperties.Name="Maximum parent levels"/>
-              <CheckBox IsChecked="{Binding SkipSingleChildParents}">
-                <TextBlock Text="Skip parents with only one child folder" TextWrapping="Wrap"/>
-              </CheckBox>
-            </StackPanel>
-          </StackPanel>
-          <StackPanel Spacing="6" IsVisible="{Binding UsesRanges}">
-            <TextBlock Text="Items per range"/>
-            <NumericUpDown Value="{Binding RangeSize}" Minimum="1" Maximum="2147483647" FormatString="0"
-                           AutomationProperties.Name="Items per range"/>
-            <TextBlock Text="Range start"/>
-            <NumericUpDown Value="{Binding RangeStart}" Minimum="0" Maximum="2147483647" FormatString="0"
-                           AutomationProperties.Name="Range start"/>
-            <TextBlock Text="Range separator"/>
-            <ComboBox HorizontalAlignment="Stretch" SelectedIndex="{Binding RangeSeparatorStyle}" AutomationProperties.Name="Range separator">
-              <ComboBoxItem Content="-"/>
-              <ComboBoxItem Content="to"/>
-              <ComboBoxItem Content="Custom"/>
-            </ComboBox>
-            <TextBox IsVisible="{Binding UsesCustomRangeSeparator}" Text="{Binding CustomRangeSeparator}"
-                     AutomationProperties.Name="Custom range separator"/>
-          </StackPanel>
-          <Separator Margin="0,4"/>
-          <TextBlock Text="Track ID separator"/>
-          <ComboBox HorizontalAlignment="Stretch" SelectedIndex="{Binding IdSeparatorStyle}" AutomationProperties.Name="Track ID separator">
-            <ComboBoxItem Content="Dash"/>
-            <ComboBoxItem Content="None"/>
-          </ComboBox>
-          <CheckBox IsChecked="{Binding Move}" Content="Move items instead of copying"/>
-        </StackPanel>
-      </ScrollViewer>
-      <Grid Grid.Column="1">
-        <Grid.RowDefinitions>
-          <RowDefinition Height="Auto"/>
-          <RowDefinition Height="3*" MinHeight="48"/>
-          <RowDefinition Height="Auto"/>
-          <RowDefinition Height="*" MinHeight="64"/>
-        </Grid.RowDefinitions>
-        <Grid.Styles>
-          <Style Selector="TreeView.destinationPreview">
-            <Setter Property="Grid.RowSpan" Value="3"/>
-          </Style>
-          <Style Selector="TreeView.destinationPreview.withIssues">
-            <Setter Property="Grid.RowSpan" Value="1"/>
-          </Style>
-        </Grid.Styles>
-        <DockPanel Margin="0,0,0,6">
-          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
-            <Button Content="{Binding TreeExpansionLabel}" Command="{Binding ToggleTreeExpansionCommand}"/>
-            <Button Content="Refresh" Click="Refresh_Click"/>
-          </StackPanel>
-          <TextBlock Classes="heading3" Text="Destination preview" VerticalAlignment="Center"/>
-        </DockPanel>
-        <TreeView Grid.Row="1" Classes="destinationPreview" Classes.withIssues="{Binding HasIssues}"
-                  ItemsSource="{Binding Tree}" AutomationProperties.Name="Destination preview">
-          <TreeView.Styles>
-            <Style Selector="TreeViewItem">
-              <Setter Property="IsExpanded" Value="{ReflectionBinding IsExpanded, Mode=TwoWay}"/>
-            </Style>
-          </TreeView.Styles>
-          <TreeView.ItemTemplate>
-            <TreeDataTemplate x:DataType="vm:TrackGroupingNode" ItemsSource="{Binding Children}">
-              <TextBlock Text="{Binding Label}" ToolTip.Tip="{Binding Detail}"/>
-            </TreeDataTemplate>
-          </TreeView.ItemTemplate>
-        </TreeView>
-        <GridSplitter Grid.Row="2" IsVisible="{Binding HasIssues}" Height="14" Background="Transparent"
-                      ResizeDirection="Rows" ResizeBehavior="PreviousAndNext" HorizontalAlignment="Stretch"
-                      AutomationProperties.Name="Resize skipped items and conflicts panel">
-          <GridSplitter.Template>
-            <ControlTemplate>
-              <Border Background="{TemplateBinding Background}">
-                <Border Width="32" Height="3" CornerRadius="2" HorizontalAlignment="Center" VerticalAlignment="Center"
-                        Background="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
-              </Border>
-            </ControlTemplate>
-          </GridSplitter.Template>
-        </GridSplitter>
-        <Grid Grid.Row="3" IsVisible="{Binding HasIssues}" RowDefinitions="Auto,*" RowSpacing="6">
-          <TextBlock Classes="heading3" Text="Skipped items and conflicts"/>
-          <ListBox Grid.Row="1" ItemsSource="{Binding Issues}" AutomationProperties.Name="Skipped items and conflicts">
-            <ListBox.ItemTemplate>
-              <DataTemplate x:DataType="vm:TrackGroupingPreviewIssue">
-                <TextBlock Text="{Binding Text}" ToolTip.Tip="{Binding Text}" TextWrapping="Wrap"/>
-              </DataTemplate>
-            </ListBox.ItemTemplate>
-          </ListBox>
-        </Grid>
+  <shared:OperationPreviewLayout Title="Group by Track ID" PreviewTitle="Destination preview"
+                                 Status="{Binding Status}" StatusSeverity="{Binding StatusSeverity}"
+                                 Progress="{Binding PreviewProgress}" HasIssues="{Binding HasIssues}">
+    <shared:OperationPreviewLayout.HeaderContent>
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+        <TextBox Text="{Binding OutputFolder}" PlaceholderText="Destination folder"
+                 AutomationProperties.Name="Destination folder"/>
+        <Button Grid.Column="1" Content="Browse…" Click="Browse_Click"/>
       </Grid>
-    </Grid>
-    <Border Grid.Row="3" Classes="windowFooter dialog">
-      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{x:Static shared:WindowSpacing.StatusProgressGap}" VerticalAlignment="Center">
-          <shared:StatusBar Message="{Binding Status}" Kind="{Binding StatusSeverity}" VerticalAlignment="Center"/>
-          <ProgressBar Grid.Column="1" Width="{x:Static shared:WindowSpacing.StatusProgressWidth}" VerticalAlignment="Center"
-                       IsVisible="{Binding PreviewProgress.IsVisible}" IsIndeterminate="{Binding PreviewProgress.IsIndeterminate}"
-                       Value="{Binding PreviewProgress.Percent, Mode=OneWay}"/>
-        </Grid>
-        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top" Spacing="{x:Static shared:WindowSpacing.FooterButtonGap}">
-          <Button Content="Back" Click="Back_Click"/>
-          <Button Classes.accent="{Binding CanApply}" Content="{Binding ApplyLabel}" IsEnabled="{Binding CanApply}" Click="Apply_Click"/>
+    </shared:OperationPreviewLayout.HeaderContent>
+    <shared:OperationPreviewLayout.SettingsContent>
+      <StackPanel Spacing="6">
+        <TextBlock Text="Selected folders"/>
+        <ComboBox HorizontalAlignment="Stretch" SelectedIndex="{Binding FolderHandling}" AutomationProperties.Name="Selected folders">
+          <ComboBoxItem Content="Group files inside folders"/>
+          <ComboBoxItem Content="Group selected folders as items"/>
+        </ComboBox>
+        <CheckBox IsVisible="{Binding ScanFolders}" IsChecked="{Binding Recurse}" Content="Include subfolders"/>
+        <Separator Margin="0,4"/>
+        <TextBlock Text="Grouping"/>
+        <ComboBox HorizontalAlignment="Stretch" SelectedIndex="{Binding GroupingMode}" AutomationProperties.Name="Grouping">
+          <ComboBoxItem Content="Trailing digits"/>
+          <ComboBoxItem Content="Number ranges"/>
+        </ComboBox>
+        <StackPanel Spacing="6" IsVisible="{Binding UsesTrailingDigits}">
+          <TextBlock Text="Trailing digits"/>
+          <NumericUpDown Value="{Binding TrailingDigits}" Minimum="1" Maximum="8" FormatString="0"
+                         AutomationProperties.Name="Trailing digits"/>
+          <TextBlock Text="Folder style"/>
+          <ComboBox HorizontalAlignment="Stretch" SelectedIndex="{Binding MaskStyle}" AutomationProperties.Name="Folder style">
+            <ComboBoxItem Content="Lowercase x"/>
+            <ComboBoxItem Content="Uppercase X"/>
+            <ComboBoxItem Content="Number signs (#)"/>
+            <ComboBoxItem Content="Range start with s"/>
+          </ComboBox>
+          <CheckBox IsChecked="{Binding CreateParents}" Content="Create parent folders"/>
+          <StackPanel Spacing="6" Margin="20,0,0,0" IsVisible="{Binding CreateParents}">
+            <TextBlock Text="Maximum parent levels (0 for all)"/>
+            <NumericUpDown Value="{Binding MaxParentLevels}" Minimum="0" Maximum="8" FormatString="0"
+                           AutomationProperties.Name="Maximum parent levels"/>
+            <CheckBox IsChecked="{Binding SkipSingleChildParents}">
+              <TextBlock Text="Skip parents with only one child folder" TextWrapping="Wrap"/>
+            </CheckBox>
+          </StackPanel>
         </StackPanel>
-      </Grid>
-    </Border>
-  </Grid>
+        <StackPanel Spacing="6" IsVisible="{Binding UsesRanges}">
+          <TextBlock Text="Items per range"/>
+          <NumericUpDown Value="{Binding RangeSize}" Minimum="1" Maximum="2147483647" FormatString="0"
+                         AutomationProperties.Name="Items per range"/>
+          <TextBlock Text="Range start"/>
+          <NumericUpDown Value="{Binding RangeStart}" Minimum="0" Maximum="2147483647" FormatString="0"
+                         AutomationProperties.Name="Range start"/>
+          <TextBlock Text="Range separator"/>
+          <ComboBox HorizontalAlignment="Stretch" SelectedIndex="{Binding RangeSeparatorStyle}" AutomationProperties.Name="Range separator">
+            <ComboBoxItem Content="-"/>
+            <ComboBoxItem Content="to"/>
+            <ComboBoxItem Content="Custom"/>
+          </ComboBox>
+          <TextBox IsVisible="{Binding UsesCustomRangeSeparator}" Text="{Binding CustomRangeSeparator}"
+                   AutomationProperties.Name="Custom range separator"/>
+        </StackPanel>
+        <Separator Margin="0,4"/>
+        <TextBlock Text="Track ID separator"/>
+        <ComboBox HorizontalAlignment="Stretch" SelectedIndex="{Binding IdSeparatorStyle}" AutomationProperties.Name="Track ID separator">
+          <ComboBoxItem Content="Dash"/>
+          <ComboBoxItem Content="None"/>
+        </ComboBox>
+        <CheckBox IsChecked="{Binding Move}" Content="Move items instead of copying"/>
+      </StackPanel>
+    </shared:OperationPreviewLayout.SettingsContent>
+    <shared:OperationPreviewLayout.PreviewActions>
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Content="{Binding TreeExpansionLabel}" Command="{Binding ToggleTreeExpansionCommand}"/>
+        <Button Content="Refresh" Click="Refresh_Click"/>
+      </StackPanel>
+    </shared:OperationPreviewLayout.PreviewActions>
+    <shared:OperationPreviewLayout.PreviewContent>
+      <TreeView ItemsSource="{Binding Tree}" AutomationProperties.Name="Destination preview">
+        <TreeView.Styles>
+          <Style Selector="TreeViewItem">
+            <Setter Property="IsExpanded" Value="{ReflectionBinding IsExpanded, Mode=TwoWay}"/>
+          </Style>
+        </TreeView.Styles>
+        <TreeView.ItemTemplate>
+          <TreeDataTemplate x:DataType="vm:TrackGroupingNode" ItemsSource="{Binding Children}">
+            <TextBlock Text="{Binding Label}" ToolTip.Tip="{Binding Detail}"/>
+          </TreeDataTemplate>
+        </TreeView.ItemTemplate>
+      </TreeView>
+    </shared:OperationPreviewLayout.PreviewContent>
+    <shared:OperationPreviewLayout.IssuesContent>
+      <ListBox ItemsSource="{Binding Issues}" AutomationProperties.Name="Skipped items and conflicts">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:TrackGroupingPreviewIssue">
+            <TextBlock Text="{Binding Text}" ToolTip.Tip="{Binding Text}" TextWrapping="Wrap"/>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </shared:OperationPreviewLayout.IssuesContent>
+    <shared:OperationPreviewLayout.FooterActions>
+      <StackPanel Orientation="Horizontal" VerticalAlignment="Top" Spacing="{x:Static shared:WindowSpacing.FooterButtonGap}">
+        <Button Content="Back" Click="Back_Click"/>
+        <Button Classes.accent="{Binding CanApply}" Content="{Binding ApplyLabel}" IsEnabled="{Binding CanApply}" Click="Apply_Click"/>
+      </StackPanel>
+    </shared:OperationPreviewLayout.FooterActions>
+  </shared:OperationPreviewLayout>
 </UserControl>

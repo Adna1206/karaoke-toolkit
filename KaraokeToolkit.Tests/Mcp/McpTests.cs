@@ -39,10 +39,10 @@ public class McpTests
 
         var sink = new ProgressSink();
         await tools.RunOperation(JsonSerializer.Deserialize<McpOperationRequest>(
-            """{"operationId":"OrganizeFiles","inputs":["input"]}""", Program.JsonOptions)!, sink, default, true);
+            """{"operationId":"group-by-alphabet-files","inputs":["input"]}""", Program.JsonOptions)!, sink, default, true);
         var inherited = executor.LastRequest!;
         await tools.RunOperation(JsonSerializer.Deserialize<McpOperationRequest>(
-            """{"operationId":"OrganizeFiles","inputs":["input"],"recoveryVerification":"XxHash128","options":{"RecurseFolders":true}}""", Program.JsonOptions)!, sink, default, true);
+            """{"operationId":"group-by-alphabet-files","inputs":["input"],"recoveryVerification":"XxHash128","options":{"RecurseFolders":true}}""", Program.JsonOptions)!, sink, default, true);
         var overridden = executor.LastRequest!;
         Assert.Equal(RecoveryVerificationMode.Sha256, inherited.RecoveryVerification);
         Assert.False(inherited.Options.RecurseFolders);
@@ -130,7 +130,7 @@ public class McpTests
         {
             ["request"] = new
             {
-                operationId = "GroupByTrackId",
+                operationId = "group-by-track-id",
                 inputs = new[] { source },
                 outputFolder = destination,
                 grouping = new { rangeSize = 50, rangeSeparator = " to " }
@@ -171,14 +171,24 @@ public class McpTests
         using var operations = Json(await client.CallToolAsync("get_operations"));
         Assert.False(operations.RootElement.GetProperty("allowFileChanges").GetBoolean());
         Assert.Equal(Enum.GetValues<OperationId>().Length, operations.RootElement.GetProperty("operations").GetArrayLength());
+        var alphabetical = operations.RootElement.GetProperty("operations").EnumerateArray()
+            .Single(entry => entry.GetProperty("coreId").GetString() == "OrganizeFiles");
+        Assert.Equal("group-by-alphabet-files", alphabetical.GetProperty("name").GetString());
         using var settings = Json(await client.CallToolAsync("get_settings"));
         Assert.Equal(320, settings.RootElement.GetProperty("defaults").GetProperty("options").GetProperty("audioBitrate").GetInt32());
         Assert.Equal("XxHash128", settings.RootElement.GetProperty("defaultFileMoveRecoveryVerification").GetString());
         string root = TestMediaFixture.NewFolder(); TestMediaFixture.Seed(root, OperationId.ZipToBin, "keep");
+        var alphabeticalPlan = await client.CallToolAsync("plan_operation", new Dictionary<string, object?>
+        {
+            ["request"] = new { operationId = "group-by-alphabet-files", inputs = new[] { root } }
+        });
+        Assert.False(alphabeticalPlan.IsError ?? false);
+        using var grouped = Json(alphabeticalPlan);
+        Assert.Equal("OrganizeFiles", grouped.RootElement.GetProperty("report").GetProperty("operation").GetString());
         var result = await client.CallToolAsync("run_operation", new Dictionary<string, object?>
-        { ["request"] = new { operationId = "ZipToAudioG", inputs = new[] { root } }, ["confirmFileChanges"] = true });
+        { ["request"] = new { operationId = "zip-to-audiog", inputs = new[] { root } }, ["confirmFileChanges"] = true });
         Assert.True(result.IsError); Assert.False(File.Exists(Path.Combine(root, "song.wav")));
-        var check = await client.CallToolAsync("validate_karaoke", new Dictionary<string, object?> { ["inputs"] = new[] { root } });
+        var check = await client.CallToolAsync("validate_karaoke_files", new Dictionary<string, object?> { ["inputs"] = new[] { root } });
         Assert.False(check.IsError ?? false); using var report = Json(check);
         Assert.Equal("Validation Report", report.RootElement.GetProperty("report").GetProperty("reportType").GetString());
     }
@@ -188,7 +198,7 @@ public class McpTests
     {
         await using var client = await Connect(true);
         string root = TestMediaFixture.NewFolder(); TestMediaFixture.Seed(root, OperationId.ZipToBin, "keep");
-        var request = new { operationId = "ZipToAudioG", inputs = new[] { root }, options = new { AutoCreateCueText = false, DeleteOldFiles = false } };
+        var request = new { operationId = "zip-to-audiog", inputs = new[] { root }, options = new { AutoCreateCueText = false, DeleteOldFiles = false } };
         var plan = await client.CallToolAsync("plan_operation", new Dictionary<string, object?> { ["request"] = request });
         Assert.False(plan.IsError ?? false); Assert.False(File.Exists(Path.Combine(root, "song.wav")));
         var denied = await client.CallToolAsync("run_operation", new Dictionary<string, object?> { ["request"] = request });
@@ -257,7 +267,7 @@ public class McpTests
             await Send(new { jsonrpc = "2.0", id = 2, method = "tools/call", @params = new
             {
                 name = "run_operation",
-                arguments = new { request = new { operationId = "ZipToAudioG", inputs = new[] { root },
+                arguments = new { request = new { operationId = "zip-to-audiog", inputs = new[] { root },
                     options = new { AutoCreateCueText = false, DeleteOldFiles = false } }, confirmFileChanges = true },
                 _meta = new { progressToken = "wire-test" }
             } });
@@ -338,16 +348,18 @@ public class McpTests
         Assert.Contains("not exposed", error.Message); Assert.Equal(0, executor.Calls); Assert.True(File.Exists(path));
     }
 
-    [Fact]
-    public async Task UnknownOperationIsAnActionableMcpToolError()
+    [Theory]
+    [InlineData("FutureUnknownOperation")]
+    [InlineData("OrganizeFiles")]
+    public async Task UnknownOperationIsAnActionableMcpToolError(string name)
     {
         await using var client = await Connect();
         var result = await client.CallToolAsync("run_operation", new Dictionary<string, object?>
-        { ["request"] = new { operationId = "FutureUnknownOperation", inputs = new[] { "unused" } } });
+        { ["request"] = new { operationId = name, inputs = new[] { "unused" } } });
         Assert.True(result.IsError);
         string message = result.Content.OfType<TextContentBlock>().First().Text;
         Assert.Contains("Unregistered MCP operation", message);
-        Assert.Contains("FutureUnknownOperation", message);
+        Assert.Contains(name, message);
         Assert.Contains("get_operations", message);
     }
 
@@ -356,10 +368,10 @@ public class McpTests
     {
         await using var client = await Connect();
         var result = await client.CallToolAsync("run_operation", new Dictionary<string, object?>
-        { ["request"] = new { operationId = "PlayAudioG", inputs = new[] { "unused" } } });
+        { ["request"] = new { operationId = "play-audiog", inputs = new[] { "unused" } } });
         Assert.True(result.IsError);
         string message = result.Content.OfType<TextContentBlock>().First().Text;
-        Assert.Contains("PlayAudioG", message); Assert.Contains("excluded", message);
+        Assert.Contains("play-audiog", message); Assert.Contains("excluded", message);
         Assert.Contains("Playback is deferred", message); Assert.Contains("get_operations", message);
     }
 }

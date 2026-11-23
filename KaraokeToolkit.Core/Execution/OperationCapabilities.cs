@@ -13,12 +13,12 @@ public static class OperationCapabilities
 
     public static OperationSupport Describe(OperationId operation) => OperationCatalog.Get(operation).Support;
     public static bool RenamesFilenames(OperationId operation) => operation is
-        OperationId.CleanUpFilenames or OperationId.AddTrackIdSeparator or OperationId.RemoveTrackIdSeparator;
+        OperationId.CleanUpFilenames or OperationId.AddTrackIdSeparator or OperationId.RemoveTrackIdSeparator or OperationId.RenameByPattern;
     public static bool IsConversion(OperationId operation) => OperationCatalog.Get(operation).IsConversion;
     public static bool CanRunUnattended(OperationId operation) => OperationCatalog.Get(operation).CanRunUnattended;
     public static bool SupportsFileMoveRecoveryOptions(OperationId operation) => operation is
         OperationId.GroupByTrackId or OperationId.OrganizeFiles or OperationId.OrganizeFolders
-        or OperationId.FlattenOneLayer or OperationId.FlattenAllLayers;
+        or OperationId.FlattenOneLayer or OperationId.FlattenAllLayers or OperationId.RenameByPattern;
     public static RecoveryVerificationMode DefaultRecoveryVerification(OperationId operation) =>
         SupportsFileMoveRecoveryOptions(operation) ? DefaultFileMoveRecoveryVerification : RecoveryVerificationMode.Sha256;
 }

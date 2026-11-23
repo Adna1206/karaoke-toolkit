@@ -1,4 +1,5 @@
 using KaraokeToolkit.App.Shared;
+using KaraokeToolkit.App.Features.AlphabeticalGrouping;
 using KaraokeToolkit.App.Features.Settings;
 using KaraokeToolkit.App.Features.Main.Dialogs;
 using KaraokeToolkit.App.Features.Reports;
@@ -6,6 +7,7 @@ using KaraokeToolkit.App.Features.DiscRipping;
 using KaraokeToolkit.App.Features.About;
 using KaraokeToolkit.App.Features.Recipes;
 using KaraokeToolkit.App.Features.Tagging;
+using KaraokeToolkit.App.Features.FilenameRename;
 using KaraokeToolkit.App.Features.TrackGrouping;
 using KaraokeToolkit.Core.FileOperations;
 using System;
@@ -58,7 +60,18 @@ public partial class MainWindow : Window
             var preview = new TrackGroupingPreviewView(viewModel, ConfirmPreviewBackAsync);
             return ShowPreviewAsync(preview, preview.ReviewAsync, preview.CancelPreview);
         };
+        model.ConfigureAlphabeticalGroupingAsync = viewModel =>
+        {
+            var preview = new AlphabeticalGroupingPreviewView(viewModel, ConfirmPreviewBackAsync);
+            return ShowPreviewAsync(preview, preview.ReviewAsync, preview.CancelPreview);
+        };
+        model.ConfigureFilenameRenameAsync = viewModel =>
+        {
+            var preview = new FilenameRenamePreviewView(viewModel, ConfirmPreviewBackAsync);
+            return ShowPreviewAsync(preview, preview.ReviewAsync, preview.CancelPreview);
+        };
         model.ResolveConflictAsync = (conflict, token) => OutputConflictDialog.ShowAsync(this, conflict, token);
+        model.ResolveConflictsAsync = (conflicts, token) => OutputConflictReviewWindow.ShowAsync(this, conflicts, token);
         model.ConfirmRecoveryAsync = job => InterruptedRunDialog.ShowAsync(this, job);
         await model.CheckForRecoveryAsync();
         // Recovery briefly disables editing; focus once the home list is ready.

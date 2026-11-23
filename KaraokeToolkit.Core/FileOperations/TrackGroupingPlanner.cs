@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using KaraokeToolkit.Core.Archives;
 using KaraokeToolkit.Core.Conversion;
+using KaraokeToolkit.Core.Naming;
 using KaraokeToolkit.Core.Recovery;
 
 namespace KaraokeToolkit.Core.FileOperations;
@@ -40,9 +41,6 @@ public static partial class TrackGroupingPlanner
 {
     private static readonly StringComparer Paths = InputSelection.Paths;
     private const int MaximumDigits = 9;
-
-    [GeneratedRegex(@"^(?<prefix>[A-Za-z]+)[ _-]?(?<number>[0-9]+)(?=$|[\s_.-])", RegexOptions.CultureInvariant)]
-    private static partial Regex TrackName();
 
     [GeneratedRegex(@"^(?<prefix>[A-Za-z]+)[ _-]?(?<number>[0-9]+)(?<mask>[xX#]+)$", RegexOptions.CultureInvariant)]
     private static partial Regex FolderMask();
@@ -293,16 +291,14 @@ public static partial class TrackGroupingPlanner
                 return null;
         }
 
-        var track = TrackName().Match(name);
-        string number = track.Groups["number"].Value;
-        if (!track.Success || number.Length > MaximumDigits)
+        if (LeadingTrackId.Parse(name) is not { } track || track.Digits.Length > MaximumDigits)
             return null;
-        long value = ParseDigits(number);
-        return new(track.Groups["prefix"].Value.ToUpperInvariant(), value, value, number.Length);
+        long value = ParseDigits(track.Digits);
+        return new(track.Prefix.ToUpperInvariant(), value, value, track.Digits.Length);
     }
 
     // A start-only name such as BKD-33600s could represent several interval sizes.
-    // TrackName deliberately requires a boundary after the number so it stays unrecognized.
+    // The leading ID parser requires a boundary after the number so it stays unrecognized.
     private static Regex? CustomFolderRange(TrackGroupingOptions options)
     {
         if (!options.WholeFolders || (options.IdSeparator is "-" or "" && options.RangeSeparator is " - " or " to "))

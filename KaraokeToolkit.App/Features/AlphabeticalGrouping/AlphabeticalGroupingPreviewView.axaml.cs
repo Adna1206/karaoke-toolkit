@@ -1,0 +1,53 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Avalonia.Controls;
+using Avalonia.Interactivity;
+
+namespace KaraokeToolkit.App.Features.AlphabeticalGrouping;
+
+public sealed partial class AlphabeticalGroupingPreviewView : UserControl
+{
+    private AlphabeticalGroupingViewModel Model => (AlphabeticalGroupingViewModel)DataContext!;
+    private readonly Func<bool, bool, Task<bool>>? confirmBack;
+    private readonly TaskCompletionSource<AlphabeticalGroupingSubmission?> decision = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public AlphabeticalGroupingPreviewView() => InitializeComponent();
+
+    internal AlphabeticalGroupingPreviewView(AlphabeticalGroupingViewModel model, Func<bool, bool, Task<bool>> confirmBack) : this()
+    {
+        this.confirmBack = confirmBack;
+        DataContext = model;
+    }
+
+    internal void CancelPreview() => decision.TrySetResult(null);
+
+    internal async Task<AlphabeticalGroupingSubmission?> ReviewAsync()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var preview = Model.RefreshAsync(cancellation.Token);
+        try
+        {
+            if (await Task.WhenAny(preview, decision.Task) == preview)
+                await preview;
+            return await decision.Task;
+        }
+        finally
+        {
+            cancellation.Cancel();
+            Model.RefreshCommand.Cancel();
+        }
+    }
+
+    private async void Back_Click(object? sender, RoutedEventArgs args)
+    {
+        if (confirmBack == null ? !Model.HasEdits : await confirmBack(Model.IsBusy, Model.HasEdits))
+            CancelPreview();
+    }
+
+    private void Apply_Click(object? sender, RoutedEventArgs args)
+    {
+        if (Model.BuildSubmission() is { } submission)
+            decision.TrySetResult(submission);
+    }
+}

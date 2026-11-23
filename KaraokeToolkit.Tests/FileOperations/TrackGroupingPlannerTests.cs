@@ -4,13 +4,16 @@ namespace KaraokeToolkit.Tests.FileOperations;
 
 public class TrackGroupingPlannerTests
 {
-    [Fact]
-    public void RangeOriginSeparatesBoundaryTracksAndKeepsCompanionsTogether()
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("_")]
+    public void RangeOriginSeparatesBoundaryTracksAndKeepsCompanionsTogether(string inputSeparator)
     {
         string root = TestMediaFixture.NewFolder(), output = Path.Combine(root, "sorted");
         string previous = FileAt(root, "BKD-33600 - Artist - Title.zip");
-        string audio = FileAt(root, "BKD33601 - Artist - Title.mp3");
-        string graphics = FileAt(root, "BKD33601 - Artist - Title.cdg");
+        string audio = FileAt(root, $"BKD{inputSeparator}33601 - Artist - Title.mp3");
+        string graphics = FileAt(root, $"BKD{inputSeparator}33601 - Artist - Title.cdg");
         string otherPrefix = FileAt(root, "SF-33652.zip");
 
         var plan = TrackGroupingPlanner.Plan([previous, audio, otherPrefix], output, new()

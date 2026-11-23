@@ -12,7 +12,7 @@
       <ComboBox Classes="filenamePattern" ItemsSource="{Binding Patterns}" Text="{Binding Pattern, Mode=TwoWay}" IsEditable="True"
                 Padding="11,5"
                 IsEnabled="{Binding CanPreview}" HorizontalAlignment="Stretch" PlaceholderText="Filename pattern"
-                AutomationProperties.Name="Filename pattern" ToolTip.Tip="Type a filename pattern or choose one from your history."/>
+                AutomationProperties.Name="Filename pattern" ToolTip.Tip="Choose a built-in or previously accepted pattern, or type your own."/>
       <Button Grid.Column="1" Content="Refresh" Command="{Binding PreviewCommand}" MinWidth="100"/>
     </Grid>
     <TextBlock Grid.Row="2" Text="%DISC% → Album · %TRACK% → numeric Track · %ARTIST% → Artist · %TITLE% → Title. Reorder fields and type any separators. ZIPs use the archive filename."

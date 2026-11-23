@@ -13,11 +13,11 @@ namespace KaraokeToolkit.Mcp;
 public sealed class McpTools(McpOperationsService service, McpAccessPolicy policy, SharedSettingsStore profile)
 {
     [McpServerTool(Name = "get_operations", ReadOnly = true, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Discover every Core operation, its explicit MCP exposure decision, file-change requirement and exclusion reason.")]
+    [Description("Discover operation names shared with CLI, stable Core IDs, MCP availability and file-change requirements.")]
     public object GetOperations() => new
     {
         policy.AllowFileChanges,
-        Operations = McpOperationCatalog.All.Select(r => new { Operation = r.Id, r.Included, r.ChangesFiles, r.ExclusionReason, OperationCatalog.Get(r.Id).Description, OperationCatalog.Get(r.Id).RequiresFolders })
+        Operations = McpOperationCatalog.All.Select(r => new { r.Name, CoreId = r.Id.ToString(), r.Included, r.ChangesFiles, r.ExclusionReason, OperationCatalog.Get(r.Id).Description, OperationCatalog.Get(r.Id).RequiresFolders })
     };
 
     [McpServerTool(Name = "get_settings", ReadOnly = true, OpenWorld = false, UseStructuredContent = true)]
@@ -36,7 +36,7 @@ public sealed class McpTools(McpOperationsService service, McpAccessPolicy polic
         RecoveryVerificationModes = Enum.GetNames<KaraokeToolkit.Core.Recovery.RecoveryVerificationMode>(),
         OperationCapabilities.DefaultFileMoveRecoveryVerification,
         TrackGroupingMasks = new[] { "x", "X", "#", "s" },
-        Notes = "Paths are local absolute paths. Originals are kept by default. Media conversions with OutputFolder keep originals. GroupByTrackId requires OutputFolder and accepts Grouping settings. Recipes use saved per-step settings; Ask is unsupported. Read-only mode is not an OS filesystem sandbox."
+        Notes = "Use the name from get_operations as operationId. Paths are local absolute paths. Originals are kept by default. Media conversions with OutputFolder keep originals. group-by-track-id requires OutputFolder and accepts Grouping settings. Recipes use Core IDs and saved per-step settings. Ask is unsupported. Read-only mode is not an OS filesystem sandbox."
     };
 
     [McpServerTool(Name = "list_settings", ReadOnly = true, OpenWorld = false, UseStructuredContent = true)]
@@ -63,7 +63,7 @@ public sealed class McpTools(McpOperationsService service, McpAccessPolicy polic
         { throw new McpException(error.Message, error); }
     }
 
-    [McpServerTool(Name = "validate_karaoke", ReadOnly = true, OpenWorld = false, UseStructuredContent = true)]
+    [McpServerTool(Name = "validate_karaoke_files", ReadOnly = true, OpenWorld = false, UseStructuredContent = true)]
     [Description("Check local karaoke structure, pairing and ZIP integrity without moving or rewriting files. Not a playback or audio-quality test.")]
     public Task<ExecutionResult> Validate(string[] inputs, IProgress<ProgressNotificationValue> progress, CancellationToken cancellationToken, bool? recurse = null)
     {

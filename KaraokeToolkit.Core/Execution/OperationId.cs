@@ -33,5 +33,6 @@ public enum OperationId
     PlayAudioG,
     AddTrackIdSeparator,
     RemoveTrackIdSeparator,
-    CheckForUpdates
+    CheckForUpdates,
+    RenameByPattern
 }

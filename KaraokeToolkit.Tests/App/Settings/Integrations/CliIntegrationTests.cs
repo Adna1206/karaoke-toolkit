@@ -20,9 +20,9 @@ public class CliIntegrationTests
         Assert.False(model.ExampleNeedsFolder);
         model.ExampleIndex = 2;
         Assert.True(model.ExampleNeedsFolder);
-        Assert.Contains(" validate '<karaoke-folder>' --json --quiet", model.CommandText);
+        Assert.Contains(" validate-karaoke-files '<karaoke-folder>' --json --quiet", model.CommandText);
         model.ExampleIndex = 3;
-        Assert.Contains(" tag-preview ", model.CommandText);
+        Assert.Contains(" preview-tags ", model.CommandText);
         model.ExampleIndex = 1;
         Assert.False(model.ExampleNeedsFolder);
         Assert.EndsWith(" operations", model.CommandText);

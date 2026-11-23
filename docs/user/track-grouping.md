@@ -30,9 +30,9 @@ applying. Items already at their planned path are skipped.
 
 Review the live destination tree before applying. Use **Expand all** and
 **Collapse all** beside **Refresh** to open or close every branch.
-When there are skipped items
-or conflicts, drag the divider above their panel to resize it. The Move or Copy
-button uses the accent colour once the plan is ready. Conflicts block
+When there are skipped items or conflicts, drag the divider above their panel
+to resize it. Drag it to the bottom to hide the panel and back up to reopen it.
+The Move or Copy button uses the accent colour once the plan is ready. Conflicts block
 the batch. The desktop preview defaults to Move, which requires a same-volume
 destination. CLI and MCP default to Copy.
 Interrupted publication can be resumed from the saved plan using Recover.

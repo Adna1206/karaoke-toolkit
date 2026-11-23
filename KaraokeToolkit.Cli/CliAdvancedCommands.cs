@@ -20,7 +20,8 @@ internal sealed class CliAdvancedCommands(OperationExecutionService service, IDi
             if (args.Length > 2) throw new CliUsageException("help takes at most one command or operation.");
             await output.WriteLineAsync(CliHelp.For(args.ElementAtOrDefault(1))); return 0;
         }
-        if (command is not ("recipe" or "disc-list" or "disc-rip" or "quarantine" or "completion" or "path")) return null;
+        if (command is not ("recipe" or "disc-list" or "quarantine" or "completion" or "path") &&
+            !CliOperationCatalog.Get(OperationId.DiscRip).MatchesName(command)) return null;
         if (args.TakeWhile(a => a != "--").Any(a => a is "--help" or "-h"))
         { await output.WriteLineAsync(CliHelp.For(command)); return 0; }
         if (command is "completion" or "path")
@@ -32,7 +33,7 @@ internal sealed class CliAdvancedCommands(OperationExecutionService service, IDi
         if (command == "quarantine")
         {
             CheckFlags(args[1..], ["json", "quiet", "report", "dry-run", "input", "recurse", "no-recurse"]);
-            var parsed = CliArguments.Parse(["validate", .. args[1..]], loadProfile);
+            var parsed = CliArguments.Parse([OperationCommandNames.Get(OperationId.ValidateKaraoke), .. args[1..]], loadProfile);
             var result = await service.QuarantineAsync(parsed.Inputs, parsed.Request!.Options.RecurseFolders,
                 parsed.Quiet ? null : new CliApplication.ConsoleProgress(error), token, parsed.DryRun);
             return await CliApplication.WriteResultAsync(parsed, result, output, error);
@@ -56,7 +57,7 @@ internal sealed class CliAdvancedCommands(OperationExecutionService service, IDi
         string tracksText = Take(rest, "tracks") ?? "all";
         if (!rest.Remove("--experimental")) throw new CliUsageException("Pass --experimental to acknowledge experimental physical CD+G capture.");
         var parsedRip = CliArguments.Parse(["run", "bin-to-audiog", ".", .. rest], loadProfile);
-        if (parsedRip.Inputs.Length != 1 || parsedRip.Inputs[0] != ".") throw new CliUsageException("disc-rip takes --device and --output, not positional input paths.");
+        if (parsedRip.Inputs.Length != 1 || parsedRip.Inputs[0] != ".") throw new CliUsageException("rip-cdg requires --device and --output; remove positional input paths.");
         var options = parsedRip.Request!.Options with { ExperimentalDiscRipping = true, CdrdaoExecutablePath = executable ?? parsedRip.Request.Options.CdrdaoExecutablePath };
         reader = discReader ?? new NativeDiscReader(options.CdrdaoExecutablePath);
         new ConversionRequest(OperationId.BinToZip, destination, options).Validate();

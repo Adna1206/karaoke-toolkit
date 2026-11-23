@@ -21,6 +21,9 @@ public class MaintenanceContractTests
             File.WriteAllText(Path.Combine(folder, before + title + extension), extension);
         string unrelated = Path.Combine(folder, "Artist - ABC123.mp3");
         File.WriteAllText(unrelated, "unchanged");
+        string[] groupingOnly = ["ABC 001 - Song.mp3", "ABC_001 - Song.mp3"];
+        foreach (string name in groupingOnly)
+            File.WriteAllText(Path.Combine(folder, name), name);
 
         var request = new ConversionRequest(operation, folder, new());
         var result = await Service().RunAsync(request);
@@ -31,6 +34,8 @@ public class MaintenanceContractTests
             Assert.Equal(extension, File.ReadAllText(Path.Combine(folder, after + title + extension)));
         }
         Assert.Equal("unchanged", File.ReadAllText(unrelated));
+        foreach (string name in groupingOnly)
+            Assert.Equal(name, File.ReadAllText(Path.Combine(folder, name)));
         Assert.Equal(1, (await Service().RunAsync(request)).Skipped);
     }
 

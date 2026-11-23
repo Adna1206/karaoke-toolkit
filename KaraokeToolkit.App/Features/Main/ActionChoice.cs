@@ -36,6 +36,7 @@ public partial class ActionChoice(OperationDefinition definition, RecipeDefiniti
     public bool IsRestore => Definition.IsRestore;
     public bool IsTagging => Definition.IsTagging;
     public bool IsTrackGrouping => Definition.IsTrackGrouping;
+    public bool IsFilenameRename => Definition.IsFilenameRename;
     public AlphabeticalOrganizeScope? OrganizeMode => Definition.OrganizeMode;
     public bool IsOrganizer => OrganizeMode.HasValue;
     public FolderFlattenScope? FlattenScope => Definition.FlattenScope;
@@ -47,6 +48,7 @@ public partial class ActionChoice(OperationDefinition definition, RecipeDefiniti
         Recipe is { } recipe ? RecipeOperations.FileExtensions(recipe.Steps[0].OperationId) :
         IsOrganizer || IsTrackGrouping ? null :
         IsTagging ? KaraokeTaggingService.InputExtensions :
+        IsFilenameRename ? FilenameRenameService.Extensions :
         Action is { } action && OperationCapabilities.IsConversion(action) ? InputSelection.ConversionFileExtensions(action) :
         InputSelection.Extensions.Concat(ArchiveZipConverter.Extensions).ToArray();
     public OperationSection Section => Definition.Section;

@@ -11,7 +11,7 @@ dependencies before adding them here. Windows builds bundle this reader for the
 experimental CD+G operation; Linux/macOS use an installed executable or configured
 path. See [disc ripping](../../docs/user/disc-ripping.md) for integration and limits.
 
-CDRDAO's source archive includes GPL v2 `COPYING`. All four runtime DLLs now
+CDRDAO's source archive includes GPL v2 `COPYING`. All four runtime DLLs
 match archived MSYS2 packages byte-for-byte; `runtime-components.json` records
 their identities and source archives. Repository `licenses/cdrdao/` retains
 their licence texts, which build preparation copies to output `licenses/cdrdao/`.

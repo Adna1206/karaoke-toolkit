@@ -7,8 +7,8 @@ internal static class CliHelp
     internal static string For(string? topic)
     {
         if (topic is null or "run") return CliApplication.Help;
-        if (topic.Equals("disc-rip", StringComparison.OrdinalIgnoreCase) || topic.Equals("DiscRip", StringComparison.OrdinalIgnoreCase))
-            return "Usage: karaoke-toolkit disc-rip --device DEVICE --output FOLDER --disc-name NAME --experimental [--tracks all|1,2,4-6] [--format Bin|AudioG|Zip] [--cdrdao EXECUTABLE] [conversion options] [--dry-run]\nPhysical CD+G capture remains experimental. Uses the existing Core ripper and selected encoding settings; no prompts or elevation.";
+        if (CliOperationCatalog.Get(OperationId.DiscRip).MatchesName(topic))
+            return "Usage: karaoke-toolkit rip-cdg --device DEVICE --output FOLDER --disc-name NAME --experimental [--tracks all|1,2,4-6] [--format Bin|AudioG|Zip] [--cdrdao EXECUTABLE] [conversion options] [--dry-run]\nPhysical CD+G capture remains experimental. Uses the existing Core ripper and selected encoding settings.";
         try
         {
             var operation = CliOperationCatalog.Resolve(topic);
@@ -27,7 +27,7 @@ internal static class CliHelp
                     """;
             string specific = operation.OperationId switch
             {
-                OperationId.TagKaraoke or OperationId.PreviewTags => "Tagging: --pattern, --fill-empty-only, --preserve-comments, --preserve-other-tags. Use tag-preview before applying metadata.",
+                OperationId.TagKaraoke or OperationId.PreviewTags => "Tagging: --pattern, --fill-empty-only, --preserve-comments, --preserve-other-tags. Use preview-tags before applying metadata.",
                 OperationId.KaraokeToVideo => "Video: --video-container, --video-resolution, --video-smoothing, --video-frame-rate, --video-bitrate, --video-audio-bitrate, --video-audio-fallback-only.",
                 OperationId.OrganizeFiles => "Folder tools: --ignore-leading-the. This operation always recurses and moves files.",
                 OperationId.OrganizeFolders => "Groups immediate child folders. This operation moves directories; --no-recurse does not change its scope.",
@@ -48,7 +48,6 @@ internal static class CliHelp
             {
                 "recipe" => "Usage: karaoke-toolkit recipe list FOLDER | show FILE | validate FILE | run FILE PATH... [--dry-run] [--json] [--quiet] [--report NEW.json|NEW.txt]\nRecipe steps retain their saved settings and must use fail/skip/replace, never Ask. recover JOURNAL also resumes recipes.",
                 "disc-list" => "Usage: karaoke-toolkit disc-list [--cdrdao EXECUTABLE] [--json]\nScan for cdrdao-compatible discs; requires device access. Does not request elevation.",
-                "disc-rip" => "Usage: karaoke-toolkit disc-rip --device DEVICE --output FOLDER --disc-name NAME --experimental [--tracks all|1,2,4-6] [--format Bin|AudioG|Zip] [--cdrdao EXECUTABLE] [conversion options] [--dry-run]\nPhysical CD+G capture remains experimental. Uses the existing Core ripper and selected encoding settings.",
                 "quarantine" => "Usage: karaoke-toolkit quarantine PATH... [--no-recurse] [--dry-run] [--json] [--quiet] [--report NEW.json|NEW.txt]\nValidate inputs and move eligible failures into Damaged with restoration manifests; never moves valid files.",
                 "completion" => "Usage: karaoke-toolkit completion powershell|bash|zsh\nPrint shell completion setup; evaluate it in your own shell or save to a profile.",
                 "path" => "Usage: karaoke-toolkit path powershell|bash|zsh\nPrint optional PATH setup for this installation. Does not modify profiles or environment itself.",

@@ -1,4 +1,5 @@
 using KaraokeToolkit.Core.Execution;
+using KaraokeToolkit.App.Features.AlphabeticalGrouping;
 using KaraokeToolkit.Core.Audio;
 using KaraokeToolkit.App.Shared;
 using KaraokeToolkit.App.Features.Settings;
@@ -98,7 +99,8 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
         finally { settingInputs = false; }
         InputSummary = normalized.Length == 1 ? "Selected: " + normalized[0] : normalized.Length + " selected inputs: " + string.Join("; ", normalized.Select(Path.GetFileName));
         var extensions = normalized.Where(File.Exists).Select(p => Path.GetExtension(p).ToLowerInvariant()).Distinct().ToArray();
-        if (suggestOperation && SelectedOperation is not { IsOrganizer: true } and not { IsFlatten: true } and not { IsRecipe: true } and not { IsTagging: true } and not { IsTrackGrouping: true } && normalized.All(File.Exists))
+        if (suggestOperation && SelectedOperation is not { IsOrganizer: true } and not { IsFlatten: true } and not { IsRecipe: true } and
+            not { IsTagging: true } and not { IsTrackGrouping: true } and not { IsFilenameRename: true } && normalized.All(File.Exists))
         {
             if (extensions.All(e => e == ".zip") && SelectedOperation?.Action != Action.RepackZip)
                 SelectedOperation = Operations.First(x => x.Action == Action.ZipToAudioG);
@@ -235,11 +237,12 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
     {
         get; set;
     }
+    internal ResolveOutputConflicts? ResolveConflictsAsync { get; set; }
     public ConversionOptions Options { get; private set; } = new();
     public AudioBitratePreferences AudioBitrates { get; private set; } = new();
     public SettingsWindowSize OptionsWindowSize { get; private set; } = new();
     public int OptionsTabIndex { get; private set; }
-    public IReadOnlyList<ActionChoice> Operations { get; } = OperationDefinitions.All.Select(definition => new ActionChoice(definition)).ToArray();
+    public IReadOnlyList<ActionChoice> Operations { get; } = OperationDefinitions.Desktop.Select(definition => new ActionChoice(definition)).ToArray();
     public ObservableCollection<ActivityEntry> Activity { get; } = new();
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(StartCommand))]
     public partial string FolderPath { get; set; } = "";
@@ -531,6 +534,11 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
             await RunTrackGroupingAsync();
             return;
         }
+        if (SelectedOperation?.IsFilenameRename == true)
+        {
+            await RunFilenameRenameAsync();
+            return;
+        }
         if (SelectedOperation?.IsValidation == true)
         {
             await ValidateAsync();
@@ -544,7 +552,8 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
                 if (await CheckForRecoveryAsync(folder, recurse: true))
                     return;
             }
-            await RunFileOperationAsync();
+            if (SelectedOperation.IsOrganizer) await ReviewAlphabeticalGroupingAsync();
+            else await RunFileOperationAsync();
             return;
         }
         try
@@ -701,7 +710,8 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
                             cancelled = true;
                             break;
                         }
-                        var attempt = await new SelectionConversionService(recovery).RunAsync(retry, run.Progress, run.Token, ResolveConflictAsync);
+                        var attempt = await new SelectionConversionService(recovery).RunAsync(retry, run.Progress, run.Token,
+                            ResolveConflictAsync, ResolveConflictsAsync);
                         all.AddRange(attempt.Files);
                         nextRetry.AddRange(attempt.RetryRequests);
                         total += attempt.Found;
@@ -720,12 +730,15 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
                     };
                 }
                 else if (recoveryJob != null)
-                    result = await new ConversionService(recovery).ResumeAsync(recoveryJob, run.Progress, run.Token, ResolveConflictAsync);
-                else if (selectedInputs.Length > 0 || File.Exists(FolderPath))
+                    result = ResolveConflictsAsync is { } review
+                        ? await new ConversionService(recovery).ResumeWithConflictReviewAsync(recoveryJob, review, run.Progress, run.Token)
+                        : await new ConversionService(recovery).ResumeAsync(recoveryJob, run.Progress, run.Token, ResolveConflictAsync);
+                else if (selectedInputs.Length > 0 || File.Exists(FolderPath) ||
+                         OverwritePolicy == OverwritePolicy.Ask && ResolveConflictsAsync != null)
                     result = await new SelectionConversionService(recovery).RunAsync(new(action, CurrentInputs, runOptions, OverwritePolicy)
                     {
                         ValidateBeforeConversion = ValidateBeforeConversion
-                    }, run.Progress, run.Token, ResolveConflictAsync);
+                    }, run.Progress, run.Token, ResolveConflictAsync, ResolveConflictsAsync);
                 else
                     result = await new ConversionService(recovery).RunAsync(new(action, FolderPath, runOptions), OverwritePolicy, run.Progress, run.Token, ResolveConflictAsync, ValidateBeforeConversion);
             }
@@ -773,7 +786,7 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
             await ExecuteAsync(null, retryRequests.ToArray());
     }
 
-    private async Task RunFileOperationAsync(RecoveryJob? job = null)
+    private async Task RunFileOperationAsync(RecoveryJob? job = null, AlphabeticalGroupingSubmission? alphabetical = null)
     {
         var run = BeginRun(job == null ? SelectedOperation?.Label ?? "File Operation" : "Recovery — " + job.Action,
             job == null ? "Preparing file moves…" : "Checking interrupted file moves…", isIndeterminate: true);
@@ -805,10 +818,11 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
         }
         try
         {
-            var result = SelectedOperation!.IsFlatten
-                ? await new FlattenFolderLayer().RunAsync(CurrentInputs, run.Progress, run.Token, SelectedOperation.FlattenScope!.Value, RecoveryVerification, SaveResumableRun)
-                : await new AlphabeticalOrganizer().RunAsync(CurrentInputs, SelectedOperation.OrganizeMode!.Value, run.Progress, run.Token,
-                    IgnoreLeadingTheForFileOrganization, RecoveryVerification, SaveResumableRun);
+            var result = alphabetical != null
+                ? await new AlphabeticalOrganizer(recovery).ApplyPreviewAsync(CurrentInputs, alphabetical.Scope, alphabetical.Plan,
+                    run.Progress, run.Token, alphabetical.IgnoreLeadingThe, RecoveryVerification, SaveResumableRun)
+                : await new FlattenFolderLayer().RunAsync(CurrentInputs, run.Progress, run.Token, SelectedOperation!.FlattenScope!.Value,
+                    RecoveryVerification, SaveResumableRun);
             run.StopProgress();
             LastReport = CompletionReport.FromConversion(RunTitle, result) with { ReportType = "File Organization Report" };
             FoundFiles = result.Found;

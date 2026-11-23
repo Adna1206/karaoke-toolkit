@@ -20,9 +20,19 @@ public class AlphabeticalOrganizerTests
         File.WriteAllText(Path.Combine(first, "apple.txt"), "apple");
 
         var model = new MainViewModel(Path.Combine(TestMediaFixture.NewFolder(), "options.xmls"));
-        model.SelectedOperation = model.Operations.Single(x => x.OrganizeMode == AlphabeticalOrganizeScope.Folders);
+        model.SelectedOperation = model.Operations.Single(x => x.IsOrganizer);
         model.SetInputs([first, second]);
         Assert.Equal(2, model.CurrentInputs.Length);
+        model.ConfigureAlphabeticalGroupingAsync = async preview =>
+        {
+            await preview.RefreshAsync();
+            preview.ScopeIndex = (int)AlphabeticalOrganizeScope.Folders;
+            Assert.Null(preview.BuildSubmission());
+            await preview.RefreshAsync();
+            Assert.Equal(3, preview.Moves.Count);
+            Assert.True(Directory.Exists(Path.Combine(first, "Bravo")));
+            return preview.BuildSubmission();
+        };
         await model.StartCommand.ExecuteAsync(null);
 
         Assert.Equal(3, model.LastReport!.Entries.Count(x => x.Status == "Succeeded"));
@@ -72,6 +82,50 @@ public class AlphabeticalOrganizerTests
         Assert.Equal(2, moved.Succeeded);
         Assert.True(File.Exists(Path.Combine(root, "S", "song.mp3")));
         Assert.True(File.Exists(Path.Combine(root, "S", "song.cdg")));
+    }
+
+    [Fact]
+    public async Task PreviewAndApplySkipTheWholeConflictingPairAndMoveOtherFiles()
+    {
+        string root = TestMediaFixture.NewFolder();
+        string audio = Path.Combine(root, "song.mp3");
+        string graphics = Path.Combine(root, "song.cdg");
+        string notes = Path.Combine(root, "notes.txt");
+        File.WriteAllText(audio, "audio");
+        File.WriteAllText(graphics, "graphics");
+        File.WriteAllText(notes, "notes");
+        Directory.CreateDirectory(Path.Combine(root, "S"));
+        File.WriteAllText(Path.Combine(root, "S", "song.cdg"), "occupied");
+        var organizer = new AlphabeticalOrganizer();
+
+        var plan = await organizer.PreviewAsync([root], AlphabeticalOrganizeScope.Files);
+        Assert.Equal(new[] { audio, graphics }, plan.Files.Where(file => file.Status == ConversionStatus.Failed)
+            .Select(file => file.Source).OrderDescending(StringComparer.Ordinal));
+        Assert.Equal(notes, Assert.Single(plan.Files, file => file.Status == ConversionStatus.Succeeded).Source);
+        var result = await organizer.ApplyPreviewAsync([root], AlphabeticalOrganizeScope.Files, plan);
+
+        Assert.Equal(2, result.Skipped);
+        Assert.Equal("audio", File.ReadAllText(audio));
+        Assert.Equal("graphics", File.ReadAllText(graphics));
+        Assert.Equal("notes", File.ReadAllText(Path.Combine(root, "N", "notes.txt")));
+    }
+
+    [Fact]
+    public async Task ApprovalRejectsAChangedDestinationBeforeMovingAnything()
+    {
+        string root = TestMediaFixture.NewFolder();
+        string audio = Path.Combine(root, "song.mp3");
+        File.WriteAllText(audio, "audio");
+        var organizer = new AlphabeticalOrganizer();
+        var approved = await organizer.PreviewAsync([audio], AlphabeticalOrganizeScope.Files);
+        string target = Assert.Single(Assert.Single(approved.Files).Outputs);
+        Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+        File.WriteAllText(target, "new destination");
+
+        await Assert.ThrowsAsync<IOException>(() =>
+            organizer.ApplyPreviewAsync([audio], AlphabeticalOrganizeScope.Files, approved));
+        Assert.Equal("audio", File.ReadAllText(audio));
+        Assert.Equal("new destination", File.ReadAllText(target));
     }
 
     [Fact]

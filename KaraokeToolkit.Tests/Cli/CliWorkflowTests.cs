@@ -89,7 +89,7 @@ public class CliWorkflowTests
         string source = TestMediaFixture.NewFolder(), destination = TestMediaFixture.NewFolder();
         TestMediaFixture.Seed(source, OperationId.AudioGToBin, "keep");
         var original = Snapshot(source);
-        Assert.Equal(0, await App().RunAsync(["run", "losslessg-to-mp3g", source, "--output", destination, "--no-cue-text", "--quiet"], new StringWriter(), new StringWriter()));
+        Assert.Equal(0, await App().RunAsync(["run", "lossless-audiog-to-mp3g", source, "--output", destination, "--no-cue-text", "--quiet"], new StringWriter(), new StringWriter()));
         Assert.True(File.Exists(Path.Combine(destination, "song.mp3")));
         Assert.Equal(FileTransaction.Hash(Path.Combine(source, "song.cdg")), FileTransaction.Hash(Path.Combine(destination, "song.cdg")));
         Assert.Equal(original, Snapshot(source));
@@ -120,14 +120,14 @@ public class CliWorkflowTests
     }
 
     [Theory]
-    [InlineData("organize-files")]
-    [InlineData("organize-folders")]
-    [InlineData("flatten-one-layer")]
-    [InlineData("flatten-all-layers")]
-    [InlineData("cleanup-filenames")]
+    [InlineData("group-by-alphabet-files")]
+    [InlineData("group-by-alphabet-folders")]
+    [InlineData("flatten-one-folder-level")]
+    [InlineData("flatten-all-folder-levels")]
+    [InlineData("clean-up-filenames")]
     [InlineData("add-track-id-separator")]
     [InlineData("remove-track-id-separator")]
-    [InlineData("create-cue-and-text-files")]
+    [InlineData("create-cue-txt-files")]
     public async Task FolderToolDryRunsDoNotCreateOrMoveFiles(string operation)
     {
         string root = TestMediaFixture.NewFolder();
@@ -195,7 +195,7 @@ public class CliWorkflowTests
         var reader = new DiscRipTests.FakeReader(); reader.Disc = reader.Disc with { Device = "test-device" };
         var cli = new CliApplication(discReader: reader); string destination = TestMediaFixture.NewFolder();
         Assert.Equal(0, await cli.RunAsync(["disc-list", "--json"], new StringWriter(), new StringWriter()));
-        string[] args = ["disc-rip", "--device", "test-device", "--output", destination, "--disc-name", "TEST", "--tracks", "1", "--format", "Bin", "--no-cue-text", "--quiet"];
+        string[] args = ["rip-cdg", "--device", "test-device", "--output", destination, "--disc-name", "TEST", "--tracks", "1", "--format", "Bin", "--no-cue-text", "--quiet"];
         Assert.Equal(2, await cli.RunAsync(args, new StringWriter(), new StringWriter())); Assert.Empty(reader.ReadTracks);
         Assert.Equal(0, await cli.RunAsync([.. args, "--experimental", "--dry-run"], new StringWriter(), new StringWriter())); Assert.Empty(reader.ReadTracks);
         Assert.Equal(0, await cli.RunAsync([.. args, "--experimental"], new StringWriter(), new StringWriter())); Assert.Equal(new[] { 1 }, reader.ReadTracks);
@@ -211,7 +211,7 @@ public class CliWorkflowTests
     {
         var reader = new DiscRipTests.FakeReader(); reader.Disc = reader.Disc with { Device = "test" };
         string root = TestMediaFixture.NewFolder();
-        int code = await new CliApplication(discReader: reader).RunAsync(["disc-rip", "--device", "test", "--output", root,
+        int code = await new CliApplication(discReader: reader).RunAsync(["rip-cdg", "--device", "test", "--output", root,
             "--disc-name", "TEST", "--tracks", selection, "--experimental", "--quiet"], new StringWriter(), new StringWriter());
         Assert.Equal(2, code); Assert.Empty(reader.ReadTracks); Assert.Empty(Directory.GetFileSystemEntries(root));
     }

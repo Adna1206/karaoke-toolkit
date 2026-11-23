@@ -56,16 +56,16 @@ protocol initialization/tool discovery and propagates cancellation notifications
 
 | Tool | Purpose |
 | --- | --- |
-| `get_operations` | All Core IDs, explicit inclusion/exclusion, reasons and file-change requirements |
+| `get_operations` | Shared CLI and MCP names, Core IDs, availability and file-change requirements |
 | `get_settings` | Per-call safe defaults and named encoding/compression/video choices |
 | `list_settings`, `get_setting` | Effective shared processing preferences, their types and available values |
 | `set_setting` | Update a shared preference by ID with owner-enabled writes and per-call confirmation |
-| `validate_karaoke` | Read-only structural, pairing and ZIP integrity checks |
+| `validate_karaoke_files` | Read-only structural, pairing and ZIP integrity checks |
 | `preview_tags` | Existing and filename-derived metadata, without writing |
 | `plan_operation` | Read-only scope, candidate outputs and detectable conflicts |
 | `run_operation` | Included conversions, tagging, file tools, quarantine/restoration |
 | `run_recipe` | Portable recipe object with saved per-step settings |
-| `list_recovery` | Available conversion, tagging, track grouping and recipe journals, without resuming |
+| `list_recovery` | Available conversion, tagging, file move and recipe journals, without resuming |
 | `recover` | Resume saved processing and recipe snapshots after access checks |
 
 Results contain Core's completion report, found count, issue flag and optional tag
@@ -85,7 +85,7 @@ Example arguments for `plan_operation` (and `run_operation` with additional
 ```json
 {
   "request": {
-    "operationId": "ZipToAudioG",
+    "operationId": "zip-to-audiog",
     "inputs": ["D:\\Karaoke\\song.zip"],
     "overwritePolicy": "Fail",
     "options": {
@@ -100,7 +100,8 @@ Example arguments for `plan_operation` (and `run_operation` with additional
 }
 ```
 
-Always use operation names, never enum numbers. MCP options accept camelCase or
+Set `operationId` to the `name` shown by `get_operations`. Recipe step
+definitions use the separate `coreId` values. MCP options accept camelCase or
 PascalCase property names, rejecting unknown/duplicate settings. Non-ZIP enums
 use names. ZIP levels accept current levels 0-9 (numbers/strings) or current enum
 names; `Balanced` means 5. Omitted deletion preferences **always keep originals**,
@@ -134,7 +135,7 @@ review if interrupted. Defaults and recovery behavior are documented in
 
 ### Track ID separator
 
-Pass `AddTrackIdSeparator` or `RemoveTrackIdSeparator` as the request's
+Pass `add-track-id-separator` or `remove-track-id-separator` as the request's
 `operationId`, with source folders in `inputs`. Use `plan_operation` to
 preview and `run_operation` with `confirmFileChanges: true` on a process
 launched with `--allow-writes` to apply.
@@ -148,7 +149,7 @@ accept the same `request` payload. Applying a copy or move also requires
 ```json
 {
   "request": {
-    "operationId": "GroupByTrackId",
+    "operationId": "group-by-track-id",
     "inputs": ["D:\\Incoming\\ABC-31xxx", "D:\\Incoming\\ABC-32xxx"],
     "outputFolder": "D:\\Grouped",
     "grouping": {
@@ -168,6 +169,14 @@ Trailing-digit grouping is the default with two masked digits. Its optional
 `createParents`, `maxParentLevels` and `skipSingleChildParents` settings control
 automatic nesting. `idSeparator` defaults to a dash and accepts an empty string.
 Set `move: true` for a same-volume move. Conflicts block execution.
+
+### Group by Alphabet
+
+Use `group-by-alphabet-files` for files or `group-by-alphabet-folders` for
+immediate subfolders. Both names match the CLI. Use `plan_operation` to
+review destinations before applying the move with `run_operation`.
+
+Use Desktop for **Rename by Filename Pattern** previews and runs.
 
 ## Exposure and permissions
 

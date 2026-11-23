@@ -89,7 +89,7 @@ area, with separate rules for each:
 | Change | Definition | How Core tracks it |
 | --- | --- | --- |
 | Change the file layout or convert saved values to a new representation | A tested C# step from one schema version to the next | The profile's `schemaVersion` |
-| Apply a one-time release decision, such as setting recovery verification to xxHash128 | A bundled `settings-migrations.json` entry keyed by stable setting IDs, validated by the typed catalogue | An immutable migration ID in `AppliedSettingsMigrations` |
+| Apply a one-time release change to a saved preference | A bundled `settings-migrations.json` entry keyed by stable setting IDs, validated by the typed catalogue | An immutable migration ID in `AppliedSettingsMigrations` |
 | Retire the old `options.xmls` file | A bundled `deleteAppDataFile` entry resolved by Core to the known old settings paths | An immutable migration ID recorded after cleanup succeeds |
 
 The JSON manifest supports typed `set` operations and `deleteAppDataFile`.

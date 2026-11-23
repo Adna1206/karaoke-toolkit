@@ -9,12 +9,27 @@ The preview animates its progress bar while scanning inputs, then shows how many
 files it has checked once the file count is known. **Back** returns to the
 selected operation and inputs. Confirm before leaving a preview with edits.
 
-The default is `%DISC%-%TRACK% - %ARTIST% - %TITLE%`. Tokens can be reordered or
-omitted, and separators are literal text. For example `%DISC%. %ARTIST% - %TITLE%`
-reads `ABC123. Artist - Title`. Type a pattern directly into the dropdown or
-choose a previously accepted pattern. The last accepted pattern is filled in
-when you reopen the preview.
-Cancelled or merely previewed combinations are not added.
+The dropdown offers these built-in patterns.
+
+| Pattern | Example filename stem |
+| --- | --- |
+| `%DISC%-%TRACK% - %ARTIST% - %TITLE%` (default) | `ABC123-04 - Artist - Title` |
+| `%DISC% - %ARTIST% - %TITLE%` | `ABC123-04 - Artist - Title` |
+| `%DISC%-%TRACK% - %TITLE% - %ARTIST%` | `ABC123-04 - Title - Artist` |
+| `%ARTIST% - %TITLE% - %DISC%-%TRACK%` | `Artist - Title - ABC123-04` |
+| `%TITLE% - %ARTIST% - %DISC%-%TRACK%` | `Title - Artist - ABC123-04` |
+| `%ARTIST% - %TITLE%` | `Artist - Title` |
+| `%TITLE% - %ARTIST%` | `Title - Artist` |
+
+For an identifier such as `ABC-1234567`, the default previews `ABC` in Album
+and `1234567` in Track. With `%DISC% - %ARTIST% - %TITLE%`, the preview
+proposes `ABC-1234567` for Album and preserves the existing Track value.
+
+You can also choose a previously accepted pattern or type your own. Tokens
+can be reordered or omitted, and separators are literal text. For example
+`%DISC%. %ARTIST% - %TITLE%` reads `ABC123. Artist - Title`. The last accepted
+pattern is filled in when you reopen the preview. Applying tags adds custom
+patterns to the dropdown history.
 
 | Token | Metadata field |
 | --- | --- |
@@ -25,15 +40,17 @@ Cancelled or merely previewed combinations are not added.
 
 Tokens are case-insensitive and appear at most once. Adjacent tokens need a
 separator. Unknown tokens, missing matches and nonnumeric or negative tracks are
-reported without guessing. Separators inside artist/title names can be ambiguous:
-the preview shows the literal split for review and manual correction. Fields
-omitted from a pattern retain their existing values; this is not a filename-renaming tool.
+reported as preview issues. With the default pattern,
+`ABC-123 - Artist - Title - Live` previews Album `ABC`, Track `123`,
+Artist `Artist` and Title `Title - Live`. With `%ARTIST% - %TITLE%`,
+`Artist - Title - Live` produces the same artist and title. Review the split
+if the artist itself contains ` - `. Fields omitted from the pattern keep
+their existing tags. To change filenames, use
+[Rename by Filename Pattern](file-workflow-features.md#rename-by-filename-pattern).
 Track 0 is accepted, including `00` and `0000`. Containers that represent zero as
 an unset track may display it as blank rather than `0` in another media player.
-Hyphenated disc identifiers stay together: the default pattern reads
-`KJ1309-5-04 - Lana Del Ray - Summertime Sadness` as Album `KJ1309-5`, Track `4`,
-Artist `Lana Del Ray` and Title `Summertime Sadness`. It does not infer a separate
-numeric Disc field from part of the identifier.
+The default pattern reads `ABC1309-5-04 - Artist - Title` as Album
+`ABC1309-5`, Track `4`, Artist `Artist` and Title `Title`.
 
 **Fill empty fields only** preserves populated Album/Track/Artist/Title. Otherwise
 the fields supplied by the pattern replace matching existing values.

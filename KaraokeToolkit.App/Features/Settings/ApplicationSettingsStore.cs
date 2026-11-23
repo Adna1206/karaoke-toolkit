@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Xml.Linq;
 using KaraokeToolkit.App.Metadata;
 using KaraokeToolkit.Core.Conversion;
+using KaraokeToolkit.Core.Naming;
 using KaraokeToolkit.Core.Settings;
 using KaraokeToolkit.Core.Recovery;
 using KaraokeToolkit.Core.Tagging;
@@ -83,7 +84,7 @@ public sealed class ApplicationSettingsStore(string path, bool persistRenameBins
 
     public IReadOnlyList<string> LoadTaggingPatterns()
     {
-        var patterns = new List<string> { FilenameTagPattern.Default };
+        var patterns = new List<string>(KaraokeFilenamePattern.Presets);
         foreach (string value in processing.ReadDesktopPreferences()?.Element("TaggingPatterns")?.Elements("Pattern").Select(p => p.Value) ?? [])
         {
             try { _ = new FilenameTagPattern(value); if (!patterns.Contains(value, StringComparer.Ordinal)) patterns.Add(value); }

@@ -71,8 +71,9 @@ the engines: an advanced recipe is not a dry run or a guarantee of useful output
 A failure stops subsequent steps, including validation findings needing attention.
 Skipped conversions are not presented as new outputs. If a step has no inputs or
 finds no matching items, the recipe stops with a warning. Cancellation stops further
-work; completed steps remain committed. Existing overwrite prompts, staging,
-output verification and per-conversion recovery are reused. Runs appear in the
+work and keeps completed steps committed. Desktop recipes using **Ask each time**
+prompt as conflicts are encountered. Recipe conversions use staged publication,
+output verification and per-conversion recovery. Runs appear in the
 main progress screen with a numbered step log and a **Recipe Report** available
 through **View Last Run Report**.
 

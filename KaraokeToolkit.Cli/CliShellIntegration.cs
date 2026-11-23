@@ -3,7 +3,7 @@ namespace KaraokeToolkit.Cli;
 /// <summary>Prints opt-in shell setup. Never edits a user's profile or environment.</summary>
 internal static class CliShellIntegration
 {
-    private static string[] Words => new[] { "help", "operations", "run", "validate", "tag", "tag-preview", "recipe", "quarantine", "disc-list", "disc-rip", "recovery-list", "recover", "completion", "path",
+    private static string[] Words => new[] { "help", "operations", "run", "recipe", "quarantine", "disc-list", "recovery-list", "recover", "completion", "path",
         "--help", "--version", "--input", "--json", "--quiet", "--report", "--options", "--dry-run", "--output", "--overwrite", "--encoder", "--bitrate", "--zip-level", "--zip-algorithm",
         "--recurse", "--no-recurse", "--keep-originals", "--delete-originals", "--cue-text", "--no-cue-text", "--validate-inputs", "--ignore-leading-the", "--pattern",
         "--fill-empty-only", "--preserve-comments", "--preserve-other-tags", "--video-container", "--video-resolution", "--video-smoothing", "--video-frame-rate", "--video-bitrate", "--video-audio-bitrate", "--video-audio-fallback-only",

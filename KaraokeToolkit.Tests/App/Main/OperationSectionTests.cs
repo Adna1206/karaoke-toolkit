@@ -21,6 +21,9 @@ public class OperationSectionTests
         Assert.Equal(2, model.OperationSections.Single(section => section.Section == OperationSection.Archives).Operations.Count);
         var fileTools = model.OperationSections.Single(section => section.Section == OperationSection.FilesAndFolders).Operations;
         Assert.Equal(9, fileTools.Count);
+        Assert.Equal("Group by Alphabet", Assert.Single(fileTools, operation => operation.IsOrganizer).Label);
+        Assert.Contains(OperationDefinitions.All, definition => definition.Operation == OperationId.OrganizeFolders && definition.CanUseInRecipes);
+        Assert.Contains(fileTools, operation => operation.IsFilenameRename);
         Assert.Contains(fileTools, operation => operation.Definition.Operation == OperationId.AddTrackIdSeparator);
         Assert.Contains(fileTools, operation => operation.Definition.Operation == OperationId.RemoveTrackIdSeparator);
         Assert.Contains(fileTools, operation => operation.Definition.Operation == OperationId.GroupByTrackId);

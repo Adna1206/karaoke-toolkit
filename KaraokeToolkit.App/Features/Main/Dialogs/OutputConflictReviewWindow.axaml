@@ -1,0 +1,49 @@
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shared="using:KaraokeToolkit.App.Shared"
+        xmlns:dialogs="using:KaraokeToolkit.App.Features.Main.Dialogs"
+        x:Class="KaraokeToolkit.App.Features.Main.Dialogs.OutputConflictReviewWindow"
+        x:DataType="dialogs:OutputConflictReviewModel"
+        Title="Review existing output files" Width="760" Height="540" MinWidth="580" MinHeight="380"
+        WindowStartupLocation="CenterOwner">
+  <Grid Margin="{x:Static shared:WindowSpacing.ContentInset}" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
+    <StackPanel Spacing="6">
+      <TextBlock Classes="heading2" Text="Review existing output files"/>
+      <TextBlock Text="Select the groups to replace. Unselected groups keep their existing outputs and sources."
+                 TextWrapping="Wrap"/>
+    </StackPanel>
+    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="{x:Static shared:WindowSpacing.FooterButtonGap}">
+      <Button x:Name="SkipAll" Content="Skip all" Click="SkipAll_Click"/>
+      <Button Content="Replace all" Click="ReplaceAll_Click"/>
+    </StackPanel>
+    <ListBox Grid.Row="2" ItemsSource="{Binding Rows}" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+             AutomationProperties.Name="Existing output groups">
+      <ListBox.Styles>
+        <Style Selector="ListBoxItem">
+          <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        </Style>
+      </ListBox.Styles>
+      <ListBox.ItemTemplate>
+        <DataTemplate x:DataType="dialogs:OutputConflictReviewRow">
+          <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+            <CheckBox Content="Replace" IsChecked="{Binding Replace}" VerticalAlignment="Top"
+                      AutomationProperties.Name="{Binding ReplaceLabel}"/>
+            <StackPanel Grid.Column="1" Spacing="4">
+              <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap" ToolTip.Tip="{Binding Source}"/>
+              <TextBlock Text="{Binding ExistingOutputs}" TextWrapping="Wrap" Opacity="0.8"/>
+            </StackPanel>
+          </Grid>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+    <Border Grid.Row="3" Classes="windowFooter dialog">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+        <shared:StatusBar Message="{Binding Summary}" VerticalAlignment="Center"/>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{x:Static shared:WindowSpacing.FooterButtonGap}">
+          <Button Content="Cancel operation" Click="Cancel_Click"/>
+          <Button Content="Apply choices" Classes.destructive="{Binding HasReplacements}"
+                  Classes.accent="{Binding !HasReplacements}" Click="Apply_Click"/>
+        </StackPanel>
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

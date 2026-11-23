@@ -1,9 +1,158 @@
 # Current handoff
 
+## Filename and file workflows
+
+2026-11-23, `master` from `ba73400`, version 2026.11.18. This change includes
+shared filename presets, pattern-based renaming, batch conflict review,
+alphabetical grouping and shared command names. The updated guides cover
+these workflows and the settings reset. Verified 228 local Markdown links
+across 44 files and checked whitespace with `git diff --check`. The dated
+entries below record the individual implementation and test checkpoints.
+The next runtime check is the settings and updater cutover with two
+installed Windows versions.
+
+## Shared CLI and MCP operation names
+
+2026-11-23, `master` from `ba73400`, version 2026.11.18. Uncommitted changes
+make CLI and MCP invocation names follow the same desktop terminology.
+Both alphabetical scopes use `group-by-alphabet-*` names. CLI help,
+completion and desktop integration examples use the preferred commands.
+MCP discovery exposes `name` for invocation and `coreId` for recipe steps.
+Retired public spellings have no aliases. Recipes and recovery use the
+Core operation identities internally.
+
+The StandaloneTests Release build with SDK 10.0.404 passed without warnings.
+The no-build suite passed 807/807 with local test-host access and xUnit
+collections run serially. Tests include CLI parsing, MCP discovery and calls
+over stdio, and rejection of retired names. The built CLI also listed and
+showed help for the new alphabetical commands.
+See [CLI](user/cli.md) and [MCP](user/mcp.md).
+
+## Group by Alphabet
+
+2026-11-22, `master` from `ba73400`, version 2026.11.18. Uncommitted
+changes combine the desktop alphabetical entries in the shared preview
+workspace. The Files and Folders scopes keep their existing move behavior.
+The preview keeps blocked groups together, and Core rechecks the approved
+destinations before saving the move plan. Recipes, headless commands and
+journals keep both operation identities.
+
+The StandaloneTests Release build with SDK 10.0.404 passed without warnings.
+The no-build suite passed 803/803 with local test-host access and xUnit test
+collections run serially. Two parallel runs each passed 802/803 and hit
+distinct FFprobe JSON failures. A live Windows preview with disposable
+fixtures confirmed Files, Folders and the skipped pane. See
+[file workflows](user/file-workflow-features.md#group-files-and-folders).
+
+The settings reset retires the old folder-favourite mapping. The targeted
+alphabetical, favourites, catalogue and MCP tests passed 52/52 with
+local test-host access.
+
+## Batch review for existing conversion outputs
+
+2026-11-22, `master` from `ba73400`, version 2026.11.18. Uncommitted
+App and Core changes gather conflicting groups across a standalone desktop
+conversion using Ask each time. Nonconflicting media publishes as it finishes.
+The final review offers bulk and individual choices, including automatic
+CUE/TXT conflicts. Verified media waits in disposable staging and approved
+replacements recheck sources, destinations and staged payloads. Resume can
+regenerate unpublished results and review the remaining conflicts.
+
+The StandaloneTests Release build with SDK 10.0.404 passed without warnings.
+The no-build suite passed 800/800 with local test-host access, including
+multi-folder review, mixed choices, cancellation, changed destinations and
+interrupted review recovery. A live Windows dialog with 105 synthetic rows
+confirmed Skip all, Replace all and a per-group override. See
+[file workflows](user/file-workflow-features.md#review-existing-conversion-outputs).
+
+## Shared operation preview layout
+
+2026-11-22, `master` from `ba73400`, version 2026.11.18. Uncommitted
+changes move track grouping and filename renaming onto a shared desktop preview
+layout. Rename shows filename pairs separately from skipped items and conflicts.
+The pattern editors vertically center their text. Uppercase Disc ID defaults
+on and supports case-only paired renames with recovery.
+
+The StandaloneTests Release build with SDK 10.0.404 succeeded with zero
+warnings. The no-build suite passed 794/794 with local test-host access using
+the properties below. In live Windows preview windows with disposable
+fixtures, verified both layouts, the issues divider, centered pattern text,
+and the Disc toggle clearing the stale preview. The settings cutover with two
+installed versions remains open.
+
+The follow-up adds 12 DIP between the shared preview and footer and shortens
+the rename guidance to the tokens and two brief instructions. The App Release
+build with SDK 10.0.404 passed without warnings. A live rename preview with
+both a conflict and a skipped item confirmed the footer gap and two-line help.
+
+The preview splitter can collapse the issues row fully. Its heading and list
+hide together when the row becomes too short to read, and dragging the handle
+back up restores both. The App Release build passed without warnings, and a
+950 × 540 Windows preview confirmed collapsing and reopening the pane.
+
+Remove spaces from Disc ID defaults on in the rename preview and Core
+request. The StandaloneTests Release build with SDK 10.0.404 passed without
+warnings. The no-build `FullyQualifiedName~FilenameRename` test run passed
+10/10 with local test-host access, including the option turned off.
+
+## Rename by Filename Pattern
+
+2026-11-22, `master` from `ba73400`, version 2026.11.18. Uncommitted
+Desktop and Core changes add a preview-driven rename using a source pattern,
+a destination pattern and an optional Disc ID whitespace removal. Renames
+preserve extensions and audio/CDG pairing, block collisions, and use the
+existing file-move recovery journal. New runs start in Desktop.
+See [file workflows](user/file-workflow-features.md#rename-by-filename-pattern).
+
+With SDK 10.0.404, the StandaloneTests Release build using `--no-restore -m:1`
+and the properties below succeeded with zero warnings. The no-build suite
+passed 790/790 with local test-host access, including desktop routing, stale
+plans, late conflicts and interrupted pair recovery. See the current entry
+above for visual verification of the updated layout.
+
+## Legacy online-renaming references in Settings
+
+2026-11-22, `master` from `ba73400`, version 2026.11.18. Uncommitted App
+changes remove the unavailable online-renaming card from Settings → General
+and its unused display metadata. Saved configuration retains compatibility.
+The existing uncommitted filename parser and preset work is recorded below.
+
+The StandaloneTests Release build passed with SDK 10.0.404 using the command
+and properties below. A no-build rerun filtered to App Settings, App Metadata,
+GuiWorkflowTests and Core Settings passed 92/92 with local test-host access.
+The Settings markup was checked for remaining references. A live window
+inspection was not performed. The settings cutover verification remains open.
+
+## Shared karaoke filename parsing
+
+2026-11-22, `master` from `ba73400`, version 2026.11.18. Uncommitted
+Core, App, test and documentation changes add a shared filename template
+parser. The desktop tagging dropdown lists seven built-in layouts ahead of
+custom history and opens on the last accepted pattern. Presets cover a whole
+disc identifier, a split disc and track at either end, and artist/title
+without an ID. Tagging maps parsed track digits to a numeric tag. Grouping and
+separator edits reuse leading ID recognition with their existing separator rules.
+See [Core structure](development/core-structure.md) and [tagging](user/tagging.md).
+
+With SDK 10.0.404, `scripts/Test.ps1 -NoRestore` built successfully, then
+VSTest timed out connecting to the sandboxed test host.
+`dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj -c Release --no-build --no-restore -p:UsedAvaloniaProducts= -p:ArtifactBuildName=StandaloneTests`
+passed 776/776 with local test-host access. After wiring the dropdown, the same
+Release test project built with SDK 10.0.404 using `--no-restore -m:1` and the
+same build properties. The no-build test rerun passed 777/777 with local
+test-host access after an initial MKV test received truncated FFprobe JSON.
+After expanding the presets, the same Release build succeeded with zero
+warnings and the no-build test run passed 784/784 with local test-host access.
+Tests cover the new layouts, dropdown population, and both mappings of a
+manufacturer-prefixed track ID. The dropdown was checked by automated tests
+and its compiled binding. Whitespace checks passed.
+The next outstanding verification is the settings cutover with two installed
+versions.
+
 ## Shared processing profile and migrations
 
 2026-11-22 checkpoint, `master` based on `959239a`, version 2026.11.18.
-Desktop, CLI and MCP now use versioned `settings.xml` with a shared typed
+Desktop, CLI and MCP use versioned `settings.xml` with a shared typed
 processing catalogue and App-owned desktop preferences. The preview starts
 from current defaults, including xxHash128 for file moves. The bundled
 `deleteAppDataFile` migration removes `options.xmls` at the known old paths after
@@ -82,9 +231,8 @@ existing behavior.
 
 The Release build and full suite commands in Desktop dialog design succeeded
 with 753/753 tests. Visually checked the bar during a Windows flatten run
-and confirmed it cleared on completion. A separate
-`karaoke-toolkit run organize-files <fixture> --recovery-verification sha256`
-run on 350 synthetic audio/CDG pairs (1.2 GiB) took 3.4 seconds from the
+and confirmed it cleared on completion. A separate CLI alphabetical file
+grouping run with SHA-256 on 350 synthetic audio/CDG pairs (1.2 GiB) took 3.4 seconds from the
 preparation message to the first processing event and 8.1 seconds total.
 The fixture was removed. Next, verify the updater with two installed versions.
 

@@ -13,6 +13,9 @@ directories, and views share their feature namespace with their view models.
 | Features/DiscRipping | Disc ripping window and its view model |
 | Features/Recipes | Recipe library, builder and per-step settings editor |
 | Features/Tagging | Filename-pattern configuration, editable tag preview and tag submission |
+| Features/TrackGrouping | Grouping configuration and destination tree preview |
+| Features/AlphabeticalGrouping | File/folder scope selection and alphabetical destination preview |
+| Features/FilenameRename | Source and destination filename patterns and rename preview |
 | Metadata | Shared operation and setting definitions |
 | Services | Explorer integration, folder launching and Velopack update checks against GitHub Releases |
 | Shared | View model base, view locator, window titles and modal dialog presentation |
@@ -22,6 +25,11 @@ Startup files, global styling, assembly configuration and the application
 manifest stay at the project root. Code used by one feature belongs inside that
 feature; code used by several features belongs in an appropriate shared folder.
 Core continues to own processing and remains independent of App and Avalonia.
+
+`Shared.OperationPreviewLayout` provides the split workspace for track
+grouping, alphabetical grouping and filename renaming. It owns the scrolling settings column,
+preview header, optional resizable issues pane and footer. Each operation
+supplies its own controls, issue presentation and submission logic.
 
 Keep each app-owned dialog in its own named file. Standalone XAML dialogs use
 the feature's `*Window.axaml` and code-behind pair. Put short, code-built

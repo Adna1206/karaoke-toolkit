@@ -69,12 +69,27 @@ members must be smaller than 4 GiB. Failed items can be retried. Cancellation ke
 the current source. Tests include TAR, TGZ, GZip, solid/encrypted 7z, output
 algorithms, source retention, overwrite, cancellation, retry and checkpoint resume.
 
+## Review existing conversion outputs
+
+Set **Existing output files (including CUE/TXT)** to **Ask each time** in Settings.
+Standalone desktop conversions publish outputs that have no conflict as they
+finish. At the end, one review lists
+the conflicting groups across the selected folders, including existing
+automatic CUE or TXT outputs where applicable. Select individual groups to
+replace, or use **Skip all** and **Replace all** to set the choices together.
+Anything left unchecked is skipped. Select **Apply choices** to continue.
+
+Matching outputs for one track are kept together. **Cancel operation**
+discards unpublished work and keeps completed changes. If a source or an
+observed destination changes while the review is open, publication of that
+group fails and the affected files are kept in place.
+
 ## Repack ZIP for Compatibility
 
 Choose **Archive Tools → Repack ZIP for Compatibility** for selected ZIP files or
 folders containing ZIPs. Folder input follows the recursion setting. The operation
-rebuilds the archive using the ZIP algorithm and compression level saved in Options;
-the defaults are **Deflate, level 5**. Deflate is recommended for legacy karaoke
+rebuilds the archive using the ZIP algorithm and compression level saved in Settings.
+The defaults are **Deflate, level 5**. Deflate is recommended for legacy karaoke
 players that cannot read other ZIP compression methods. Choosing BZip2 or LZMA still
 uses that setting, but may not improve compatibility with those players.
 
@@ -94,11 +109,46 @@ Cancellation, failed-item retry and crash recovery use the standard conversion w
 
 ## Group files and folders
 
-**Group Files Alphabetically** moves selected files and files under selected
-folders into A–Z and `#` folders. **Group Folders Alphabetically** moves the
-immediate subfolders of each selection into those buckets as whole folders.
-See [Group by Track ID](track-grouping.md) for numeric ranges and trailing-digit
-grouping with a destination preview.
+Choose **File & Folder Tools → Group by Alphabet** and select a mode in the
+preview. **Files** groups selected files and files inside selected folders and
+their subfolders into A–Z and `#` folders. **Folders** moves the immediate
+subfolders of each selected folder into those groups with their contents.
+
+In **Files** mode, **Ignore leading ‘The’** groups `The Example.mp3` under E.
+Use **Refresh** after changing the mode or this setting. Review
+the destination paths and skipped items before choosing **Move items**.
+Drag the divider above the skipped items to resize or hide that pane.
+An occupied destination keeps the affected group in place, including a
+matching audio/CDG pair. See [Group by Track ID](track-grouping.md) for numeric
+range and trailing-digit grouping.
+
+## Rename by Filename Pattern
+
+Select karaoke files or folders and choose **File & Folder Tools → Rename by
+Filename Pattern**. Pick a **Source pattern** that describes the current names
+and a **Destination pattern** that describes the new names. Both fields accept
+built-in patterns and custom text. Configure the patterns and **Include
+subfolders** on the left, then use **Refresh** to compare current and proposed
+names on the right. Hover over a name to see its full path. Drag the divider
+above **Skipped items and conflicts** to resize the pane. Drag it all the way
+down to hide the pane, and back up to see it again. Select **Rename Files**
+when the preview is ready.
+
+For example, to rename `ABC 20-02 Song Title - Song Artist.mp3`:
+
+1. Set the source to `%DISC%-%TRACK% %TITLE% - %ARTIST%`.
+2. Set the destination to `%DISC%-%TRACK% - %ARTIST% - %TITLE%`.
+3. The default options produce `ABC20-02 - Song Artist - Song Title.mp3`.
+   Turn off **Remove spaces from Disc ID** to keep `ABC 20`. Turn off
+   **Uppercase Disc ID** to retain the source casing, such as `Abc`.
+
+The track keeps its original digits, and the destination must use fields that
+the source provides. Matching audio and CDG files are renamed together, even
+when only one of the pair is selected. File contents and extensions are
+preserved. Unmatched names are shown as skipped. An occupied or duplicate
+destination blocks the batch.
+The run rechecks the approved plan before moving any files. Interrupted
+renames use [file move recovery](crash-recovery.md). Start a new rename in Desktop.
 
 ## Flatten One Folder Level
 
@@ -122,8 +172,8 @@ not change either flattening operation; choose the operation for the depth you w
 
 ## Experimental disc ripping
 
-Experimental CD+G ripping now uses cdrdao on all supported desktop platforms;
-Windows x64 bundles the reader, while Linux/macOS currently use an installed executable.
+Experimental CD+G ripping uses cdrdao. Windows x64 bundles the reader. Linux and
+macOS use an installed executable.
 See [disc ripping](disc-ripping.md) for capture behaviour, synthetic tests and hardware limits.
 
 ## Completion reports

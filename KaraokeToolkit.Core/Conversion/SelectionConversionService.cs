@@ -19,7 +19,8 @@ public sealed class SelectionConversionService(RecoveryStore? recovery = null)
     /// <summary>Plans the selected source groups and prepares folder checkpoints before running conversions.</summary>
     /// <remarks>Aggregates per-folder outcomes and retry requests while preserving completed work on cancellation.</remarks>
     public async Task<ConversionResult> RunAsync(ConversionRetry request, IProgress<ConversionProgress>? progress = null,
-        CancellationToken token = default, Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolveConflict = null)
+        CancellationToken token = default, Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolveConflict = null,
+        ResolveOutputConflicts? resolveConflicts = null)
     {
         return await Task.Run(async () =>
         {
@@ -75,6 +76,9 @@ public sealed class SelectionConversionService(RecoveryStore? recovery = null)
                 }
                 throw;
             }
+
+            if (workflow == null && request.Policy == OverwritePolicy.Ask && resolveConflicts != null)
+                return await new ConversionService(recovery).RunWithConflictReviewAsync(prepared, resolveConflicts, progress, token);
 
             var results = new List<ConversionFileResult>();
             var retry = new List<ConversionRetry>();

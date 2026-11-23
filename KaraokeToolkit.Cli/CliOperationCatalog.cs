@@ -6,6 +6,7 @@ public sealed record CliOperationRegistration(OperationId OperationId, string? N
 {
     public bool Exposed => Name != null;
     public bool DedicatedCommand { get; init; }
+    internal bool MatchesName(string name) => Name?.Equals(name, StringComparison.OrdinalIgnoreCase) == true;
 }
 
 /// <summary>Every Core identity needs an explicit CLI decision. Command names and
@@ -17,12 +18,11 @@ public static class CliOperationCatalog
 
     public static CliOperationRegistration Resolve(string command)
     {
-        var registration = All.SingleOrDefault(o =>
-            string.Equals(o.Name, command, StringComparison.OrdinalIgnoreCase) || o.OperationId.ToString().Equals(command, StringComparison.OrdinalIgnoreCase));
-        if (registration == null)
+        if (!OperationCommandNames.TryResolve(command, out var operationId))
             throw new CliUsageException($"Unregistered CLI operation '{command}'. Run 'karaoke-toolkit operations' to list supported operations.");
+        var registration = Get(operationId);
         if (!registration.Exposed)
-            throw new CliUsageException($"CLI operation '{registration.OperationId}' is excluded: {registration.ExclusionReason} Run 'karaoke-toolkit operations' for available operations.");
+            throw new CliUsageException($"CLI operation '{command}' is excluded: {registration.ExclusionReason} Run 'karaoke-toolkit operations' for available operations.");
         return registration;
     }
 
@@ -39,38 +39,39 @@ public static class CliOperationCatalog
 #pragma warning disable CS8524
     private static CliOperationRegistration Registration(OperationId id) => id switch
     {
-        OperationId.ZipToBin => Include(id, "zip-to-bin"),
-        OperationId.ZipToAudioG => Include(id, "zip-to-audiog"),
-        OperationId.BinToZip => Include(id, "bin-to-zip"),
-        OperationId.BinToAudioG => Include(id, "bin-to-audiog"),
-        OperationId.AudioGToBin => Include(id, "audiog-to-bin"),
-        OperationId.AudioGToZip => Include(id, "audiog-to-zip"),
-        OperationId.AddTrackIdSeparator => Include(id, "add-track-id-separator"),
-        OperationId.RemoveTrackIdSeparator => Include(id, "remove-track-id-separator"),
-        OperationId.CleanUpFilenames => Include(id, "cleanup-filenames"),
-        OperationId.CreateCueAndTextFiles => Include(id, "create-cue-and-text-files"),
-        OperationId.ArchiveToZip => Include(id, "archive-to-zip"),
-        OperationId.LosslessGToMp3G => Include(id, "losslessg-to-mp3g"),
-        OperationId.KaraokeToVideo => Include(id, "karaoke-to-video"),
-        OperationId.RepackZip => Include(id, "repack-zip"),
-        OperationId.ValidateKaraoke => Include(id, "validate"),
-        OperationId.TagKaraoke => Include(id, "tag"),
-        OperationId.PreviewTags => Include(id, "tag-preview"),
-        OperationId.OrganizeFiles => Include(id, "organize-files"),
-        OperationId.OrganizeFolders => Include(id, "organize-folders"),
-        OperationId.GroupByTrackId => Include(id, "group-by-track-id"),
-        OperationId.FlattenOneLayer => Include(id, "flatten-one-layer"),
-        OperationId.FlattenAllLayers => Include(id, "flatten-all-layers"),
-        OperationId.RestoreQuarantined => Include(id, "restore-quarantined-files"),
-        OperationId.QuarantineInvalid => Include(id, "quarantine-invalid"),
+        OperationId.ZipToBin => Include(id),
+        OperationId.ZipToAudioG => Include(id),
+        OperationId.BinToZip => Include(id),
+        OperationId.BinToAudioG => Include(id),
+        OperationId.AudioGToBin => Include(id),
+        OperationId.AudioGToZip => Include(id),
+        OperationId.AddTrackIdSeparator => Include(id),
+        OperationId.RemoveTrackIdSeparator => Include(id),
+        OperationId.CleanUpFilenames => Include(id),
+        OperationId.CreateCueAndTextFiles => Include(id),
+        OperationId.ArchiveToZip => Include(id),
+        OperationId.LosslessGToMp3G => Include(id),
+        OperationId.KaraokeToVideo => Include(id),
+        OperationId.RepackZip => Include(id),
+        OperationId.ValidateKaraoke => Include(id),
+        OperationId.TagKaraoke => Include(id),
+        OperationId.PreviewTags => Include(id),
+        OperationId.OrganizeFiles => Include(id),
+        OperationId.OrganizeFolders => Include(id),
+        OperationId.GroupByTrackId => Include(id),
+        OperationId.FlattenOneLayer => Include(id),
+        OperationId.FlattenAllLayers => Include(id),
+        OperationId.RestoreQuarantined => Include(id),
+        OperationId.QuarantineInvalid => Include(id),
         OperationId.DiscRip
-            => new(id, "disc-rip", null) { DedicatedCommand = true },
+            => Include(id) with { DedicatedCommand = true },
         OperationId.RenameFilesFromInternet => Exclude(id, "Online metadata lookup is deferred."),
+        OperationId.RenameByPattern => Exclude(id, "Filename pattern renaming uses the desktop preview."),
         OperationId.PlayAudioG => Exclude(id, "Playback is deferred."),
         OperationId.CheckForUpdates => Exclude(id, "Release hosting and update UI are not enabled.")
     };
 #pragma warning restore CS8524
 
-    private static CliOperationRegistration Include(OperationId id, string name) => new(id, name, null);
+    private static CliOperationRegistration Include(OperationId id) => new(id, OperationCommandNames.Get(id), null);
     private static CliOperationRegistration Exclude(OperationId id, string reason) => new(id, null, reason);
 }

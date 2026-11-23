@@ -82,6 +82,15 @@ internal sealed class FileTransaction : IDisposable
             observedTargets[target] = File.Exists(target) ? Fingerprint(target) : null;
         }
     }
+
+    internal TransactionObservation Observation => new(new(fingerprints, fingerprints.Comparer),
+        new(observedTargets, observedTargets.Comparer));
+
+    internal void RestoreObservation(TransactionObservation observation)
+    {
+        foreach (var (path, hash) in observation.Inputs) fingerprints.Add(path, hash);
+        foreach (var (path, hash) in observation.Targets) observedTargets.Add(path, hash);
+    }
     /// <summary>Publishes staged outputs and removes selected sources as one recoverable file group.</summary>
     /// <remarks>Ask must be resolved beforehand. Inputs and observed targets are checked before moves;
     /// failed publication attempts rollback. Cancellation is checked before publication, not between moves.
@@ -190,6 +199,8 @@ internal sealed class FileTransaction : IDisposable
     }
 }
 internal sealed class OutputSkippedException : IOException;
+
+internal sealed record TransactionObservation(Dictionary<string, string> Inputs, Dictionary<string, string?> Targets);
 
 
 

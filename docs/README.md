@@ -8,7 +8,8 @@ the current checkout. [Planned work](todo.md) is a backlog, not implemented beha
 
 | Guide | Covers |
 | --- | --- |
-| [File workflows](user/file-workflow-features.md) | Selection, archives, compression, folder tools, reports, validation and Explorer integration |
+| [File workflows](user/file-workflow-features.md) | Selection, archives, conflict review, filename renaming, alphabetical grouping, reports and Explorer integration |
+| [Group by Track ID](user/track-grouping.md) | Numeric ranges, masked folders and automatic parents |
 | [CLI](user/cli.md) | Headless commands, per-run settings, JSON, exit codes and recovery |
 | [MCP](user/mcp.md) | Local stdio tools, client setup, operation exposure and file-change policy |
 | [CLI examples](user/cli-examples.md) | Practical conversion, tagging, video, folder and scripting workflows |
@@ -24,7 +25,6 @@ the current checkout. [Planned work](todo.md) is a backlog, not implemented beha
 | [Changelog](changelogs/README.md) | Version history, user-visible changes and upgrade steps |
 | [App structure](development/app-structure.md) | Avalonia features, views/viewmodels and shared services |
 | [Core structure](development/core-structure.md) | Processing responsibilities and namespace organization |
-| [Group by Track ID](user/track-grouping.md) | Numeric ranges, masked folders and automatic parents |
 | [Operation contracts](development/operations.md) | Shared identities, capabilities, interface registrations and compatibility |
 | [Settings format and migrations](development/settings-format.md) | Canonical profile, migration rules and upgrade compatibility |
 | [Activity table messages](development/activity-messages.md) | Item labels, progress and summaries |
@@ -33,7 +33,7 @@ the current checkout. [Planned work](todo.md) is a backlog, not implemented beha
 | [Audio runtime](distribution/audio-runtime.md) | FFmpeg preparation, format checks and opt-in benchmarks |
 | [Artifacts](distribution/artifacts.md) | Generated output locations and cleanup |
 | [Publishing](distribution/publishing.md) | Windows/Linux packages, prerequisites and release-readiness limits |
-| [Updates](distribution/updates.md) | Velopack lifecycle and Flow update checks |
+| [Updates](distribution/updates.md) | Velopack lifecycle, GitHub Release checks and the settings reset |
 | [Versioning](distribution/versioning.md) | Shared YEAR.MONTH.BUILD version |
 | [Commit conventions](development/commit-conventions.md) | Conventional Commit messages |
 

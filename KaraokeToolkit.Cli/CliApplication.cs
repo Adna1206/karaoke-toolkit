@@ -34,9 +34,9 @@ public sealed class CliApplication(IOperationExecutor? executor = null, IDiscRea
                 if (json) await output.WriteLineAsync(JsonSerializer.Serialize(descriptions, JsonOptions));
                 else
                 {
-                    await output.WriteLineAsync($"{"Command",-29} {"Core ID",-23} Description");
+                    await output.WriteLineAsync($"{"Command",-30} {"Core ID",-23} Description");
                     foreach (var operation in descriptions)
-                        await output.WriteLineAsync($"{operation.Command,-29} {operation.Id,-23} {operation.Description}" + (operation.RequiresFolders ? " (folders only)" : "") + (operation.DedicatedCommand ? " (dedicated command; use --help)" : ""));
+                        await output.WriteLineAsync($"{operation.Command,-30} {operation.Id,-23} {operation.Description}" + (operation.RequiresFolders ? " (folders only)" : "") + (operation.DedicatedCommand ? " (dedicated command; use --help)" : ""));
                 }
                 return 0;
             }
@@ -127,15 +127,15 @@ public sealed class CliApplication(IOperationExecutor? executor = null, IDiscRea
           karaoke-toolkit --help
           karaoke-toolkit operations [--json]
           karaoke-toolkit run OPERATION PATH... [options]
-          karaoke-toolkit validate PATH... [options]
-          karaoke-toolkit tag-preview PATH... [options]
-          karaoke-toolkit tag PATH... [options]
+          karaoke-toolkit validate-karaoke-files PATH... [options]
+          karaoke-toolkit preview-tags PATH... [options]
+          karaoke-toolkit tag-karaoke-files PATH... [options]
           karaoke-toolkit recovery-list [FOLDER...] [--json]
           karaoke-toolkit recover JOURNAL [--json] [--quiet] [--report PATH]
           karaoke-toolkit recipe list|show|validate|run ...
           karaoke-toolkit quarantine PATH... [--dry-run] [--no-recurse]
           karaoke-toolkit disc-list [--cdrdao EXECUTABLE] [--json]
-          karaoke-toolkit disc-rip --device DEVICE --output FOLDER --disc-name NAME --experimental
+          karaoke-toolkit rip-cdg --device DEVICE --output FOLDER --disc-name NAME --experimental
           karaoke-toolkit completion powershell|bash|zsh
           karaoke-toolkit path powershell|bash|zsh
           karaoke-toolkit settings list | get ID | set ID VALUE
@@ -143,7 +143,7 @@ public sealed class CliApplication(IOperationExecutor? executor = null, IDiscRea
           karaoke-toolkit --version
 
         PATH may also be specified with repeated --input PATH. Use -- before paths
-        beginning with a dash. See operations for names; stable Core IDs also work.
+        beginning with a dash. See operations for command names.
         No GUI or prompts. Recipe steps use their saved settings and cannot use Ask.
         Quarantine is explicit; physical disc capture requires --experimental.
 
@@ -160,10 +160,10 @@ public sealed class CliApplication(IOperationExecutor? executor = null, IDiscRea
           --validate-inputs | --no-validate-inputs
           --encoder MP3|OGG|WMA|WAV|FLAC|AAC   --bitrate KBPS (default MP3, 320)
           --zip-algorithm Deflate|BZip2|LZMA   --zip-level 0..9 (default 5)
-          --ignore-leading-the | --no-ignore-leading-the (Organize Files)
+          --ignore-leading-the | --no-ignore-leading-the (Group by Alphabet — Files)
           Deflate is the default; legacy karaoke software generally prefers it.
           Shared processing settings apply where supported by the chosen operation.
-          Organize Files always recurses; Organize Folders groups immediate children.
+          Group by Alphabet (Files) always recurses. Folders groups immediate children.
           Flatten depth is chosen by the operation, independently of --no-recurse.
           --recovery-verification sha256|xxhash128|metadata|none (default xxhash128 for file moves and grouping)
           --batch-resume | --no-batch-resume  Override the saved file move preference
@@ -172,7 +172,7 @@ public sealed class CliApplication(IOperationExecutor? executor = null, IDiscRea
           --pattern "%DISC%-%TRACK% - %ARTIST% - %TITLE%"
           --fill-empty-only --preserve-comments --preserve-other-tags
           Tags update in place; delete/overwrite options do not affect tagging.
-          Use tag-preview first to review inferred tags without changing files.
+          Use preview-tags first to review inferred tags without changing files.
         Video:
           --video-container MP4|MKV|AVI --video-resolution SD|HD|FullHD|QHD|UHD
           --video-smoothing None|Bilinear|Bicubic|Lanczos
@@ -184,10 +184,11 @@ public sealed class CliApplication(IOperationExecutor? executor = null, IDiscRea
           always uses that rate. Video flags require run karaoke-to-video.
 
         Examples:
-          karaoke-toolkit validate "D:\Karaoke" --json --quiet
+          karaoke-toolkit validate-karaoke-files "D:\Karaoke" --json --quiet
           karaoke-toolkit run zip-to-audiog "D:\Incoming" --no-cue-text
-          karaoke-toolkit run repack-zip "D:\Incoming" --overwrite skip
-          karaoke-toolkit tag-preview "D:\Karaoke" --pattern "%ARTIST% - %TITLE%"
+          karaoke-toolkit run repack-zip-for-compatibility "D:\Incoming" --overwrite skip
+          karaoke-toolkit preview-tags "D:\Karaoke" --pattern "%ARTIST% - %TITLE%"
+          karaoke-toolkit run group-by-alphabet-files "D:\Karaoke" --dry-run
           karaoke-toolkit run karaoke-to-video "D:\Karaoke" --video-container MP4
 
         Option names are case-sensitive; command and enum choices ignore case.

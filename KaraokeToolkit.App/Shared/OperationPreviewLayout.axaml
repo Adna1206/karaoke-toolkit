@@ -1,0 +1,68 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:shared="using:KaraokeToolkit.App.Shared" x:Class="KaraokeToolkit.App.Shared.OperationPreviewLayout"
+             x:Name="Layout" x:DataType="shared:OperationPreviewLayout">
+  <Grid Margin="{x:Static shared:WindowSpacing.ContentInset}" RowDefinitions="Auto,Auto,*,Auto">
+    <TextBlock Classes="heading1" Text="{Binding #Layout.Title}" Margin="0,0,0,14"/>
+    <ContentPresenter Grid.Row="1" Content="{Binding #Layout.HeaderContent}" IsVisible="{Binding !!#Layout.HeaderContent}" Margin="0,0,0,14"/>
+    <Grid Grid.Row="2" Margin="0,0,0,12" ColumnSpacing="18" ClipToBounds="True">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="{Binding #Layout.SettingsWidth}"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
+      <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <ContentPresenter Margin="0,0,8,0" Content="{Binding #Layout.SettingsContent}"/>
+      </ScrollViewer>
+      <Grid Grid.Column="1">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="2*" MinHeight="48"/>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Grid.Styles>
+          <Style Selector="ContentPresenter.operationPreview">
+            <Setter Property="Grid.RowSpan" Value="3"/>
+          </Style>
+          <Style Selector="ContentPresenter.operationPreview.withIssues">
+            <Setter Property="Grid.RowSpan" Value="1"/>
+          </Style>
+        </Grid.Styles>
+        <DockPanel Margin="0,0,0,6">
+          <ContentPresenter DockPanel.Dock="Right" Content="{Binding #Layout.PreviewActions}"/>
+          <TextBlock Classes="heading3" Text="{Binding #Layout.PreviewTitle}" VerticalAlignment="Center"/>
+        </DockPanel>
+        <ContentPresenter Grid.Row="1" Classes="operationPreview" Classes.withIssues="{Binding #Layout.HasIssues}"
+                          Content="{Binding #Layout.PreviewContent}"/>
+        <GridSplitter Grid.Row="2" IsVisible="{Binding #Layout.HasIssues}" Height="14"
+                      ResizeDirection="Rows" ResizeBehavior="PreviousAndNext" HorizontalAlignment="Stretch"
+                      AutomationProperties.Name="Resize skipped items and conflicts panel">
+          <GridSplitter.Template>
+            <ControlTemplate>
+              <Border Background="Transparent">
+                <Border Width="32" Height="3" CornerRadius="2" HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Background="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+              </Border>
+            </ControlTemplate>
+          </GridSplitter.Template>
+        </GridSplitter>
+        <Border Grid.Row="3" IsVisible="{Binding #Layout.HasIssues}" ClipToBounds="True" SizeChanged="IssuesPane_SizeChanged">
+          <Grid x:Name="IssuesBody" IsVisible="False" RowDefinitions="Auto,*" RowSpacing="6">
+            <TextBlock Classes="heading3" Text="Skipped items and conflicts"/>
+            <ContentPresenter Grid.Row="1" Content="{Binding #Layout.IssuesContent}"/>
+          </Grid>
+        </Border>
+      </Grid>
+    </Grid>
+    <Border Grid.Row="3" Classes="windowFooter dialog">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{x:Static shared:WindowSpacing.StatusProgressGap}" VerticalAlignment="Center">
+          <shared:StatusBar Message="{Binding #Layout.Status}" Kind="{Binding #Layout.StatusSeverity}" VerticalAlignment="Center"/>
+          <ProgressBar Grid.Column="1" Width="{x:Static shared:WindowSpacing.StatusProgressWidth}" VerticalAlignment="Center"
+                       IsVisible="{Binding #Layout.Progress.IsVisible}" IsIndeterminate="{Binding #Layout.Progress.IsIndeterminate}"
+                       Value="{Binding #Layout.Progress.Percent, Mode=OneWay}"/>
+        </Grid>
+        <ContentPresenter Grid.Column="1" Content="{Binding #Layout.FooterActions}"/>
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>

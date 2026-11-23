@@ -15,10 +15,11 @@ the same `OperationId` enum rather than declaring independent identities.
 | `Conversion/ConversionRequest` | Conversion-specific Action/Folder/Options request and validation |
 | `ConversionOptions`, `ConversionResult`, `ConversionProgress` | Existing processing contracts, retained in Conversion |
 
-Core does not decide GUI labels, CLI command names or which operations an interface
-chooses to expose. App's metadata retains those labels and input-picker behaviour.
-CLI's `CliOperationCatalog` explicitly includes each operation with a command name,
-or excludes it with a reason. Core still validates execution capabilities independently.
+App owns desktop labels and input-picker behaviour. `OperationCommandNames`
+defines the preferred invocation names shared by CLI and MCP. Use the desktop
+terminology when choosing these names. CLI and MCP requests use the shared
+invocation names. Recipes, recovery journals and reports use `OperationId`
+names. CLI's `CliOperationCatalog` explicitly includes or excludes each operation.
 MCP has its own explicit `McpOperationCatalog` over these identities, with the same
 CS8509 compiler guard. Its decisions also apply to recipe/recovery calls. See [MCP](../user/mcp.md).
 
@@ -72,6 +73,23 @@ CLI and MCP share the planner. Desktop rechecks the approved plan before
 applying. CLI and MCP use the same options and require an explicit output path.
 The operation is directly available in all three interfaces. Recipe steps do
 not currently include it. See [Group by Track ID](../user/track-grouping.md).
+
+## Rename by Filename Pattern
+
+`RenameByPattern` uses a typed `FilenameRenameRequest` and an approved
+`FilenameRenamePlan`. The desktop preview and the recheck before publication
+use the same Core planner. It records same-folder renames in the existing
+file-move journal. New rename runs start in Desktop. CLI, MCP and recipes have
+no direct execution entry point for this operation.
+See [Rename by Filename Pattern](../user/file-workflow-features.md#rename-by-filename-pattern).
+
+## Group by Alphabet
+
+Desktop presents one **Group by Alphabet** entry with a scope choice. Its
+approved preview is rechecked by Core before it saves a move plan. The
+`OrganizeFiles` and `OrganizeFolders` identities continue to describe the
+separate scopes. CLI and MCP use `group-by-alphabet-files` and
+`group-by-alphabet-folders` as the preferred names.
 
 ## Persistence and disc ripping
 

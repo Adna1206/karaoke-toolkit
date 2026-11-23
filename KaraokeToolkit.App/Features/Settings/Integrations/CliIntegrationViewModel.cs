@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using KaraokeToolkit.App.Shared;
+using KaraokeToolkit.Core.Execution;
 
 namespace KaraokeToolkit.App.Features.Settings.Integrations;
 
@@ -49,8 +50,8 @@ public partial class CliIntegrationViewModel : ViewModelBase
     public string CommandText => Invocation + (ExampleIndex switch
     {
         1 => " operations",
-        2 => " validate '<karaoke-folder>' --json --quiet",
-        3 => " tag-preview '<karaoke-folder>' --json --quiet",
+        2 => $" {OperationCommandNames.Get(OperationId.ValidateKaraoke)} '<karaoke-folder>' --json --quiet",
+        3 => $" {OperationCommandNames.Get(OperationId.PreviewTags)} '<karaoke-folder>' --json --quiet",
         _ => " --help"
     });
 

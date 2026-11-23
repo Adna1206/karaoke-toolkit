@@ -1,6 +1,7 @@
 using KaraokeToolkit.Core.Execution;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using KaraokeToolkit.Core.FileOperations;
 using Action = KaraokeToolkit.Core.Execution.OperationId;
 
@@ -74,6 +75,10 @@ public static class OperationDefinitions
             "Fill in song details from filenames.",
             "Preview and edit album, track, artist and title before saving tags. Audio, video and single-track karaoke ZIPs are supported. The audio and graphics stay intact.",
             OperationSection.FilesAndFolders, OperationInputKind.FilesAndFolders, true) { IsTagging = true },
+        new(OperationId.RenameByPattern, null, "Rename by Filename Pattern",
+            "Change filenames from one pattern to another.",
+            "Choose source and destination patterns, preview new names, and keep matching audio and CDG files together.",
+            OperationSection.FilesAndFolders, OperationInputKind.FilesAndFolders, true),
         new(OperationId.GroupByTrackId, null, "Group by Track ID",
             "Group files or whole folders by track ID.",
             "Preview how files or whole folders will be grouped by track ID ranges or trailing digits, then copy or move them.",
@@ -107,6 +112,15 @@ public static class OperationDefinitions
             "Check BIN, CDG and ZIP file structure and audio/CDG pairing. The report lists problems and leaves your files untouched.",
             OperationSection.ValidationAndReports, OperationInputKind.FilesAndFolders, true),
     ]);
+    public static IReadOnlyList<OperationDefinition> Desktop { get; } = Array.AsReadOnly(All
+        .Where(operation => operation.Operation != OperationId.OrganizeFolders)
+        .Select(operation => operation.Operation == OperationId.OrganizeFiles ? operation with
+        {
+            Label = "Group by Alphabet",
+            ShortDescription = "Group files or folders into A–Z and # folders.",
+            Description = "Choose files or immediate subfolders and preview their alphabetical destinations before moving them."
+        } : operation).ToArray());
+
     public static IReadOnlyList<OperationSectionDefinition> Sections { get; } = Array.AsReadOnly<OperationSectionDefinition>([
         new(OperationSection.Favourites, "Favourites"),
         new(OperationSection.KaraokeConversion, "Karaoke Conversion"),

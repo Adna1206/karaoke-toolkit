@@ -12,7 +12,7 @@ namespace KaraokeToolkit.Core.Conversion;
 /// <summary>Local conversion workflow with verified staging, per-source results and safe cancellation.</summary>
 /// <remarks>Converters only see disposable inputs. Source deletion occurs after all outputs
 /// for that source group have been published and verified. Previously completed groups remain on cancellation.</remarks>
-public sealed class ConversionService
+public sealed partial class ConversionService
 {
     private readonly RecoveryStore recovery;
     public ConversionService(RecoveryStore? recovery = null) => this.recovery = recovery ?? new();
@@ -22,14 +22,20 @@ public sealed class ConversionService
     public Task<ConversionResult> ResumeAsync(RecoveryJob job, IProgress<ConversionProgress>? progress = null,
         CancellationToken cancellationToken = default,
         Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolveConflict = null)
+        => ResumePassAsync(job, progress, cancellationToken, resolveConflict, null);
+
+    private Task<ConversionResult> ResumePassAsync(RecoveryJob job, IProgress<ConversionProgress>? progress,
+        CancellationToken token, Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolveConflict,
+        ConversionConflictReview? review)
         => Task.Run(async () =>
         {
             using var run = new RunSession(recovery, job.JournalPath);
             if (run.Data.Finished)
                 throw new IOException("This run has already finished.");
-            cancellationToken.ThrowIfCancellationRequested();
+            token.ThrowIfCancellationRequested();
             run.RecoverPending();
-            return await RunCoreAsync(run.Data.Request, run.Data.Policy, progress, cancellationToken, resolveConflict, run, run.Data.ValidateBeforeConversion);
+            return await RunCoreAsync(run.Data.Request, run.Data.Policy, progress, token, resolveConflict, run,
+                run.Data.ValidateBeforeConversion, run.Data.Policy == OverwritePolicy.Ask ? review : null);
         }, CancellationToken.None);
 
     /// <summary>Converts selected source groups through verified staging and durable per-group checkpoints.</summary>
@@ -43,7 +49,8 @@ public sealed class ConversionService
 
     private async Task<ConversionResult> RunCoreAsync(ConversionRequest request, OverwritePolicy overwrite,
         IProgress<ConversionProgress>? progress, CancellationToken token,
-        Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolveConflict, RunSession? resumed = null, bool validateBeforeConversion = false)
+        Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolveConflict, RunSession? resumed = null, bool validateBeforeConversion = false,
+        ConversionConflictReview? review = null)
     {
         request.Validate();
         if (!Enum.IsDefined(overwrite))
@@ -105,7 +112,8 @@ public sealed class ConversionService
             {
                 run.Begin(source);
                 Report(0, "Processing: " + source, source, "Processing");
-                if (validateBeforeConversion && !maintenance && request.Action is not (Action.ArchiveToZip or Action.RepackZip))
+                if (review is not { IsApplying: true } && validateBeforeConversion && !maintenance &&
+                    request.Action is not (Action.ArchiveToZip or Action.RepackZip))
                 {
                     Report(0, "Validating input: " + source, show: false);
                     var validation = await new ValidationService().ScanAsync([source], false, token: token);
@@ -117,14 +125,16 @@ public sealed class ConversionService
                         throw new InvalidDataException("Input validation found no source group.");
                 }
                 ConversionFileResult result;
-                if (OperationCapabilities.RenamesFilenames(request.Action))
+                if (review is { IsApplying: true })
+                    result = review.Publish(source, token);
+                else if (OperationCapabilities.RenamesFilenames(request.Action))
                     result = await FilenameCleanup.RunAsync(source, request.Action, token);
                 else if (request.Action == Action.CreateCueAndTextFiles)
                     result = await WriteMetadataAsync(source, request.Options, overwrite, token, resolveConflict,
-                        writing: label => ReportWriting(0, source, label));
+                        writing: label => ReportWriting(0, source, label), review: review);
                 else
                     result = await ConvertOneAsync(source, request, overwrite, token,
-                        (percent, message) => Report(percent, message, show: false), resolveConflict);
+                        (percent, message) => Report(percent, message, show: false), resolveConflict, review);
                 run.Complete(result);
                 results.Add(result);
                 Report(100, result.Status + ": " + source + " — " + result.Message, source, result.Status.ToString(), result.Message,
@@ -136,6 +146,7 @@ public sealed class ConversionService
                 cancelled = true;
                 break;
             }
+            catch (ConversionConflictDeferredException) { /* No publication or completion receipt until review. */ }
             catch (OutputSkippedException) { var result = new ConversionFileResult(source, ConversionStatus.Skipped, [], "Existing output retained."); run.Complete(result); results.Add(result); Report(100, "Skipped: " + source, source, "Skipped", result.Message); }
             catch (Exception error)
             {
@@ -154,24 +165,34 @@ public sealed class ConversionService
                 Action.AudioGToZip or Action.BinToZip => ".zip",
                 _ => ".cdg"
             };
-            foreach (string folder in results.Where(r => r.Status == ConversionStatus.Succeeded).Select(r => string.IsNullOrEmpty(request.OutputFolder) ? Path.GetDirectoryName(r.Source)! : request.OutputFolder).Distinct().ToArray())
+            var listingSources = results.Where(r => r.Status == ConversionStatus.Succeeded).Select(r => r.Source);
+            if (review is { IsApplying: false })
+                listingSources = listingSources.Concat(review.DeferredSources);
+            foreach (string folder in listingSources.Select(source => string.IsNullOrEmpty(request.OutputFolder)
+                ? Path.GetDirectoryName(source)! : request.OutputFolder).Distinct(InputSelection.Paths).ToArray())
             {
                 if (run.Data.Metadata.Contains(folder))
                     continue;
                 run.Begin(folder, metadata: true);
                 try
                 {
+                    if (review is { IsApplying: false })
+                    {
+                        review.PlanListing(folder, CueTextService.PlannedTargets(folder, request.Options, listingExtension));
+                        continue;
+                    }
                     var metadata = await WriteMetadataAsync(folder, request.Options, overwrite, token, resolveConflict, listingExtension,
-                        label => ReportWriting(100, folder, label));
+                        label => ReportWriting(100, folder, label), review);
                     run.Complete(metadata);
                 }
                 catch (OperationCanceledException) { cancelled = true; break; }
-                catch (OutputSkippedException) { var result = new ConversionFileResult(folder, ConversionStatus.Skipped, [], "Existing CUE/text retained."); run.Complete(result); results.Add(result); }
+                catch (OutputSkippedException) { var result = new ConversionFileResult(folder, ConversionStatus.Skipped, [], "Existing CUE/text retained.") { IsMetadata = true }; run.Complete(result); results.Add(result); }
                 catch (Exception error) { run.ThrowIfUnresolved(); var result = new ConversionFileResult(folder, ConversionStatus.Failed, [], "CUE/text: " + error.Message) { IsMetadata = true }; run.Complete(result); results.Add(result); }
             }
         }
         run.ThrowIfUnresolved();
-        run.Finish();
+        if (cancelled || token.IsCancellationRequested || review is not { IsApplying: false, HasPendingWork: true })
+            run.Finish();
         RunSession.Current.Value = null;
         return new(results, cancelled || token.IsCancellationRequested)
         {
@@ -209,19 +230,27 @@ public sealed class ConversionService
     internal static bool IsVideoSource(string path) => Path.GetExtension(path).ToLowerInvariant() is ".bin" or ".zip" or ".cdg";
     internal static async Task<ConversionFileResult> WriteMetadataAsync(string folder, ConversionOptions options, OverwritePolicy overwrite, CancellationToken token,
         Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolveConflict, string? extension = null,
-        System.Action<string>? writing = null)
+        System.Action<string>? writing = null, ConversionConflictReview? review = null)
     {
         using var transaction = new FileTransaction(folder);
         var outputs = CueTextService.Write(folder, transaction.Workspace, options, extension, writing);
         if (outputs.Count == 0)
             return new(folder, ConversionStatus.Skipped, [], "No tracks for CUE/text output.");
         transaction.ObserveTargets(outputs);
-        overwrite = await ResolveOverwriteAsync(folder, outputs, overwrite, resolveConflict, token);
+        const string message = "Created CUE/text files.";
+        if (review is { IsApplying: true })
+            overwrite = review.ResolveListing(folder, transaction);
+        else if (review != null)
+        {
+            review.DeferIfConflicting(folder, folder, transaction, outputs, [], message, token);
+            overwrite = OverwritePolicy.Fail;
+        }
+        else overwrite = await ResolveOverwriteAsync(folder, outputs, overwrite, resolveConflict, token);
         var committed = transaction.Commit(outputs, [], overwrite, token);
-        return new(folder, ConversionStatus.Succeeded, committed, "Created CUE/text files.");
+        return new(folder, ConversionStatus.Succeeded, committed, message);
     }
     private static async Task<ConversionFileResult> ConvertOneAsync(string source, ConversionRequest request, OverwritePolicy overwrite, CancellationToken token, System.Action<int, string> report,
-        Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolveConflict)
+        Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolveConflict, ConversionConflictReview? review)
     {
         string destination = string.IsNullOrEmpty(request.OutputFolder) ? Path.GetDirectoryName(source)! : request.OutputFolder;
         using var transaction = new FileTransaction(destination);
@@ -348,17 +377,22 @@ public sealed class ConversionService
         report(90, "Verified outputs: " + source);
         token.ThrowIfCancellationRequested();
         transaction.ObserveTargets(outputs);
-        // Repacking in place intentionally replaces its own input, not an unrelated
-        // existing output. Source fingerprints still guard against concurrent changes.
-        overwrite = request.Action == Action.RepackZip && request.Options.DeleteOldFiles
-            ? OverwritePolicy.Fail
-            : await ResolveOverwriteAsync(destination, outputs, overwrite, resolveConflict, token);
         // The CDG remains the graphics half of MP3+G; only the old lossless audio may be removed.
         var retired = request.Options.DeleteOldFiles && request.Action != Action.KaraokeToVideo
             ? request.Action == Action.LosslessGToMp3G ? inputs.Skip(1).ToArray() : inputs.ToArray()
             : [];
+        const string message = "Outputs verified and published.";
+        // Intentional in-place repacking replaces the verified input, without an overwrite question.
+        if (request.Action == Action.RepackZip && request.Options.DeleteOldFiles)
+            overwrite = OverwritePolicy.Fail;
+        else if (review != null)
+        {
+            review.DeferIfConflicting(source, destination, transaction, outputs, retired, message, token);
+            overwrite = OverwritePolicy.Fail;
+        }
+        else overwrite = await ResolveOverwriteAsync(destination, outputs, overwrite, resolveConflict, token);
         var committed = transaction.Commit(outputs, retired, overwrite, token);
-        return new(source, ConversionStatus.Succeeded, committed, "Outputs verified and published.");
+        return new(source, ConversionStatus.Succeeded, committed, message);
     }
     private static async Task<OverwritePolicy> ResolveOverwriteAsync(string folder, IReadOnlyList<string> outputs,
         OverwritePolicy policy, Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolve,

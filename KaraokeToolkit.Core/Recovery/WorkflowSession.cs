@@ -146,11 +146,18 @@ internal sealed class WorkflowSession : IDisposable
                 !RecoveryFingerprint.IsValid(m.Hash, data.VerificationMode)))))
             throw new IOException("Invalid track grouping checkpoint.");
         if (data.Kind == RecoveryKind.FileMoves && (data.OperationId is not (OperationIdValue.OrganizeFiles or
-            OperationIdValue.OrganizeFolders or OperationIdValue.FlattenOneLayer or OperationIdValue.FlattenAllLayers) ||
+            OperationIdValue.OrganizeFolders or OperationIdValue.FlattenOneLayer or OperationIdValue.FlattenAllLayers or OperationIdValue.RenameByPattern) ||
             data.CopyGrouping || data.Moves is not { Count: > 0 } || data.Moves.Any(g => g.Items.Length == 0 || g.Items.Any(m =>
-                m.Target != null ? !RecoveryFingerprint.IsValid(m.Hash, data.VerificationMode) || InputSelection.Paths.Equals(m.Source, m.Target)
+                m.Target != null ? !RecoveryFingerprint.IsValid(m.Hash, data.VerificationMode) ||
+                    (data.OperationId == OperationIdValue.RenameByPattern ? StringComparer.Ordinal : InputSelection.Paths).Equals(m.Source, m.Target)
                 : g.SkipReason == null && (!m.Directory || m.Hash != "empty" || data.Roots.Contains(m.Source, InputSelection.Paths))))))
             throw new IOException("Invalid standalone file move checkpoint.");
+        if (data.OperationId == OperationIdValue.RenameByPattern &&
+            (data.Kind != RecoveryKind.FileMoves || data.Moves!.Any(group =>
+                group.SkipReason != null || group.Items.Any(move => move.Directory || move.Target == null ||
+                    !InputSelection.Paths.Equals(Path.GetDirectoryName(group.Items[0].Source), Path.GetDirectoryName(move.Source)) ||
+                    !InputSelection.Paths.Equals(Path.GetDirectoryName(move.Source), Path.GetDirectoryName(move.Target))))))
+            throw new IOException("Invalid filename rename checkpoint.");
         if (data.Kind == RecoveryKind.Recipe)
         {
             RecipeOperations.Validate(data.Recipe!);
@@ -265,7 +272,7 @@ internal sealed class WorkflowSession : IDisposable
     internal void Finish()
     {
         bool partialMove = !Data.CopyGrouping && Data.Moves?.Any(group => group.Results == null && group.SkipReason == null &&
-            group.Items.Any(move => !WorkflowMoves.Exists(move.Source))) == true;
+            group.Items.Any(move => !WorkflowMoves.MovePathExists(move, move.Source, Data.OperationId == OperationIdValue.RenameByPattern))) == true;
         if (HasPendingPublication || partialMove || Data.Conversions?.Any(p => p.Journal != null && File.Exists(p.Journal) && !RunSession.Read(p.Journal).Finished) == true)
             throw new IOException("An interrupted publication remains. Use Recover to resume this workflow.");
         Data.Finished = true; Save(); DurableJson.Delete(Store.IndexPath(Journal));

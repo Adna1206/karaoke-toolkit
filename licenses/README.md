@@ -89,14 +89,14 @@ Except for TagLibSharp, NuGet package metadata lists the remaining runtime packa
 developer-only AvaloniaUI.DiagnosticsSupport package, which has no license
 expression in its package metadata. Test-only packages are not in app releases.
 
-The four MSYS DLLs in CDRDAO's Windows ZIP now have byte-for-byte upstream
+The four MSYS DLLs in CDRDAO's Windows ZIP have byte-for-byte upstream
 package matches, shipped licence notices and checksummed source-package
 references. The source assembly command prepares those archives locally;
 public release source access still needs arranging. TagLibSharp release source
 and the pinned Windows/Linux FFmpeg core source are also recorded in
 `vendor/distribution-sources.json`. FFmpeg's external-library sources, notices
 and exact build recipe are not yet complete; see the distribution licensing record.
-The Apple Silicon build now has pinned upstream release source and vendor
+The Apple Silicon build has pinned upstream release source and vendor
 build metadata. The exact recipe revision and complete corresponding source
 still need verification.
 The macOS binaries also need native execution and signing checks. This index is

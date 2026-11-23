@@ -13,14 +13,14 @@ See [CLI reference](cli.md) for defaults, settings and exit codes.
 .\karaoke-toolkit.exe --help
 .\karaoke-toolkit.exe operations
 .\karaoke-toolkit.exe operations --json
-.\karaoke-toolkit.exe validate "D:\Karaoke" --json --quiet
+.\karaoke-toolkit.exe validate-karaoke-files "D:\Karaoke" --json --quiet
 ```
 
 Validation is read-only. It checks supported karaoke files for structure, pairing
 and ZIP integrity; it does not move damaged files automatically. To save a report:
 
 ```powershell
-.\karaoke-toolkit.exe validate "D:\Karaoke" --report "D:\Reports\validation.json" --quiet
+.\karaoke-toolkit.exe validate-karaoke-files "D:\Karaoke" --report "D:\Reports\validation.json" --quiet
 ```
 
 Create `D:\Reports` first and choose a new report filename for every run.
@@ -41,14 +41,14 @@ Add `--no-recurse` to limit ordinary conversion scanning to the selected folder.
 ## Repack for compatibility
 
 ```powershell
-.\karaoke-toolkit.exe run repack-zip "D:\Incoming" --zip-algorithm Deflate --zip-level 5 --no-cue-text
+.\karaoke-toolkit.exe run repack-zip-for-compatibility "D:\Incoming" --zip-algorithm Deflate --zip-level 5 --no-cue-text
 ```
 
 This keeps the source ZIP and creates its repacked counterpart. To replace source
 ZIPs with successfully verified repacks, explicitly choose deletion:
 
 ```powershell
-.\karaoke-toolkit.exe run repack-zip "D:\Incoming" --zip-algorithm Deflate --zip-level 5 --delete-originals --no-cue-text
+.\karaoke-toolkit.exe run repack-zip-for-compatibility "D:\Incoming" --zip-algorithm Deflate --zip-level 5 --delete-originals --no-cue-text
 ```
 
 Deflate is the compatibility default for older karaoke software. Other ZIP-writing
@@ -58,7 +58,7 @@ operations use the same algorithm/level preferences.
 
 ```powershell
 .\karaoke-toolkit.exe run bin-to-audiog "D:\Karaoke\track.bin" --encoder FLAC --no-cue-text
-.\karaoke-toolkit.exe run losslessg-to-mp3g "D:\Lossless Karaoke" --bitrate 192 --validate-inputs --no-cue-text
+.\karaoke-toolkit.exe run lossless-audiog-to-mp3g "D:\Lossless Karaoke" --bitrate 192 --validate-inputs --no-cue-text
 ```
 
 The first extracts lossless audio and graphics from BIN. The second makes MP3+G
@@ -69,8 +69,8 @@ checks; normal output checks still apply without that flag.
 ## Preview tags, then apply them
 
 ```powershell
-.\karaoke-toolkit.exe tag-preview "D:\Karaoke" --pattern "%DISC%-%TRACK% - %ARTIST% - %TITLE%" --json --quiet
-.\karaoke-toolkit.exe tag "D:\Karaoke" --pattern "%DISC%-%TRACK% - %ARTIST% - %TITLE%" --fill-empty-only --preserve-comments --preserve-other-tags
+.\karaoke-toolkit.exe preview-tags "D:\Karaoke" --pattern "%DISC%-%TRACK% - %ARTIST% - %TITLE%" --json --quiet
+.\karaoke-toolkit.exe tag-karaoke-files "D:\Karaoke" --pattern "%DISC%-%TRACK% - %ARTIST% - %TITLE%" --fill-empty-only --preserve-comments --preserve-other-tags
 ```
 
 The pattern shown is the default. A filename such as
@@ -102,18 +102,18 @@ These commands move files or directories. Keeping originals is a conversion
 preference, not a way to turn file organization into copying.
 
 ```powershell
-.\karaoke-toolkit.exe run organize-files "D:\Karaoke" --ignore-leading-the
-.\karaoke-toolkit.exe run organize-folders "D:\Artists"
-.\karaoke-toolkit.exe run flatten-one-layer "D:\Incoming"
-.\karaoke-toolkit.exe run flatten-all-layers "D:\Incoming"
+.\karaoke-toolkit.exe run group-by-alphabet-files "D:\Karaoke" --ignore-leading-the
+.\karaoke-toolkit.exe run group-by-alphabet-folders "D:\Artists"
+.\karaoke-toolkit.exe run flatten-one-folder-level "D:\Incoming"
+.\karaoke-toolkit.exe run flatten-all-folder-levels "D:\Incoming"
 ```
 
-Organize Files recursively groups files into A-Z/# buckets. The optional leading-The
-rule puts names starting with `The Beatles` into B. Organize Folders groups only
-immediate child folders. Flatten One Layer moves the contents of immediate children
-into the selected root; Flatten All Layers brings all descendant files into that
-root. Empty folders are removed. These scopes do not change with `--no-recurse`.
-Choose one of these operations for the layout you want; the examples are independent.
+`group-by-alphabet-files` recursively groups files into A–Z and `#` folders.
+With `--ignore-leading-the`, `The Example.mp3` goes under E.
+`group-by-alphabet-folders` groups immediate subfolders.
+`flatten-one-folder-level` moves the contents of immediate subfolders into the
+selected root. `flatten-all-folder-levels` brings all descendant files into
+that root. Both flatten commands remove subfolders emptied by the move.
 
 ## Reuse conversion settings
 
@@ -156,7 +156,7 @@ It is a separate operation, not crash recovery.
 ## Use results in a script
 
 ```powershell
-$text = & .\karaoke-toolkit.exe validate "D:\Karaoke" --json --quiet
+$text = & .\karaoke-toolkit.exe validate-karaoke-files "D:\Karaoke" --json --quiet
 $code = $LASTEXITCODE
 $result = $text | ConvertFrom-Json
 if ($code -eq 0) { "Validation passed" }
@@ -191,10 +191,10 @@ recipe has since changed or been deleted. Use the exact journal path from discov
 ## Preview changes and choose an output folder
 
 ```powershell
-.\karaoke-toolkit.exe run flatten-all-layers "D:\Incoming" --dry-run --json
+.\karaoke-toolkit.exe run flatten-all-folder-levels "D:\Incoming" --dry-run --json
 .\karaoke-toolkit.exe run zip-to-audiog "D:\Incoming" --output "D:\Converted" --no-cue-text --dry-run
 .\karaoke-toolkit.exe run zip-to-audiog "D:\Incoming" --output "D:\Converted" --no-cue-text
-.\karaoke-toolkit.exe run create-cue-and-text-files "D:\Converted"
+.\karaoke-toolkit.exe run create-cue-txt-files "D:\Converted"
 ```
 
 Create `D:\Converted` first. Outputs from all selected source folders share that
@@ -213,14 +213,14 @@ successful decoding/encoding or protection against later changes to files.
 
 Only eligible failed groups move; valid files stay in place. The report includes
 restoration manifests. Unreadable or otherwise nonmovable findings remain issues.
-The ordinary `validate` command continues to be read-only.
+`validate-karaoke-files` is read-only.
 
 ## Discover and rip a disc
 
 ```powershell
 .\karaoke-toolkit.exe disc-list --json
-.\karaoke-toolkit.exe disc-rip --device "0,1,0" --output "D:\Ripped" --disc-name "DISC123" --tracks "1,3-5" --format Bin --experimental --dry-run
-.\karaoke-toolkit.exe disc-rip --device "0,1,0" --output "D:\Ripped" --disc-name "DISC123" --tracks "1,3-5" --format Zip --encoder MP3 --bitrate 192 --experimental
+.\karaoke-toolkit.exe rip-cdg --device "0,1,0" --output "D:\Ripped" --disc-name "DISC123" --tracks "1,3-5" --format Bin --experimental --dry-run
+.\karaoke-toolkit.exe rip-cdg --device "0,1,0" --output "D:\Ripped" --disc-name "DISC123" --tracks "1,3-5" --format Zip --encoder MP3 --bitrate 192 --experimental
 ```
 
 Use the device address returned by `disc-list`, not the sample address. Add
@@ -233,7 +233,7 @@ A dry run scans the disc but does not read its full image or publish tracks.
 
 ```powershell
 .\karaoke-toolkit.exe help karaoke-to-video
-.\karaoke-toolkit.exe run repack-zip --help
+.\karaoke-toolkit.exe run repack-zip-for-compatibility --help
 (& .\karaoke-toolkit.exe completion powershell | Out-String) | Invoke-Expression
 (& .\karaoke-toolkit.exe path powershell | Out-String) | Invoke-Expression
 ```

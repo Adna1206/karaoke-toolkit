@@ -30,8 +30,8 @@ matching channel assets. Installations built with the old Flow source need the
 GitHub-enabled build installed first to see releases on GitHub. Applying updates
 must wait for file operations to finish.
 
-On Windows, settings and favourites, saved recipes, and the recovery index now
-live in `%LOCALAPPDATA%\KaraokeToolkitData`. The toolkit starts from defaults in
+On Windows, settings, favourites, saved recipes and the recovery index live
+in `%LOCALAPPDATA%\KaraokeToolkitData`. The toolkit starts from defaults in
 `settings.xml` and removes the former `options.xmls` once the new profile is
 ready. To retain the old preferences for a downgrade, copy `options.xmls`
 before starting the new version. Startup copies surviving recipes and recovery

@@ -44,8 +44,9 @@ and [support guide](docs/SUPPORT.md).
 - Lossless Audio+G to MP3+G: matching WAV, FLAC, APE, AIFF, ALAC/M4A or WavPack audio is checked by codec before MP3 encoding; the CDG stays unchanged.
 - Convert BIN, karaoke ZIP, or matching Audio+G to MP4, MKV, or AVI video with synchronized CDG graphics and seek-friendly keyframes.
 - Local filename cleanup with paired-name and collision protection.
-- [Tag Karaoke Files](docs/user/tagging.md): preview and edit metadata from custom filename templates, with remembered patterns, ZIP-contained audio tagging and media-payload verification.
-- Organize files recursively or immediate child folders into A-Z and # folders, with an optional leading-"The" rule for files.
+- [Tag Karaoke Files](docs/user/tagging.md) previews and edits metadata using built-in and custom filename patterns, including tags in single-track karaoke ZIPs.
+- [Rename by Filename Pattern](docs/user/file-workflow-features.md#rename-by-filename-pattern) previews names before applying a new pattern, keeps audio/CDG pairs together and can normalize Disc IDs.
+- [Group by Alphabet](docs/user/file-workflow-features.md#group-files-and-folders) previews moves into A–Z and `#` folders. Group files recursively or move immediate subfolders intact.
 - [Group files or whole folders by track ID](docs/user/track-grouping.md) with numeric ranges, masked digits, automatic parent folders and a destination preview.
 - Flatten one or all directory layers beneath selected folders, moving contents into each selected root while leaving name collisions in place.
 - Standalone CUE sheets for BIN tracks and TXT track listings.
@@ -61,13 +62,15 @@ and [support guide](docs/SUPPORT.md).
 - Read-only karaoke validation and explicit, reversible moves to `Damaged`.
 
 Open **Settings → General** for appearance, automatic CUE/TXT generation and existing
-output handling. Ask each time offers Skip, Replace and Cancel conversion when a
-media or CUE/TXT destination already exists. Disabling automatic generation does not
-disable the standalone Create Cue/Text action. Settings changes apply on OK or Apply; Cancel
-discards changes made since the last Apply.
+output handling. In standalone desktop conversions, **Ask each time** collects existing
+media and automatic CUE/TXT outputs into [one review](docs/user/file-workflow-features.md#review-existing-conversion-outputs)
+with individual choices and **Skip all** and **Replace all** controls.
+**Create CUE/TXT Files** is available separately. **OK** and **Apply** save settings.
+**Cancel** discards edits made since the last save.
 
-On Windows, settings are stored at `%LOCALAPPDATA%\KaraokeToolkitData\options.xmls`. Saves replace the
-file atomically and retain the previous version as `options.xmls.bak`.
+On Windows, settings are stored at `%LOCALAPPDATA%\KaraokeToolkitData\settings.xml`. Saves replace the
+file atomically and retain the previous version as `settings.xml.bak`. See the
+[upgrade guide](docs/distribution/updates.md) for the settings reset.
 
 ## Development
 

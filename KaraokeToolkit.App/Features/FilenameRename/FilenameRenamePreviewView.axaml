@@ -1,0 +1,79 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:KaraokeToolkit.App.Features.FilenameRename"
+             xmlns:shared="using:KaraokeToolkit.App.Shared" x:Class="KaraokeToolkit.App.Features.FilenameRename.FilenameRenamePreviewView"
+             x:DataType="vm:FilenameRenameViewModel">
+  <UserControl.Styles>
+    <Style Selector="ComboBox.filenamePattern /template/ TextBox#PART_EditableTextBox">
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+  </UserControl.Styles>
+  <shared:OperationPreviewLayout Title="Rename by Filename Pattern" PreviewTitle="Filename preview" SettingsWidth="365"
+                                 Status="{Binding Status}" StatusSeverity="{Binding StatusSeverity}"
+                                 Progress="{Binding PreviewProgress}" HasIssues="{Binding HasIssues}">
+    <shared:OperationPreviewLayout.SettingsContent>
+      <StackPanel Spacing="10" IsEnabled="{Binding CanPreview}">
+        <StackPanel Spacing="4">
+          <TextBlock Text="Source pattern"/>
+          <ComboBox Classes="filenamePattern" ItemsSource="{Binding SourcePatterns}" Text="{Binding SourcePattern, Mode=TwoWay}"
+                    IsEditable="True" Padding="11,5" HorizontalAlignment="Stretch"
+                    AutomationProperties.Name="Source pattern" ToolTip.Tip="{Binding SourcePattern}"/>
+        </StackPanel>
+        <StackPanel Spacing="4">
+          <TextBlock Text="Destination pattern"/>
+          <ComboBox Classes="filenamePattern" ItemsSource="{Binding DestinationPatterns}" Text="{Binding DestinationPattern, Mode=TwoWay}"
+                    IsEditable="True" Padding="11,5" HorizontalAlignment="Stretch"
+                    AutomationProperties.Name="Destination pattern" ToolTip.Tip="{Binding DestinationPattern}"/>
+        </StackPanel>
+        <TextBlock Text="%DISC% · %TRACK% · %ARTIST% · %TITLE%&#10;Match separators. Omit the extension."
+                   TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.8"/>
+        <Separator Margin="0,4"/>
+        <CheckBox Content="Uppercase Disc ID" IsChecked="{Binding UppercaseDisc}"/>
+        <CheckBox Content="Remove spaces from Disc ID" IsChecked="{Binding RemoveDiscWhitespace}"/>
+        <CheckBox Content="Include subfolders" IsChecked="{Binding IncludeSubfolders}"/>
+      </StackPanel>
+    </shared:OperationPreviewLayout.SettingsContent>
+    <shared:OperationPreviewLayout.PreviewActions>
+      <Button Content="Refresh" Command="{Binding RefreshCommand}" IsEnabled="{Binding CanPreview}"/>
+    </shared:OperationPreviewLayout.PreviewActions>
+    <shared:OperationPreviewLayout.PreviewContent>
+      <ListBox ItemsSource="{Binding Changes}" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+               AutomationProperties.Name="Current and proposed filenames">
+        <ListBox.Styles>
+          <Style Selector="ListBoxItem">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+          </Style>
+        </ListBox.Styles>
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:FilenameRenamePreviewRow">
+            <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="8">
+              <TextBlock Text="{Binding SourceName}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Item.Source}"/>
+              <TextBlock Grid.Column="1" Text="→"/>
+              <TextBlock Grid.Column="2" Text="{Binding DestinationName}" TextTrimming="CharacterEllipsis"
+                         ToolTip.Tip="{Binding Item.Destination}" FontWeight="SemiBold"/>
+            </Grid>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </shared:OperationPreviewLayout.PreviewContent>
+    <shared:OperationPreviewLayout.IssuesContent>
+      <ListBox ItemsSource="{Binding Issues}" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+               AutomationProperties.Name="Skipped items and conflicts">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:FilenameRenamePreviewRow">
+            <StackPanel Spacing="2">
+              <TextBlock Text="{Binding IssueHeading}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Item.Source}"
+                         FontWeight="SemiBold"/>
+              <TextBlock Text="{Binding Item.Issue}" ToolTip.Tip="{Binding Item.Destination}" TextWrapping="Wrap"/>
+            </StackPanel>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </shared:OperationPreviewLayout.IssuesContent>
+    <shared:OperationPreviewLayout.FooterActions>
+      <StackPanel Orientation="Horizontal" VerticalAlignment="Top" Spacing="{x:Static shared:WindowSpacing.FooterButtonGap}">
+        <Button Content="Back" Click="Back_Click"/>
+        <Button Content="Rename Files" Click="Apply_Click" Classes.accent="{Binding CanApply}" IsEnabled="{Binding CanApply}"/>
+      </StackPanel>
+    </shared:OperationPreviewLayout.FooterActions>
+  </shared:OperationPreviewLayout>
+</UserControl>

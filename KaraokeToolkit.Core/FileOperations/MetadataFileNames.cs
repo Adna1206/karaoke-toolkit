@@ -16,6 +16,11 @@ public static class MetadataFileNames
             throw new ArgumentException("The only supported placeholder is {folder}.");
 
         stem = stem.Replace(DefaultTemplate, folderName.Length == 0 ? "tracks" : folderName, StringComparison.Ordinal);
+        return ValidateAndAppendExtension(stem, extension);
+    }
+
+    internal static string ValidateAndAppendExtension(string stem, string extension)
+    {
         if (stem.Length == 0 || stem.EndsWith('.') || stem.EndsWith(' ') ||
             stem.IndexOfAny(['<', '>', ':', '"', '/', '\\', '|', '?', '*']) >= 0 || stem.Any(char.IsControl))
             throw new ArgumentException("Use a filename without path separators, reserved characters, or trailing dots or spaces.");

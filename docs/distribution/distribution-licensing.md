@@ -134,7 +134,7 @@ and GPL text for each macOS target.
 
 The pinned binaries identify libvorbis 1.3.7 in the Windows and Linux
 `libavcodec` libraries and in the Apple Silicon `ffmpeg` and `ffprobe` pairs. The
-upstream BSD copyright notice now ships under `licenses/ffmpeg/` on all three
+upstream BSD copyright notice ships under `licenses/ffmpeg/` on all three
 targets. [libvorbis 1.3.7 COPYING](https://github.com/xiph/vorbis/blob/v1.3.7/COPYING)
 
 The retained October 31 BtbN release supplies both Windows and Linux
@@ -157,7 +157,7 @@ This identifies the expected libudfread input from the recipe. No BD-J JAR
 was found in the extracted Windows archive.
 
 The Windows recipe also selects NVIDIA codec header revision `ced4f8eb`
-for FFmpeg 8.1, and pins LAME at SVN revision 7113. The source manifest now
+for FFmpeg 8.1, and pins LAME at SVN revision 7113. The source manifest
 includes the AMF headers installed by the recipe (58 files including its
 licence, checked against Git blob IDs), MinGW-w64, OpenCORE AMR and SoXR.
 It also includes Shaderc's DEPS pins and selected nested sources for JPEG XL
@@ -169,7 +169,7 @@ the visible DLL strings do not establish the full dependency resolution.
 Rav1e declares `cc` under `[build-dependencies]`. Its changed version is
 evidence that the recipe can resolve inputs during a build. It is not evidence
 of an extra runtime crate linked into the DLL.
-The Windows notice bundle now includes libudfread, OpenCORE AMR and SoXR
+The Windows notice bundle includes libudfread, OpenCORE AMR and SoXR
 licence texts from their pinned sources.
 
 Remaining work is to reconcile all linked inputs, nested build dependencies
@@ -231,10 +231,10 @@ The Windows media suite passed 221 of 222 cases. The remaining test calls
 `libvpx-vp9` to create a WebM fixture, an encoder absent from the candidate.
 A separate test generated VP9/Opus WebM with BtbN, then used Toolkit's CLI
 with the Conda runtime to tag it. The tags persisted and both encoded
-stream hashes were unchanged. The automated tagging test now uses a
+stream hashes were unchanged. The automated tagging test uses a
 synthetic VP9/Opus fixture and checks both encoded stream hashes.
 
-The opt-in Windows build now uses an exact package and per-binary checksum
+The opt-in Windows build uses an exact package and per-binary checksum
 lock. It extracts 61 files from 40 binary packages plus an intermediate
 FreeType package for matching notices. The Windows UCRT and Microsoft Visual
 C++ runtime must be available on the host. Their DLLs are excluded from the
@@ -297,13 +297,13 @@ unresolved as recorded in the [vendor inventory](../../vendor/versions.md).
 A follow-up found an archived index for the September 29 BtbN release, but no
 verified build-recipe revision or complete corresponding source for that pair.
 The displaced archives are in `artifacts/checks/ffmpeg-review/september-29/`.
-Apple Silicon now uses Martin Riedl's FFmpeg and FFprobe 9.0.2 release. Both ZIPs
+Apple Silicon uses Martin Riedl's FFmpeg and FFprobe 9.0.2 release. Both ZIPs
 match the published checksums and contain ARM64 Mach-O executables. The source
 bundle includes the upstream FFmpeg release source and the vendor's version
 and configure report. The report identifies LAME, Vorbis and x264. The bundle
 also includes recipe candidate `6a611e19870e197bc37c6e4c7fccddebd3715466`.
 Its version files agree with the reported dependency versions where present.
-The bundle now includes the candidate's release archives for LAME 4.0,
+The bundle includes the candidate's release archives for LAME 4.0,
 libass 0.17.5 and libvorbis 1.3.7. These versions match the vendor's report.
 Its x264 script fetches the moving `master` archive, and the report gives only
 `0.165.x`. The exact x264 revision and confirmation that the vendor used this

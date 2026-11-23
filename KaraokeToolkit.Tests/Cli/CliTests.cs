@@ -16,6 +16,16 @@ namespace KaraokeToolkit.Tests.Cli;
 
 public class CliTests
 {
+    [Theory]
+    [InlineData("validate-karaoke-files", "validate", OperationId.ValidateKaraoke)]
+    [InlineData("tag-karaoke-files", "tag", OperationId.TagKaraoke)]
+    [InlineData("preview-tags", "tag-preview", OperationId.PreviewTags)]
+    public void DirectCommandsUseTheSharedNames(string command, string retiredName, OperationId operation)
+    {
+        Assert.Equal(operation, CliArguments.Parse([command, "folder"]).Request!.OperationId);
+        Assert.Throws<CliUsageException>(() => CliArguments.Parse([retiredName, "folder"]));
+    }
+
     [Fact]
     public async Task SettingsCommandsAndExplicitRunOptionsShareTheProfile()
     {
@@ -28,9 +38,9 @@ public class CliTests
 
         Assert.Equal(0, await cli.RunAsync(["settings", "set", "recovery.verification", "Sha256"], output, error));
         Assert.Equal("Sha256", profile.Get("recovery.verification", SettingsClient.Mcp).Value.ToString());
-        Assert.Equal(0, await cli.RunAsync(["run", "organize-files", root], output, error));
+        Assert.Equal(0, await cli.RunAsync(["run", "group-by-alphabet-files", root], output, error));
         Assert.Equal(RecoveryVerificationMode.Sha256, executor.Request!.RecoveryVerification);
-        Assert.Equal(0, await cli.RunAsync(["run", "organize-files", root, "--recovery-verification", "metadata"], output, error));
+        Assert.Equal(0, await cli.RunAsync(["run", "group-by-alphabet-files", root, "--recovery-verification", "metadata"], output, error));
         Assert.Equal(RecoveryVerificationMode.MetadataOnly, executor.Request!.RecoveryVerification);
         Assert.False(executor.Request.Options.DeleteOldFiles);
         Assert.Empty(error.ToString().Replace("[50%] Working", "").Trim());
@@ -38,7 +48,8 @@ public class CliTests
 
     [Theory]
     [InlineData("FutureUnknownOperation", "Unregistered CLI operation")]
-    [InlineData("PlayAudioG", "Playback is deferred")]
+    [InlineData("play-audiog", "Playback is deferred")]
+    [InlineData("organize-files", "Unregistered CLI operation")]
     public async Task OperationErrorsExplainUnknownOrExcludedIdsInJson(string operation, string expected)
     {
         var executor = new FakeExecutor(); var output = new StringWriter(); var error = new StringWriter();
@@ -68,8 +79,8 @@ public class CliTests
     public async Task FileMoveUsesDefaultOrExplicitVerification(string? option, RecoveryVerificationMode expected)
     {
         var executor = new FakeExecutor();
-        string[] args = option is null ? ["run", "organize-files", "folder"]
-            : ["run", "organize-files", "folder", "--recovery-verification", option];
+        string[] args = option is null ? ["run", "group-by-alphabet-files", "folder"]
+            : ["run", "group-by-alphabet-files", "folder", "--recovery-verification", option];
 
         Assert.Equal(0, await new CliApplication(executor).RunAsync(args, new StringWriter(), new StringWriter()));
         Assert.Equal(expected, executor.Request!.RecoveryVerification);
@@ -93,19 +104,19 @@ public class CliTests
 
     [Theory]
     [InlineData("recipe", "name")]
-    [InlineData("run", "DiscRip")]
-    [InlineData("run", "ZipToAudioG", "--input")]
-    [InlineData("validate", "x", "--typo")]
-    [InlineData("validate", "x", "--overwrite", "ask")]
-    [InlineData("validate", "x", "--overwrite", "2")]
-    [InlineData("validate", "x", "--json=true")]
-    [InlineData("validate", "x", "--recurse", "--no-recurse")]
-    [InlineData("validate", "x", "--quiet", "--quiet")]
+    [InlineData("run", "rip-cdg")]
+    [InlineData("run", "zip-to-audiog", "--input")]
+    [InlineData("validate-karaoke-files", "x", "--typo")]
+    [InlineData("validate-karaoke-files", "x", "--overwrite", "ask")]
+    [InlineData("validate-karaoke-files", "x", "--overwrite", "2")]
+    [InlineData("validate-karaoke-files", "x", "--json=true")]
+    [InlineData("validate-karaoke-files", "x", "--recurse", "--no-recurse")]
+    [InlineData("validate-karaoke-files", "x", "--quiet", "--quiet")]
     [InlineData("run", "audiog-to-zip", "x", "--zip-level", "10")]
     [InlineData("run", "audiog-to-zip", "x", "--encoder", "unknown")]
     [InlineData("run", "audiog-to-zip", "x", "--pattern", "%TITLE%")]
-    [InlineData("validate", "x", "--video-frame-rate", "30")]
-    [InlineData("run", "organize-folders", "x", "--ignore-leading-the")]
+    [InlineData("validate-karaoke-files", "x", "--video-frame-rate", "30")]
+    [InlineData("run", "group-by-alphabet-folders", "x", "--ignore-leading-the")]
     public async Task InvalidArgumentsDoNotExecute(params string[] args)
     {
         var executor = new FakeExecutor(); var error = new StringWriter();
@@ -123,15 +134,15 @@ public class CliTests
         Assert.False(parsed.Request.Options.DeleteOldFiles); Assert.True(parsed.Request.Options.RecurseFolders);
         Assert.Equal(ZipCompression.Level7, parsed.Request.Options.ZipCompression);
         File.WriteAllText(file, """{"DeleteOldFiles":true}""");
-        Assert.False(CliArguments.Parse(["tag", "x", "--options", file, "--keep-originals"]).Request!.Options.DeleteOldFiles);
+        Assert.False(CliArguments.Parse(["tag-karaoke-files", "x", "--options", file, "--keep-originals"]).Request!.Options.DeleteOldFiles);
         File.WriteAllText(file, """{"Typo":true}""");
-        Assert.Throws<CliUsageException>(() => CliArguments.Parse(["validate", "x", "--options", file]));
+        Assert.Throws<CliUsageException>(() => CliArguments.Parse(["validate-karaoke-files", "x", "--options", file]));
     }
 
     [Fact]
     public void DefaultsAndTagSettingsAreExplicitAndEndOfOptionsIsHonoured()
     {
-        var parsed = CliArguments.Parse(["tag", "--pattern", "%ARTIST% - %TITLE%", "--fill-empty-only", "--preserve-comments", "--preserve-other-tags", "--", "--help"]);
+        var parsed = CliArguments.Parse(["tag-karaoke-files", "--pattern", "%ARTIST% - %TITLE%", "--fill-empty-only", "--preserve-comments", "--preserve-other-tags", "--", "--help"]);
         Assert.Equal("--help", Assert.Single(parsed.Inputs)); Assert.False(parsed.Request!.Options.DeleteOldFiles);
         Assert.Equal(320, parsed.Request.Options.AudioBitrate);
         Assert.Equal(OverwritePolicy.Fail, parsed.Request.OverwritePolicy); Assert.True(parsed.Request.Tagging.FillEmptyOnly);
@@ -175,7 +186,7 @@ public class CliTests
         Assert.Equal(4000, video.Request.Options.VideoBitrateKbps);
         Assert.Equal(256, video.Request.Options.VideoAudioBitrateKbps);
         Assert.False(video.Request.Options.VideoAudioMatchSourceBitrate);
-        Assert.True(CliArguments.Parse(["run", "organize-files", "x", "--ignore-leading-the"]).Request!.IgnoreLeadingThe);
+        Assert.True(CliArguments.Parse(["run", "group-by-alphabet-files", "x", "--ignore-leading-the"]).Request!.IgnoreLeadingThe);
     }
 
     [Fact]
@@ -227,20 +238,20 @@ public class CliTests
     public async Task ExitCodesReflectProcessingOutcome(bool issues, bool cancelled, int found, int expected)
     {
         var executor = new FakeExecutor { Result = new(new("Test", DateTimeOffset.Now, cancelled, []), found, issues) };
-        Assert.Equal(expected, await new CliApplication(executor).RunAsync(["validate", "x", "--json"], new StringWriter(), new StringWriter()));
+        Assert.Equal(expected, await new CliApplication(executor).RunAsync(["validate-karaoke-files", "x", "--json"], new StringWriter(), new StringWriter()));
     }
 
     [Fact]
     public async Task CancellationAndReportsNeverOverwriteExistingFiles()
     {
         var executor = new FakeExecutor { Cancel = true };
-        Assert.Equal(130, await new CliApplication(executor).RunAsync(["validate", "x"], new StringWriter(), new StringWriter()));
+        Assert.Equal(130, await new CliApplication(executor).RunAsync(["validate-karaoke-files", "x"], new StringWriter(), new StringWriter()));
         string report = Path.Combine(TestMediaFixture.NewFolder(), "report.json"); File.WriteAllText(report, "keep");
         executor.Request = null;
-        Assert.Equal(2, await new CliApplication(executor).RunAsync(["validate", "x", "--report", report], new StringWriter(), new StringWriter()));
+        Assert.Equal(2, await new CliApplication(executor).RunAsync(["validate-karaoke-files", "x", "--report", report], new StringWriter(), new StringWriter()));
         Assert.Null(executor.Request); Assert.Equal("keep", File.ReadAllText(report));
         File.Delete(report); executor.Cancel = false;
-        Assert.Equal(0, await new CliApplication(executor).RunAsync(["validate", "x", "--report", report, "--quiet"], new StringWriter(), new StringWriter()));
+        Assert.Equal(0, await new CliApplication(executor).RunAsync(["validate-karaoke-files", "x", "--report", report, "--quiet"], new StringWriter(), new StringWriter()));
         using var json = JsonDocument.Parse(File.ReadAllText(report)); Assert.Equal("Test", json.RootElement.GetProperty("Operation").GetString());
     }
 
@@ -263,12 +274,12 @@ public class CliTests
         string audio = Path.Combine(folder, "DISC-00 - Artist - Song.wav"); File.Move(Path.Combine(folder, "song.wav"), audio);
         string before = FileTransaction.Hash(audio);
         var cli = new CliApplication(new OperationExecutionService(new(TestMediaFixture.NewFolder()))); var output = new StringWriter();
-        Assert.Equal(0, await cli.RunAsync(["tag-preview", audio, "--json", "--quiet"], output, new StringWriter()));
+        Assert.Equal(0, await cli.RunAsync(["preview-tags", audio, "--json", "--quiet"], output, new StringWriter()));
         Assert.Equal(before, FileTransaction.Hash(audio)); using var json = JsonDocument.Parse(output.ToString());
         Assert.Equal("Artist", json.RootElement.GetProperty("TagPreview")[0].GetProperty("Tags").GetProperty("Artist").GetString());
-        Assert.Equal(0, await cli.RunAsync(["tag", audio, "--quiet"], new StringWriter(), new StringWriter()));
+        Assert.Equal(0, await cli.RunAsync(["tag-karaoke-files", audio, "--quiet"], new StringWriter(), new StringWriter()));
         Assert.Equal("Song", KaraokeTaggingService.ReadTags(audio).Title);
-        Assert.Equal(1, await cli.RunAsync(["tag", audio, "--pattern", "literal %TRACK%", "--quiet"], new StringWriter(), new StringWriter()));
+        Assert.Equal(1, await cli.RunAsync(["tag-karaoke-files", audio, "--pattern", "literal %TRACK%", "--quiet"], new StringWriter(), new StringWriter()));
     }
 
     [Fact]

@@ -8,6 +8,15 @@ namespace KaraokeToolkit.Core.FileOperations;
 /// <summary>Generates local CUE sheets and track listings without online metadata.</summary>
 internal static class CueTextService
 {
+    internal static string[] PlannedTargets(string folder, ConversionOptions options, string preferredExtension)
+    {
+        string name = MetadataFileNames.FolderName(folder);
+        string listing = Path.Combine(folder, MetadataFileNames.Resolve(options.TrackListingName, name, ".txt"));
+        return preferredExtension == ".bin"
+            ? [Path.Combine(folder, MetadataFileNames.Resolve(options.CueSheetName, name, ".cue")), listing]
+            : [listing];
+    }
+
     internal static IReadOnlyList<string> Write(string folder, string stage, ConversionOptions options, string? preferredExtension = null,
         Action<string>? writing = null)
     {

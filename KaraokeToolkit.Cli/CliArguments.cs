@@ -43,8 +43,13 @@ public sealed record CliArguments(string Command, OperationRequest? Request, str
             if (registration.DedicatedCommand) throw new CliUsageException("Use " + registration.Name + " directly; see " + registration.Name + " --help.");
             operation = registration.OperationId;
         }
-        else if (command is "validate" or "tag" or "tag-preview") operation = CliOperationCatalog.Resolve(command).OperationId;
-        else if (command is not ("operations" or "recovery-list" or "recover")) throw new CliUsageException("Unknown command: " + args[0]);
+        else if (command is not ("operations" or "recovery-list" or "recover"))
+        {
+            var shortcut = CliOperationCatalog.Exposed.SingleOrDefault(registration =>
+                registration.OperationId is (OperationId.ValidateKaraoke or OperationId.TagKaraoke or OperationId.PreviewTags) &&
+                registration.MatchesName(command));
+            operation = shortcut?.OperationId ?? throw new CliUsageException("Unknown command: " + args[0]);
+        }
 
         var inputs = new List<string>();
         var options = new Dictionary<string, string?>(StringComparer.Ordinal);
@@ -85,7 +90,8 @@ public sealed record CliArguments(string Command, OperationRequest? Request, str
         }
         if (operation == null)
         {
-            if (options.Keys.Any(k => k is not ("json" or "quiet" or "report"))) throw new CliUsageException("Processing settings require run, validate, tag or tag-preview.");
+            if (options.Keys.Any(k => k is not ("json" or "quiet" or "report")))
+                throw new CliUsageException("Processing settings require run, validate-karaoke-files, tag-karaoke-files or preview-tags.");
             if (command == "operations" && inputs.Count > 0) throw new CliUsageException("operations does not take input paths.");
             if (command == "recover" && inputs.Count != 1) throw new CliUsageException("recover requires exactly one journal path from recovery-list.");
             if (command is "operations" or "recovery-list" && report != null) throw new CliUsageException("--report is only available for operation results.");
@@ -141,11 +147,11 @@ public sealed record CliArguments(string Command, OperationRequest? Request, str
         string pattern = options.GetValueOrDefault("pattern") ?? defaults.TaggingPattern;
         bool tagging = operation is OperationId.TagKaraoke or OperationId.PreviewTags;
         if (!tagging && options.Keys.Any(k => k is "pattern" or "fill-empty-only" or "preserve-comments" or "preserve-other-tags"))
-            throw new CliUsageException("Tag settings require tag or tag-preview.");
+            throw new CliUsageException("Tag settings require tag-karaoke-files or preview-tags.");
         if (operation != OperationId.KaraokeToVideo && options.Keys.Any(k => k.StartsWith("video-", StringComparison.Ordinal)))
             throw new CliUsageException("Video settings require run karaoke-to-video.");
         if (operation != OperationId.OrganizeFiles && (options.ContainsKey("ignore-leading-the") || options.ContainsKey("no-ignore-leading-the")))
-            throw new CliUsageException("--ignore-leading-the requires run organize-files.");
+            throw new CliUsageException("--ignore-leading-the requires run group-by-alphabet-files.");
         if (tagging) _ = new FilenameTagPattern(pattern);
         var capability = OperationCatalog.Get(operation.Value);
         string outputFolder = options.TryGetValue("output", out var destination) ? Path.TrimEndingDirectorySeparator(Path.GetFullPath(destination!)) : "";

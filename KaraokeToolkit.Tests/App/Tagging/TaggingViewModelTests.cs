@@ -2,6 +2,7 @@ using KaraokeToolkit.App.Features.Main;
 using KaraokeToolkit.App.Features.Settings;
 using KaraokeToolkit.App.Features.Tagging;
 using KaraokeToolkit.Core.Conversion;
+using KaraokeToolkit.Core.Naming;
 using KaraokeToolkit.Core.Tagging;
 using KaraokeToolkit.Tests.Tagging;
 
@@ -38,15 +39,26 @@ public class TaggingViewModelTests
     }
 
     [Fact]
+    public void NewProfileOffersAllPresetsAndSelectsTheTaggingDefault()
+    {
+        var store = new ApplicationSettingsStore(Path.Combine(TestMediaFixture.NewFolder(), "settings.xml"));
+
+        Assert.Equal(KaraokeFilenamePattern.Presets, store.LoadTaggingPatterns());
+        Assert.Equal(FilenameTagPattern.Default, store.LoadLastTaggingPattern());
+    }
+
+    [Fact]
     public void PatternHistoryIsUniquePersistentAndSurvivesOtherSettingsSaves()
     {
         string filename = Path.Combine(TestMediaFixture.NewFolder(), "settings.xml");
         const string custom = "%DISC%. %ARTIST% - %TITLE%";
+        const string savedPreset = "%TITLE% - %ARTIST% - %DISC%-%TRACK%";
         var store = new ApplicationSettingsStore(filename);
-        store.Save(new(), taggingPatterns: [FilenameTagPattern.Default, custom, custom], lastTaggingPattern: custom);
+        store.Save(new(), taggingPatterns: [FilenameTagPattern.Default, custom, savedPreset, custom],
+            lastTaggingPattern: custom);
         store.Save(new() { AudioBitrate = 192 }, theme: ApplicationTheme.Dark);
         var reopened = new ApplicationSettingsStore(filename);
-        Assert.Equal(new[] { FilenameTagPattern.Default, custom }, reopened.LoadTaggingPatterns());
+        Assert.Equal(KaraokeFilenamePattern.Presets.Append(custom), reopened.LoadTaggingPatterns());
         Assert.Equal(custom, reopened.LoadLastTaggingPattern());
         Assert.Equal(192, reopened.Load().AudioBitrate);
         Assert.Equal(ApplicationTheme.Dark, reopened.LoadTheme());

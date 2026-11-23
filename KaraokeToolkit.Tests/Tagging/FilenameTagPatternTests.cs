@@ -1,9 +1,17 @@
+using KaraokeToolkit.Core.Naming;
 using KaraokeToolkit.Core.Tagging;
 
 namespace KaraokeToolkit.Tests.Tagging;
 
 public class FilenameTagPatternTests
 {
+    [Theory]
+    [InlineData(KaraokeFilenamePattern.DiscIdTrackArtistTitle, "KV", 1234567u)]
+    [InlineData(KaraokeFilenamePattern.DiscIdArtistTitle, "KV-1234567", null)]
+    public void ManufacturerAndTrackIdCanBeSplitOrKeptTogether(string preset, string album, uint? track)
+        => Assert.Equal(new KaraokeTags(album, track, "The Lanterns", "Open Road"),
+            new FilenameTagPattern(preset).Parse("KV-1234567 - The Lanterns - Open Road"));
+
     [Fact]
     public void DefaultMapsAlphanumericDiscToAlbumAndNumericTrack()
         => Assert.Equal(new KaraokeTags("SF123", 4, "The Beatles", "Help!"), new FilenameTagPattern(FilenameTagPattern.Default).Parse("SF123-04 - The Beatles - Help!"));
