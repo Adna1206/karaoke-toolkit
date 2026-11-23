@@ -1,5 +1,5 @@
 using KaraokeToolkit.Core.Conversion;
-using System.Security.Cryptography;
+using KaraokeToolkit.Core.Recovery;
 using SharpCompress.Archives;
 using SharpCompress.Archives.Zip;
 using SharpCompress.Common;
@@ -20,7 +20,8 @@ public static class ArchiveZipConverter
         return name + ".zip";
     }
 
-    internal static async Task ConvertAsync(string source, string destination, ConversionOptions options, CancellationToken token, bool repackZip = false)
+    internal static async Task ConvertAsync(string source, string destination, ConversionOptions options, CancellationToken token,
+        bool repackZip = false, RecoveryVerificationMode verification = RecoveryVerificationMode.Sha256)
     {
         token.ThrowIfCancellationRequested();
         // Streams intentionally prevent auto-discovery of unselected archive volumes.
@@ -34,7 +35,7 @@ public static class ArchiveZipConverter
         await using var reader = repackZip ? null : archive != null
             ? await archive.ExtractAllEntriesAsync() : await ReaderFactory.OpenAsyncReader(input, cancellationToken: token);
         if (reader?.Type == ArchiveType.Zip) throw new NotSupportedException("Input is already a ZIP archive.");
-        var expected = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        var expected = new Dictionary<string, MemberFingerprint?>(StringComparer.OrdinalIgnoreCase);
         var fileNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var directoryNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         await using (var output = new FileStream(destination, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 65536, useAsync: true))
@@ -73,7 +74,7 @@ public static class ArchiveZipConverter
                 long advertisedCrc = entry.Crc;
                 if (advertisedSize >= uint.MaxValue) throw new NotSupportedException("Archive members must be smaller than 4 GiB.");
                 await using var member = repackZip ? await zipEntries!.Current.OpenEntryStreamAsync(token) : await reader!.OpenEntryStreamAsync(token);
-                using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+                using var hash = RecoveryFingerprint.IsContentVerified(verification) ? RecoveryFingerprint.CreateContentHash(verification) : null;
                 using var verified = new VerifyingMemberStream(member, advertisedSize, hash);
                 await writer.WriteAsync(name, verified, entry.LastModifiedTime, token);
                 if ((repackZip || advertisedSize > 0) && verified.BytesRead != advertisedSize) throw new InvalidDataException("Truncated archive member.");
@@ -81,7 +82,7 @@ public static class ArchiveZipConverter
                 if (repackZip ? verified.Crc != advertisedCrc || verified.Crc != entry.Crc :
                     reader!.Type is ArchiveType.Rar or ArchiveType.SevenZip && advertisedCrc != 0 && verified.Crc != advertisedCrc)
                     throw new InvalidDataException("Archive member CRC check failed.");
-                expected[name] = Convert.ToHexString(hash.GetHashAndReset());
+                expected[name] = new(verified.BytesRead, verified.Crc, hash?.GetHex());
             }
         }
         if (expected.Count == 0) throw new InvalidDataException("Archive contains no entries.");
@@ -91,21 +92,30 @@ public static class ArchiveZipConverter
         foreach (var entry in entries)
         {
             token.ThrowIfCancellationRequested();
-            if (!expected.TryGetValue(entry.Key!, out string? hash)) throw new InvalidDataException("Unexpected ZIP member.");
-            if (hash == null)
+            if (!expected.TryGetValue(entry.Key!, out var fingerprint)) throw new InvalidDataException("Unexpected ZIP member.");
+            if (fingerprint == null)
             {
                 if (!entry.IsDirectory) throw new InvalidDataException("ZIP directory was not preserved.");
                 continue;
             }
-            await using var stream = await entry.OpenEntryStreamAsync(token);
-            if (Convert.ToHexString(await SHA256.HashDataAsync(stream, token)) != hash)
+            if (entry.IsDirectory || entry.Size != fingerprint.Size || entry.Crc != fingerprint.Crc)
                 throw new InvalidDataException("ZIP payload differs from the source.");
+            if (fingerprint.Hash is { } hash)
+            {
+                await using var stream = await entry.OpenEntryStreamAsync(token);
+                if (await RecoveryFingerprint.HashStreamAsync(stream, verification, token) != hash)
+                    throw new InvalidDataException("ZIP payload differs from the source.");
+            }
+            else
+                await KaraokeArchive.ReadEntryAsync(entry, Stream.Null, token, allowEmpty: true);
         }
     }
 
+    private sealed record MemberFingerprint(long Size, uint Crc, string? Hash);
+
     // The async writer pulls the payload. Verify the same bytes as they stream
     // through to the staged ZIP, without buffering an entire archive member.
-    private sealed class VerifyingMemberStream(Stream source, long advertisedSize, IncrementalHash hash) : Stream
+    private sealed class VerifyingMemberStream(Stream source, long advertisedSize, RecoveryFingerprint.ContentHash? hash) : Stream
     {
         private uint crc = uint.MaxValue;
         internal long BytesRead { get; private set; }
@@ -118,7 +128,7 @@ public static class ArchiveZipConverter
             if (BytesRead >= uint.MaxValue || (advertisedSize > 0 && BytesRead > advertisedSize))
                 throw new InvalidDataException("Archive member exceeds its supported size.");
             var bytes = buffer.Span[..count];
-            hash.AppendData(bytes);
+            hash?.Append(bytes);
             foreach (byte value in bytes)
             {
                 crc ^= value;

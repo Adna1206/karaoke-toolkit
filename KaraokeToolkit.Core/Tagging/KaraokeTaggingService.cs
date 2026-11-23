@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Globalization;
@@ -66,9 +65,17 @@ public sealed class KaraokeTaggingService(RecoveryStore? recovery = null)
 
     public Task<IReadOnlyList<TaggingPreview>> PreviewAsync(IEnumerable<string> inputs, string pattern, bool recurse,
         CancellationToken token, Action<int, int>? report)
+        => ReadPreviewAsync(inputs, pattern, recurse, token, report);
+
+    public Task<IReadOnlyList<TaggingPreview>> ReadPreviewAsync(IEnumerable<string> inputs, bool recurse,
+        CancellationToken token, Action<int, int>? report)
+        => ReadPreviewAsync(inputs, null, recurse, token, report);
+
+    private static Task<IReadOnlyList<TaggingPreview>> ReadPreviewAsync(IEnumerable<string> inputs, string? pattern, bool recurse,
+        CancellationToken token, Action<int, int>? report)
         => Task.Run(async () =>
         {
-            var template = new FilenameTagPattern(pattern);
+            var template = pattern == null ? null : new FilenameTagPattern(pattern);
             var files = new HashSet<string>(InputSelection.Paths);
             foreach (string path in NormalizeInputs(inputs))
                 if (Directory.Exists(path))
@@ -92,10 +99,10 @@ public sealed class KaraokeTaggingService(RecoveryStore? recovery = null)
                 try
                 {
                     RunSession.CheckPlainPath(path);
-                    string hash = FileTransaction.Hash(path);
+                    string hash = RecoveryFingerprint.Hash(path);
                     string extension = Path.GetExtension(path).ToLowerInvariant();
                     if (extension is ".bin" or ".cdg") throw new NotSupportedException("BIN and CDG have no standard metadata fields. Tag their audio or a converted media file instead.");
-                    var tags = template.Parse(Path.GetFileNameWithoutExtension(path));
+                    var tags = template?.Parse(Path.GetFileNameWithoutExtension(path));
                     KaraokeTags existing;
                     if (extension == ".zip")
                     {
@@ -111,7 +118,7 @@ public sealed class KaraokeTaggingService(RecoveryStore? recovery = null)
                         finally { Directory.Delete(temporary, true); }
                     }
                     else existing = ReadTags(path);
-                    if (hash != FileTransaction.Hash(path)) throw new IOException("Source changed while previewing.");
+                    if (hash != RecoveryFingerprint.Hash(path)) throw new IOException("Source changed while previewing.");
                     result.Add(new(path, tags, existing, null, hash));
                 }
                 catch (Exception error) when (error is not OperationCanceledException)
@@ -121,22 +128,46 @@ public sealed class KaraokeTaggingService(RecoveryStore? recovery = null)
             return (IReadOnlyList<TaggingPreview>)result;
         }, token);
 
+    public static IEnumerable<TaggingPreview> PlanPreview(IReadOnlyList<TaggingPreview> sources, string pattern)
+    {
+        var template = new FilenameTagPattern(pattern);
+        foreach (var source in sources)
+        {
+            if (source.Error != null)
+            {
+                yield return source;
+                continue;
+            }
+            TaggingPreview row;
+            try { row = source with { Tags = template.Parse(Path.GetFileNameWithoutExtension(source.Path)) }; }
+            catch (Exception error) when (error is FormatException or ArgumentException or System.Text.RegularExpressions.RegexMatchTimeoutException)
+            { row = source with { Error = error.Message }; }
+            yield return row;
+        }
+    }
+
     /// <summary>Checkpoints the supplied preview and publishes verified tag updates from staged copies.</summary>
     /// <remarks>Checks saved fingerprints before writing and verifies media payload preservation.
     /// Completed files remain published if a later file fails or the run is cancelled.</remarks>
     public Task<ConversionResult> ApplyAsync(IReadOnlyList<TaggingPreview> preview, TaggingOptions options,
-        ConversionOptions processing, IProgress<ConversionProgress>? progress = null, CancellationToken token = default)
+        ConversionOptions processing, IProgress<ConversionProgress>? progress = null, CancellationToken token = default,
+        bool continueBatchAfterRecovery = true)
         => Task.Run(async () =>
         {
-            if (preview.Count == 0) return new ConversionResult([], token.IsCancellationRequested);
-            var roots = WorkflowSession.RootsFor(preview.Select(p => p.Path));
-            foreach (string root in roots)
-                if (recovery.Find(root).Count > 0) throw new IOException("Recover interrupted work before tagging: " + root);
+            if (preview.Count == 0 || token.IsCancellationRequested) return new ConversionResult([], token.IsCancellationRequested);
+            var roots = preview.Select(p => Path.GetDirectoryName(Path.GetFullPath(p.Path))!).Distinct(InputSelection.Paths).ToArray();
+            string? workspaceRoot = roots.FirstOrDefault(WorkflowMoves.IsAvailableFolder);
+            if (workspaceRoot == null)
+                return new ConversionResult(preview.Select(item => new ConversionFileResult(item.Path,
+                    item.CanApply ? ConversionStatus.Failed : ConversionStatus.Skipped, [], item.Error ?? "Source folder is unavailable.")).ToArray(),
+                    false) { Found = preview.Count };
+            WorkflowMoves.CheckApprovedRecovery(recovery, roots, token);
             using var session = new WorkflowSession(recovery, new WorkflowData
             {
-                Kind = RecoveryKind.Tagging, Roots = roots, Inputs = preview.Select(p => p.Path).ToArray(),
-                TagFiles = preview.ToArray(), TagOptions = options, Processing = processing,
-                Expected = WorkflowSession.Capture(preview.Where(p => p.CanApply).Select(p => p.Path))
+                Kind = RecoveryKind.Tagging, Roots = roots.Where(root => !InputSelection.Paths.Equals(root, workspaceRoot)).Prepend(workspaceRoot).ToArray(),
+                Inputs = preview.Select(p => p.Path).ToArray(),
+                SaveResumableRun = continueBatchAfterRecovery,
+                TagFiles = preview.ToArray(), TagOptions = options, Processing = processing
             });
             return await ApplyCoreAsync(session, progress, token);
         });
@@ -147,7 +178,18 @@ public sealed class KaraokeTaggingService(RecoveryStore? recovery = null)
         {
             using var session = new WorkflowSession(recovery, job);
             if (session.Data.Kind != RecoveryKind.Tagging) throw new IOException("This recovery job is not tagging.");
-            session.Enter(); session.RecoverTransaction(); session.VerifyExpected();
+            token.ThrowIfCancellationRequested();
+            session.Enter(); session.RecoverTransaction();
+            if (!session.Data.SaveResumableRun)
+            {
+                var results = session.Data.TagResults.Values.Concat(session.Data.TagFiles
+                    .Where(item => !session.Data.TagResults.ContainsKey(item.Path))
+                    .Select(item => new ConversionFileResult(item.Path, ConversionStatus.Skipped, [], "Left for a new run after recovery.")))
+                    .ToArray();
+                session.Finish();
+                return new ConversionResult(results, false) { Found = session.Data.TagFiles.Length };
+            }
+            session.VerifyExpected();
             return await ApplyCoreAsync(session, progress, token);
         });
 
@@ -192,12 +234,14 @@ public sealed class KaraokeTaggingService(RecoveryStore? recovery = null)
                 try
                 {
                     string folder = Path.GetDirectoryName(item.Path)!;
+                    if (RunSession.CheckPlainPath(item.Path) is not { } attributes || (attributes & FileAttributes.Directory) != 0)
+                        throw new IOException("Tag source is missing or no longer a file: " + item.Path);
                     if (recovery.Find(folder, false).Count > 0) throw new IOException("Recover the interrupted run before tagging this folder.");
                     using var transaction = new FileTransaction(folder);
                     DurableJson.Write(Path.Combine(transaction.Workspace, "tagging.json"), new { Version = 1 });
-                    if (FileTransaction.Hash(item.Path) != item.SourceHash) throw new IOException("Source changed after preview. Refresh the preview before tagging.");
+                    if (RecoveryFingerprint.Hash(item.Path) != item.SourceHash) throw new IOException("Source changed after preview. Refresh the preview before tagging.");
                     string staged = await transaction.CopyInputAsync(item.Path, token);
-                    if (FileTransaction.Hash(staged) != item.SourceHash) throw new IOException("Source changed while staging.");
+                    if (RecoveryFingerprint.Hash(staged) != item.SourceHash) throw new IOException("Source changed while staging.");
                     if (Path.GetExtension(staged).Equals(".zip", StringComparison.OrdinalIgnoreCase))
                         await TagZipAsync(staged, item.Tags!, options, processing, token);
                     else await TagMediaAsync(staged, item.Tags!, options, token);
@@ -309,7 +353,7 @@ public sealed class KaraokeTaggingService(RecoveryStore? recovery = null)
         await using (var archive = await ZipArchive.OpenAsyncArchive(path, cancellationToken: token))
             names = await archive.EntriesAsync.Where(e => !e.IsDirectory).Select(e => e.Key!).ToArrayAsync(token);
         var pair = await KaraokeArchive.ExtractAsync(path, token);
-        string graphicsHash = await KaraokeArchive.HashFileAsync(pair.Graphics, token);
+        string graphicsHash = await RecoveryFingerprint.HashFileAsync(pair.Graphics, RecoveryVerificationMode.Sha256, token);
         await TagMediaAsync(pair.Audio, tags, options, token);
         string rebuilt = Path.Combine(folder, "tagged-" + Guid.NewGuid().ToString("N") + ".zip");
         await using (var output = new FileStream(rebuilt, FileMode.Create, FileAccess.Write, FileShare.None, 65536, useAsync: true))
@@ -323,13 +367,13 @@ public sealed class KaraokeTaggingService(RecoveryStore? recovery = null)
                 await writer.WriteAsync(name, input, modificationTime: null, cancellationToken: token);
             }
         }
-        string audioHash = await KaraokeArchive.HashFileAsync(pair.Audio, token);
+        string audioHash = await RecoveryFingerprint.HashFileAsync(pair.Audio, RecoveryVerificationMode.Sha256, token);
         await using (var archive = await ZipArchive.OpenAsyncArchive(rebuilt, cancellationToken: token))
         await foreach (var entry in archive.EntriesAsync.Where(e => !e.IsDirectory).WithCancellation(token))
         {
             await using var contents = await entry.OpenEntryStreamAsync(token);
             string expected = Path.GetExtension(entry.Key!).Equals(".cdg", StringComparison.OrdinalIgnoreCase) ? graphicsHash : audioHash;
-            if (Convert.ToHexString(await SHA256.HashDataAsync(contents, token)) != expected)
+            if (await RecoveryFingerprint.HashStreamAsync(contents, RecoveryVerificationMode.Sha256, token) != expected)
                 throw new InvalidDataException("Tagged ZIP payload verification failed.");
         }
         token.ThrowIfCancellationRequested();
@@ -349,7 +393,7 @@ public sealed class KaraokeTaggingService(RecoveryStore? recovery = null)
         using var registration = token.Register(() => { try { process.Kill(true); } catch (InvalidOperationException) { } });
         var error = process.StandardError.ReadToEndAsync(token);
         // Packet lists can be huge. Hash them as a stream rather than retaining them in memory.
-        var digests = new Dictionary<string, IncrementalHash>(StringComparer.Ordinal);
+        var digests = new Dictionary<string, RecoveryFingerprint.ContentHash>(StringComparer.Ordinal);
         var output = new StringBuilder();
         int lines = 0;
         try
@@ -362,8 +406,9 @@ public sealed class KaraokeTaggingService(RecoveryStore? recovery = null)
                     // Only stream index, size and compressed data hash are media payload.
                     string[] fields = line.Split(',');
                     if (fields.Length < 3 || !fields[2].StartsWith("SHA256:", StringComparison.Ordinal)) continue;
-                    if (!digests.TryGetValue(fields[0], out var digest)) digests.Add(fields[0], digest = IncrementalHash.CreateHash(HashAlgorithmName.SHA256));
-                    digest.AppendData(Encoding.UTF8.GetBytes(fields[1] + "," + fields[2] + "\n"));
+                    if (!digests.TryGetValue(fields[0], out var digest))
+                        digests.Add(fields[0], digest = RecoveryFingerprint.CreateContentHash(RecoveryVerificationMode.Sha256));
+                    digest.Append(Encoding.UTF8.GetBytes(fields[1] + "," + fields[2] + "\n"));
                     lines++;
                 }
                 else if (output.Length < 1024 * 1024) output.AppendLine(line);
@@ -372,7 +417,7 @@ public sealed class KaraokeTaggingService(RecoveryStore? recovery = null)
             string message = await error;
             if (process.ExitCode != 0) throw new InvalidDataException(tool + " could not process the container: " + message);
             if (hashOutput && lines == 0) throw new InvalidDataException("No readable media packets were found.");
-            return hashOutput ? string.Join(";", digests.OrderBy(d => d.Key, StringComparer.Ordinal).Select(d => d.Key + ":" + Convert.ToHexString(d.Value.GetHashAndReset()))) : output.ToString();
+            return hashOutput ? string.Join(";", digests.OrderBy(d => d.Key, StringComparer.Ordinal).Select(d => d.Key + ":" + d.Value.GetHex())) : output.ToString();
         }
         finally
         {

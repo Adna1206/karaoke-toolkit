@@ -7,8 +7,9 @@ namespace KaraokeToolkit.Core.FileOperations;
 public enum FolderFlattenScope { OneLayer, AllLayers }
 
 /// <summary>Flattens one directory layer or moves all descendant files into selected roots.</summary>
-public sealed class FlattenFolderLayer
+public sealed class FlattenFolderLayer(RecoveryStore? recovery = null)
 {
+    private readonly RecoveryStore recovery = recovery ?? new();
     public Task<ConversionResult> PreviewAsync(IEnumerable<string> folders, FolderFlattenScope scope, CancellationToken token = default)
         => Task.Run(() => Run(folders, null, token, scope, true), token);
     private static readonly StringComparer Paths = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
@@ -16,12 +17,14 @@ public sealed class FlattenFolderLayer
     public Task<ConversionResult> RunAsync(IEnumerable<string> folders,
         IProgress<ConversionProgress>? progress = null, CancellationToken token = default,
         FolderFlattenScope scope = FolderFlattenScope.OneLayer,
-        RecoveryVerificationMode verificationMode = OperationCapabilities.DefaultFileMoveRecoveryVerification, bool saveResumableRun = true) =>
-        Task.Run(() => Run(folders, progress, token, scope, verificationMode: verificationMode, saveResumableRun: saveResumableRun), token);
+        RecoveryVerificationMode verificationMode = OperationCapabilities.DefaultFileMoveRecoveryVerification, bool saveResumableRun = true,
+        FileCheckTiming timing = OperationCapabilities.DefaultFileMoveCheckTiming) =>
+        Task.Run(() => Run(folders, progress, token, scope, verificationMode: verificationMode, saveResumableRun: saveResumableRun, timing: timing), token);
 
-    private static ConversionResult Run(IEnumerable<string> folders, IProgress<ConversionProgress>? progress, CancellationToken token,
+    private ConversionResult Run(IEnumerable<string> folders, IProgress<ConversionProgress>? progress, CancellationToken token,
         FolderFlattenScope scope, bool preview = false,
-        RecoveryVerificationMode verificationMode = OperationCapabilities.DefaultFileMoveRecoveryVerification, bool saveResumableRun = true)
+        RecoveryVerificationMode verificationMode = OperationCapabilities.DefaultFileMoveRecoveryVerification, bool saveResumableRun = true,
+        FileCheckTiming timing = OperationCapabilities.DefaultFileMoveCheckTiming)
     {
         if (!Enum.IsDefined(scope)) throw new ArgumentOutOfRangeException(nameof(scope));
 
@@ -44,7 +47,6 @@ public sealed class FlattenFolderLayer
         string[] roots = selected.Where(folder => !selected.Any(parent => !Paths.Equals(parent, folder) &&
             folder.StartsWith(parent.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, comparison)))
             .Order(Paths).ToArray();
-        var recovery = new RecoveryStore();
         foreach (string root in roots)
             if (recovery.Find(root, true).Count > 0)
                 throw new IOException("Recover the interrupted conversion before flattening: " + root);
@@ -68,6 +70,7 @@ public sealed class FlattenFolderLayer
         progress?.Report(new(0, 0, 0, 0, "Preparing recovery for file moves…", "00:00:00") { IsIndeterminate = true });
         {
             var mode = WorkflowSession.Current.Value?.Data.VerificationMode ?? verificationMode;
+            timing = WorkflowMoves.TimingForStandalone(timing);
             var plan = new List<WorkflowMoveGroup>();
             foreach (var item in work)
                 if (item.Protected)
@@ -75,10 +78,11 @@ public sealed class FlattenFolderLayer
                 else
                 {
                     foreach (string entry in item.Entries)
-                        plan.Add(new() { Items = [WorkflowMoves.Move(entry, Path.Combine(item.Root, Path.GetFileName(entry)), mode)] });
+                        plan.Add(new() { Items = [WorkflowMoves.Move(entry, Path.Combine(item.Root, Path.GetFileName(entry)), mode, timing)] });
                     plan.Add(new() { Items = [new(item.Child, null, "empty", true)] });
                 }
-            return WorkflowMoves.RunStandaloneOrRecipe(recovery, roots, scope == FolderFlattenScope.OneLayer ? OperationId.FlattenOneLayer : OperationId.FlattenAllLayers, plan, mode, saveResumableRun, progress, token);
+            return WorkflowMoves.RunStandaloneOrRecipe(recovery, roots, scope == FolderFlattenScope.OneLayer ? OperationId.FlattenOneLayer : OperationId.FlattenAllLayers,
+                plan, mode, saveResumableRun, progress, token, timing);
         }
 
         void Plan(string root, string child)

@@ -38,6 +38,8 @@ internal static class FileTransactionRecovery
             return null; // Interrupted staging: originals were never moved.
         RunSession.CheckPlainPath(path);
         var journal = JsonSerializer.Deserialize<TransactionJournal>(File.ReadAllText(path)) ?? throw new IOException("Empty transaction journal.");
+        if (!RecoveryFingerprint.IsContentVerified(RecoveryFingerprint.Parse(journal.VerificationMode)))
+            throw new IOException("Interrupted publication has no content fingerprints. Keep the workspace for manual recovery: " + workspace);
         if (journal.Version != 1 || journal.Outputs == null || journal.Backups == null || journal.Outputs.Length == 0 ||
             journal.Outputs.Any(x => x == null) || journal.Backups.Any(x => x == null) ||
             journal.Phase is not ("Publishing" or "Committed" or "RollingBack" or "RolledBack"))
@@ -127,6 +129,8 @@ internal static class FileTransactionRecovery
     /// Leaves the journal and workspace for the caller to retain or clean.</remarks>
     internal static void Rollback(string workspace, TransactionJournal journal)
     {
+        if (!RecoveryFingerprint.IsContentVerified(RecoveryFingerprint.Parse(journal.VerificationMode)))
+            throw new IOException("Interrupted publication has no content fingerprints. Keep the workspace for manual recovery: " + workspace);
         string folder = Path.GetDirectoryName(workspace)!;
         // This is also restartable: restored originals have their original hash and no backup.
         foreach (var old in journal.Backups)
@@ -182,7 +186,7 @@ internal static class FileTransactionRecovery
     }
     private static void ValidateHash(string hash, string mode)
     {
-        if (string.IsNullOrEmpty(hash) || hash.Length != RecoveryFingerprint.HexLength(mode) || hash.Any(c => !Uri.IsHexDigit(c)))
+        if (string.IsNullOrEmpty(hash) || !RecoveryFingerprint.IsValid(hash, RecoveryFingerprint.Parse(mode)))
             throw new IOException("Invalid recovery hash.");
     }
 }

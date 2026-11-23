@@ -26,7 +26,7 @@ public sealed partial class ConversionService
             }
             try
             {
-                outcomes[i] = await ResumePassAsync(jobs[i], Reporter(i), token, null, reviews[i]);
+                outcomes[i] = await ResumePassAsync(jobs[i], Reporter(i), token, null, reviews[i], freshSelection);
                 if (outcomes[i]!.Cancelled)
                 {
                     cancelled = true;
@@ -76,7 +76,7 @@ public sealed partial class ConversionService
             reviews[i].IsApplying = true;
             try
             {
-                outcomes[i] = await ResumePassAsync(jobs[i], Reporter(i), token, null, reviews[i]);
+                outcomes[i] = await ResumePassAsync(jobs[i], Reporter(i), token, null, reviews[i], freshSelection);
                 cancelled = outcomes[i]!.Cancelled;
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)

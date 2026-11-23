@@ -45,7 +45,8 @@ public sealed class CliApplication(IOperationExecutor? executor = null, IDiscRea
             {
                 var jobs = recoveryService.FindRecovery(parsed.Inputs);
                 if (json) await output.WriteLineAsync(JsonSerializer.Serialize(jobs, JsonOptions));
-                else foreach (var job in jobs) await output.WriteLineAsync($"{job.Action}: {job.Completed}/{job.Total} — {job.JournalPath}" + (job.Problem == null ? "" : " — " + job.Problem));
+                else foreach (var job in jobs) await output.WriteLineAsync($"{job.Action}: {job.Completed}/{job.Total} — {job.JournalPath}" +
+                    (job.Problem != null ? " — " + job.Problem : job.ContinueBatchAfterRecovery ? "" : " — recover interrupted item only"));
                 return 0;
             }
             var progress = parsed.Quiet ? null : new ConsoleProgress(error);
@@ -165,8 +166,10 @@ public sealed class CliApplication(IOperationExecutor? executor = null, IDiscRea
           Shared processing settings apply where supported by the chosen operation.
           Group by Alphabet (Files) always recurses. Folders groups immediate children.
           Flatten depth is chosen by the operation, independently of --no-recurse.
-          --recovery-verification sha256|xxhash128|metadata|none (default xxhash128 for file moves and grouping)
-          --batch-resume | --no-batch-resume  Override the saved file move preference
+          --recovery-verification sha256|xxhash128|metadata|none (default xxhash128 for standalone media conversions and file moves)
+          --check-timing before-batch|before-item  More robust waiting-file checks or faster startup (default before-item)
+                                                  Applies to standalone media conversions, file moves and grouping.
+          --batch-resume | --no-batch-resume  Continue the batch or recover only the interrupted item
           See help group-by-track-id for track grouping and folder naming options.
         Tagging:
           --pattern "%DISC%-%TRACK% - %ARTIST% - %TITLE%"

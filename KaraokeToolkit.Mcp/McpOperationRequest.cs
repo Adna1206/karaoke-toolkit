@@ -24,6 +24,7 @@ public sealed record McpOperationRequest
     public TaggingOptions? Tagging { get; init; }
     public bool? SaveResumableRun { get; init; }
     public RecoveryVerificationMode? RecoveryVerification { get; init; }
+    public FileCheckTiming? CheckTiming { get; init; }
     public TrackGroupingOptions? Grouping { get; init; }
     public string? OutputFolder { get; init; }
 
@@ -49,6 +50,7 @@ public sealed record McpOperationRequest
             TaggingPattern = TaggingPattern ?? request.TaggingPattern,
             Tagging = Tagging ?? request.Tagging,
             RecoveryVerification = RecoveryVerification ?? request.RecoveryVerification,
+            CheckTiming = CheckTiming ?? request.CheckTiming,
             SaveResumableRun = SaveResumableRun ?? request.SaveResumableRun,
             OutputFolder = OutputFolder ?? request.OutputFolder
         };

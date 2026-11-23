@@ -4,21 +4,37 @@ using KaraokeToolkit.Core.Conversion;
 
 namespace KaraokeToolkit.App.Features.Main;
 
-/// <summary>Owns one run's cancellation and UI-dispatched progress lifetime.</summary>
+/// <summary>Owns one run's cancellation, elapsed clock and UI-dispatched progress.</summary>
 internal sealed class ProcessingRun : IDisposable
 {
     private readonly CancellationTokenSource cancellation = new();
     private readonly object gate = new();
+    private readonly TimeProvider clock;
+    private readonly long startedAt;
+    private readonly ITimer? elapsedTimer;
+    private long? stoppedAt;
     private bool accepting = true;
     private bool disposed;
 
     public CancellationToken Token { get; }
     public IProgress<ConversionProgress> Progress { get; }
+    public string Elapsed
+    {
+        get
+        {
+            lock (gate)
+            {
+                TimeSpan elapsed = clock.GetElapsedTime(startedAt, stoppedAt ?? clock.GetTimestamp());
+                return FormattableString.Invariant($"{(long)elapsed.TotalHours:00}:{elapsed.Minutes:00}:{elapsed.Seconds:00}");
+            }
+        }
+    }
 
-    /// <summary>Captures the caller's synchronization context for progress delivery until stopped or disposed.</summary>
-    public ProcessingRun(Action<ConversionProgress> report)
+    public ProcessingRun(Action<ConversionProgress> report, Action<string>? updateElapsed = null, TimeProvider? clock = null)
     {
         Token = cancellation.Token;
+        this.clock = clock ?? TimeProvider.System;
+        startedAt = this.clock.GetTimestamp();
         // Capture the caller's UI context. Check lifetime when dispatched, not
         // when queued, so late callbacks cannot overwrite the completed report.
         Progress = new Progress<ConversionProgress>(value =>
@@ -28,12 +44,32 @@ internal sealed class ProcessingRun : IDisposable
                 if (accepting) report(value);
             }
         });
+        if (updateElapsed != null)
+        {
+            var context = SynchronizationContext.Current ?? new SynchronizationContext();
+            TimeSpan interval = TimeSpan.FromSeconds(1);
+            elapsedTimer = this.clock.CreateTimer(_ => context.Post(UpdateElapsed, null), null, interval, interval);
+
+            void UpdateElapsed(object? state)
+            {
+                lock (gate)
+                {
+                    if (accepting) updateElapsed(Elapsed);
+                }
+            }
+        }
     }
 
-    /// <summary>Rejects future deliveries, including already queued callbacks, without requesting cancellation.</summary>
+    /// <summary>Freezes elapsed time and rejects queued updates without requesting cancellation.</summary>
     public void StopProgress()
     {
-        lock (gate) accepting = false;
+        lock (gate)
+        {
+            if (!accepting) return;
+            stoppedAt = clock.GetTimestamp();
+            accepting = false;
+            elapsedTimer?.Dispose();
+        }
     }
 
     public void Cancel()
@@ -50,7 +86,7 @@ internal sealed class ProcessingRun : IDisposable
         lock (gate)
         {
             if (disposed) return;
-            accepting = false;
+            StopProgress();
             disposed = true;
             cancellation.Dispose();
         }

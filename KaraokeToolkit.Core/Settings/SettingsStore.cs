@@ -38,6 +38,8 @@ public sealed class SettingsStore(string path, bool persistRenameBins = false, b
     }
 
     public string LoadTaggingPattern() => ReadSnapshot().TaggingPattern;
+    public bool LoadCheckForInterruptedRunsOnStartup() => ReadSnapshot().CheckForInterruptedRunsOnStartup;
+    public FileCheckTiming LoadFileCheckTiming() => ReadSnapshot().CheckTiming;
     public XElement? ReadDesktopPreferences() => ReadDocument()?.Root?.Element("Desktop");
 
     internal SharedSettingsSnapshot ReadSnapshot()
@@ -66,7 +68,8 @@ public sealed class SettingsStore(string path, bool persistRenameBins = false, b
     public void Save(ConversionOptions? options, OverwritePolicy? overwritePolicy = null,
         bool? validateBeforeConversion = null, bool? ignoreLeadingTheForFileOrganization = null,
         AudioBitratePreferences? audioBitrates = null, Action<XElement>? updateAdditionalPreferences = null,
-        RecoveryVerificationMode? recoveryVerification = null, bool? saveResumableRun = null, string? taggingPattern = null)
+        RecoveryVerificationMode? recoveryVerification = null, bool? saveResumableRun = null, string? taggingPattern = null,
+        bool? checkForInterruptedRunsOnStartup = null, FileCheckTiming? checkTiming = null)
     {
         if (options != null)
         {
@@ -80,6 +83,8 @@ public sealed class SettingsStore(string path, bool persistRenameBins = false, b
             throw new ArgumentOutOfRangeException(nameof(overwritePolicy));
         if (recoveryVerification.HasValue && !Enum.IsDefined(recoveryVerification.Value))
             throw new ArgumentOutOfRangeException(nameof(recoveryVerification));
+        if (checkTiming.HasValue && !Enum.IsDefined(checkTiming.Value))
+            throw new ArgumentOutOfRangeException(nameof(checkTiming));
         audioBitrates?.Validate();
         if (taggingPattern != null) SharedSettingCatalog.All["tags.filename-pattern"].Parse(taggingPattern);
 
@@ -90,7 +95,9 @@ public sealed class SettingsStore(string path, bool persistRenameBins = false, b
             if (validateBeforeConversion.HasValue) SettingsXml.Write(root, "files.validate-before-conversion", validateBeforeConversion.Value);
             if (ignoreLeadingTheForFileOrganization.HasValue) SettingsXml.Write(root, "files.ignore-leading-the", ignoreLeadingTheForFileOrganization.Value);
             if (recoveryVerification.HasValue) SettingsXml.Write(root, "recovery.verification", recoveryVerification.Value);
+            if (checkTiming.HasValue) SettingsXml.Write(root, "recovery.check-timing", checkTiming.Value);
             if (saveResumableRun.HasValue) SettingsXml.Write(root, "recovery.batch-resume", saveResumableRun.Value);
+            if (checkForInterruptedRunsOnStartup.HasValue) SettingsXml.Write(root, "recovery.check-on-startup", checkForInterruptedRunsOnStartup.Value);
             if (taggingPattern != null) SettingsXml.Write(root, "tags.filename-pattern", taggingPattern);
             if (audioBitrates != null)
             {
@@ -106,7 +113,7 @@ public sealed class SettingsStore(string path, bool persistRenameBins = false, b
     internal void UpdateDocument(Action<XElement>? update = null)
     {
         string key = OperatingSystem.IsWindows() ? filename.ToUpperInvariant() : filename;
-        using var mutex = new Mutex(false, "KaraokeToolkit-Settings-" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(key))));
+        using var mutex = new Mutex(false, "KaraokeToolkit-Settings-" + RecoveryFingerprint.HashBytes(System.Text.Encoding.UTF8.GetBytes(key)));
         bool acquired = false;
         try
         {

@@ -115,11 +115,13 @@ their subfolders into A–Z and `#` folders. **Folders** moves the immediate
 subfolders of each selected folder into those groups with their contents.
 
 In **Files** mode, **Ignore leading ‘The’** groups `The Example.mp3` under E.
-Use **Refresh** after changing the mode or this setting. Review
+Changing the mode or this setting updates the preview. Use **Refresh** to
+detect changes on disk. Review
 the destination paths and skipped items before choosing **Move items**.
 Drag the divider above the skipped items to resize or hide that pane.
-An occupied destination keeps the affected group in place, including a
-matching audio/CDG pair. See [Group by Track ID](track-grouping.md) for numeric
+The run uses the approved list. A source that disappeared or a destination
+that became occupied keeps the affected group in place, including a matching
+audio/CDG pair. See [Group by Track ID](track-grouping.md) for numeric
 range and trailing-digit grouping.
 
 ## Rename by Filename Pattern
@@ -127,9 +129,9 @@ range and trailing-digit grouping.
 Select karaoke files or folders and choose **File & Folder Tools → Rename by
 Filename Pattern**. Pick a **Source pattern** that describes the current names
 and a **Destination pattern** that describes the new names. Both fields accept
-built-in patterns and custom text. Configure the patterns and **Include
-subfolders** on the left, then use **Refresh** to compare current and proposed
-names on the right. Hover over a name to see its full path. Drag the divider
+built-in patterns and custom text. The preview updates as you change the
+patterns and **Include subfolders** on the left. Use **Refresh** to detect
+changes on disk. Hover over a name to see its full path. Drag the divider
 above **Skipped items and conflicts** to resize the pane. Drag it all the way
 down to hide the pane, and back up to see it again. Select **Rename Files**
 when the preview is ready.
@@ -145,9 +147,10 @@ For example, to rename `ABC 20-02 Song Title - Song Artist.mp3`:
 The track keeps its original digits, and the destination must use fields that
 the source provides. Matching audio and CDG files are renamed together, even
 when only one of the pair is selected. File contents and extensions are
-preserved. Unmatched names are shown as skipped. An occupied or duplicate
-destination blocks the batch.
-The run rechecks the approved plan before moving any files. Interrupted
+preserved. Unmatched names are shown as skipped. Resolve occupied or duplicate
+destinations shown in the preview before applying. The run uses the approved
+list and skips a group if its source disappears or a destination becomes
+occupied. Interrupted
 renames use [file move recovery](crash-recovery.md). Start a new rename in Desktop.
 
 ## Flatten One Folder Level

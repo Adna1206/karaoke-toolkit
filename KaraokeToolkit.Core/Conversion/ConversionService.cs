@@ -22,11 +22,15 @@ public sealed partial class ConversionService
     public Task<ConversionResult> ResumeAsync(RecoveryJob job, IProgress<ConversionProgress>? progress = null,
         CancellationToken cancellationToken = default,
         Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolveConflict = null)
-        => ResumePassAsync(job, progress, cancellationToken, resolveConflict, null);
+        => ResumePassAsync(job, progress, cancellationToken, resolveConflict, null, freshSelection: false);
+
+    internal Task<ConversionResult> RunPreparedAsync(RecoveryJob job, IProgress<ConversionProgress>? progress,
+        CancellationToken token, Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolveConflict)
+        => ResumePassAsync(job, progress, token, resolveConflict, null, freshSelection: true);
 
     private Task<ConversionResult> ResumePassAsync(RecoveryJob job, IProgress<ConversionProgress>? progress,
         CancellationToken token, Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolveConflict,
-        ConversionConflictReview? review)
+        ConversionConflictReview? review, bool freshSelection)
         => Task.Run(async () =>
         {
             using var run = new RunSession(recovery, job.JournalPath);
@@ -34,6 +38,16 @@ public sealed partial class ConversionService
                 throw new IOException("This run has already finished.");
             token.ThrowIfCancellationRequested();
             run.RecoverPending();
+            if (!freshSelection && !run.Data.ContinueBatchAfterRecovery)
+            {
+                run.ThrowIfUnresolved();
+                var results = run.Data.Results.Values.Concat(run.Data.MetadataResults.Values)
+                    .Concat(run.Data.Sources.Where(source => !run.Data.Results.ContainsKey(source))
+                        .Select(source => new ConversionFileResult(source, ConversionStatus.Skipped, [], "Left for a new run after recovery.")))
+                    .ToArray();
+                run.Finish();
+                return new ConversionResult(results, false) { Found = run.Data.Sources.Length };
+            }
             return await RunCoreAsync(run.Data.Request, run.Data.Policy, progress, token, resolveConflict, run,
                 run.Data.ValidateBeforeConversion, run.Data.Policy == OverwritePolicy.Ask ? review : null);
         }, CancellationToken.None);
@@ -44,15 +58,22 @@ public sealed partial class ConversionService
     public Task<ConversionResult> RunAsync(ConversionRequest request,
         OverwritePolicy overwrite = OverwritePolicy.Fail, IProgress<ConversionProgress>? progress = null,
         CancellationToken cancellationToken = default,
-        Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolveConflict = null, bool validateBeforeConversion = false)
-        => Task.Run(() => RunCoreAsync(request, overwrite, progress, cancellationToken, resolveConflict, validateBeforeConversion: validateBeforeConversion), CancellationToken.None);
+        Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolveConflict = null, bool validateBeforeConversion = false,
+        bool continueBatchAfterRecovery = true, FileCheckTiming checkTiming = FileCheckTiming.BeforeItem,
+        RecoveryVerificationMode verificationMode = OperationCapabilities.DefaultFileMoveRecoveryVerification)
+        => Task.Run(() => RunCoreAsync(request, overwrite, progress, cancellationToken, resolveConflict,
+            validateBeforeConversion: validateBeforeConversion, continueBatchAfterRecovery: continueBatchAfterRecovery,
+            checkTiming: checkTiming, verificationMode: verificationMode), CancellationToken.None);
 
     private async Task<ConversionResult> RunCoreAsync(ConversionRequest request, OverwritePolicy overwrite,
         IProgress<ConversionProgress>? progress, CancellationToken token,
         Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolveConflict, RunSession? resumed = null, bool validateBeforeConversion = false,
-        ConversionConflictReview? review = null)
+        ConversionConflictReview? review = null, bool continueBatchAfterRecovery = true, FileCheckTiming checkTiming = FileCheckTiming.BeforeItem,
+        RecoveryVerificationMode verificationMode = OperationCapabilities.DefaultFileMoveRecoveryVerification)
     {
         request.Validate();
+        if (!Enum.IsDefined(checkTiming)) throw new ArgumentOutOfRangeException(nameof(checkTiming));
+        if (!Enum.IsDefined(verificationMode)) throw new ArgumentOutOfRangeException(nameof(verificationMode));
         if (!Enum.IsDefined(overwrite))
             throw new ArgumentOutOfRangeException(nameof(overwrite));
         if (!Directory.Exists(request.Folder))
@@ -76,6 +97,7 @@ public sealed partial class ConversionService
         token.ThrowIfCancellationRequested();
         string[] folders = EnumerateFolders(Path.GetFullPath(request.Folder), request.Options.RecurseFolders).ToArray();
         bool maintenance = OperationCapabilities.RenamesFilenames(request.Action) || request.Action == Action.CreateCueAndTextFiles;
+        bool standaloneMedia = !maintenance && WorkflowSession.Current.Value == null;
         string extension = request.Action switch
         {
             Action.AudioGToBin or Action.AudioGToZip or Action.LosslessGToMp3G => ".cdg",
@@ -86,7 +108,17 @@ public sealed partial class ConversionService
             request.Action == Action.KaraokeToVideo ? IsVideoSource(p) :
             request.Action == Action.ArchiveToZip ? ArchiveZipConverter.IsInput(p) :
             Path.GetExtension(p).Equals(extension, StringComparison.OrdinalIgnoreCase)).Order(StringComparer.OrdinalIgnoreCase).ToArray());
-        using var fresh = resumed == null ? new RunSession(recovery, request, overwrite, sources, validateBeforeConversion) : null;
+        Dictionary<string, ConversionInputSnapshot>? batchInputs = null;
+        var verification = resumed?.Data.VerificationMode ??
+            (standaloneMedia ? verificationMode : RecoveryVerificationMode.Sha256);
+        if (resumed == null && checkTiming == FileCheckTiming.BeforeBatch && standaloneMedia)
+        {
+            progress?.Report(new(0, 0, sources.Length, 0, "Checking conversion inputs before the batch…", "00:00:00") { IsIndeterminate = true });
+            batchInputs = await ConversionInputSnapshot.CaptureAsync(request.Action, sources, token, verification);
+        }
+        using var fresh = resumed == null
+            ? new RunSession(recovery, request, overwrite, sources, validateBeforeConversion, continueBatchAfterRecovery, batchInputs, verification)
+            : null;
         var run = resumed ?? fresh!;
         RunSession.Current.Value = run;
         var results = run.Data.Results.Values.Concat(run.Data.MetadataResults.Values.Where(r => r.Status is ConversionStatus.Failed or ConversionStatus.Skipped)).ToList();
@@ -112,11 +144,14 @@ public sealed partial class ConversionService
             {
                 run.Begin(source);
                 Report(0, "Processing: " + source, source, "Processing");
+                var snapshot = run.Data.BatchInputs?[source];
+                if (snapshot?.Error is { } inputError)
+                    throw new IOException(inputError);
                 if (review is not { IsApplying: true } && validateBeforeConversion && !maintenance &&
                     request.Action is not (Action.ArchiveToZip or Action.RepackZip))
                 {
                     Report(0, "Validating input: " + source, show: false);
-                    var validation = await new ValidationService().ScanAsync([source], false, token: token);
+                    var validation = await new ValidationService().ScanConversionAsync(source, verification, token);
                     token.ThrowIfCancellationRequested();
                     var issue = validation.Findings.FirstOrDefault(f => f.Status != ValidationStatus.Valid);
                     if (issue != null)
@@ -134,7 +169,7 @@ public sealed partial class ConversionService
                         writing: label => ReportWriting(0, source, label), review: review);
                 else
                     result = await ConvertOneAsync(source, request, overwrite, token,
-                        (percent, message) => Report(percent, message, show: false), resolveConflict, review);
+                        (percent, message) => Report(percent, message, show: false), resolveConflict, review, snapshot, verification);
                 run.Complete(result);
                 results.Add(result);
                 Report(100, result.Status + ": " + source + " — " + result.Message, source, result.Status.ToString(), result.Message,
@@ -178,11 +213,11 @@ public sealed partial class ConversionService
                 {
                     if (review is { IsApplying: false })
                     {
-                        review.PlanListing(folder, CueTextService.PlannedTargets(folder, request.Options, listingExtension));
+                        review.PlanListing(folder, CueTextService.PlannedTargets(folder, request.Options, listingExtension), verification);
                         continue;
                     }
                     var metadata = await WriteMetadataAsync(folder, request.Options, overwrite, token, resolveConflict, listingExtension,
-                        label => ReportWriting(100, folder, label), review);
+                        label => ReportWriting(100, folder, label), review, verification);
                     run.Complete(metadata);
                 }
                 catch (OperationCanceledException) { cancelled = true; break; }
@@ -207,7 +242,10 @@ public sealed partial class ConversionService
                     }, overwrite)
                 {
                     ValidateBeforeConversion = validateBeforeConversion,
-                    OutputFolder = request.OutputFolder
+                    OutputFolder = request.OutputFolder,
+                    ContinueBatchAfterRecovery = run.Data.ContinueBatchAfterRecovery,
+                    CheckTiming = run.Data.BatchInputs == null ? FileCheckTiming.BeforeItem : FileCheckTiming.BeforeBatch,
+                    RecoveryVerification = verification
                 }).ToArray()
         };
     }
@@ -230,9 +268,9 @@ public sealed partial class ConversionService
     internal static bool IsVideoSource(string path) => Path.GetExtension(path).ToLowerInvariant() is ".bin" or ".zip" or ".cdg";
     internal static async Task<ConversionFileResult> WriteMetadataAsync(string folder, ConversionOptions options, OverwritePolicy overwrite, CancellationToken token,
         Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolveConflict, string? extension = null,
-        System.Action<string>? writing = null, ConversionConflictReview? review = null)
+        System.Action<string>? writing = null, ConversionConflictReview? review = null, RecoveryVerificationMode verification = RecoveryVerificationMode.Sha256)
     {
-        using var transaction = new FileTransaction(folder);
+        using var transaction = new FileTransaction(folder, verification);
         var outputs = CueTextService.Write(folder, transaction.Workspace, options, extension, writing);
         if (outputs.Count == 0)
             return new(folder, ConversionStatus.Skipped, [], "No tracks for CUE/text output.");
@@ -250,11 +288,13 @@ public sealed partial class ConversionService
         return new(folder, ConversionStatus.Succeeded, committed, message);
     }
     private static async Task<ConversionFileResult> ConvertOneAsync(string source, ConversionRequest request, OverwritePolicy overwrite, CancellationToken token, System.Action<int, string> report,
-        Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolveConflict, ConversionConflictReview? review)
+        Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolveConflict, ConversionConflictReview? review,
+        ConversionInputSnapshot? snapshot, RecoveryVerificationMode verification)
     {
         string destination = string.IsNullOrEmpty(request.OutputFolder) ? Path.GetDirectoryName(source)! : request.OutputFolder;
-        using var transaction = new FileTransaction(destination);
-        string staged = await transaction.CopyInputAsync(source, token);
+        using var transaction = new FileTransaction(destination, verification);
+        Task<string> StageAsync(string path) => transaction.CopyInputAsync(path, token, snapshot?.FingerprintFor(path));
+        string staged = await StageAsync(source);
         var inputs = new List<string> { source };
         var outputs = new List<string>();
         string audio = "", graphics = "";
@@ -262,25 +302,17 @@ public sealed partial class ConversionService
         {
             graphics = staged;
             KaraokeArchive.ValidateGraphics(graphics);
-            string stem = Path.GetFileNameWithoutExtension(source);
-            string[] matches = Directory.GetFiles(Path.GetDirectoryName(source)!).Where(p => Path.GetFileNameWithoutExtension(p).Equals(stem, StringComparison.OrdinalIgnoreCase) && KaraokeArchive.AudioExtensions.Contains(Path.GetExtension(p), StringComparer.OrdinalIgnoreCase)).ToArray();
-            if (matches.Length != 1)
-                throw new InvalidDataException("Expected exactly one matching audio file.");
-            inputs.Add(matches[0]);
-            audio = await transaction.CopyInputAsync(matches[0], token);
+            string companion = ConversionInputSnapshot.FindAudioCompanion(request.Action, source)!;
+            inputs.Add(companion);
+            audio = await StageAsync(companion);
         }
         if (request.Action == Action.LosslessGToMp3G)
         {
             graphics = staged;
             KaraokeArchive.ValidateGraphics(graphics);
-            string stem = Path.GetFileNameWithoutExtension(source);
-            string[] matches = Directory.GetFiles(Path.GetDirectoryName(source)!).Where(p =>
-                Path.GetFileNameWithoutExtension(p).Equals(stem, StringComparison.OrdinalIgnoreCase) &&
-                LosslessAudioTranscoder.IsCandidate(p)).ToArray();
-            if (matches.Length != 1)
-                throw new InvalidDataException("Expected exactly one matching lossless audio file.");
-            string stagedAudio = await transaction.CopyInputAsync(matches[0], token);
-            inputs.Add(matches[0]);
+            string companion = ConversionInputSnapshot.FindAudioCompanion(request.Action, source)!;
+            string stagedAudio = await StageAsync(companion);
+            inputs.Add(companion);
             string mp3 = Path.ChangeExtension(staged, ".mp3");
             report(35, "Encoding MP3: " + source);
             await LosslessAudioTranscoder.EncodeAsync(stagedAudio, mp3, request.Options.AudioBitrate, token);
@@ -320,21 +352,21 @@ public sealed partial class ConversionService
             string zip = Path.ChangeExtension(staged, ".zip");
             report(60, "Creating ZIP: " + source);
             await KaraokeZipWriter.CreateAsync(audio, graphics, zip, request.Options.ZipCompression, token, request.Options.ZipAlgorithm);
-            await KaraokeArchive.VerifyCreatedAsync(zip, audio, graphics, token);
+            await KaraokeArchive.VerifyCreatedAsync(zip, audio, graphics, token, verification);
             outputs.Add(zip);
         }
         if (request.Action == Action.ArchiveToZip)
         {
             string zip = Path.Combine(transaction.Workspace, ArchiveZipConverter.OutputName(source));
             report(20, "Converting archive: " + source);
-            await ArchiveZipConverter.ConvertAsync(staged, zip, request.Options, token);
+            await ArchiveZipConverter.ConvertAsync(staged, zip, request.Options, token, verification: verification);
             outputs.Add(zip);
         }
         if (request.Action == Action.RepackZip)
         {
             string zip = Path.Combine(transaction.Workspace, Path.GetFileNameWithoutExtension(source) + " (repacked).zip");
             report(20, "Repacking ZIP: " + source);
-            await ArchiveZipConverter.ConvertAsync(staged, zip, request.Options, token, repackZip: true);
+            await ArchiveZipConverter.ConvertAsync(staged, zip, request.Options, token, repackZip: true, verification: verification);
             if (request.Options.DeleteOldFiles)
             {
                 // Replace only the staged input here. Commit backs up the real source
@@ -359,13 +391,9 @@ public sealed partial class ConversionService
             else if (kind == ".cdg")
             {
                 graphics = staged;
-                string stem = Path.GetFileNameWithoutExtension(source);
-                string[] matches = Directory.GetFiles(Path.GetDirectoryName(source)!).Where(p =>
-                    Path.GetFileNameWithoutExtension(p).Equals(stem, StringComparison.OrdinalIgnoreCase) &&
-                    KaraokeArchive.AudioExtensions.Contains(Path.GetExtension(p), StringComparer.OrdinalIgnoreCase)).ToArray();
-                if (matches.Length != 1) throw new InvalidDataException("Expected exactly one matching audio file for CDG video conversion.");
-                inputs.Add(matches[0]);
-                audio = await transaction.CopyInputAsync(matches[0], token);
+                string companion = ConversionInputSnapshot.FindAudioCompanion(request.Action, source)!;
+                inputs.Add(companion);
+                audio = await StageAsync(companion);
             }
             else throw new ArgumentException("Video conversion requires BIN, ZIP or matching Audio+G input.");
             string video = Path.ChangeExtension(staged, VideoOptions.Extension(request.Options.VideoContainer));

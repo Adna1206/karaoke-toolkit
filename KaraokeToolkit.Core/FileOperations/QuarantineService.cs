@@ -159,7 +159,7 @@ public sealed class QuarantineService
     private static void RequireHash(string path, string hash)
     {
         RunSession.CheckPlainPath(path);
-        if (!File.Exists(path) || FileTransaction.Hash(path) != hash)
+        if (!File.Exists(path) || RecoveryFingerprint.Hash(path) != hash)
             throw new IOException("File is missing or changed since validation: " + path);
     }
     private static IDisposable LockFolders(IEnumerable<string> folders)

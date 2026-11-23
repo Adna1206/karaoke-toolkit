@@ -82,7 +82,6 @@ public partial class MainViewModel
             run.StopProgress();
             LastReport = result.ToReport(recipe.Name, Label);
             FoundFiles = result.Steps.Sum(step => step.Result.Found);
-            Elapsed = result.Elapsed.ToString(@"hh\:mm\:ss");
             int failed = result.Steps.Sum(step => step.Result.Failed);
             StatusOutcome = RunStatusSummary.From(result.Cancelled,
                 result.Steps.Sum(step => step.Result.Succeeded), failed, result.Steps.Sum(step => step.Result.Skipped));
@@ -92,13 +91,14 @@ public partial class MainViewModel
             if (!result.Cancelled && result.StopReason.Length == 0) Progress = TotalProgress = 100;
             foreach (var step in result.Steps)
                 AppendActivityIssues(step.Result.Files, $"Step {step.Number}/{recipe.Steps.Count} ({Label(step.OperationId)}): ");
-            Activity.Add(new(Elapsed, Status));
+            AddActivity(Status);
         }
         catch (Exception error)
         {
             StatusOutcome = RunStatus.Failure; Status = "Recipe failed: " + error.Message;
             LastReport = new(recipe.Name, DateTimeOffset.Now, false, [new(recipe.Name, "Failed", error.Message, [])]) { ReportType = "Recipe Report" };
-            Activity.Add(new(Elapsed, Status));
+            run.StopProgress();
+            AddActivity(Status);
         }
         finally
         {

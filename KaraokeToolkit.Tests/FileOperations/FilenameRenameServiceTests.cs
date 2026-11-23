@@ -93,7 +93,8 @@ public class FilenameRenameServiceTests
         var current = await service.PreviewAsync(request);
         Assert.False(current.CanApply);
         Assert.All(current.Items, item => Assert.True(item.IsConflict));
-        await Assert.ThrowsAsync<IOException>(() => service.ApplyAsync(request, approved, RecoveryVerificationMode.Sha256, true));
+        var result = await service.ApplyAsync(request, approved, RecoveryVerificationMode.Sha256, true);
+        Assert.Equal(2, result.Skipped);
         Assert.Equal("audio", File.ReadAllText(audio));
         Assert.Equal("graphics", File.ReadAllText(graphics));
         Assert.Equal("unrelated audio", File.ReadAllText(occupied));
@@ -123,7 +124,7 @@ public class FilenameRenameServiceTests
     }
 
     [Fact]
-    public async Task CompanionAddedAfterRevalidationStillPreventsRename()
+    public async Task DestinationCompanionAddedDuringPreparationPreventsRename()
     {
         string folder = TestMediaFixture.NewFolder();
         string audio = Write(folder, Before + ".mp3", "audio");

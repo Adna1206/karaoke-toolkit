@@ -65,10 +65,10 @@ public class TaggingViewModelTests
     }
 
     [Fact]
-    public async Task EditingPatternRequiresFreshPreviewAndFieldCorrectionsAreValidated()
+    public async Task EditingPatternReusesReadMediaAndFieldCorrectionsAreValidated()
     {
         string path = await KaraokeTaggingTests.CreateMedia(".wav");
-        var model = new TaggingViewModel([path], false, [FilenameTagPattern.Default], FilenameTagPattern.Default);
+        var model = new TaggingViewModel([Path.GetDirectoryName(path)!], false, [FilenameTagPattern.Default], FilenameTagPattern.Default);
         await model.PreviewAsync();
         Assert.True(model.CanApply);
         var row = Assert.Single(model.Rows);
@@ -82,10 +82,16 @@ public class TaggingViewModelTests
         Assert.Equal(row.Preview.SourceHash, request.Files[0].SourceHash);
         row.Track = "0000";
         Assert.Equal(0u, model.BuildRequest()!.Files[0].Tags!.Track);
+        string newPath = Path.Combine(Path.GetDirectoryName(path)!, "Another song.wav");
+        File.Move(path, newPath);
+        File.Move(Path.ChangeExtension(path, ".cdg"), Path.ChangeExtension(newPath, ".cdg"));
         model.Pattern = "%TITLE%";
-        Assert.False(model.CanApply); Assert.Null(model.BuildRequest());
+        Assert.True(model.CanApply);
+        Assert.Equal(path, Assert.Single(model.Rows).Path);
+        Assert.Equal(row.Preview.SourceHash, model.BuildRequest()!.Files[0].SourceHash);
         await model.PreviewAsync();
         Assert.True(model.CanApply);
+        Assert.Equal(newPath, Assert.Single(model.Rows).Path);
         Assert.Null(model.BuildRequest()!.Files[0].Tags!.Album);
         row = Assert.Single(model.Rows);
         int applyChanges = 0;

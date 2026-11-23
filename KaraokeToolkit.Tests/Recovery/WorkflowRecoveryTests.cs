@@ -152,16 +152,20 @@ public class WorkflowRecoveryTests
     }
 
     /// <summary>Defers a discovered tagging job, then resumes its frozen preview without rewriting its completed file.</summary>
-    [Fact]
-    public async Task StartupTagRecoveryUsesSavedPreviewSkipsFinishedFileAndSupportsLater()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task StartupTagRecoveryUsesSavedPreviewSkipsFinishedFileAndSupportsLater(bool continueBatch)
     {
         string folder = TestMediaFixture.NewFolder(), settings = TestMediaFixture.NewFolder(), index = Path.Combine(settings, "Recovery");
         TestMediaFixture.Seed(folder, Action.AudioGToBin, "keep");
         string first = Path.Combine(folder, "DISC-00 - Artist - First.wav"), second = Path.Combine(folder, "DISC-01 - Artist - Second.wav");
         File.Move(Path.Combine(folder, "song.wav"), first); File.Copy(first, second);
-        await Crash("tagging", folder, index);
+        string secondHash = FileTransaction.Hash(second);
+        await Crash(continueBatch ? "tagging" : "tagging-item-only", folder, index);
         var store = new RecoveryStore(index); var job = Assert.Single(store.Find());
         Assert.Equal(RecoveryKind.Tagging, job.Kind); Assert.Equal(1, job.Completed);
+        Assert.Equal(continueBatch, job.ContinueBatchAfterRecovery);
         string firstHash = FileTransaction.Hash(first);
         var model = new MainViewModel(Path.Combine(settings, "settings.xml"));
         model.ConfirmRecoveryAsync = _ => Task.FromResult(MainViewModel.RecoveryChoice.Later);
@@ -170,10 +174,12 @@ public class WorkflowRecoveryTests
         model.ConfigureTaggingAsync = _ => throw new InvalidOperationException("Recovery must not reopen the tagging configuration dialog.");
         model.ConfirmRecoveryAsync = pending => { Assert.Equal(RecoveryKind.Tagging, pending.Kind); return Task.FromResult(MainViewModel.RecoveryChoice.Resume); };
         Assert.True(await model.CheckForRecoveryAsync());
-        Assert.Equal("Tagging Report", model.LastReport!.ReportType); Assert.Contains("2 updated", model.Status);
+        Assert.Equal("Tagging Report", model.LastReport!.ReportType);
+        Assert.Contains(continueBatch ? "2 updated" : "1 updated, 1 skipped", model.Status);
         Assert.True(model.ShowProgress); Assert.False(model.IsRecoveryMode); Assert.False(model.RecoveryAvailable);
         Assert.Equal(firstHash, FileTransaction.Hash(first));
-        Assert.Equal("Saved preview title", KaraokeTaggingService.ReadTags(second).Title);
+        if (continueBatch) Assert.Equal("Saved preview title", KaraokeTaggingService.ReadTags(second).Title);
+        else Assert.Equal(secondHash, FileTransaction.Hash(second));
         Assert.Empty(store.Find());
     }
 

@@ -2,7 +2,6 @@ using KaraokeToolkit.Core.Archives;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Recovery;
 using SharpCompress.Archives.Zip;
-using System.Security.Cryptography;
 
 namespace KaraokeToolkit.Core.Validation;
 
@@ -21,6 +20,13 @@ public sealed record ValidationResult(IReadOnlyList<ValidationFinding> Findings,
 public sealed class ValidationService
 {
     public Task<ValidationResult> ScanAsync(IEnumerable<string> inputs, bool recurse, IProgress<ConversionProgress>? progress = null, CancellationToken token = default)
+        => ScanAsync(inputs, recurse, progress, RecoveryVerificationMode.Sha256, saveQuarantineFingerprints: true, token);
+
+    internal Task<ValidationResult> ScanConversionAsync(string source, RecoveryVerificationMode verification, CancellationToken token)
+        => ScanAsync([source], false, null, verification, saveQuarantineFingerprints: false, token);
+
+    private static Task<ValidationResult> ScanAsync(IEnumerable<string> inputs, bool recurse, IProgress<ConversionProgress>? progress,
+        RecoveryVerificationMode verification, bool saveQuarantineFingerprints, CancellationToken token)
         => Task.Run(async () =>
         {
             var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -40,7 +46,7 @@ public sealed class ValidationService
                 if (!visited.Add(file))
                     continue;
                 string[] group = [file];
-                ValidatedFile[]? hashes = null;
+                (string Path, string Fingerprint)[]? hashes = null;
                 try
                 {
                     string extension = Path.GetExtension(file).ToLowerInvariant();
@@ -52,7 +58,7 @@ public sealed class ValidationService
                         foreach (string member in group)
                             visited.Add(member);
                     }
-                    hashes = await FingerprintAsync(group, token);
+                    hashes = await FingerprintAsync(group, verification, token);
                     ValidationStatus status = ValidationStatus.Valid;
                     string message;
                     if (ArchiveZipConverter.IsInput(file))
@@ -92,20 +98,20 @@ public sealed class ValidationService
                         else
                             message = "Matching pair and CDG packet structure are valid. Audio decoding was not tested.";
                     }
-                    var after = await FingerprintAsync(group, token);
+                    var after = await FingerprintAsync(group, verification, token);
                     if (!hashes.SequenceEqual(after))
                         throw new IOException("Files changed during validation. Scan again.");
-                    findings.Add(new(file, root, status, message, hashes));
+                    findings.Add(new(file, root, status, message, QuarantineFingerprints(hashes)));
                 }
                 catch (OperationCanceledException) { cancelled = true; break; }
                 catch (Exception error) when (error is InvalidDataException or SharpCompress.Common.ArchiveException)
                 {
                     try
                     {
-                        var after = await FingerprintAsync(group, token);
+                        var after = await FingerprintAsync(group, verification, token);
                         if (hashes == null || !hashes.SequenceEqual(after))
                             throw new IOException("Files changed during validation. Scan again.");
-                        findings.Add(new(file, root, ValidationStatus.Damaged, error.Message, after));
+                        findings.Add(new(file, root, ValidationStatus.Damaged, error.Message, QuarantineFingerprints(after)));
                     }
                     catch (OperationCanceledException) { cancelled = true; break; }
                     catch (Exception e) when (e is IOException or UnauthorizedAccessException) { findings.Add(new(file, root, ValidationStatus.Unreadable, e.Message, [])); }
@@ -122,16 +128,20 @@ public sealed class ValidationService
                     "Processing: " + file, watch.Elapsed.ToString(@"hh\:mm\:ss")) { ActivitySource = file, ActivityLabel = "Processing" });
             }
             return new ValidationResult(findings, cancelled, watch.Elapsed);
+
+            ValidatedFile[] QuarantineFingerprints((string Path, string Fingerprint)[] files) =>
+                saveQuarantineFingerprints ? files.Select(file => new ValidatedFile(file.Path, file.Fingerprint)).ToArray() : [];
         }, CancellationToken.None);
 
-    internal static async Task<ValidatedFile[]> FingerprintAsync(IEnumerable<string> files, CancellationToken token)
+    private static async Task<(string Path, string Fingerprint)[]> FingerprintAsync(IEnumerable<string> files,
+        RecoveryVerificationMode verification, CancellationToken token)
     {
-        var result = new List<ValidatedFile>();
+        var result = new List<(string Path, string Fingerprint)>();
         foreach (string path in files)
         {
-            RunSession.CheckPlainPath(path);
-            await using var stream = File.OpenRead(path);
-            result.Add(new(path, Convert.ToHexString(await SHA256.HashDataAsync(stream, token))));
+            if (RunSession.CheckPlainPath(path) is not { } attributes || attributes.HasFlag(FileAttributes.Directory))
+                throw new IOException("Validation input is missing or is a directory: " + path);
+            result.Add((path, await RecoveryFingerprint.HashFileAsync(path, verification, token)));
         }
         return result.ToArray();
     }

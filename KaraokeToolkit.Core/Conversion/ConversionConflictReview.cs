@@ -7,7 +7,7 @@ internal sealed class ConversionConflictReview(string journal)
 {
     private sealed record StagedOutput(string Path, string Hash);
     private sealed record DeferredOutput(string Destination, TransactionObservation Observation,
-        StagedOutput[] Outputs, string[] Retired, string Message, OutputConflict Conflict);
+        StagedOutput[] Outputs, string[] Retired, string Message, OutputConflict Conflict, RecoveryVerificationMode Verification);
     private sealed record Listing(TransactionObservation Observation, OutputConflict? Conflict);
 
     private readonly Dictionary<string, DeferredOutput> deferred = new(InputSelection.Paths);
@@ -38,11 +38,11 @@ internal sealed class ConversionConflictReview(string journal)
         {
             token.ThrowIfCancellationRequested();
             string target = Path.Combine(staging, Path.GetFileName(output));
-            string hash = FileTransaction.Hash(output);
+            string hash = transaction.Fingerprint(output);
             File.Move(output, target);
             files.Add(new(target, hash));
         }
-        deferred.Add(source, new(destination, observation, files.ToArray(), retired, message, new(source, existing)));
+        deferred.Add(source, new(destination, observation, files.ToArray(), retired, message, new(source, existing), transaction.VerificationMode));
         throw new ConversionConflictDeferredException();
     }
 
@@ -52,7 +52,7 @@ internal sealed class ConversionConflictReview(string journal)
         if (decisions[item.Conflict] == ConflictDecision.Skip)
             throw new OutputSkippedException();
 
-        using var transaction = new FileTransaction(item.Destination);
+        using var transaction = new FileTransaction(item.Destination, item.Verification);
         transaction.RestoreObservation(item.Observation);
         var outputs = new List<string>();
         foreach (var file in item.Outputs)
@@ -61,7 +61,7 @@ internal sealed class ConversionConflictReview(string journal)
             RunSession.CheckPlainPath(file.Path);
             string staged = Path.Combine(transaction.Workspace, Path.GetFileName(file.Path));
             File.Move(file.Path, staged);
-            if (FileTransaction.Hash(staged) != file.Hash)
+            if (transaction.Fingerprint(staged) != file.Hash)
                 throw new IOException("Staged output changed while waiting for review: " + source);
             outputs.Add(staged);
         }
@@ -69,11 +69,11 @@ internal sealed class ConversionConflictReview(string journal)
             transaction.Commit(outputs, item.Retired, OverwritePolicy.Replace, token), item.Message);
     }
 
-    internal void PlanListing(string folder, IReadOnlyList<string> targets)
+    internal void PlanListing(string folder, IReadOnlyList<string> targets, RecoveryVerificationMode verification)
     {
         var observed = new Dictionary<string, string?>(InputSelection.Paths);
         foreach (string target in targets)
-            observed.Add(target, File.Exists(target) ? FileTransaction.Hash(target) : null);
+            observed.Add(target, File.Exists(target) ? RecoveryFingerprint.Hash(target, verification) : null);
         string[] existing = observed.Where(pair => pair.Value != null).Select(pair => pair.Key).ToArray();
         listings.Add(folder, new(new(new(InputSelection.Paths), observed), existing.Length == 0 ? null : new(folder, existing)));
     }

@@ -13,6 +13,80 @@ namespace KaraokeToolkit.Tests.Recovery;
 /// Reconstructed states verify recovery contracts rather than simulating physical power loss.</remarks>
 public class RecoveryTests
 {
+    [Theory]
+    [InlineData(RecoveryVerificationMode.Sha256, true)]
+    [InlineData(RecoveryVerificationMode.XxHash128, false)]
+    public async Task ResumedConversionUsesItsSavedBatchBaseline(RecoveryVerificationMode verification, bool legacy)
+    {
+        string folder = TestMediaFixture.NewFolder();
+        TestMediaFixture.Seed(folder, Action.AudioGToBin, "keep");
+        string source = Path.Combine(folder, "song.cdg");
+        string companion = Path.Combine(folder, "song.wav");
+        var store = new RecoveryStore(TestMediaFixture.NewFolder());
+        var baseline = await ConversionInputSnapshot.CaptureAsync(Action.AudioGToZip, [source], default, verification);
+        string journal;
+        using (var run = new RunSession(store, new(Action.AudioGToZip, folder, new()
+        {
+            RecurseFolders = false, AutoCreateCueText = false, DeleteOldFiles = false
+        }), OverwritePolicy.Fail, [source], batchInputs: baseline, verificationMode: verification))
+        {
+            run.Begin(source);
+            journal = run.Journal;
+        }
+        if (legacy)
+        {
+            var json = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(journal))!.AsObject();
+            Assert.True(json.Remove("VerificationMode"));
+            foreach (var item in json["BatchInputs"]![source]!["Files"]!.AsArray())
+            {
+                var file = item!.AsObject();
+                file["Sha256"] = file["Hash"]!.GetValue<string>();
+                Assert.True(file.Remove("Hash"));
+            }
+            File.WriteAllText(journal, json.ToJsonString());
+        }
+        byte[] edited = File.ReadAllBytes(companion);
+        edited[^1] ^= 1;
+        File.WriteAllBytes(companion, edited);
+
+        var recovery = await new OperationExecutionService(store).ResumeAsync(Assert.Single(store.Find()).JournalPath);
+
+        Assert.Contains("changed since the batch started", Assert.Single(recovery.Report.Entries).Message);
+        Assert.False(File.Exists(Path.Combine(folder, "song.zip")));
+        Assert.Equal(edited, File.ReadAllBytes(companion));
+        Assert.Empty(store.Find());
+    }
+
+    [Theory]
+    [InlineData(RecoveryVerificationMode.MetadataOnly)]
+    [InlineData(RecoveryVerificationMode.None)]
+    public async Task InterruptedConversionWithoutContentFingerprintsRetainsOriginalsForManualRecovery(RecoveryVerificationMode mode)
+    {
+        var (folder, workspace, journal) = Stage();
+        journal.VerificationMode = mode.ToString();
+        journal.Outputs = journal.Outputs.Select(file => file with
+        { Hash = RecoveryFingerprint.Hash(Path.Combine(workspace, file.Name), mode) }).ToArray();
+        journal.Backups = journal.Backups.Select(file => file with
+        { Hash = RecoveryFingerprint.Hash(Path.Combine(folder, file.Name), mode) }).ToArray();
+        DurableJson.Write(Path.Combine(workspace, "recovery.json"), journal);
+        string source = Path.Combine(folder, "source.zip");
+        var store = new RecoveryStore(TestMediaFixture.NewFolder());
+        using (var run = new RunSession(store, new(Action.ZipToAudioG, folder, new()), OverwritePolicy.Fail, [source], verificationMode: mode))
+        {
+            run.Begin(source);
+            run.Attach(workspace);
+        }
+        MoveBackups(folder, workspace, journal, 1);
+
+        var job = Assert.Single(store.Find());
+        Assert.Contains("manual recovery", job.Problem);
+        await Assert.ThrowsAsync<IOException>(() => new OperationExecutionService(store).ResumeAsync(job.JournalPath));
+        Assert.Throws<IOException>(() => FileTransactionRecovery.Recover(workspace));
+        Assert.True(File.Exists(Path.Combine(workspace, "backups", journal.Backups[0].Slot)));
+        Assert.True(File.Exists(Path.Combine(workspace, "song.mp3")));
+        Assert.False(File.Exists(Path.Combine(folder, "song.mp3")));
+    }
+
     [Fact]
     public void CaptureReadsFreshContentAndToleratesMissingPathsOnlyDuringSafetyCheck()
     {
@@ -258,27 +332,61 @@ public class RecoveryTests
         Assert.False(File.Exists(journal));
         Assert.Empty(store.Find());
     }
-    [Fact]
-    public async Task PublishedButUncheckpointedGroupIsRecordedWithoutRerunning()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task PublishedButUncheckpointedGroupIsRecordedWithoutRerunning(bool continueBatch)
     {
         var (folder, workspace, transaction) = Stage();
         var store = new RecoveryStore(TestMediaFixture.NewFolder());
         string source = Path.Combine(folder, "source.zip");
+        string waiting = Path.Combine(folder, "waiting.zip");
+        File.WriteAllText(waiting, "invalid archive");
         using (var run = new RunSession(store, new(Action.ZipToAudioG, folder, new()
         {
             AutoCreateCueText = false
-        }), OverwritePolicy.Fail, [source]))
+        }), OverwritePolicy.Fail, [source, waiting], continueBatchAfterRecovery: continueBatch))
         {
             run.Begin(source);
             run.Attach(workspace);
         }
         MoveBackups(folder, workspace, transaction, 2);
         File.Move(Path.Combine(workspace, "song.cdg"), Path.Combine(folder, "song.cdg"));
-        var result = await new ConversionService(store).ResumeAsync(Assert.Single(store.Find()));
+        var job = Assert.Single(store.Find());
+        Assert.Equal(continueBatch, job.ContinueBatchAfterRecovery);
+        var result = await new ConversionService(store).ResumeAsync(job);
         Assert.Equal(1, result.Succeeded);
-        Assert.Equal(0, result.Failed); // The fake ZIP would fail if conversion ran again.
+        var waitingResult = Assert.Single(result.Files, file => file.Source == waiting);
+        Assert.Equal(continueBatch ? ConversionStatus.Failed : ConversionStatus.Skipped, waitingResult.Status);
+        Assert.Equal("new graphics", File.ReadAllText(Path.Combine(folder, "song.cdg")));
+        Assert.Equal("new audio", File.ReadAllText(Path.Combine(folder, "song.mp3")));
         Assert.False(Directory.Exists(workspace));
         Assert.Empty(store.Find());
+    }
+
+    [Fact]
+    public async Task DisabledStartupCheckStillAllowsExplicitAndScopedRecoveryDiscovery()
+    {
+        string folder = TestMediaFixture.NewFolder();
+        string settings = Path.Combine(TestMediaFixture.NewFolder(), "settings.xml");
+        var store = new RecoveryStore(Path.Combine(Path.GetDirectoryName(settings)!, "Recovery"));
+        using (var run = new RunSession(store, new(Action.ZipToAudioG, folder, new()), OverwritePolicy.Fail, [])) { }
+        var profile = new ApplicationSettingsStore(settings);
+        profile.Save(checkForInterruptedRunsOnStartup: false);
+        int prompts = 0;
+        var model = new MainViewModel(settings) { ConfirmRecoveryAsync = _ =>
+        {
+            prompts++;
+            return Task.FromResult(MainViewModel.RecoveryChoice.Later);
+        }};
+
+        await model.CheckForRecoveryOnStartupAsync();
+        Assert.Equal(0, prompts);
+        Assert.True(model.ShowRecoverButton);
+        await model.CheckRecoveryCommand.ExecuteAsync(null);
+        Assert.True(await model.CheckForRecoveryAsync(folder));
+        Assert.Equal(2, prompts);
+        Assert.Single(store.Find());
     }
     [Fact]
     public async Task LaterLeavesJobUntouchedAndStartDoesNotRunOverIt()

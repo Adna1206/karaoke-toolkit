@@ -4,6 +4,7 @@ using KaraokeToolkit.Core.Audio;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.FileOperations;
+using KaraokeToolkit.Core.Recovery;
 using KaraokeToolkit.Core.Tagging;
 using KaraokeToolkit.Core.Video;
 
@@ -19,7 +20,9 @@ internal static class SharedSettingCatalog
     internal static readonly IReadOnlyDictionary<string, SettingDefinition> All = new SettingDefinition[]
     {
         Define("recovery.verification", OperationCapabilities.DefaultFileMoveRecoveryVerification, Shared, Shared, s => s.RecoveryVerification),
+        Define("recovery.check-timing", OperationCapabilities.DefaultFileMoveCheckTiming, Shared, Shared, s => s.CheckTiming),
         Define("recovery.batch-resume", true, Shared, Shared, s => s.SaveResumableRun),
+        Define("recovery.check-on-startup", true, Shared, Shared, s => s.CheckForInterruptedRunsOnStartup),
         Define("files.overwrite", OverwritePolicy.Ask, Shared, Shared, s => s.Overwrite),
         Define("files.validate-before-conversion", false, Shared, Shared, s => s.ValidateBeforeConversion),
         Define("files.ignore-leading-the", false, Shared, Shared, s => s.IgnoreLeadingThe),

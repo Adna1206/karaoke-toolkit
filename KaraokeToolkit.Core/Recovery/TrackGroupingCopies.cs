@@ -7,7 +7,8 @@ namespace KaraokeToolkit.Core.Recovery;
 /// an interrupted publication from an unrelated entry already present at a destination.</summary>
 internal static class TrackGroupingCopies
 {
-    internal static ConversionResult Run(WorkflowSession session, IProgress<ConversionProgress>? progress, CancellationToken token)
+    internal static ConversionResult Run(WorkflowSession session, IProgress<ConversionProgress>? progress, CancellationToken token,
+        bool interruptedOnly = false)
     {
         var clock = Stopwatch.StartNew();
         var groups = session.Data.Moves!;
@@ -19,25 +20,52 @@ internal static class TrackGroupingCopies
         {
             var group = groups[index];
             if (group.Results != null) continue;
+            if (interruptedOnly && index != session.Data.ActiveMoveGroup) continue;
             if (token.IsCancellationRequested && !group.CopyPrepared) break;
+            session.BeginMoveGroup(index);
             string staging = Path.Combine(workspace, "copy-" + index);
             RunSession.CheckPlainPath(staging);
             if (!group.CopyPrepared)
             {
-                if (group.Items.Any(m => WorkflowMoves.Exists(m.Target!)))
-                    throw new IOException("A destination appeared after planning. Resolve the collision and resume grouping.");
-                if (Directory.Exists(staging)) RecoveryWorkspaceCleanup.Delete(staging);
-                Directory.CreateDirectory(staging);
-                for (int i = 0; i < group.Items.Length; i++)
+                if (Directory.Exists(staging)) RecoveryWorkspaceCleanup.DeleteGroupingCopy(workspace, index);
+                bool capture = WorkflowMoves.NeedsFingerprints(group);
+                var verified = capture ? (WorkflowMove[])group.Items.Clone() : group.Items;
+                try
                 {
-                    var move = group.Items[i];
-                    progress?.Report(new(0, completed * 100 / found, found, completed,
-                        "Processing: " + move.Source, clock.Elapsed.ToString(@"hh\:mm\:ss"))
-                        { ActivitySource = move.Source, ActivityLabel = "Processing" });
-                    string staged = Path.Combine(staging, i.ToString());
-                    Copy(move.Source, staged, move.Directory);
-                    Verify(staged, move, session.Data.VerificationMode);
+                    if (session.Data.SkipUnavailableMoveGroups)
+                        WorkflowMoves.CheckApprovedGroup(group, filenameRename: false, session.Data.VerificationMode, verifyFingerprints: false);
+                    else if (group.Items.Any(m => WorkflowMoves.Exists(m.Target!)))
+                        throw new IOException("A destination appeared after planning. Resolve the collision and resume grouping.");
+                    Directory.CreateDirectory(staging);
+                    for (int i = 0; i < group.Items.Length; i++)
+                    {
+                        var move = group.Items[i];
+                        progress?.Report(new(0, completed * 100 / found, found, completed,
+                            "Processing: " + move.Source, clock.Elapsed.ToString(@"hh\:mm\:ss"))
+                            { ActivitySource = move.Source, ActivityLabel = "Processing" });
+                        string staged = Path.Combine(staging, i.ToString());
+                        WorkflowMoves.VerifySourceKind(move);
+                        string fingerprint = CopyAndFingerprint(move, staged, capture ? session.Data.VerificationMode : RecoveryVerificationMode.None,
+                            session.Data.SkipUnavailableMoveGroups);
+                        if (capture)
+                        {
+                            move = move with { Hash = fingerprint };
+                            verified[i] = move;
+                        }
+                        Verify(staged, move, session.Data.VerificationMode);
+                    }
+                    if (session.Data.SkipUnavailableMoveGroups)
+                        WorkflowMoves.CheckApprovedGroup(group, filenameRename: false, session.Data.VerificationMode, verifyFingerprints: false);
                 }
+                catch (Exception error) when (session.Data.SkipUnavailableMoveGroups && (error is IOException or UnauthorizedAccessException))
+                {
+                    // No copy can reach a destination before CopyPrepared is persisted.
+                    if (Directory.Exists(staging)) RecoveryWorkspaceCleanup.DeleteGroupingCopy(workspace, index);
+                    group.Results = WorkflowMoves.Skipped(group, error.Message);
+                    CompleteGroup();
+                    continue;
+                }
+                group.Items = verified;
                 group.CopyPrepared = true;
                 session.Save();
             }
@@ -68,10 +96,16 @@ internal static class TrackGroupingCopies
             }
             group.Results = group.Items.Select(m => new ConversionFileResult(m.Source, ConversionStatus.Succeeded,
                 [m.Target!], "Copied and verified.")).ToList();
-            session.Save();
-            completed += group.Items.Length;
-            progress?.Report(new(100, completed * 100 / found, found, completed,
-                $"Copied {completed} of {found} planned items.", clock.Elapsed.ToString(@"hh\:mm\:ss")) { ShowInActivity = false });
+            CompleteGroup();
+
+            void CompleteGroup()
+            {
+                session.Data.ActiveMoveGroup = null;
+                session.Save();
+                completed += group.Items.Length;
+                progress?.Report(new(100, completed * 100 / found, found, completed,
+                    $"Processed {completed} of {found} planned items.", clock.Elapsed.ToString(@"hh\:mm\:ss")) { ShowInActivity = false });
+            }
         }
         return new(groups.Where(g => g.Results != null).SelectMany(g => g.Results!).ToArray(), token.IsCancellationRequested)
             { Found = found, Elapsed = clock.Elapsed };
@@ -84,22 +118,14 @@ internal static class TrackGroupingCopies
             throw new IOException("Grouping copy changed or disappeared: " + path);
     }
 
-    private static void Copy(string source, string target, bool directory)
+    private static string CopyAndFingerprint(WorkflowMove move, string target, RecoveryVerificationMode mode, bool approved)
     {
-        RunSession.CheckPlainPath(source);
-        if (directory)
-        {
-            Directory.CreateDirectory(target);
-            foreach (string entry in Directory.EnumerateFileSystemEntries(source))
-                Copy(entry, Path.Combine(target, Path.GetFileName(entry)), Directory.Exists(entry));
-            return;
-        }
-        using (var input = File.OpenRead(source))
-        using (var output = new FileStream(target, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-        {
-            input.CopyTo(output);
-            output.Flush(true);
-        }
-        File.SetLastWriteTimeUtc(target, File.GetLastWriteTimeUtc(source));
+        if (!move.Directory) return FileStaging.CopyForGrouping(move.Source, target, mode);
+        return WorkflowSession.TreeHash(move.Source, mode,
+            visitDirectory: path => Directory.CreateDirectory(Destination(path)),
+            fingerprintFile: path => FileStaging.CopyForGrouping(path, Destination(path), mode),
+            checkEntry: approved ? WorkflowMoves.CheckApprovedEntry : null);
+
+        string Destination(string path) => Path.Combine(target, Path.GetRelativePath(move.Source, path));
     }
 }

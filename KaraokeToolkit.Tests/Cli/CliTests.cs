@@ -38,9 +38,23 @@ public class CliTests
 
         Assert.Equal(0, await cli.RunAsync(["settings", "set", "recovery.verification", "Sha256"], output, error));
         Assert.Equal("Sha256", profile.Get("recovery.verification", SettingsClient.Mcp).Value.ToString());
+        Assert.Equal(0, await cli.RunAsync(["settings", "set", "recovery.check-on-startup", "false"], output, error));
+        Assert.Equal(0, await cli.RunAsync(["settings", "set", "recovery.batch-resume", "false"], output, error));
+        Assert.Equal(0, await cli.RunAsync(["settings", "set", "recovery.check-timing", "BeforeItem"], output, error));
+        Assert.False(profile.Load().CheckForInterruptedRunsOnStartup);
         Assert.Equal(0, await cli.RunAsync(["run", "group-by-alphabet-files", root], output, error));
         Assert.Equal(RecoveryVerificationMode.Sha256, executor.Request!.RecoveryVerification);
-        Assert.Equal(0, await cli.RunAsync(["run", "group-by-alphabet-files", root, "--recovery-verification", "metadata"], output, error));
+        Assert.Equal(FileCheckTiming.BeforeItem, executor.Request.CheckTiming);
+        Assert.False(executor.Request.SaveResumableRun);
+        Assert.Equal(0, await cli.RunAsync(["run", "group-by-alphabet-files", root, "--recovery-verification", "metadata",
+            "--check-timing", "before-batch"], output, error));
+        Assert.Equal(RecoveryVerificationMode.MetadataOnly, executor.Request!.RecoveryVerification);
+        Assert.Equal(FileCheckTiming.BeforeBatch, executor.Request.CheckTiming);
+        Assert.Equal(0, await cli.RunAsync(["run", "zip-to-bin", root, "--batch-resume", "--check-timing", "before-batch"], output, error));
+        Assert.True(executor.Request!.SaveResumableRun);
+        Assert.Equal(FileCheckTiming.BeforeBatch, executor.Request.CheckTiming);
+        Assert.Equal(RecoveryVerificationMode.Sha256, executor.Request.RecoveryVerification);
+        Assert.Equal(0, await cli.RunAsync(["run", "zip-to-bin", root, "--recovery-verification", "metadata"], output, error));
         Assert.Equal(RecoveryVerificationMode.MetadataOnly, executor.Request!.RecoveryVerification);
         Assert.False(executor.Request.Options.DeleteOldFiles);
         Assert.Empty(error.ToString().Replace("[50%] Working", "").Trim());

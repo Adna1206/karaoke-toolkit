@@ -34,9 +34,9 @@ public sealed partial class PreviewProgress : ObservableObject
             {
                 if (!ReferenceEquals(current, preview))
                     return;
-                Percent = total > 0 ? 100.0 * completed / total : 0;
+                Percent = total > 0 ? Math.Clamp(100.0 * completed / total, 0, 100) : 0;
                 IsIndeterminate = total <= 0;
-                setStatus(total > 0 ? $"{stage} · {completed:N0} of {total:N0}" : stage + "…");
+                setStatus(total > 0 ? $"{stage} · {completed:N0} of {total:N0} · {(int)Percent}%" : stage + "…");
             });
         };
     }

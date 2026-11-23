@@ -30,7 +30,7 @@ public class SettingsApplyTests
         {
             Theme = (int)ApplicationTheme.Dark, Overwrite = (int)OverwritePolicy.Replace,
             ValidateBeforeConversion = true, IgnoreLeadingTheForFileOrganization = true,
-            RecoveryVerification = (int)RecoveryVerificationMode.Sha256
+            RecoveryVerification = (int)RecoveryVerificationMode.Sha256, CheckTiming = (int)FileCheckTiming.BeforeBatch
         };
         model.MarkApplied();
         model.ResetToDefaults();
@@ -39,6 +39,7 @@ public class SettingsApplyTests
         Assert.Equal((int)ApplicationTheme.System, model.Theme);
         Assert.Equal((int)OverwritePolicy.Ask, model.Overwrite);
         Assert.Equal((int)RecoveryVerificationMode.XxHash128, model.RecoveryVerification);
+        Assert.Equal((int)FileCheckTiming.BeforeItem, model.CheckTiming);
         Assert.False(model.ValidateBeforeConversion);
         Assert.False(model.IgnoreLeadingTheForFileOrganization);
         // A new window still receives the unchanged saved preferences if reset is cancelled.

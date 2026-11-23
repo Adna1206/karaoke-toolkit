@@ -22,9 +22,11 @@ public partial class SettingsViewModel : ViewModelBase
     private AudioBitratePreferences audioBitrates = new();
     private bool initializing;
     private sealed record Snapshot(ConversionOptions Options, int Overwrite, int Theme, bool Validate, bool IgnoreLeadingThe,
-        AudioBitratePreferences AudioBitrates, int Backdrop, bool RememberInputFolder, int RecoveryVerification, bool SaveResumableRun, bool CheckForUpdatesOnStartup);
+        AudioBitratePreferences AudioBitrates, int Backdrop, bool RememberInputFolder, int RecoveryVerification, bool SaveResumableRun,
+        bool CheckForUpdatesOnStartup, bool CheckForInterruptedRunsOnStartup, int CheckTiming);
     private Snapshot? applied;
-    private Snapshot Current => new(ToOptions(), Overwrite, Theme, ValidateBeforeConversion, IgnoreLeadingTheForFileOrganization, audioBitrates, Backdrop, RememberInputFolder, RecoveryVerification, SaveResumableRun, CheckForUpdatesOnStartup);
+    private Snapshot Current => new(ToOptions(), Overwrite, Theme, ValidateBeforeConversion, IgnoreLeadingTheForFileOrganization,
+        audioBitrates, Backdrop, RememberInputFolder, RecoveryVerification, SaveResumableRun, CheckForUpdatesOnStartup, CheckForInterruptedRunsOnStartup, CheckTiming);
     public bool HasChanges => applied != null && Current != applied;
 
     public void MarkApplied()
@@ -82,6 +84,8 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty] public partial int RecoveryVerification { get; set; } = (int)OperationCapabilities.DefaultFileMoveRecoveryVerification;
     [ObservableProperty] public partial bool SaveResumableRun { get; set; } = true;
     [ObservableProperty] public partial bool CheckForUpdatesOnStartup { get; set; }
+    [ObservableProperty] public partial bool CheckForInterruptedRunsOnStartup { get; set; } = true;
+    [ObservableProperty] public partial int CheckTiming { get; set; } = (int)OperationCapabilities.DefaultFileMoveCheckTiming;
     [ObservableProperty] public partial bool RememberInputFolder { get; set; }
     [ObservableProperty] public partial bool ExperimentalDiscRipping { get; set; }
     [ObservableProperty] public partial string CdrdaoExecutablePath { get; set; } = "";
@@ -228,6 +232,8 @@ public partial class SettingsViewModel : ViewModelBase
         IgnoreLeadingTheForFileOrganization = false;
         RecoveryVerification = (int)OperationCapabilities.DefaultFileMoveRecoveryVerification;
         SaveResumableRun = true;
+        CheckForInterruptedRunsOnStartup = true;
+        CheckTiming = (int)OperationCapabilities.DefaultFileMoveCheckTiming;
         CheckForUpdatesOnStartup = false;
         RememberInputFolder = false;
         Error = "";

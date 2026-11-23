@@ -34,6 +34,23 @@ public class KaraokeTaggingTests
         Assert.Equal(0u, KaraokeTaggingService.ReadTags(renamed).Track ?? 0);
     }
 
+    [Fact]
+    public async Task MissingApprovedTagSourceDoesNotPreventApplyingTheRest()
+    {
+        string missing = await CreateMedia(".wav");
+        string ready = await CreateMedia(".wav");
+        var service = new KaraokeTaggingService(new RecoveryStore(TestMediaFixture.NewFolder()));
+        var approved = await service.PreviewAsync([missing, ready], FilenameTagPattern.Default, false);
+        File.Delete(missing);
+
+        var result = await service.ApplyAsync(approved, new(), new());
+
+        Assert.Equal(1, result.Succeeded);
+        Assert.Equal(1, result.Failed);
+        Assert.Contains(result.Files, item => item.Source == missing && item.Message.Contains("missing", StringComparison.Ordinal));
+        Assert.Equal("Title", KaraokeTaggingService.ReadTags(ready).Title);
+    }
+
     internal static async Task<string> CreateMedia(string extension = ".mp3")
     {
         string folder = TestMediaFixture.NewFolder();

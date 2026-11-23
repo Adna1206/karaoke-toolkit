@@ -1,6 +1,6 @@
 using SharpCompress.Archives;
 using SharpCompress.Archives.Zip;
-using System.Security.Cryptography;
+using KaraokeToolkit.Core.Recovery;
 namespace KaraokeToolkit.Core.Archives;
 
 /// <summary>Reads a single karaoke pair without trusting archive paths or silently choosing among songs.</summary>
@@ -41,10 +41,10 @@ internal static class KaraokeArchive
         await using var target = new FileStream(output, FileMode.CreateNew, FileAccess.Write, FileShare.None, 65536, useAsync: true);
         await ReadEntryAsync(entry, target, token);
     }
-    internal static async Task ReadEntryAsync(IArchiveEntry entry, Stream target, CancellationToken token)
+    internal static async Task ReadEntryAsync(IArchiveEntry entry, Stream target, CancellationToken token, bool allowEmpty = false)
     {
         if (entry.IsEncrypted) throw new NotSupportedException("Encrypted ZIP members are not supported.");
-        if (entry.Size <= 0 || entry.Size > 4L * 1024 * 1024 * 1024)
+        if (entry.Size < 0 || (!allowEmpty && entry.Size == 0) || entry.Size > 4L * 1024 * 1024 * 1024)
             throw new InvalidDataException("Archive member is empty or exceeds the 4 GiB limit.");
         // Opening a member replaces SharpCompress's central-directory metadata with
         // its local header. Retain both so a corrupt central CRC cannot be hidden.
@@ -73,7 +73,8 @@ internal static class KaraokeArchive
         if (written != expectedSize)
             throw new InvalidDataException("Truncated archive member.");
     }
-    internal static async Task VerifyCreatedAsync(string zipPath, string audio, string graphics, CancellationToken token)
+    internal static async Task VerifyCreatedAsync(string zipPath, string audio, string graphics, CancellationToken token,
+        RecoveryVerificationMode verification = RecoveryVerificationMode.Sha256)
     {
         await using var zip = await ZipArchive.OpenAsyncArchive(zipPath, cancellationToken: token);
         var entries = await zip.EntriesAsync.ToArrayAsync(token);
@@ -83,17 +84,20 @@ internal static class KaraokeArchive
         {
             var entry = entries.SingleOrDefault(e => e.Key! == Path.GetFileName(input))
                 ?? throw new InvalidDataException("Output ZIP is missing " + Path.GetFileName(input));
-            await using var stream = await entry.OpenEntryStreamAsync(token);
-            if (Convert.ToHexString(await SHA256.HashDataAsync(stream, token)) != await HashFileAsync(input, token))
+            if (entry.IsDirectory || entry.Size != new FileInfo(input).Length)
                 throw new InvalidDataException("Output ZIP payload differs from its source.");
+            if (RecoveryFingerprint.IsContentVerified(verification))
+            {
+                await using var stream = await entry.OpenEntryStreamAsync(token);
+                if (await RecoveryFingerprint.HashStreamAsync(stream, verification, token) !=
+                    await RecoveryFingerprint.HashFileAsync(input, verification, token))
+                    throw new InvalidDataException("Output ZIP payload differs from its source.");
+            }
+            else
+                await ReadEntryAsync(entry, Stream.Null, token);
         }
     }
 
-    internal static async Task<string> HashFileAsync(string path, CancellationToken token)
-    {
-        await using var input = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 65536, useAsync: true);
-        return Convert.ToHexString(await SHA256.HashDataAsync(input, token));
-    }
 }
 
 

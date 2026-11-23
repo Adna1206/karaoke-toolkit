@@ -60,6 +60,16 @@ public partial class MainWindow : Window
             var preview = new TrackGroupingPreviewView(viewModel, ConfirmPreviewBackAsync);
             return ShowPreviewAsync(preview, preview.ReviewAsync, preview.CancelPreview);
         };
+        model.PickTrackGroupingDestinationAsync = async () =>
+        {
+            var folders = await ModalDialog.RunAsync(this, () => StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            {
+                Title = "Choose the grouping destination",
+                AllowMultiple = false
+            }));
+            using var folder = folders.FirstOrDefault();
+            return folder?.TryGetLocalPath();
+        };
         model.ConfigureAlphabeticalGroupingAsync = viewModel =>
         {
             var preview = new AlphabeticalGroupingPreviewView(viewModel, ConfirmPreviewBackAsync);
@@ -73,7 +83,7 @@ public partial class MainWindow : Window
         model.ResolveConflictAsync = (conflict, token) => OutputConflictDialog.ShowAsync(this, conflict, token);
         model.ResolveConflictsAsync = (conflicts, token) => OutputConflictReviewWindow.ShowAsync(this, conflicts, token);
         model.ConfirmRecoveryAsync = job => InterruptedRunDialog.ShowAsync(this, job);
-        await model.CheckForRecoveryAsync();
+        await model.CheckForRecoveryOnStartupAsync();
         // Recovery briefly disables editing; focus once the home list is ready.
         if (!model.ShowProgress)
         {
@@ -255,7 +265,8 @@ public partial class MainWindow : Window
         if (DataContext is MainViewModel { IsBusy: false } model && model.RefreshSharedSettings())
         {
             var dialog = new SettingsWindow(model.Options, model.OverwritePolicy, model.Theme, model.ValidateBeforeConversion,
-                model.IgnoreLeadingTheForFileOrganization, model.AudioBitrates, model.SaveOptions, model.Backdrop, model.RememberInputFolder, model.RecoveryVerification, model.SaveResumableRun, model.CheckForUpdatesOnStartup);
+                model.IgnoreLeadingTheForFileOrganization, model.AudioBitrates, model.SaveOptions, model.Backdrop, model.RememberInputFolder,
+                model.RecoveryVerification, model.SaveResumableRun, model.CheckForUpdatesOnStartup, model.CheckForInterruptedRunsOnStartup, model.CheckTiming);
             dialog.RestorePresentation(this, model.OptionsWindowSize, model.OptionsTabIndex);
             await ModalDialog.ShowAsync(dialog, this);
             model.RememberOptionsWindow(dialog.LastNormalSize, dialog.CurrentTabIndex);

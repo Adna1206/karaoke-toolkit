@@ -17,7 +17,6 @@ internal static class RecoveryWorkspaceCleanup
     internal static void Delete(string workspace, string journalName = "recovery.json")
     {
         workspace = Path.GetFullPath(workspace);
-        string name = Path.GetFileName(workspace);
         string prefix = journalName switch
         {
             "recovery.json" => ".karaoke-job-",
@@ -25,31 +24,50 @@ internal static class RecoveryWorkspaceCleanup
             "workflow.json" => ".karaoke-job-workflow-",
             _ => throw new ArgumentException("Unknown recovery journal.", nameof(journalName))
         };
+        RequireWorkspace(workspace, prefix);
+        DeleteResolved(workspace, Path.Combine(workspace, journalName));
+    }
+
+    // An unfinished grouping copy can have disposable staging below the live
+    // workflow. Keep the owning workflow and its recovery record in place.
+    internal static void DeleteGroupingCopy(string workflowWorkspace, int groupIndex)
+    {
+        workflowWorkspace = Path.GetFullPath(workflowWorkspace);
+        RequireWorkspace(workflowWorkspace, ".karaoke-job-workflow-");
+        DeleteResolved(Path.Combine(workflowWorkspace, "copy-" + groupIndex), journal: null);
+    }
+
+    private static void RequireWorkspace(string workspace, string prefix)
+    {
+        string name = Path.GetFileName(workspace);
         if (!name.StartsWith(prefix, StringComparison.Ordinal) || !Guid.TryParseExact(name[prefix.Length..], "N", out _))
             throw new IOException("Refusing to clean an unrecognized recovery workspace: " + workspace);
+    }
+
+    private static void DeleteResolved(string workspace, string? journal)
+    {
         if (!Directory.Exists(workspace)) return;
 
-        string journal = Path.Combine(workspace, journalName);
         byte[]? savedJournal = null;
         try
         {
             var files = new List<string>();
             var directories = new List<string>();
             Inspect(workspace, files, directories); // Refuse links before changing any attributes.
-            if (File.Exists(journal)) savedJournal = File.ReadAllBytes(journal);
+            if (journal != null && File.Exists(journal)) savedJournal = File.ReadAllBytes(journal);
             foreach (string directory in directories) Retry(() => MakeWritable(directory));
             foreach (string file in files.Where(path => !InputSelection.Paths.Equals(path, journal)))
                 Retry(() => DeleteFile(file));
             foreach (string directory in directories.AsEnumerable().Reverse().Where(path => !InputSelection.Paths.Equals(path, workspace)))
                 Retry(() => { CheckPath(directory); Directory.Delete(directory); });
-            Retry(() => DeleteFile(journal));
+            if (journal != null) Retry(() => DeleteFile(journal));
             Retry(() => { CheckPath(workspace); Directory.Delete(workspace); });
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {
             // If removing the final empty directory failed, put its journal back.
             // Never overwrite a journal another actor created in the meantime.
-            if (savedJournal != null && Directory.Exists(workspace) && !File.Exists(journal))
+            if (journal != null && savedJournal != null && Directory.Exists(workspace) && !File.Exists(journal))
             {
                 try
                 {

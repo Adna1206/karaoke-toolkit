@@ -27,18 +27,17 @@ public partial class MainViewModel
             var submission = await ConfigureFilenameRenameAsync(model);
             if (submission == null) return;
 
-            run = BeginRun(title, "Checking rename plan…", isIndeterminate: true);
+            run = BeginRun(title, "Preparing recovery for renames…", isIndeterminate: true);
             var result = await new FilenameRenameService(recovery).ApplyAsync(submission.Request, submission.Plan,
-                RecoveryVerification, SaveResumableRun, run.Progress, run.Token);
+                RecoveryVerification, SaveResumableRun, run.Progress, run.Token, CheckTiming);
             run.StopProgress();
             LastReport = CompletionReport.FromConversion(title, result) with { ReportType = "Filename Rename Report" };
             FoundFiles = result.Found;
-            Elapsed = result.Elapsed.ToString(@"hh\:mm\:ss");
             Status = $"{(result.Cancelled ? "Rename cancelled" : "Rename finished")} · {result.Succeeded} renamed · {result.Skipped} skipped · {result.Failed} failed";
             StatusOutcome = RunStatusSummary.From(result);
             if (!result.Cancelled) Progress = TotalProgress = 100;
             AppendActivityIssues(result.Files);
-            Activity.Add(new(Elapsed, Status));
+            AddActivity(Status);
         }
         catch (OperationCanceledException)
         {

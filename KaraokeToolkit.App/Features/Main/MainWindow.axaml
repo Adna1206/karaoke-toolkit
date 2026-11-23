@@ -110,7 +110,7 @@
                    Width="{x:Static shared:WindowSpacing.StatusProgressWidth}" VerticalAlignment="Center"
                    AutomationProperties.Name="Preparation progress"/>
      </Grid>
-     <Button Grid.Column="1" Content="Recover…" Command="{Binding CheckRecoveryCommand}" IsVisible="{Binding RecoveryAvailable}"
+     <Button Grid.Column="1" Content="Recover…" Command="{Binding CheckRecoveryCommand}" IsVisible="{Binding ShowRecoverButton}"
              IsEnabled="{Binding CanEdit}" ToolTip.Tip="{Binding RecoveryMessage}"/>
      <Button Grid.Column="2" Content="View Last Run Report…" Click="Results_Click" IsEnabled="{Binding CanViewReport}"/>
      <Button Grid.Column="3" Content="Back" Click="Back_Click" IsVisible="{Binding ShowProgress, FallbackValue=False}"/>

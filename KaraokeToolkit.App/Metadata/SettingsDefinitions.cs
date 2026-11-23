@@ -12,6 +12,11 @@ public sealed class SettingsDefinitions
 {
     public static SettingsDefinitions Instance { get; } = new();
     private SettingsDefinitions() { }
+    public ChoiceSettingDefinition<string> FileCheckTiming { get; } = new(
+        "recovery.check-timing", "When to start checking for file changes",
+        "With content verification, checking before the batch is more robust and catches edits while files wait. Checking each item is faster to start.",
+        "Applies to standalone media conversions, file moves, renames, and grouping copies. Both options verify outputs before finishing.",
+        SettingCategory.Recovery, Array.AsReadOnly<string>(["Before the batch starts", "When each item starts (default)"]));
     public ChoiceSettingDefinition<string> Theme { get; } = new(
         "Theme", "Colour theme", "Colour theme",
         "System Default follows your operating system's light or dark theme.",

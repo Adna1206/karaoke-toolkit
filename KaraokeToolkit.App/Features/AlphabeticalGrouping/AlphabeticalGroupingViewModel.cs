@@ -25,6 +25,7 @@ public sealed partial class AlphabeticalGroupingViewModel(IReadOnlyList<string> 
     AlphabeticalOrganizer organizer) : ViewModelBase
 {
     private readonly bool initialIgnoreLeadingThe = ignoreLeadingThe;
+    private AlphabeticalOrganizer.PreviewSnapshot? snapshot;
     private AlphabeticalGroupingSubmission? preview;
 
     public PreviewProgress PreviewProgress { get; } = new();
@@ -50,16 +51,14 @@ public sealed partial class AlphabeticalGroupingViewModel(IReadOnlyList<string> 
     public bool CanApply => !IsBusy && preview != null && Moves.Count > 0;
     internal bool HasEdits => !OrganizeFiles || IgnoreLeadingThe != initialIgnoreLeadingThe;
 
-    partial void OnScopeIndexChanged(int value) => InvalidatePreview();
-    partial void OnIgnoreLeadingTheChanged(bool value) => InvalidatePreview();
+    partial void OnScopeIndexChanged(int value) => UpdatePreview();
+    partial void OnIgnoreLeadingTheChanged(bool value) => UpdatePreview();
 
     private void InvalidatePreview()
     {
         preview = null;
         Moves = [];
         Issues = [];
-        Status = "Refresh to review the destination paths.";
-        StatusSeverity = StatusKind.Info;
     }
 
     [RelayCommand]
@@ -67,22 +66,15 @@ public sealed partial class AlphabeticalGroupingViewModel(IReadOnlyList<string> 
     {
         if (IsBusy) return;
         IsBusy = true;
+        snapshot = null;
         InvalidatePreview();
         Status = "Finding items to group…";
+        StatusSeverity = StatusKind.Info;
         PreviewProgress.Begin(status => Status = status);
         try
         {
-            var scope = (AlphabeticalOrganizeScope)ScopeIndex;
-            bool ignoreArticle = IgnoreLeadingThe;
-            var plan = await organizer.PreviewAsync(inputs, scope, token, ignoreArticle);
-            if (scope != (AlphabeticalOrganizeScope)ScopeIndex || ignoreArticle != IgnoreLeadingThe) return;
-            preview = new(scope, ignoreArticle, plan);
-            Moves = plan.Files.Where(file => file.Status == ConversionStatus.Succeeded)
-                .Select(file => new AlphabeticalPreviewRow(file)).ToArray();
-            Issues = plan.Files.Where(file => file.Status != ConversionStatus.Succeeded)
-                .Select(file => new AlphabeticalPreviewRow(file)).ToArray();
-            Status = $"{Moves.Count} ready · {Issues.Count} skipped";
-            StatusSeverity = Moves.Count == 0 || HasIssues ? StatusKind.Warning : StatusKind.Success;
+            snapshot = await organizer.ReadPreviewAsync(inputs, token);
+            UpdatePreview();
         }
         catch (OperationCanceledException)
         {
@@ -97,6 +89,30 @@ public sealed partial class AlphabeticalGroupingViewModel(IReadOnlyList<string> 
         {
             PreviewProgress.Finish();
             IsBusy = false;
+        }
+    }
+
+    private void UpdatePreview()
+    {
+        if (snapshot == null) return;
+        InvalidatePreview();
+        try
+        {
+            var scope = (AlphabeticalOrganizeScope)ScopeIndex;
+            bool ignoreArticle = IgnoreLeadingThe;
+            var plan = snapshot.Plan(scope, ignoreArticle);
+            preview = new(scope, ignoreArticle, plan);
+            Moves = plan.Files.Where(file => file.Status == ConversionStatus.Succeeded)
+                .Select(file => new AlphabeticalPreviewRow(file)).ToArray();
+            Issues = plan.Files.Where(file => file.Status != ConversionStatus.Succeeded)
+                .Select(file => new AlphabeticalPreviewRow(file)).ToArray();
+            Status = $"{Moves.Count} ready · {Issues.Count} skipped";
+            StatusSeverity = Moves.Count == 0 || HasIssues ? StatusKind.Warning : StatusKind.Success;
+        }
+        catch (IOException error)
+        {
+            Status = error.Message;
+            StatusSeverity = StatusKind.Failure;
         }
     }
 

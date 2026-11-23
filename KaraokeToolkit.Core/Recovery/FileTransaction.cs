@@ -1,6 +1,5 @@
 using KaraokeToolkit.Core.DiscRipping;
 using KaraokeToolkit.Core.Conversion;
-using System.Security.Cryptography;
 using System.Text.Json;
 namespace KaraokeToolkit.Core.Recovery;
 
@@ -21,11 +20,11 @@ internal sealed class FileTransaction : IDisposable
     {
         get;
     }
-    private readonly string verificationMode;
-    internal FileTransaction(string folder, string verificationMode = RecoveryFingerprint.Sha256)
+    internal RecoveryVerificationMode VerificationMode { get; }
+    internal FileTransaction(string folder, RecoveryVerificationMode verificationMode = RecoveryVerificationMode.Sha256)
     {
-        _ = RecoveryFingerprint.HexLength(verificationMode);
-        this.verificationMode = verificationMode;
+        if (!Enum.IsDefined(verificationMode)) throw new ArgumentOutOfRangeException(nameof(verificationMode));
+        VerificationMode = verificationMode;
         this.folder = Path.GetFullPath(folder);
         RunSession.CheckPlainPath(this.folder);
         folderLease = AcquireLease(this.folder);
@@ -46,29 +45,23 @@ internal sealed class FileTransaction : IDisposable
         string lockDirectory = Path.Combine(Path.GetTempPath(), "KaraokeToolkitLocks");
         Directory.CreateDirectory(lockDirectory);
         string key = OperatingSystem.IsWindows() ? Path.GetFullPath(folder).ToUpperInvariant() : Path.GetFullPath(folder);
-        string lockName = Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(key))) + ".lock";
+        string lockName = RecoveryFingerprint.HashBytes(System.Text.Encoding.UTF8.GetBytes(key)) + ".lock";
         return new FileStream(Path.Combine(lockDirectory, lockName), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
     }
-    private string Fingerprint(string path) => RecoveryFingerprint.Hash(path, verificationMode);
-
-    internal static string Hash(string path)
-    {
-        using var file = File.OpenRead(path);
-        return Convert.ToHexString(SHA256.HashData(file));
-    }
+    internal string Fingerprint(string path) => RecoveryFingerprint.Hash(path, VerificationMode);
+    internal static string Hash(string path) => RecoveryFingerprint.Hash(path);
     /// <summary>Copies an input into staging and records its verified hash for publication checks.</summary>
     /// <returns>The staged path; the original remains unchanged.</returns>
-    internal async Task<string> CopyInputAsync(string path, CancellationToken token)
+    internal async Task<string> CopyInputAsync(string path, CancellationToken token, string? expectedFingerprint = null)
     {
         if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
             throw new IOException("Symbolic-link inputs are not supported: " + path);
         string destination = Path.Combine(Workspace, Path.GetFileName(path));
-        await using (var input = File.OpenRead(path))
-        await using (var output = new FileStream(destination, FileMode.CreateNew, FileAccess.Write))
-            await input.CopyToAsync(output, token);
-        string hash = Fingerprint(destination);
-        if (hash != Fingerprint(path))
-            throw new IOException("Input changed while being copied: " + path);
+        string hash = await FileStaging.CopyInputAsync(path, destination, VerificationMode, token);
+        if (expectedFingerprint != null && hash != expectedFingerprint)
+            throw new IOException("Conversion input changed since the batch started: " + path);
+        if (!File.Exists(destination) || hash != await RecoveryFingerprint.HashFileAsync(destination, VerificationMode, token))
+            throw new IOException("Staged input failed verification: " + path);
         fingerprints.Add(path, hash);
         return destination;
     }
@@ -133,7 +126,7 @@ internal sealed class FileTransaction : IDisposable
         var oldFiles = targets.Concat(removeSources).Distinct(StringComparer.OrdinalIgnoreCase).Where(File.Exists).ToArray();
         var journal = new TransactionJournal
         {
-            VerificationMode = verificationMode,
+            VerificationMode = VerificationMode.ToString(),
             Outputs = outputs.Select(p => new RecoveryOutput(Path.GetFileName(p), Fingerprint(p))).ToArray(),
             Backups = oldFiles.Select((p, i) => new RecoveryBackup(Path.GetFileName(p), i.ToString(), Fingerprint(p))).ToArray()
         };
@@ -149,7 +142,7 @@ internal sealed class FileTransaction : IDisposable
             for (int i = 0; i < outputs.Count; i++)
             {
                 File.Move(outputs[i], targets[i]);
-                if (Fingerprint(targets[i]) != journal.Outputs[i].Hash)
+                if (!File.Exists(targets[i]) || Fingerprint(targets[i]) != journal.Outputs[i].Hash)
                     throw new IOException("Published output failed verification: " + targets[i]);
             }
             journal.Phase = "Committed";
@@ -167,6 +160,11 @@ internal sealed class FileTransaction : IDisposable
             {
                 retain = true;
                 throw;
+            }
+            if (!RecoveryFingerprint.IsContentVerified(VerificationMode))
+            {
+                retain = true;
+                throw new IOException("Publication was interrupted without content fingerprints. Manual recovery is required: " + Workspace, original);
             }
             try
             {

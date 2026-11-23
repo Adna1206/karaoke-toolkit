@@ -34,6 +34,8 @@ public sealed class McpTools(McpOperationsService service, McpAccessPolicy polic
         AudioBitrates = new[] { 64, 96, 128, 160, 192, 224, 256, 320 },
         OverwritePolicies = new[] { "Fail", "Skip", "Replace" },
         RecoveryVerificationModes = Enum.GetNames<KaraokeToolkit.Core.Recovery.RecoveryVerificationMode>(),
+        FileCheckTimings = Enum.GetNames<KaraokeToolkit.Core.Recovery.FileCheckTiming>(),
+        OperationCapabilities.DefaultFileMoveCheckTiming,
         OperationCapabilities.DefaultFileMoveRecoveryVerification,
         TrackGroupingMasks = new[] { "x", "X", "#", "s" },
         Notes = "Use the name from get_operations as operationId. Paths are local absolute paths. Originals are kept by default. Media conversions with OutputFolder keep originals. group-by-track-id requires OutputFolder and accepts Grouping settings. Recipes use Core IDs and saved per-step settings. Ask is unsupported. Read-only mode is not an OS filesystem sandbox."
@@ -104,7 +106,7 @@ public sealed class McpTools(McpOperationsService service, McpAccessPolicy polic
     public object ListRecovery(string[]? folders = null) => service.ListRecovery(folders ?? []);
 
     [McpServerTool(Name = "recover", ReadOnly = false, Destructive = true, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Resume an available journal returned by list_recovery, using saved settings and recipe snapshots. Requires startup --allow-writes and user-authorized confirmFileChanges=true. Changed files or damaged journals remain protected.")]
+    [Description("Recover a journal returned by list_recovery. The saved ContinueBatchAfterRecovery value indicates whether recovery also processes remaining items. Requires startup --allow-writes and user-authorized confirmFileChanges=true. Changed files or damaged journals remain protected.")]
     public Task<ExecutionResult> Recover(string journal, IProgress<ProgressNotificationValue> progress, CancellationToken cancellationToken, bool confirmFileChanges = false)
         => service.ResumeAsync(journal, confirmFileChanges, progress, cancellationToken);
 }

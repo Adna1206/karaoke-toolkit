@@ -33,9 +33,15 @@ public sealed partial class OperationExecutionService(RecoveryStore? recovery = 
     {
         if (request.OperationId == Action.GroupByTrackId)
             return await ExecuteGroupingAsync(request, null, progress, token);
-        if ((request.RecoveryVerification != RecoveryVerificationMode.Sha256 || !request.SaveResumableRun) &&
-            !OperationCapabilities.SupportsFileMoveRecoveryOptions(request.OperationId))
+        if (!Enum.IsDefined(request.CheckTiming))
+            throw new ArgumentException("Unknown file check timing.");
+        if (request.RecoveryVerification != RecoveryVerificationMode.Sha256 &&
+            !OperationCapabilities.SupportsFileCheckTiming(request.OperationId))
             throw new ArgumentException("This operation does not support a recovery verification override.");
+        if (request.CheckTiming != FileCheckTiming.BeforeBatch && !OperationCapabilities.SupportsFileCheckTiming(request.OperationId))
+            throw new ArgumentException("This operation does not support a file check timing override.");
+        if (!request.SaveResumableRun && !OperationCapabilities.SupportsBatchContinuation(request.OperationId))
+            throw new ArgumentException("This operation does not support a batch continuation override.");
         var operation = OperationCatalog.Get(request.OperationId);
         if (!operation.CanRunUnattended) throw new NotSupportedException("This operation has no unattended execution contract: " + operation.Identifier);
         if (request.OverwritePolicy == OverwritePolicy.Ask || !Enum.IsDefined(request.OverwritePolicy))
@@ -82,22 +88,27 @@ public sealed partial class OperationExecutionService(RecoveryStore? recovery = 
         ConversionResult result;
         if (operation.IsConversion)
             result = await new SelectionConversionService(recovery).RunAsync(new(operation.Id, inputs, request.Options, request.OverwritePolicy)
-                { ValidateBeforeConversion = request.ValidateBeforeConversion, OutputFolder = request.OutputFolder }, progress, token);
+                { ValidateBeforeConversion = request.ValidateBeforeConversion, OutputFolder = request.OutputFolder,
+                    ContinueBatchAfterRecovery = request.SaveResumableRun, CheckTiming = request.CheckTiming,
+                    RecoveryVerification = request.RecoveryVerification }, progress, token);
         else if (operation.Id == Action.TagKaraoke)
         {
             var service = new KaraokeTaggingService(recovery);
             var preview = await service.PreviewAsync(inputs, request.TaggingPattern, request.Options.RecurseFolders, token);
-            var applied = await service.ApplyAsync(preview.Where(p => p.CanApply).ToArray(), request.Tagging, request.Options, progress, token);
+            var applied = await service.ApplyAsync(preview.Where(p => p.CanApply).ToArray(), request.Tagging, request.Options, progress, token,
+                continueBatchAfterRecovery: request.SaveResumableRun);
             var rejected = preview.Where(p => !p.CanApply).Select(p => new ConversionFileResult(p.Path,
                 Path.GetExtension(p.Path).ToLowerInvariant() is ".bin" or ".cdg" ? ConversionStatus.Skipped : ConversionStatus.Failed, [], p.Error ?? "Cannot tag this input."));
             result = applied with { Files = applied.Files.Concat(rejected).ToArray(), Found = preview.Count };
         }
         else if (operation.Id is Action.OrganizeFiles or Action.OrganizeFolders)
-            result = await new AlphabeticalOrganizer().RunAsync(inputs,
-                operation.Id == Action.OrganizeFiles ? AlphabeticalOrganizeScope.Files : AlphabeticalOrganizeScope.Folders, progress, token, request.IgnoreLeadingThe, request.RecoveryVerification, request.SaveResumableRun);
+            result = await new AlphabeticalOrganizer(recovery).RunAsync(inputs,
+                operation.Id == Action.OrganizeFiles ? AlphabeticalOrganizeScope.Files : AlphabeticalOrganizeScope.Folders, progress, token,
+                request.IgnoreLeadingThe, request.RecoveryVerification, request.SaveResumableRun, request.CheckTiming);
         else if (operation.Id is Action.FlattenOneLayer or Action.FlattenAllLayers)
-            result = await new FlattenFolderLayer().RunAsync(inputs, progress, token,
-                operation.Id == Action.FlattenAllLayers ? FolderFlattenScope.AllLayers : FolderFlattenScope.OneLayer, request.RecoveryVerification, request.SaveResumableRun);
+            result = await new FlattenFolderLayer(recovery).RunAsync(inputs, progress, token,
+                operation.Id == Action.FlattenAllLayers ? FolderFlattenScope.AllLayers : FolderFlattenScope.OneLayer,
+                request.RecoveryVerification, request.SaveResumableRun, request.CheckTiming);
         else if (operation.Id == Action.RestoreQuarantined)
         {
             var restored = new List<ConversionFileResult>();

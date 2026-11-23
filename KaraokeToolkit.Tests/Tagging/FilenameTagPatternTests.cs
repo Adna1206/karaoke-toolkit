@@ -13,6 +13,11 @@ public class FilenameTagPatternTests
             new FilenameTagPattern(preset).Parse("KV-1234567 - The Lanterns - Open Road"));
 
     [Fact]
+    public void WholeIdentifierPresetPreservesTrackIdSuffixInAlbum()
+        => Assert.Equal(new KaraokeTags("ABC-369A", null, "Artist (WVocal)", "Title (Ext Ver)"),
+            new FilenameTagPattern(KaraokeFilenamePattern.DiscIdArtistTitle).Parse("ABC-369A - Artist (WVocal) - Title (Ext Ver)"));
+
+    [Fact]
     public void DefaultMapsAlphanumericDiscToAlbumAndNumericTrack()
         => Assert.Equal(new KaraokeTags("SF123", 4, "The Beatles", "Help!"), new FilenameTagPattern(FilenameTagPattern.Default).Parse("SF123-04 - The Beatles - Help!"));
 
@@ -41,6 +46,7 @@ public class FilenameTagPatternTests
 
     [Theory]
     [InlineData("SF123-X - Artist - Title")]
+    [InlineData("ABC-369A - Artist - Title")]
     [InlineData("SF123--1 - Artist - Title")]
     [InlineData("SF123-999999999999 - Artist - Title")]
     [InlineData("Artist - Title")]

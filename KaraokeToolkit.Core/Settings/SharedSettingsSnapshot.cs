@@ -14,11 +14,13 @@ public sealed record SharedSettingsSnapshot(
     bool IgnoreLeadingThe,
     string TaggingPattern,
     RecoveryVerificationMode RecoveryVerification,
-    bool SaveResumableRun)
+    bool SaveResumableRun,
+    bool CheckForInterruptedRunsOnStartup = true,
+    FileCheckTiming CheckTiming = OperationCapabilities.DefaultFileMoveCheckTiming)
 {
     public OperationRequest ForUnattendedOperation(OperationId id, IReadOnlyList<string> inputs)
     {
-        bool supportsRecoveryOptions = OperationCapabilities.SupportsFileMoveRecoveryOptions(id);
+        bool supportsRecoveryOptions = OperationCapabilities.SupportsFileCheckTiming(id);
         return new(id, inputs)
         {
             Options = Options with { DeleteOldFiles = false },
@@ -27,7 +29,8 @@ public sealed record SharedSettingsSnapshot(
             IgnoreLeadingThe = id == OperationId.OrganizeFiles && IgnoreLeadingThe,
             TaggingPattern = TaggingPattern,
             RecoveryVerification = supportsRecoveryOptions ? RecoveryVerification : RecoveryVerificationMode.Sha256,
-            SaveResumableRun = !supportsRecoveryOptions || SaveResumableRun
+            CheckTiming = supportsRecoveryOptions ? CheckTiming : FileCheckTiming.BeforeBatch,
+            SaveResumableRun = !OperationCapabilities.SupportsBatchContinuation(id) || SaveResumableRun
         };
     }
 

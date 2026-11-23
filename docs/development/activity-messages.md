@@ -11,7 +11,7 @@ folder when possible, using forward slashes.
 | Create a CUE or TXT listing | `Writing Cue File: <path>` or `Writing Text File: <path>` |
 | Skip an item | `Skipped: <path> — <reason>` |
 | Fail an item | `Failed: <path> — <reason>` |
-| Grouping plan check | `Checking grouping plan…` |
+| Build a grouping plan for an unattended run | `Checking grouping plan…` |
 | Prepare hashes and recovery | `Preparing recovery for grouped items…` or `Preparing recovery for file moves…` |
 | Recipe activity | Prefix the same message with the step number and name |
 | Finish, cancel or stop a run | Show one operation summary with totals or the reason it stopped |
@@ -19,3 +19,6 @@ folder when possible, using forward slashes.
 Use `ShowInActivity = false` for progress-only percentages and repeated batch
 counts. Routine successes go in the totals and report. Use fictional catalogue
 prefixes in examples, such as `Processing: Disc 1/ABC-12345.zip`.
+
+The elapsed time below the activity table updates once a second during a run.
+Each activity row keeps the elapsed time when the desktop records the event.

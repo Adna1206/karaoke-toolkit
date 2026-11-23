@@ -21,12 +21,13 @@ internal static class RecoveryCrashWorker
             string mode = args[1], root = args[2];
             var store = new RecoveryStore(args[3]);
             var pause = new PauseWorkflow(root, mode);
-            if (mode == "tagging")
+            if (mode is "tagging" or "tagging-item-only")
             {
                 var service = new KaraokeTaggingService(store);
                 var preview = await service.PreviewAsync([root], FilenameTagPattern.Default, false);
                 preview = preview.Where(p => p.CanApply).Select(p => p with { Tags = p.Tags! with { Title = "Saved preview title" } }).ToArray();
-                await service.ApplyAsync(preview, new(ClearComments: false), new(), pause);
+                await service.ApplyAsync(preview, new(ClearComments: false), new(), pause,
+                    continueBatchAfterRecovery: mode == "tagging");
             }
             else
             {
@@ -93,7 +94,7 @@ internal static class RecoveryCrashWorker
         {
             bool ready = mode switch
             {
-                "tagging" => value.Completed == 1 && value.ActivityLabel == "Processing",
+                "tagging" or "tagging-item-only" => value.Completed == 1 && value.ActivityLabel == "Processing",
                 "recipe-tagging" => value.Completed == 1 && value.ActivityLabel?.EndsWith("Processing", StringComparison.Ordinal) == true,
                 "between" => value.Message == "Completed step 1/2.",
                 "moving" => value.Message.Contains("planned items.", StringComparison.Ordinal),

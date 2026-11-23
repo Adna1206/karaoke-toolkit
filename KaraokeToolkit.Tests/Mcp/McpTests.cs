@@ -36,19 +36,31 @@ public class McpTests
         Assert.Throws<McpException>(() => tools.SetSetting("files.recurse", JsonSerializer.SerializeToElement("false"), true));
         tools.SetSetting("recovery.verification", sha, true);
         tools.SetSetting("files.recurse", JsonSerializer.SerializeToElement(false), true);
+        tools.SetSetting("recovery.check-on-startup", JsonSerializer.SerializeToElement(false), true);
+        tools.SetSetting("recovery.batch-resume", JsonSerializer.SerializeToElement(false), true);
+        tools.SetSetting("recovery.check-timing", JsonSerializer.SerializeToElement("BeforeItem"), true);
+        Assert.False((bool)readOnly.GetSetting("recovery.check-on-startup").Value);
 
         var sink = new ProgressSink();
         await tools.RunOperation(JsonSerializer.Deserialize<McpOperationRequest>(
             """{"operationId":"group-by-alphabet-files","inputs":["input"]}""", Program.JsonOptions)!, sink, default, true);
         var inherited = executor.LastRequest!;
         await tools.RunOperation(JsonSerializer.Deserialize<McpOperationRequest>(
-            """{"operationId":"group-by-alphabet-files","inputs":["input"],"recoveryVerification":"XxHash128","options":{"RecurseFolders":true}}""", Program.JsonOptions)!, sink, default, true);
+            """{"operationId":"group-by-alphabet-files","inputs":["input"],"recoveryVerification":"XxHash128","checkTiming":"BeforeBatch","options":{"RecurseFolders":true}}""", Program.JsonOptions)!, sink, default, true);
         var overridden = executor.LastRequest!;
         Assert.Equal(RecoveryVerificationMode.Sha256, inherited.RecoveryVerification);
+        Assert.Equal(FileCheckTiming.BeforeItem, inherited.CheckTiming);
+        Assert.Equal(FileCheckTiming.BeforeBatch, overridden.CheckTiming);
+        Assert.False(inherited.SaveResumableRun);
         Assert.False(inherited.Options.RecurseFolders);
         Assert.Equal(RecoveryVerificationMode.XxHash128, overridden.RecoveryVerification);
         Assert.True(overridden.Options.RecurseFolders);
         Assert.False(overridden.Options.DeleteOldFiles);
+        tools.SetSetting("recovery.check-timing", JsonSerializer.SerializeToElement("BeforeBatch"), true);
+        await tools.RunOperation(JsonSerializer.Deserialize<McpOperationRequest>(
+            """{"operationId":"zip-to-bin","inputs":["input"]}""", Program.JsonOptions)!, sink, default, true);
+        Assert.Equal(FileCheckTiming.BeforeBatch, executor.LastRequest!.CheckTiming);
+        Assert.Equal(RecoveryVerificationMode.Sha256, executor.LastRequest.RecoveryVerification);
     }
 
     private sealed class FakeExecutor : IOperationExecutor

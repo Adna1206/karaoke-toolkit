@@ -18,11 +18,15 @@ match folders; the app and test tools import those namespaces explicitly.
 | Tagging | Mapping filename fields to media tags, tag previews, staged metadata writes and packet-payload verification |
 | FileOperations | Alphabetical grouping, flattening, pattern-based renaming, filename cleanup, CUE/TXT, quarantine and restoration |
 | Validation | Read-only integrity checks and findings |
-| Recovery | Conversion, recipe, tagging and file move checkpoints, saved plans and transactional file publication |
+| Recovery | Conversion, recipe, tagging and file move checkpoints, saved plans, transactional publication and shared fingerprinting |
 | Reporting | Run reports and shared report headers |
 | Recipes | Saved workflows, step settings, chaining constraints and execution adapters |
 | Settings | Processing preferences and atomic XML settings persistence |
 | DiscRipping | cdrdao discovery, disc capture, track extraction and ripping workflow |
+
+Conversion transactions and track grouping copies share `FileStaging` for
+copying and fingerprinting the same stream. Each workflow owns its publication
+checks and recovery checkpoints.
 
 ApplicationInfo and AssemblyInfo remain at the root. Related small result and enum
 types stay with their feature. OutputConflict and ConflictDecision belong to

@@ -110,7 +110,8 @@ internal static class SettingsXml
             Read(root, "files.validate-before-conversion", false), Read(root, "files.ignore-leading-the", false),
             Read(root, "tags.filename-pattern", FilenameTagPattern.Default),
             Read(root, "recovery.verification", OperationCapabilities.DefaultFileMoveRecoveryVerification),
-            Read(root, "recovery.batch-resume", true));
+            Read(root, "recovery.batch-resume", true), Read(root, "recovery.check-on-startup", true),
+            Read(root, "recovery.check-timing", OperationCapabilities.DefaultFileMoveCheckTiming));
 
         int SupportedBitrate(AudioEncoder codec)
         {

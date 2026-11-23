@@ -6,13 +6,16 @@ namespace KaraokeToolkit.Tests.Recovery;
 public class FileTransactionTests
 {
 
-    [Fact]
-    public async Task ChangedSourceIsNotDeleted()
+    [Theory]
+    [InlineData(RecoveryVerificationMode.Sha256)]
+    [InlineData(RecoveryVerificationMode.XxHash128)]
+    [InlineData(RecoveryVerificationMode.MetadataOnly)]
+    public async Task ChangedSourceIsNotDeleted(RecoveryVerificationMode mode)
     {
         string folder = TestMediaFixture.NewFolder();
         string source = Path.Combine(folder, "input");
         File.WriteAllText(source, "first");
-        using var transaction = new FileTransaction(folder);
+        using var transaction = new FileTransaction(folder, mode);
         await transaction.CopyInputAsync(source, default);
         string stagedOutput = Path.Combine(transaction.Workspace, "output");
         File.WriteAllText(stagedOutput, "result");

@@ -7,6 +7,14 @@
   For a partially successful batch, reverse only completed changes. Defer
   redo, longer history, and undo for conversions, tagging, and whole recipes.
 
+- [ ] **Investigate file grouping and move startup time** — compare full-batch
+  fingerprinting with fingerprinting and checkpointing each group just before
+  moving or copying it. Measure time to the first item and total runtime for
+  track grouping, alphabetical grouping, flattening, and pattern-based renaming.
+  Keep batch-wide path and conflict checks up front. Evaluate how each approach
+  detects changes to waiting files and recovers an interrupted audio/CDG pair.
+  See [crash recovery](user/crash-recovery.md).
+
 - [ ] **Reorder Favourites** — let users drag operations and recipes into their
   preferred order or use keyboard-accessible **Move up** and **Move down**
   actions. Save the order across launches. Offer **Reset order** in the list's

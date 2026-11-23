@@ -29,8 +29,8 @@ public sealed partial class FilenameRenameViewModel(IReadOnlyList<string> inputs
 {
     private const string DefaultPattern = KaraokeFilenamePattern.DiscIdTrackArtistTitle;
     private const string DiscTrackTitleArtist = "%DISC%-%TRACK% %TITLE% - %ARTIST%";
-    private readonly FilenameRenameService service = new();
     private readonly bool initialRecurse = recurse;
+    private FilenameRenameService.PreviewSnapshot? snapshot;
     private FilenameRenameSubmission? preview;
 
     public IReadOnlyList<string> SourcePatterns { get; } = patterns.Append(DiscTrackTitleArtist).Distinct(StringComparer.Ordinal).ToArray();
@@ -54,7 +54,7 @@ public sealed partial class FilenameRenameViewModel(IReadOnlyList<string> inputs
     [ObservableProperty, NotifyPropertyChangedFor(nameof(HasIssues))]
     public partial IReadOnlyList<FilenameRenamePreviewRow> Issues { get; private set; } = [];
     [ObservableProperty]
-    public partial string Status { get; private set; } = "Choose the source and destination patterns, then refresh the preview.";
+    public partial string Status { get; private set; } = "Preparing preview…";
     [ObservableProperty]
     public partial StatusKind StatusSeverity { get; private set; }
 
@@ -66,19 +66,17 @@ public sealed partial class FilenameRenameViewModel(IReadOnlyList<string> inputs
     private FilenameRenameRequest Request => new(inputs, SourcePattern, DestinationPattern,
         RemoveDiscWhitespace, IncludeSubfolders, UppercaseDisc);
 
-    partial void OnSourcePatternChanged(string value) => InvalidatePreview();
-    partial void OnDestinationPatternChanged(string value) => InvalidatePreview();
-    partial void OnRemoveDiscWhitespaceChanged(bool value) => InvalidatePreview();
-    partial void OnUppercaseDiscChanged(bool value) => InvalidatePreview();
-    partial void OnIncludeSubfoldersChanged(bool value) => InvalidatePreview();
+    partial void OnSourcePatternChanged(string value) => UpdatePreview();
+    partial void OnDestinationPatternChanged(string value) => UpdatePreview();
+    partial void OnRemoveDiscWhitespaceChanged(bool value) => UpdatePreview();
+    partial void OnUppercaseDiscChanged(bool value) => UpdatePreview();
+    partial void OnIncludeSubfoldersChanged(bool value) => UpdatePreview();
 
     private void InvalidatePreview()
     {
         preview = null;
         Changes = [];
         Issues = [];
-        Status = "Refresh to review the new filenames.";
-        StatusSeverity = StatusKind.Info;
         OnPropertyChanged(nameof(CanApply));
     }
 
@@ -87,26 +85,15 @@ public sealed partial class FilenameRenameViewModel(IReadOnlyList<string> inputs
     {
         if (IsBusy) return;
         IsBusy = true;
-        preview = null;
-        Changes = [];
-        Issues = [];
-        Status = "Checking filenames…";
+        snapshot = null;
+        InvalidatePreview();
+        Status = "Scanning inputs…";
         StatusSeverity = StatusKind.Info;
         PreviewProgress.Begin(status => Status = status);
         try
         {
-            var request = Request;
-            var plan = await service.PreviewAsync(request, token);
-            preview = new(request, plan);
-            Changes = plan.Items.Where(item => item.Destination != null && !item.IsConflict)
-                .Select(item => new FilenameRenamePreviewRow(item)).ToArray();
-            Issues = plan.Items.Where(item => item.Destination == null || item.IsConflict)
-                .OrderByDescending(item => item.IsConflict).Select(item => new FilenameRenamePreviewRow(item)).ToArray();
-            int ready = Changes.Count;
-            int conflicts = Issues.Count(row => row.Item.IsConflict);
-            int skipped = Issues.Count - conflicts;
-            Status = $"{ready} ready · {skipped} skipped · {conflicts} {(conflicts == 1 ? "conflict" : "conflicts")}";
-            StatusSeverity = conflicts > 0 ? StatusKind.Failure : ready == 0 || skipped > 0 ? StatusKind.Warning : StatusKind.Success;
+            snapshot = await Task.Run(() => FilenameRenameService.ReadPreview(inputs, token), token);
+            UpdatePreview(token);
         }
         catch (OperationCanceledException)
         {
@@ -122,6 +109,33 @@ public sealed partial class FilenameRenameViewModel(IReadOnlyList<string> inputs
             PreviewProgress.Finish();
             IsBusy = false;
         }
+    }
+
+    private void UpdatePreview(CancellationToken token = default)
+    {
+        if (snapshot == null) return;
+        InvalidatePreview();
+        try
+        {
+            var request = Request;
+            var plan = FilenameRenameService.PlanPreview(request, snapshot, token);
+            preview = new(request, plan);
+            Changes = plan.Items.Where(item => item.Destination != null && !item.IsConflict)
+                .Select(item => new FilenameRenamePreviewRow(item)).ToArray();
+            Issues = plan.Items.Where(item => item.Destination == null || item.IsConflict)
+                .OrderByDescending(item => item.IsConflict).Select(item => new FilenameRenamePreviewRow(item)).ToArray();
+            int ready = Changes.Count;
+            int conflicts = Issues.Count(row => row.Item.IsConflict);
+            int skipped = Issues.Count - conflicts;
+            Status = $"{ready} ready · {skipped} skipped · {conflicts} {(conflicts == 1 ? "conflict" : "conflicts")}";
+            StatusSeverity = conflicts > 0 ? StatusKind.Failure : ready == 0 || skipped > 0 ? StatusKind.Warning : StatusKind.Success;
+        }
+        catch (Exception error) when (error is ArgumentException or IOException or FormatException)
+        {
+            Status = error.Message;
+            StatusSeverity = StatusKind.Failure;
+        }
+        OnPropertyChanged(nameof(CanApply));
     }
 
     internal FilenameRenameSubmission? BuildSubmission() => CanApply ? preview : null;

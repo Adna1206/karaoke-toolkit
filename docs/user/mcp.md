@@ -66,7 +66,7 @@ protocol initialization/tool discovery and propagates cancellation notifications
 | `run_operation` | Included conversions, tagging, file tools, quarantine/restoration |
 | `run_recipe` | Portable recipe object with saved per-step settings |
 | `list_recovery` | Available conversion, tagging, file move and recipe journals, without resuming |
-| `recover` | Resume saved processing and recipe snapshots after access checks |
+| `recover` | Recover an interrupted item and continue the saved batch if enabled, or resume a recipe snapshot |
 
 Results contain Core's completion report, found count, issue flag and optional tag
 preview. Structured results also have a JSON text fallback for clients. Reports
@@ -125,13 +125,17 @@ scopes depend on real preceding outputs. GUI/CLI workflows remain available for
 recipe planning. No shell/script execution, physical-disc capture, player, online
 lookup or enabled updater is exposed by MCP.
 
-### File move recovery settings
+### Recovery settings for new runs
 
-For grouping, alphabetical organization, and flattening, `recoveryVerification`
+For standalone media conversions, grouping, alphabetical organization, and flattening, `recoveryVerification`
 defaults to `XxHash128`. You can also set it to `Sha256`, `MetadataOnly`, or
-`None`. Set `saveResumableRun` to `false` to require manual
-review if interrupted. Defaults and recovery behavior are documented in
-[Recovery verification](crash-recovery.md#verification-settings).
+`None`. Use `checkTiming` with `BeforeBatch` (more robust) or `BeforeItem`
+(default, faster to start) to override `recovery.check-timing` for a standalone media
+conversion, file move or grouping request. For those operations and tagging,
+`saveResumableRun: false` overrides `recovery.batch-resume` for the request.
+`list_recovery` shows whether a saved job continues the batch after recovery.
+Set `recovery.check-on-startup` to control Desktop startup discovery. MCP
+discovery remains explicit through `list_recovery`. See [recovery settings](crash-recovery.md#recovery-settings).
 
 ### Track ID separator
 

@@ -8,6 +8,7 @@ namespace KaraokeToolkit.Core.Recovery;
 public sealed record RecoveryJob(string JournalPath, string Folder, string Action, int Completed, int Total, string? Problem = null)
 {
     public RecoveryKind Kind { get; init; }
+    public bool ContinueBatchAfterRecovery { get; init; } = true;
 }
 
 /// <summary>Finds interrupted runs without scanning a drive. The folder journal remains authoritative.</summary>
@@ -22,12 +23,20 @@ public sealed class RecoveryStore
     /// <summary>Discovers unfinished jobs through the startup index or an explicitly supplied folder scope.</summary>
     /// <remarks>Excludes jobs whose leases are held and folds child conversions into their owning workflow.
     /// Discovery does not resume publication or sweep orphan transaction backups.</remarks>
-    public IReadOnlyList<RecoveryJob> Find(string? folder = null, bool recurse = true)
+    public IReadOnlyList<RecoveryJob> Find(string? folder = null, bool recurse = true) =>
+        FindScoped(folder == null ? null : [folder], recurse);
+
+    internal IReadOnlyList<RecoveryJob> FindInFolders(IReadOnlyList<string> folders) =>
+        folders.Count == 0 ? [] : FindScoped(folders, recurse: false);
+
+    private IReadOnlyList<RecoveryJob> FindScoped(IReadOnlyList<string>? folders, bool recurse)
     {
+        var scope = folders?.Where(folder => !string.IsNullOrWhiteSpace(folder)).Select(Path.GetFullPath).ToArray();
         var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        if (folder != null && Directory.Exists(folder))
+        foreach (string folder in scope ?? [])
         {
-            foreach (string directory in ConversionService.EnumerateFolders(Path.GetFullPath(folder), recurse))
+            if (!Directory.Exists(folder)) continue;
+            foreach (string directory in ConversionService.EnumerateFolders(folder, recurse))
             {
                 foreach (string run in Directory.GetDirectories(directory, ".karaoke-job-run-*"))
                     paths.Add(Path.Combine(run, "run.json"));
@@ -41,7 +50,7 @@ public sealed class RecoveryStore
                 try
                 {
                     string? path = JsonSerializer.Deserialize<string>(File.ReadAllText(index));
-                    if (path != null && (folder == null || Path.GetFileName(path) == "workflow.json")) paths.Add(path);
+                    if (path != null && (scope == null || Path.GetFileName(path) == "workflow.json")) paths.Add(path);
                 }
                 catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException) { }
         var jobs = new List<RecoveryJob>();
@@ -62,14 +71,17 @@ public sealed class RecoveryStore
                     try
                     {
                         var workflow = WorkflowSession.Read(path);
-                        if (folder != null && !workflow.Roots.Any(root => WorkflowSession.IsWithin(root, Path.GetFullPath(folder)) || WorkflowSession.IsWithin(Path.GetFullPath(folder), root))) continue;
+                        if (scope != null && !workflow.Roots.Any(root => scope.Any(folder =>
+                            WorkflowSession.IsWithin(root, folder) || WorkflowSession.IsWithin(folder, root)))) continue;
                         if (!workflow.Finished && workflow.Kind is RecoveryKind.TrackGrouping or RecoveryKind.FileMoves)
                             jobs.Add(new(path, workflow.Roots[0], workflow.Kind == RecoveryKind.TrackGrouping ? "Group by Track ID" : workflow.OperationId!.Value.ToString(),
-                                workflow.Moves!.Count(g => g.Results != null), workflow.Moves!.Count, MoveRecoveryProblem(workflow)) { Kind = workflow.Kind });
+                                workflow.Moves!.Count(g => g.Results != null), workflow.Moves!.Count, MoveRecoveryProblem(workflow))
+                            { Kind = workflow.Kind, ContinueBatchAfterRecovery = workflow.SaveResumableRun });
                         else if (!workflow.Finished)
                             jobs.Add(new(path, workflow.Roots[0], workflow.Kind == RecoveryKind.Recipe ? "Recipe — " + workflow.Recipe!.Name : "Tag Karaoke Files",
                                 workflow.Kind == RecoveryKind.Recipe ? workflow.Steps.Count : workflow.TagResults.Count,
-                                workflow.Kind == RecoveryKind.Recipe ? workflow.Recipe!.Steps.Count : workflow.TagFiles.Length) { Kind = workflow.Kind });
+                                workflow.Kind == RecoveryKind.Recipe ? workflow.Recipe!.Steps.Count : workflow.TagFiles.Length)
+                            { Kind = workflow.Kind, ContinueBatchAfterRecovery = workflow.Kind == RecoveryKind.Recipe || workflow.SaveResumableRun });
                     }
                     catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or ArgumentException or NotSupportedException or NullReferenceException)
                     { jobs.Add(new(path, Path.GetDirectoryName(directory)!, "Workflow recovery needs attention", 0, 0, "The workflow journal could not be read safely. Keep the recovery files for inspection. " + e.Message) { Kind = RecoveryKind.Recipe }); }
@@ -111,7 +123,9 @@ public sealed class RecoveryStore
                         }
                     }
                     if (!data.Finished)
-                        jobs.Add(new(path, data.Request.Folder, data.Request.Action.ToString(), data.Results.Count, data.Sources.Length));
+                        jobs.Add(new(path, data.Request.Folder, data.Request.Action.ToString(), data.Results.Count, data.Sources.Length,
+                            ConversionRecoveryProblem(data))
+                        { ContinueBatchAfterRecovery = data.ContinueBatchAfterRecovery });
                 }
                 catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or ArgumentException or NotSupportedException or NullReferenceException)
                 {
@@ -145,9 +159,16 @@ public sealed class RecoveryStore
     internal static bool IsAbandoned(string journal) => File.Exists(journal + ".abandoned");
 
     internal string IndexPath(string journal) => Path.Combine(IndexDirectory, Path.GetFileName(Path.GetDirectoryName(journal)) + ".json");
+    private static string? ConversionRecoveryProblem(RunData data) =>
+        !RecoveryFingerprint.IsContentVerified(data.VerificationMode) && data.Workspace != null &&
+        !data.HasCurrentReceipt && File.Exists(Path.Combine(data.Workspace, "recovery.json"))
+            ? "Interrupted publication has no content fingerprints. Keep the workspace for manual recovery."
+            : null;
+
     private static string? MoveRecoveryProblem(WorkflowData workflow)
     {
-        if (!workflow.SaveResumableRun) return "Batch resume was disabled for this run. Keep the journal for manual review.";
+        if (!workflow.SaveResumableRun && !workflow.SupportsItemRecovery)
+            return "This older run disabled batch resume and has no interrupted group checkpoint. Keep the journal for manual review.";
         if (!RecoveryFingerprint.IsContentVerified(workflow.VerificationMode))
             return "This run has no content fingerprints for automatic recovery. Keep the journal for manual review.";
         return null;
@@ -196,6 +217,9 @@ internal static class DurableJson
 
 internal sealed class RunData
 {
+    public bool ContinueBatchAfterRecovery { get; set; } = true;
+    // Previous conversion journals used SHA-256.
+    public RecoveryVerificationMode VerificationMode { get; set; } = RecoveryVerificationMode.Sha256;
     public string? OwnerWorkflow { get; set; }
     public int Version { get; set; } = 2;
     public required ConversionRequest Request
@@ -211,9 +235,12 @@ internal sealed class RunData
         get; set;
     }
     public string[] Sources { get; set; } = [];
+    // A missing baseline means per-item timing, including journals written before this setting.
+    public Dictionary<string, ConversionInputSnapshot>? BatchInputs { get; set; }
     public Dictionary<string, ConversionFileResult> Results { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public HashSet<string> Metadata { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string, ConversionFileResult> MetadataResults { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    internal bool HasCurrentReceipt => Current != null && (IsMetadata ? Metadata.Contains(Current) : Results.ContainsKey(Current));
     public string? Current
     {
         get; set;
@@ -249,7 +276,9 @@ internal sealed class RunSession : IDisposable
     private readonly RecoveryStore store;
     internal static FileStream Lease(string directory) => new(Path.Combine(directory, "run.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
 
-    internal RunSession(RecoveryStore store, ConversionRequest request, OverwritePolicy policy, string[] sources, bool validateBeforeConversion = false)
+    internal RunSession(RecoveryStore store, ConversionRequest request, OverwritePolicy policy, string[] sources, bool validateBeforeConversion = false,
+        bool continueBatchAfterRecovery = true, Dictionary<string, ConversionInputSnapshot>? batchInputs = null,
+        RecoveryVerificationMode verificationMode = RecoveryVerificationMode.Sha256)
     {
         this.store = store;
         rootLease = FileTransaction.AcquireLease(Path.Combine(Path.GetFullPath(request.Folder), ".karaoke-run-lease"));
@@ -271,12 +300,15 @@ internal sealed class RunSession : IDisposable
         Data = new()
         {
             OwnerWorkflow = WorkflowSession.Current.Value?.Journal,
+            ContinueBatchAfterRecovery = WorkflowSession.Current.Value != null || continueBatchAfterRecovery,
+            VerificationMode = verificationMode,
             Request = request with
             {
                 Folder = Path.TrimEndingDirectorySeparator(Path.GetFullPath(request.Folder))
             },
             Policy = policy,
             Sources = sources,
+            BatchInputs = batchInputs,
             ValidateBeforeConversion = validateBeforeConversion
         };
         try
@@ -325,7 +357,8 @@ internal sealed class RunSession : IDisposable
         var data = JsonSerializer.Deserialize<RunData>(File.ReadAllText(journal), DurableJson.Settings) ?? throw new IOException("Empty recovery journal.");
         string root = Path.GetDirectoryName(directory)!;
         if (data.Version != 2 || data.Request == null || data.Sources == null || data.Results == null || data.Metadata == null || data.MetadataResults == null ||
-            !Enum.IsDefined(data.Policy) || !string.Equals(root, Path.GetFullPath(data.Request.Folder), StringComparison.OrdinalIgnoreCase))
+            !Enum.IsDefined(data.Policy) || !Enum.IsDefined(data.VerificationMode) ||
+            !string.Equals(root, Path.GetFullPath(data.Request.Folder), StringComparison.OrdinalIgnoreCase))
             throw new IOException("Unsupported or misplaced recovery journal.");
         foreach (string source in data.Sources.Concat(data.Results.Keys).Concat(data.Metadata).Concat(data.Current == null ? [] : new[] { data.Current }))
             if (!Within(root, source) && !(data.IsMetadata && source == data.Current && source == data.Request.OutputFolder) &&
@@ -345,8 +378,24 @@ internal sealed class RunSession : IDisposable
         }
         if (data.Results.Any(pair => pair.Value == null || !data.Sources.Contains(pair.Key, StringComparer.OrdinalIgnoreCase)))
             throw new IOException("Invalid completed source in recovery journal.");
+        if (data.BatchInputs is { } snapshots &&
+            (!OperationCapabilities.SupportsConversionCheckTiming(data.Request.Action) || data.OwnerWorkflow != null ||
+             snapshots.Count != data.Sources.Length || data.Sources.Any(source =>
+                !snapshots.TryGetValue(source, out var snapshot) || snapshot == null || !ValidSnapshot(source, snapshot))))
+            throw new IOException("Invalid conversion input baseline in recovery journal.");
         data.Request.Validate();
         return data;
+
+        bool ValidSnapshot(string source, ConversionInputSnapshot snapshot)
+        {
+            if (snapshot.Error != null) return snapshot.Files is { Length: 0 };
+            return snapshot.Files is { Length: 1 or 2 } files && files[0] != null &&
+                InputSelection.Paths.Equals(files[0].Path, source) &&
+                files.All(file => file != null && Within(root, file.Path) &&
+                    InputSelection.Paths.Equals(Path.GetDirectoryName(source), Path.GetDirectoryName(file.Path)) &&
+                    file.Value is { } value && RecoveryFingerprint.IsValid(value, data.VerificationMode)) &&
+                files.Select(file => file.Path).Distinct(InputSelection.Paths).Count() == files.Length;
+        }
     }
 
     internal static bool Within(string root, string path) => Path.IsPathFullyQualified(path) &&
@@ -387,8 +436,7 @@ internal sealed class RunSession : IDisposable
     {
         if (Data.Workspace == null || !Directory.Exists(Data.Workspace))
             return;
-        bool recorded = Data.Current != null && (Data.IsMetadata ? Data.Metadata.Contains(Data.Current) : Data.Results.ContainsKey(Data.Current));
-        if (!recorded)
+        if (!Data.HasCurrentReceipt)
         {
             var outputs = FileTransactionRecovery.Recover(Data.Workspace);
             if (outputs != null)

@@ -33,11 +33,17 @@ public sealed partial class TrackGroupingNode(string label, string detail, IRead
 public sealed partial class TrackGroupingViewModel(IReadOnlyList<string> inputs) : ViewModelBase
 {
     private CancellationTokenSource? previewCancellation;
+    private CancellationTokenSource? scanCancellation;
+    private Task<TrackGroupingPlanner.InputScan>? inputScan;
     private TrackGroupingSubmission? submission;
     private bool closed;
     private bool expandedAll;
+    private bool previewStarted;
+    private bool destinationSelected;
 
     [ObservableProperty] public partial string? OutputFolder { get; set; } = DefaultOutput(inputs, wholeFolders: false);
+    private readonly string? defaultFileOutput = DefaultOutput(inputs, wholeFolders: false);
+    private readonly string? defaultFolderOutput = DefaultOutput(inputs, wholeFolders: true);
     [ObservableProperty, NotifyPropertyChangedFor(nameof(ScanFolders))]
     public partial int FolderHandling { get; set; }
     [ObservableProperty] public partial bool Recurse { get; set; }
@@ -66,8 +72,14 @@ public sealed partial class TrackGroupingViewModel(IReadOnlyList<string> inputs)
 
     partial void OnFolderHandlingChanged(int oldValue, int newValue)
     {
-        if (OutputFolder == DefaultOutput(inputs, oldValue == 1))
-            OutputFolder = DefaultOutput(inputs, newValue == 1);
+        if (!destinationSelected && OutputFolder == (oldValue == 1 ? defaultFolderOutput : defaultFileOutput))
+            OutputFolder = (newValue == 1 ? defaultFolderOutput : defaultFileOutput) ?? OutputFolder;
+    }
+
+    internal void SetSelectedDestination(string destination)
+    {
+        destinationSelected = true;
+        OutputFolder = destination;
     }
 
     private static string? DefaultOutput(IReadOnlyList<string> paths, bool wholeFolders)
@@ -115,8 +127,8 @@ public sealed partial class TrackGroupingViewModel(IReadOnlyList<string> inputs)
             nameof(MaxParentLevels) or nameof(SkipSingleChildParents) or nameof(RangeSize) or nameof(RangeStart) or
             nameof(RangeSeparatorStyle) or nameof(CustomRangeSeparator) or nameof(IdSeparatorStyle) or nameof(Move))
         {
-            HasEdits = true;
-            _ = PreviewAsync();
+            if (e.PropertyName != nameof(OutputFolder) || previewStarted) HasEdits = true;
+            if (previewStarted) _ = PreviewAsync();
         }
     }
 
@@ -126,13 +138,24 @@ public sealed partial class TrackGroupingViewModel(IReadOnlyList<string> inputs)
     {
         closed = true;
         previewCancellation?.Cancel();
+        ResetInputScan();
         PreviewProgress.Finish();
     }
 
-    internal async Task PreviewAsync()
+    private void ResetInputScan()
+    {
+        scanCancellation?.Cancel();
+        scanCancellation?.Dispose();
+        scanCancellation = null;
+        inputScan = null;
+    }
+
+    internal async Task PreviewAsync(bool refresh = false)
     {
         if (closed) return;
+        previewStarted = true;
         previewCancellation?.Cancel();
+        if (refresh) ResetInputScan();
         using var cancellation = new CancellationTokenSource();
         previewCancellation = cancellation;
         submission = null;
@@ -152,10 +175,18 @@ public sealed partial class TrackGroupingViewModel(IReadOnlyList<string> inputs)
             string destination = hasDestination ? OutputFolder! : Path.Combine(Path.GetTempPath(), "Karaoke Toolkit Preview " + Guid.NewGuid());
             var options = BuildOptions();
             var request = new OperationRequest(OperationId.GroupByTrackId, inputs) { OutputFolder = destination, Grouping = options };
+            if (inputScan == null)
+            {
+                scanCancellation = new();
+                var scanToken = scanCancellation.Token;
+                inputScan = Task.Run(() => TrackGroupingPlanner.InputScan.Read(inputs, hasDestination ? destination : null, scanToken), scanToken);
+            }
+            if (!inputScan.IsCompleted) report("Scanning inputs", 0, 0);
+            var sources = await inputScan.WaitAsync(cancellation.Token);
+            bool checkedDestination = hasDestination && sources.CanCheckDestination(destination);
             var preview = await Task.Run(() =>
             {
-                report("Scanning inputs", 0, 0);
-                var plan = TrackGroupingPlanner.Plan(inputs, destination, hasDestination ? options : options with { Move = false },
+                var plan = TrackGroupingPlanner.PlanPreview(sources, destination, hasDestination ? options : options with { Move = false },
                     cancellation.Token, (stage, completed, total) => report(stage switch
                     {
                         TrackGroupingPreviewStage.Grouping => "Grouping items",
@@ -175,14 +206,15 @@ public sealed partial class TrackGroupingViewModel(IReadOnlyList<string> inputs)
             Issues = preview.plan.Issues.Select(issue => new TrackGroupingPreviewIssue(
                 $"{(issue.IsConflict ? "Conflict" : "Skipped")} · {issue.Source} · {issue.Message}")).ToArray();
             bool conflict = preview.plan.Issues.Any(issue => issue.IsConflict);
-            if (hasDestination && preview.plan.Items.Count > 0 && !conflict)
+            if (checkedDestination && preview.plan.Items.Count > 0 && !conflict)
                 submission = new(request, preview.plan);
             OnPropertyChanged(nameof(CanApply));
             StatusSeverity = conflict || preview.plan.Items.Count == 0 || Issues.Count > 0 ? StatusKind.Warning
-                : hasDestination ? StatusKind.Success : StatusKind.Info;
+                : checkedDestination ? StatusKind.Success : StatusKind.Info;
             Status = conflict ? "Resolve the conflicts to continue."
                 : preview.plan.Items.Count == 0 ? "No selected items can be grouped."
                 : !hasDestination ? "Choose a destination to check for conflicts."
+                : !checkedDestination ? "Refresh to check the new destination for conflicts."
                 : $"{preview.plan.Items.Count} ready · {Issues.Count} skipped";
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }

@@ -4,13 +4,20 @@ In **File & Folder Tools**, select files or folders and open **Group by Track
 ID**. Choose whether to scan folders for files, with optional recursion, or
 group each selected folder as a whole. Whole folders keep their contents and
 names. Files keep their names and matching audio and graphics are grouped together.
-The preview animates its progress bar while scanning and preparing the preview.
-It shows item counts during grouping and item destination checks.
+The preview lists files without a recognizable track ID under skipped items.
+The preview scans on open and when you select **Refresh**. Grouping options
+update the tree from the scanned files and folders. If whole-folder mode uses a
+different destination, **Refresh** checks it for conflicts before you can apply
+the plan. The status bar shows counts and
+percentages when a stage has a known total.
 The preview opens in the main workspace. **Back** returns to the selected
 operation and inputs, with confirmation if you changed the grouping settings.
 After you select **Move** or **Copy**, the footer shows an animated bar while
-the app checks the approved plan and prepares recovery. Once item processing
+the app prepares recovery for the approved items. Once item processing
 begins, the item and total progress bars show completion percentages.
+
+An ID can have letters directly after the digits. `ABC-369A` and `ABC-369B`
+group with `ABC-369` by number and keep their full names.
 
 - **Number ranges** uses a configurable range size and origin. With 50 starting
   at 1, `ABC33601` and `ABC-33650` go in `ABC-33601 to ABC-33650` when the
@@ -25,15 +32,18 @@ begins, the item and total progress bars show completion percentages.
 
 The desktop fills in the destination when the selection resolves to one folder.
 For files and whole-folder items, it uses their containing folder. For a folder
-being scanned, it uses the selected folder itself. You can change it before
-applying. Items already at their planned path are skipped.
+being scanned, it uses the selected folder itself. When the selection has no
+single destination, choose a folder before the preview opens. Items already
+at their planned path are skipped.
 
 Review the live destination tree before applying. Use **Expand all** and
 **Collapse all** beside **Refresh** to open or close every branch.
 When there are skipped items or conflicts, drag the divider above their panel
 to resize it. Drag it to the bottom to hide the panel and back up to reopen it.
-The Move or Copy button uses the accent colour once the plan is ready. Conflicts block
-the batch. The desktop preview defaults to Move, which requires a same-volume
+Resolve conflicts shown in the preview before applying. Applying uses the
+approved list. A missing source or newly occupied destination skips the affected
+group, and new files enter the list when you refresh. The desktop preview
+defaults to Move, which requires a same-volume
 destination. CLI and MCP default to Copy.
 Interrupted publication can be resumed from the saved plan using Recover.
 The same operation is available through the [CLI](cli.md) and [MCP](mcp.md).

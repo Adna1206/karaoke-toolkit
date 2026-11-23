@@ -3,7 +3,8 @@
 Choose **File & Folder Tools → Tag Karaoke Files**, select media or folders and
 click Start. The main workspace previews filename-derived tags, shows current values,
 and lets you correct fields or exclude rows before **Apply Tags**. Changing the
-pattern requires clicking **Refresh**. Use **Select all** or **Deselect all**
+pattern recalculates the proposed tags from the last scan. Use **Refresh** to
+read the files and their current tags again. Use **Select all** or **Deselect all**
 to update which editable rows are included. Folder recursion uses the existing preference.
 The preview animates its progress bar while scanning inputs, then shows how many
 files it has checked once the file count is known. **Back** returns to the
@@ -24,6 +25,8 @@ The dropdown offers these built-in patterns.
 For an identifier such as `ABC-1234567`, the default previews `ABC` in Album
 and `1234567` in Track. With `%DISC% - %ARTIST% - %TITLE%`, the preview
 proposes `ABC-1234567` for Album and preserves the existing Track value.
+Use that whole-ID pattern for a filename such as `ABC-369A - Artist - Title`
+to keep `ABC-369A` in Album. The Track tag accepts a number.
 
 You can also choose a previously accepted pattern or type your own. Tokens
 can be reordered or omitted, and separators are literal text. For example
@@ -83,11 +86,13 @@ read-only inputs and cancellation before publication keep originals unchanged.
 Completed files remain after batch cancellation.
 
 Tagging batches checkpoint the accepted, manually edited preview, tagging options,
-ZIP processing settings and completed files. Startup, revisiting a selected folder
+ZIP processing settings and completed files. Apply uses the approved list and
+checks the saved fingerprint when each file starts. Startup, revisiting a selected folder
 and **Recover** offer **Recover and resume** or **Later**. Recovery verifies the
 interrupted publication, keeps completed files, and applies the saved tags to
-remaining files without reopening the pattern dialog. Changed files block recovery
-rather than overwrite newer work. Normal cancellation ends the batch and retains
+remaining files without reopening the pattern dialog. An unprocessed file with a
+changed fingerprint is left in place and reported. Changes to files involved in
+interrupted publication can block recovery. Normal cancellation ends the batch and retains
 completed work. Old unindexed tagging transaction markers can still be recovered
 when revisiting their folder, followed by a fresh preview. Recipe tagging uses saved
 pattern/options without a dialog; its generated preview and completed files are

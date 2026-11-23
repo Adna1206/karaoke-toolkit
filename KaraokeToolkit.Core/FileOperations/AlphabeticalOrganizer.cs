@@ -15,27 +15,144 @@ public sealed class AlphabeticalOrganizer(RecoveryStore? recovery = null)
 
     public Task<ConversionResult> RunAsync(IEnumerable<string> inputs, AlphabeticalOrganizeScope scope,
         IProgress<ConversionProgress>? progress = null, CancellationToken token = default, bool ignoreLeadingThe = false,
-        RecoveryVerificationMode verificationMode = OperationCapabilities.DefaultFileMoveRecoveryVerification, bool saveResumableRun = true)
-        => Task.Run(() => Run(inputs, scope, progress, token, ignoreLeadingThe, verificationMode: verificationMode, saveResumableRun: saveResumableRun), token);
+        RecoveryVerificationMode verificationMode = OperationCapabilities.DefaultFileMoveRecoveryVerification, bool saveResumableRun = true,
+        FileCheckTiming timing = OperationCapabilities.DefaultFileMoveCheckTiming)
+        => Task.Run(() => Run(inputs, scope, progress, token, ignoreLeadingThe, verificationMode: verificationMode,
+            saveResumableRun: saveResumableRun, timing: timing), token);
 
     public Task<ConversionResult> PreviewAsync(IEnumerable<string> inputs, AlphabeticalOrganizeScope scope,
         CancellationToken token = default, bool ignoreLeadingThe = false)
         => Task.Run(() => Run(inputs, scope, null, token, ignoreLeadingThe, true), token);
 
+    public sealed class PreviewSnapshot
+    {
+        private readonly ConversionResult? files, filesIgnoringArticle, folders;
+        private readonly string? fileError, folderError;
+
+        internal PreviewSnapshot(ConversionResult? files, ConversionResult? filesIgnoringArticle, ConversionResult? folders,
+            string? fileError, string? folderError)
+        {
+            this.files = files;
+            this.filesIgnoringArticle = filesIgnoringArticle;
+            this.folders = folders;
+            this.fileError = fileError;
+            this.folderError = folderError;
+        }
+
+        public ConversionResult Plan(AlphabeticalOrganizeScope scope, bool ignoreLeadingThe) => scope switch
+        {
+            AlphabeticalOrganizeScope.Files => (ignoreLeadingThe ? filesIgnoringArticle : files) ?? throw new IOException(fileError),
+            AlphabeticalOrganizeScope.Folders => folders ?? throw new IOException(folderError),
+            _ => throw new ArgumentOutOfRangeException(nameof(scope))
+        };
+    }
+
+    public Task<PreviewSnapshot> ReadPreviewAsync(IReadOnlyList<string> inputs, CancellationToken token) => Task.Run(() =>
+    {
+        var listings = new Dictionary<string, FileSystemInfo[]>(Paths);
+        var checkedRecoveryRoots = new HashSet<string>(Paths);
+        ConversionResult? files = null, filesIgnoringArticle = null, folders = null;
+        string? fileError = null, folderError = null;
+        try
+        {
+            var work = Collect(inputs, AlphabeticalOrganizeScope.Files, token, checkAllRecoveryRoots: true, ReadDirectory, out _, checkedRecoveryRoots);
+            files = Preview(Groups(work, ignoreLeadingThe: false));
+            filesIgnoringArticle = Preview(Groups(work, ignoreLeadingThe: true));
+        }
+        catch (Exception error) when (error is ArgumentException or IOException or UnauthorizedAccessException)
+        {
+            fileError = error.Message;
+        }
+        try
+        {
+            var work = Collect(inputs, AlphabeticalOrganizeScope.Folders, token, checkAllRecoveryRoots: true, ReadDirectory, out _, checkedRecoveryRoots);
+            folders = Preview(Groups(work, ignoreLeadingThe: false));
+        }
+        catch (Exception error) when (error is ArgumentException or IOException or UnauthorizedAccessException)
+        {
+            folderError = error.Message;
+        }
+        return new PreviewSnapshot(files, filesIgnoringArticle, folders, fileError, folderError);
+
+        FileSystemInfo[] ReadDirectory(string folder)
+        {
+            if (!listings.TryGetValue(folder, out var entries))
+                listings[folder] = entries = ReadEntries(folder, token);
+            return entries;
+        }
+    }, token);
+
     public Task<ConversionResult> ApplyPreviewAsync(IEnumerable<string> inputs, AlphabeticalOrganizeScope scope,
         ConversionResult approved, IProgress<ConversionProgress>? progress = null, CancellationToken token = default,
         bool ignoreLeadingThe = false, RecoveryVerificationMode verificationMode = OperationCapabilities.DefaultFileMoveRecoveryVerification,
-        bool saveResumableRun = true)
-        => Task.Run(() => Run(inputs, scope, progress, token, ignoreLeadingThe, verificationMode: verificationMode,
-            saveResumableRun: saveResumableRun, approved: approved), token);
+        bool saveResumableRun = true, FileCheckTiming timing = OperationCapabilities.DefaultFileMoveCheckTiming)
+        => Task.Run(() => ApplyApproved(inputs, scope, approved, progress, token, ignoreLeadingThe, verificationMode,
+            saveResumableRun, timing), token);
+
+    private ConversionResult ApplyApproved(IEnumerable<string> inputs, AlphabeticalOrganizeScope scope, ConversionResult approved,
+        IProgress<ConversionProgress>? progress, CancellationToken token, bool ignoreLeadingThe,
+        RecoveryVerificationMode mode, bool saveResumableRun, FileCheckTiming timing)
+    {
+        if (!Enum.IsDefined(scope)) throw new ArgumentOutOfRangeException(nameof(scope));
+        if (!Enum.IsDefined(mode)) throw new ArgumentOutOfRangeException(nameof(mode));
+        timing = WorkflowMoves.TimingForStandalone(timing);
+        bool files = scope == AlphabeticalOrganizeScope.Files;
+        var selected = inputs.Select(path => Path.TrimEndingDirectorySeparator(Path.GetFullPath(path))).ToArray();
+        var sources = new HashSet<string>(Paths);
+        foreach (var row in approved.Files)
+        {
+            string? parent = Path.GetDirectoryName(row.Source);
+            if (!WorkflowMoves.IsNormalizedPath(row.Source) || parent == null || !sources.Add(row.Source) ||
+                !(files ? WorkflowMoves.IsApprovedSource(selected, row.Source, includeCompanions: true) : selected.Contains(parent, Paths)) ||
+                row.Status is not (ConversionStatus.Succeeded or ConversionStatus.Failed) || row.Outputs.Count != 1 ||
+                !Paths.Equals(row.Outputs[0], Path.Combine(parent, Bucket(Path.GetFileName(row.Source), files && ignoreLeadingThe), Path.GetFileName(row.Source))))
+                throw new ArgumentException("The approved alphabetical grouping plan contains an invalid source or destination.");
+        }
+        var ready = approved.Files.Where(row => row.Status == ConversionStatus.Succeeded).ToArray();
+        WorkflowMoves.CheckApprovedRecovery(recovery, ready.SelectMany(row =>
+            new[] { Path.GetDirectoryName(row.Source)!, Path.GetDirectoryName(row.Outputs[0])! }), token);
+        progress?.Report(new(0, 0, approved.Files.Count, 0, "Preparing recovery for file moves…", "00:00:00") { IsIndeterminate = true });
+        var groups = approved.Files.GroupBy(row => Path.GetDirectoryName(row.Source), Paths).SelectMany(folder =>
+            folder.GroupBy(row => IsKaraokePairMember(row.Source) ? Path.GetFileNameWithoutExtension(row.Source) : row.Source, Paths))
+            .Select(group =>
+            {
+                token.ThrowIfCancellationRequested();
+                return group.FirstOrDefault(row => row.Status != ConversionStatus.Succeeded) is { } issue
+                    ? new WorkflowMoveGroup { Items = group.Select(row => new WorkflowMove(row.Source, null, "")).ToArray(), SkipReason = issue.Message }
+                    : WorkflowMoves.ApprovedGroup(group.Select(row => new WorkflowMove(row.Source, row.Outputs[0], "", !files)), mode, timing);
+            }).ToList();
+        return WorkflowMoves.RunApproved(recovery, files ? OperationId.OrganizeFiles : OperationId.OrganizeFolders, groups, mode,
+            saveResumableRun, progress, token, timing);
+    }
 
     private ConversionResult Run(IEnumerable<string> inputs, AlphabeticalOrganizeScope scope, IProgress<ConversionProgress>? progress,
         CancellationToken token, bool ignoreLeadingThe, bool preview = false,
         RecoveryVerificationMode verificationMode = OperationCapabilities.DefaultFileMoveRecoveryVerification,
-        bool saveResumableRun = true, ConversionResult? approved = null)
+        bool saveResumableRun = true, FileCheckTiming timing = OperationCapabilities.DefaultFileMoveCheckTiming)
     {
         if (!Enum.IsDefined(scope)) throw new ArgumentOutOfRangeException(nameof(scope));
 
+        var work = Collect(inputs, scope, token, preview, folder => ReadEntries(folder, token), out var moveRoots);
+        var groups = Groups(work, scope == AlphabeticalOrganizeScope.Files && ignoreLeadingThe);
+        if (preview) return Preview(groups);
+        if (token.IsCancellationRequested) return new([], true);
+        progress?.Report(new(0, 0, 0, 0, "Preparing recovery for file moves…", "00:00:00") { IsIndeterminate = true });
+        var mode = WorkflowSession.Current.Value?.Data.VerificationMode ?? verificationMode;
+        timing = WorkflowMoves.TimingForStandalone(timing);
+        var plan = groups.Select(group =>
+        {
+            token.ThrowIfCancellationRequested();
+            return new WorkflowMoveGroup { Items = group.Select(move => WorkflowMoves.Move(move.Source, move.Target, mode, timing)).ToArray() };
+        }).ToList();
+        return WorkflowMoves.RunStandaloneOrRecipe(recovery, moveRoots,
+            scope == AlphabeticalOrganizeScope.Files ? OperationId.OrganizeFiles : OperationId.OrganizeFolders,
+            plan, mode, saveResumableRun, progress, token, timing);
+    }
+
+    private Dictionary<string, HashSet<string>> Collect(IEnumerable<string> inputs, AlphabeticalOrganizeScope scope,
+        CancellationToken token, bool checkAllRecoveryRoots, Func<string, FileSystemInfo[]> readDirectory, out string[] moveRoots,
+        HashSet<string>? checkedRecoveryRoots = null)
+    {
         var selected = inputs.Select(p => Path.TrimEndingDirectorySeparator(Path.GetFullPath(p))).Distinct(Paths).ToArray();
         if (selected.Length == 0) throw new ArgumentException("Select at least one file or folder.");
         foreach (string path in selected)
@@ -52,17 +169,21 @@ public sealed class AlphabeticalOrganizer(RecoveryStore? recovery = null)
         if (scope == AlphabeticalOrganizeScope.Folders && roots.Any(root => roots.Any(parent =>
             !Paths.Equals(parent, root) && WorkflowSession.IsWithin(parent, root))))
             throw new ArgumentException("Select non-overlapping folders when organizing child folders.");
-        var moveRoots = WorkflowSession.RootsFor(selected);
-        IEnumerable<string> recoveryRoots = approved != null || preview ? moveRoots : roots;
+        moveRoots = WorkflowSession.RootsFor(selected);
+        IEnumerable<string> recoveryRoots = checkAllRecoveryRoots ? moveRoots : roots;
         foreach (string root in recoveryRoots)
+        {
+            if (checkedRecoveryRoots?.Contains(root) == true) continue;
             if (recovery.Find(root, true).Count > 0)
                 throw new IOException("Recover the interrupted conversion before organizing: " + root);
+            checkedRecoveryRoots?.Add(root);
+        }
         var work = new Dictionary<string, HashSet<string>>(Paths);
         foreach (string root in roots)
         {
             if (scope == AlphabeticalOrganizeScope.Folders)
             {
-                foreach (string entry in Directory.EnumerateDirectories(root))
+                foreach (string entry in readDirectory(root).OfType<DirectoryInfo>().Select(entry => entry.FullName))
                     if (!IsBucket(Path.GetFileName(entry)) && !IsExcluded(entry)) Add(root, entry);
             }
             else
@@ -77,49 +198,13 @@ public sealed class AlphabeticalOrganizer(RecoveryStore? recovery = null)
             Add(parent, file);
             // Keep an explicitly selected audio/graphics track together with its matching mate.
             if (IsKaraokePairMember(file))
-                foreach (string mate in Directory.EnumerateFiles(parent).Where(p =>
+                foreach (string mate in readDirectory(parent).OfType<FileInfo>().Select(entry => entry.FullName).Where(p =>
                     IsKaraokePairMember(p) &&
                     Path.GetFileNameWithoutExtension(p).Equals(Path.GetFileNameWithoutExtension(file), StringComparison.OrdinalIgnoreCase)))
                     Add(parent, mate);
         }
 
-        var groups = work.OrderBy(pair => pair.Key, Paths).SelectMany(pair =>
-            pair.Value.Order(Paths).GroupBy(source => IsKaraokePairMember(source) ? Path.GetFileNameWithoutExtension(source) : source, Paths)
-                .Select(group => group.Select(source => (Source: source, Target: Path.Combine(pair.Key,
-                    Bucket(Path.GetFileName(source), scope == AlphabeticalOrganizeScope.Files && ignoreLeadingThe),
-                    Path.GetFileName(source)))).ToArray())).ToArray();
-
-        string?[]? issues = null;
-        if (preview || approved != null)
-        {
-            var duplicates = groups.SelectMany(group => group).CountBy(move => move.Target, Paths)
-                .Where(entry => entry.Value > 1).Select(entry => entry.Key).ToHashSet(Paths);
-            issues = groups.Select(group => FindIssue(group, duplicates)).ToArray();
-            var rows = groups.SelectMany((group, index) => group.Select(move => new ConversionFileResult(move.Source,
-                issues[index] == null ? ConversionStatus.Succeeded : ConversionStatus.Failed,
-                [move.Target], issues[index] ?? "Planned move."))).ToArray();
-            if (preview) return new(rows, false) { Found = rows.Length };
-            if (approved!.Files.Count != rows.Length || !approved.Files.Zip(rows).All(pair =>
-                Paths.Equals(pair.First.Source, pair.Second.Source) && pair.First.Status == pair.Second.Status &&
-                pair.First.Message == pair.Second.Message && pair.First.Outputs.SequenceEqual(pair.Second.Outputs, Paths)))
-                throw new IOException("The alphabetical grouping plan changed. Refresh the preview before moving files.");
-        }
-        if (token.IsCancellationRequested) return new([], true);
-        progress?.Report(new(0, 0, 0, 0, "Preparing recovery for file moves…", "00:00:00") { IsIndeterminate = true });
-        var mode = WorkflowSession.Current.Value?.Data.VerificationMode ?? verificationMode;
-        var plan = new List<WorkflowMoveGroup>();
-        for (int index = 0; index < groups.Length; index++)
-        {
-            token.ThrowIfCancellationRequested();
-            var group = groups[index];
-            string? issue = issues?[index];
-            plan.Add(issue == null
-                ? new() { Items = group.Select(move => WorkflowMoves.Move(move.Source, move.Target, mode)).ToArray() }
-                : new() { Items = group.Select(move => new WorkflowMove(move.Source, null, "")).ToArray(), SkipReason = issue });
-        }
-        return WorkflowMoves.RunStandaloneOrRecipe(recovery, moveRoots,
-            scope == AlphabeticalOrganizeScope.Files ? OperationId.OrganizeFiles : OperationId.OrganizeFolders,
-            plan, mode, saveResumableRun, progress, token);
+        return work;
 
         void Add(string root, string entry)
         {
@@ -130,13 +215,36 @@ public sealed class AlphabeticalOrganizer(RecoveryStore? recovery = null)
         {
             token.ThrowIfCancellationRequested();
             RunSession.CheckPlainPath(folder);
-            foreach (string file in Directory.EnumerateFiles(folder))
-                if (!IsExcluded(file)) Add(folder, file);
-            foreach (string child in Directory.EnumerateDirectories(folder))
-                if (!IsBucket(Path.GetFileName(child)) && !IsExcluded(child) &&
-                    (File.GetAttributes(child) & FileAttributes.ReparsePoint) == 0)
-                    Visit(child);
+            var entries = readDirectory(folder);
+            foreach (var file in entries.OfType<FileInfo>())
+                if (!IsExcluded(file.FullName)) Add(folder, file.FullName);
+            foreach (var child in entries.OfType<DirectoryInfo>())
+                if (!IsBucket(child.Name) && !IsExcluded(child.FullName) && (child.Attributes & FileAttributes.ReparsePoint) == 0)
+                    Visit(child.FullName);
         }
+    }
+
+    private static FileSystemInfo[] ReadEntries(string folder, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        return new DirectoryInfo(folder).GetFileSystemInfos();
+    }
+
+    private static (string Source, string Target)[][] Groups(Dictionary<string, HashSet<string>> work, bool ignoreLeadingThe) =>
+        work.OrderBy(pair => pair.Key, Paths).SelectMany(pair =>
+            pair.Value.Order(Paths).GroupBy(source => IsKaraokePairMember(source) ? Path.GetFileNameWithoutExtension(source) : source, Paths)
+                .Select(group => group.Select(source => (Source: source, Target: Path.Combine(pair.Key,
+                    Bucket(Path.GetFileName(source), ignoreLeadingThe), Path.GetFileName(source)))).ToArray())).ToArray();
+
+    private static ConversionResult Preview((string Source, string Target)[][] groups)
+    {
+        var duplicates = groups.SelectMany(group => group).CountBy(move => move.Target, Paths)
+            .Where(entry => entry.Value > 1).Select(entry => entry.Key).ToHashSet(Paths);
+        var foundIssues = groups.Select(group => FindIssue(group, duplicates)).ToArray();
+        var rows = groups.SelectMany((group, index) => group.Select(move => new ConversionFileResult(move.Source,
+            foundIssues[index] == null ? ConversionStatus.Succeeded : ConversionStatus.Failed,
+            [move.Target], foundIssues[index] ?? "Planned move."))).ToArray();
+        return new(rows, false) { Found = rows.Length };
     }
 
     private static string? FindIssue((string Source, string Target)[] group, HashSet<string> duplicates)

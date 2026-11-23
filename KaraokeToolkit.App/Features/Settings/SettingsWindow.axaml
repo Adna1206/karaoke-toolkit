@@ -42,10 +42,6 @@
                                 <CheckBox Content="{Binding Definitions.RecurseFolders.Label}" IsChecked="{Binding RecurseFolders}" ToolTip.Tip="{Binding Definitions.RecurseFolders.Description}"/>
                                 <CheckBox Content="Remember last input folder" IsChecked="{Binding RememberInputFolder}"
                                           ToolTip.Tip="Start Add Files and Add Folders in the last folder you picked."/>
-                                <ToggleSwitch Content="{Binding Definitions.IgnoreLeadingTheForFileOrganization.Label}"
-                                              IsChecked="{Binding IgnoreLeadingTheForFileOrganization}" ToolTip.Tip="{Binding Definitions.IgnoreLeadingTheForFileOrganization.Description}"/>
-                                <TextBlock Text="{Binding Definitions.IgnoreLeadingTheForFileOrganization.ShortDescription}"
-                                           TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7" ToolTip.Tip="{Binding Definitions.IgnoreLeadingTheForFileOrganization.Description}"/>
                                 <CheckBox Content="{Binding Definitions.DeleteOriginals.Label}" IsChecked="{Binding DeleteOriginals}" ToolTip.Tip="{Binding Definitions.DeleteOriginals.Description}"/>
                                 <ToggleSwitch Content="{Binding Definitions.ValidateBeforeConversion.Label}" IsChecked="{Binding ValidateBeforeConversion}" ToolTip.Tip="{Binding Definitions.ValidateBeforeConversion.Description}"/>
                                 <TextBlock Text="{Binding Definitions.ValidateBeforeConversion.ShortDescription}" TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7" ToolTip.Tip="{Binding Definitions.ValidateBeforeConversion.Description}"/>
@@ -154,18 +150,28 @@
                 <integrations:IntegrationsView/>
             </TabItem>
             <TabItem Header="Recovery">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="16" Spacing="10">
-                    <TextBlock Text="File organization and grouping" Classes="heading3"/>
-                    <TextBlock Text="Verification"/>
+                    <TextBlock Text="Recovery verification" Classes="heading3"/>
                     <ComboBox SelectedIndex="{Binding RecoveryVerification}" AutomationProperties.Name="Recovery verification">
                         <ComboBoxItem Content="SHA-256"/>
                         <ComboBoxItem Content="xxHash128 (default)"/>
                         <ComboBoxItem Content="Metadata only"/>
                         <ComboBoxItem Content="No verification"/>
                     </ComboBox>
-                    <CheckBox IsChecked="{Binding SaveResumableRun}" Content="Allow batch resume"/>
-                    <TextBlock Text="SHA-256 and xxHash128 verify file contents. Metadata only checks file size and last modified time. With weaker verification or batch resume off, interrupted work is listed for manual review." TextWrapping="Wrap"/>
+                    <TextBlock Text="Applies to standalone media conversions and file moves. xxHash128 and SHA-256 check file contents. Metadata only checks size and last modified time. Interrupted publication without content fingerprints requires manual review."
+                               TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
+                    <TextBlock Text="{Binding Definitions.FileCheckTiming.Label}" ToolTip.Tip="{Binding Definitions.FileCheckTiming.Description}"/>
+                    <ComboBox ItemsSource="{Binding Definitions.FileCheckTiming.Choices}" SelectedIndex="{Binding CheckTiming}"
+                              AutomationProperties.Name="{Binding Definitions.FileCheckTiming.Label}"/>
+                    <TextBlock Text="{Binding Definitions.FileCheckTiming.ShortDescription}"
+                               TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
+                    <CheckBox IsChecked="{Binding SaveResumableRun}" Content="Continue batch after recovery"/>
+                    <TextBlock Text="Applies to standalone conversions, tagging, and file moves. When off, Recover handles only the interrupted item."
+                               TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
+                    <CheckBox IsChecked="{Binding CheckForInterruptedRunsOnStartup}" Content="Check for interrupted runs on startup"/>
                 </StackPanel>
+                </ScrollViewer>
             </TabItem>
         </TabControl>
         <Border Grid.Row="2" Classes="windowFooter dialog">

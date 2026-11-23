@@ -1,7 +1,5 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Platform.Storage;
-using KaraokeToolkit.App.Shared;
 using System;
 using System.Threading.Tasks;
 
@@ -35,24 +33,6 @@ public sealed partial class TrackGroupingPreviewView : UserControl
         finally { Model.StopPreview(); }
     }
 
-    private async void Browse_Click(object? sender, RoutedEventArgs args)
-    {
-        if (TopLevel.GetTopLevel(this) is not Window owner) return;
-        try
-        {
-            var folders = await ModalDialog.RunAsync(owner, () => owner.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
-            {
-                Title = "Choose the grouping destination"
-            }));
-            foreach (var folder in folders)
-            {
-                using (folder)
-                    if (folder.TryGetLocalPath() is { } path) Model.OutputFolder = path;
-            }
-        }
-        catch (Exception error) { Model.StatusSeverity = StatusKind.Failure; Model.Status = "Could not select a destination folder. " + error.Message; }
-    }
-
     private async void Back_Click(object? sender, RoutedEventArgs args)
     {
         if (confirmBack == null ? !Model.HasEdits : await confirmBack(Model.PreviewProgress.IsVisible, Model.HasEdits))
@@ -61,7 +41,7 @@ public sealed partial class TrackGroupingPreviewView : UserControl
 
     private async void Refresh_Click(object? sender, RoutedEventArgs args)
     {
-        await Model.PreviewAsync();
+        await Model.PreviewAsync(refresh: true);
     }
 
     private void Apply_Click(object? sender, RoutedEventArgs args)

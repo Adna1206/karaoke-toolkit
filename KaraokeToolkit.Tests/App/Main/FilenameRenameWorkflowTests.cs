@@ -32,17 +32,18 @@ public class FilenameRenameWorkflowTests
         Assert.False(preview.CanApply);
 
         File.Delete(occupied);
+        preview.RemoveDiscWhitespace = false;
+        Assert.Contains(preview.Changes, row => row.DestinationName == "ABC 20-02 - Artist - Song.zip");
+        Assert.Single(preview.Issues);
+        Assert.True(preview.CanApply);
+
+        preview.RemoveDiscWhitespace = true;
+        Assert.Contains(preview.Issues, row => row.Item.IsConflict);
+        Assert.False(preview.CanApply);
         await preview.RefreshAsync();
         Assert.Equal(2, preview.Changes.Count);
         Assert.Single(preview.Issues);
         Assert.True(preview.CanApply);
-
-        preview.RemoveDiscWhitespace = false;
-        Assert.Empty(preview.Changes);
-        Assert.False(preview.HasIssues);
-        Assert.False(preview.CanApply);
-        await preview.RefreshAsync();
-        Assert.Contains(preview.Changes, row => row.DestinationName == "ABC 20-02 - Artist - Song.zip");
 
         string Write(string name)
         {
@@ -53,7 +54,7 @@ public class FilenameRenameWorkflowTests
     }
 
     [Fact]
-    public async Task StartUsesRenamePreviewAndRequiresARefreshAfterEdits()
+    public async Task StartUpdatesTheRenamePreviewAfterEdits()
     {
         string folder = TestMediaFixture.NewFolder();
         string source = Path.Combine(folder, "ABC 20-02 Song - Artist.zip");
@@ -64,20 +65,19 @@ public class FilenameRenameWorkflowTests
         model.SetInputs([source]);
         Assert.Same(operation, model.SelectedOperation);
 
-        bool stalePlanWasRejected = false;
+        bool updatedPreview = false;
         model.ConfigureFilenameRenameAsync = async preview =>
         {
             preview.SourcePattern = "%DISC%-%TRACK% %TITLE% - %ARTIST%";
             await preview.RefreshAsync();
             preview.RemoveDiscWhitespace = false;
-            stalePlanWasRejected = preview.BuildSubmission() == null;
+            updatedPreview = Assert.Single(preview.Changes).DestinationName == "ABC 20-02 - Artist - Song.zip";
             preview.RemoveDiscWhitespace = true;
-            await preview.RefreshAsync();
             return preview.BuildSubmission();
         };
         await model.StartCommand.ExecuteAsync(null);
 
-        Assert.True(stalePlanWasRejected);
+        Assert.True(updatedPreview);
         Assert.Equal("Filename Rename Report", model.LastReport?.ReportType);
         Assert.Equal("media", File.ReadAllText(Path.Combine(folder, "ABC20-02 - Artist - Song.zip")));
         Assert.False(File.Exists(source));

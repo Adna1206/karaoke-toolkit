@@ -5,13 +5,16 @@ interrupted run. When you start a file-based operation, the app checks the
 source folders for recovery, including nested folders when recursion is enabled.
 The status area shows “Checking for interrupted runs…” and an animated bar
 while searching selected folders or checking the saved-run index at startup
-or through **Recover…**. Nothing resumes automatically.
+or through **Recover…**. Nothing resumes automatically. Turn off **Check for
+interrupted runs on startup** to skip the Desktop startup check. **Recover…**
+and checks before file changes stay available.
 
 During recovery the main window explicitly shows **Recovery mode** and prefixes the
 operation title with **Recovery**. The saved action, conversion options, overwrite
 policy and source list are used, even if current settings have since changed.
-Completed, failed and skipped source groups are not attempted again. The interrupted
-group and remaining groups continue; automatic CUE/TXT generation also has checkpoints.
+Completed, failed and skipped source groups are not attempted again. With batch
+continuation enabled, the interrupted group and remaining groups continue.
+Automatic CUE/TXT generation also has checkpoints.
 New files added after the original scan are left for a subsequent run.
 The footer bar animates while the app checks saved files and interrupted
 publication before item processing resumes.
@@ -47,15 +50,15 @@ stages and verifies a full group on the destination volume before publishing.
 Move uses a same-volume rename without replacement. Resume verifies a partial
 group and finishes publication using the saved paths. It does not rescan the
 input selection. Desktop, CLI and MCP can resume these jobs. Plan revalidation
-and source hashing happen before the first item is published. Standalone flattening
-and alphabetical organization also hash their move plans and save a recovery
-journal before moving items. Rename by Filename Pattern saves its approved
+happens before the first item is published. The default captures source
+fingerprints as each group begins. Standalone flattening and alphabetical
+organization also save their move plans for recovery. Rename by Filename Pattern saves its approved
 same-folder paths and can finish a partially renamed audio/CDG pair. Recipe
 steps save their plan in the recipe journal.
 
 The desktop footer shows an animated bar during “Preparing recovery.” With
-content verification, preparing the move plan reads every source file,
-including audio and graphics sidecars. It then saves the plan to disk.
+content verification and **Before the batch starts**, preparing the move plan reads
+every source file, including audio and graphics sidecars. It then saves the plan to disk.
 Preparation time depends on total bytes and storage speed. The number of
 tracks alone does not predict the wait.
 
@@ -69,25 +72,62 @@ run from recovery prompts. The app keeps its journal and recovery files for
 manual inspection. File changes already made stay in place. A pending file
 transaction can still block writes to protect retained originals and backups.
 
-## Verification settings
+## Recovery settings
 
-The shared **Settings → Recovery** preferences control new standalone Group by Track ID,
-Group by Alphabet, Flatten and Rename by Filename Pattern runs. Choose **xxHash128** (default), **SHA-256**,
+**Continue batch after recovery** defaults to on for new standalone conversions,
+tagging and file moves. When off, **Recover interrupted item** reconciles any
+pending publication and leaves the rest of the batch for a new run. A partial
+file move or grouping copy can finish using the saved group checkpoint. If the
+app cannot verify the interrupted state safely, it keeps the journal for manual
+review. The setting is saved with the run. Recipes still resume as a workflow.
+
+**Recovery verification** applies to new standalone media conversions, Group by
+Track ID, Group by Alphabet, Flatten and Rename by Filename Pattern runs. Choose
+**xxHash128** (default), **SHA-256**,
 **Metadata only**, or **No verification**. A saved verification choice takes
 precedence over the default. Metadata checks compare file size
 and last-write time. Directory metadata checks also compare the paths in
 the tree. No verification keeps path and transaction checks. Change the shared
-setting in Desktop, [CLI](cli.md#commands-and-settings), or [MCP](mcp.md#requests-and-settings).
+settings in Desktop, [CLI](cli.md#commands-and-settings), or [MCP](mcp.md#requests-and-settings).
+The shared IDs are `recovery.batch-resume` and `recovery.check-on-startup`.
+CLI and MCP can set the Desktop startup preference through the shared profile.
+Headless recovery discovery remains an explicit command or tool call.
 
-Turning off **Allow batch resume** leaves interrupted move records available
-for manual review. Metadata-only or unverified interrupted runs also require
-manual review. Recover lists these records and explains why automatic resume
-is unavailable. Successful runs clean up their records. Journal settings are
-saved per run. An older journal without a verification mode uses SHA-256.
+**When to start checking for file changes** sets when standalone media
+conversions, file moves, renames and grouping copies capture their source
+fingerprints.
 
-Conversion and tagging publication, recipe recovery, and quarantine retain
-their existing SHA-256 checks. The setting is separate from archive validation
-and does not change any recorded fingerprint.
+- **Before the batch starts** is more robust because it can
+  detect edits to files while they wait.
+- **When each item starts** is the default and starts faster with content verification. It uses the
+  source as it exists when its group begins. Grouping copies and conversion
+  staging can hash the source bytes during the copy.
+
+Both options validate the plan and check each result at the selected verification
+level. Conversion batches that check up front capture each input group,
+including its matching audio sidecar, across the whole selection before
+converting anything. Each staged input is compared to that saved baseline.
+Conversions use the selected verification mode for input checks, staging,
+and publication in both timing modes. Archive structure, CRCs, and media
+format checks still apply where required.
+Conversion verifies the staged file, then checks the original again before
+publishing any output or removing any source.
+
+Recovery uses the timing saved with the run. Older move journals without a timing
+field use **Before the batch starts**. Older conversion journals without a
+baseline use **When each item starts**. The shared setting ID is
+`recovery.check-timing` with values `BeforeBatch` and `BeforeItem`.
+
+Metadata-only and unverified interrupted moves require manual review. Older
+move journals created with batch resume disabled also require manual review
+because they lack an interrupted group checkpoint. Successful runs clean up their
+records. An interrupted conversion publication without content fingerprints
+also requires manual review. A conversion interrupted between publications can
+resume according to its saved batch continuation setting. An older journal
+without a verification mode uses SHA-256.
+
+Tagging, recipe-owned conversions and quarantine use their existing SHA-256
+checks. Standalone validation records SHA-256 fingerprints for quarantine.
 
 ## Batch failure handling
 
@@ -97,7 +137,9 @@ show a red completion status if any item failed. Stop and retain recovery
 data if a group may be partially published or its state cannot be verified.
 
 Conversions, tagging and disc ripping generally continue after isolated item
-failures. Flattening does so for empty-folder cleanup failures. A recipe can
+failures. Approved grouping and rename previews skip an affected group if
+its source is unavailable or its destination is occupied before publication.
+Flattening continues after isolated empty-folder cleanup failures. A recipe can
 finish the current step's batch, and a failed step prevents later steps from
 starting.
 

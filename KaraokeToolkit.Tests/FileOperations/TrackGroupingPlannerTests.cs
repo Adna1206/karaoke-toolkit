@@ -31,6 +31,30 @@ public class TrackGroupingPlannerTests
         Assert.False(Directory.Exists(output));
     }
 
+    [Theory]
+    [InlineData(0, "ABC-3xx")]
+    [InlineData(50, "ABC-351 to ABC-400")]
+    public void TrackSuffixesUseNumericBucketAndKeepCompleteFilenames(int rangeSize, string group)
+    {
+        string root = TestMediaFixture.NewFolder(), output = Path.Combine(root, "sorted");
+        string audio = FileAt(root, "ABC-369A - Artist (WVocal) - Title (Ext Ver).mp3");
+        string graphics = FileAt(root, "ABC-369A - Artist (WVocal) - Title (Ext Ver).cdg");
+        string variant = FileAt(root, "ABC369bc.zip");
+        string numeric = FileAt(root, "ABC-369.zip");
+
+        var plan = TrackGroupingPlanner.Plan([audio, variant, numeric], output, new()
+        {
+            RangeSize = rangeSize,
+            RangeSeparator = " to "
+        });
+
+        Assert.Empty(plan.Issues);
+        Assert.Equal(4, plan.Items.Count);
+        foreach (string source in new[] { audio, graphics, variant, numeric })
+            Assert.Equal(Path.Combine(output, group, Path.GetFileName(source)),
+                plan.Items.Single(item => item.Source == source).Destination);
+    }
+
     [Fact]
     public void WholeIntervalFoldersStayDistinctByPrefixAndMustFitTheirDestination()
     {
@@ -57,8 +81,9 @@ public class TrackGroupingPlannerTests
         string root = TestMediaFixture.NewFolder(), output = Path.Combine(root, "sorted");
         string range = Directory.CreateDirectory(Path.Combine(root, "BKD-33601 through BKD-33650")).FullName;
         string ambiguous = Directory.CreateDirectory(Path.Combine(root, "BKD-33600s")).FullName;
+        string variant = Directory.CreateDirectory(Path.Combine(root, "BKD-33601A")).FullName;
         string mixed = Directory.CreateDirectory(Path.Combine(root, "BKD-33601 to SF-33650")).FullName;
-        var plan = TrackGroupingPlanner.Plan([range, ambiguous, mixed], output, new()
+        var plan = TrackGroupingPlanner.Plan([range, ambiguous, variant, mixed], output, new()
         {
             WholeFolders = true,
             RangeSize = 100,
@@ -66,6 +91,7 @@ public class TrackGroupingPlannerTests
         });
 
         Assert.Equal("BKD-33601 through BKD-33700", ParentOf(plan, range));
+        Assert.Equal(ParentOf(plan, range), ParentOf(plan, variant));
         Assert.Equal(2, plan.Issues.Count);
         Assert.Contains(plan.Issues, issue => issue.Source == ambiguous && !issue.IsConflict);
         Assert.Contains(plan.Issues, issue => issue.Source == mixed && !issue.IsConflict);

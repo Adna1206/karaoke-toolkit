@@ -68,6 +68,9 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
     public string[] CurrentInputs => selectedInputs.Length > 0 ? selectedInputs : [FolderPath];
     internal RecoveryVerificationMode RecoveryVerification { get; private set; } = OperationCapabilities.DefaultFileMoveRecoveryVerification;
     internal bool SaveResumableRun { get; private set; } = true;
+    internal FileCheckTiming CheckTiming { get; private set; } = OperationCapabilities.DefaultFileMoveCheckTiming;
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(ShowRecoverButton))]
+    public partial bool CheckForInterruptedRunsOnStartup { get; private set; } = true;
     internal bool CheckForUpdatesOnStartup { get; private set; }
     public bool RememberInputFolder { get; private set; }
     private string? lastInputFolder;
@@ -205,11 +208,12 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
     {
         get; set;
     }
-    [ObservableProperty]
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(ShowRecoverButton))]
     public partial bool RecoveryAvailable
     {
         get; set;
     }
+    public bool ShowRecoverButton => RecoveryAvailable || !CheckForInterruptedRunsOnStartup;
     [ObservableProperty]
     public partial bool IsRecoveryMode
     {
@@ -266,6 +270,11 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
         var extensions = operation.SourceFileExtensions;
         foreach (string path in inputs)
         {
+            if (operation.IsTrackGrouping)
+            {
+                if (TrackGroupingPlanner.GetInputError(path) is { } error) return error;
+                continue;
+            }
             if (Directory.Exists(path)) continue;
             if (extensions?.Count == 0)
                 return "This operation requires folders. Clear the selection or enter an existing folder path.";
@@ -360,6 +369,8 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
             sharedProfile?.ApplyMigrations();
             Options = store.Load();
             (RecoveryVerification, SaveResumableRun) = store.LoadRecoveryPreferences();
+            CheckTiming = store.LoadFileCheckTiming();
+            CheckForInterruptedRunsOnStartup = store.LoadCheckForInterruptedRunsOnStartup();
             CheckForUpdatesOnStartup = store.LoadCheckForUpdatesOnStartup();
             (RememberInputFolder, lastInputFolder) = store.LoadInputFolderPreference();
             AudioBitrates = store.LoadAudioBitrates(Options);
@@ -425,12 +436,18 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
         => SaveOptions(options, policy, theme, validateBeforeConversion, ignoreLeadingTheForFileOrganization, audioBitrates, backdrop, RememberInputFolder);
 
     internal void SaveOptions(ConversionOptions options, OverwritePolicy policy, ApplicationTheme theme, bool validateBeforeConversion,
-        bool ignoreLeadingTheForFileOrganization, AudioBitratePreferences audioBitrates, ApplicationBackdrop backdrop, bool rememberInputFolder, RecoveryVerificationMode? recoveryVerification = null, bool? saveResumableRun = null, bool? checkForUpdatesOnStartup = null)
+        bool ignoreLeadingTheForFileOrganization, AudioBitratePreferences audioBitrates, ApplicationBackdrop backdrop, bool rememberInputFolder,
+        RecoveryVerificationMode? recoveryVerification = null, bool? saveResumableRun = null, bool? checkForUpdatesOnStartup = null,
+        bool? checkForInterruptedRunsOnStartup = null, FileCheckTiming? checkTiming = null)
     {
         store.Save(options, policy, theme, validateBeforeConversion, ignoreLeadingTheForFileOrganization, audioBitrates,
-            backdrop: backdrop, rememberInputFolder: rememberInputFolder, recoveryVerification: recoveryVerification, saveResumableRun: saveResumableRun, checkForUpdatesOnStartup: checkForUpdatesOnStartup);
+            backdrop: backdrop, rememberInputFolder: rememberInputFolder, recoveryVerification: recoveryVerification, saveResumableRun: saveResumableRun,
+            checkForUpdatesOnStartup: checkForUpdatesOnStartup, checkForInterruptedRunsOnStartup: checkForInterruptedRunsOnStartup,
+            checkTiming: checkTiming);
+        CheckTiming = checkTiming ?? CheckTiming;
         RecoveryVerification = recoveryVerification ?? RecoveryVerification;
         SaveResumableRun = saveResumableRun ?? SaveResumableRun;
+        CheckForInterruptedRunsOnStartup = checkForInterruptedRunsOnStartup ?? CheckForInterruptedRunsOnStartup;
         CheckForUpdatesOnStartup = checkForUpdatesOnStartup ?? CheckForUpdatesOnStartup;
         RememberInputFolder = rememberInputFolder;
         if (!rememberInputFolder) lastInputFolder = null;
@@ -464,7 +481,9 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
             ValidateBeforeConversion = settings.ValidateBeforeConversion;
             IgnoreLeadingTheForFileOrganization = settings.IgnoreLeadingThe;
             RecoveryVerification = settings.RecoveryVerification;
+            CheckTiming = settings.CheckTiming;
             SaveResumableRun = settings.SaveResumableRun;
+            CheckForInterruptedRunsOnStartup = settings.CheckForInterruptedRunsOnStartup;
             return true;
         }
         catch (Exception error)
@@ -569,7 +588,15 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
         catch (Exception error) { StatusOutcome = RunStatus.Failure; Status = "Could not start: " + error.Message; }
     }
     [RelayCommand]
-    private async Task CheckRecoveryAsync() => await CheckForRecoveryAsync();
+    private async Task CheckRecoveryAsync()
+    {
+        if (await CheckForRecoveryAsync()) return;
+        StatusOutcome = RunStatus.Neutral;
+        Status = "No interrupted runs found.";
+    }
+
+    internal Task CheckForRecoveryOnStartupAsync() =>
+        CheckForInterruptedRunsOnStartup ? CheckForRecoveryAsync() : Task.CompletedTask;
 
     public async Task<bool> CheckForRecoveryAsync(string? folder = null, bool? recurse = null)
     {
@@ -631,7 +658,7 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
     private ProcessingRun BeginRun(string title, string status, bool isIndeterminate = false)
     {
         if (activeRun != null) throw new InvalidOperationException("A processing run is already active.");
-        var run = new ProcessingRun(Report);
+        var run = new ProcessingRun(Report, elapsed => Elapsed = elapsed);
         activeRun = run;
         try
         {
@@ -664,6 +691,7 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
     private void EndRun(ProcessingRun? run)
     {
         run?.Dispose();
+        if (run != null) Elapsed = run.Elapsed;
         activeRun = null;
         IsRunProgressIndeterminate = false;
         IsBusy = false;
@@ -690,7 +718,9 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
             recoveryJob != null ? "Checking interrupted conversion…" : "Finding source files…", isIndeterminate: true);
         IsRecoveryMode = recoveryJob != null;
         RecoveryAvailable = IsRecoveryMode;
-        RecoveryMessage = IsRecoveryMode ? "Recovery mode — checking interrupted publication and resuming unfinished work." : "";
+        RecoveryMessage = recoveryJob == null ? "" : recoveryJob.ContinueBatchAfterRecovery
+            ? "Recovery mode — checking interrupted publication and resuming unfinished work."
+            : "Recovery mode — checking the interrupted item only.";
         try
         {
             ConversionResult result;
@@ -737,10 +767,15 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
                          OverwritePolicy == OverwritePolicy.Ask && ResolveConflictsAsync != null)
                     result = await new SelectionConversionService(recovery).RunAsync(new(action, CurrentInputs, runOptions, OverwritePolicy)
                     {
-                        ValidateBeforeConversion = ValidateBeforeConversion
+                        ValidateBeforeConversion = ValidateBeforeConversion,
+                        ContinueBatchAfterRecovery = SaveResumableRun,
+                        CheckTiming = CheckTiming,
+                        RecoveryVerification = RecoveryVerification
                     }, run.Progress, run.Token, ResolveConflictAsync, ResolveConflictsAsync);
                 else
-                    result = await new ConversionService(recovery).RunAsync(new(action, FolderPath, runOptions), OverwritePolicy, run.Progress, run.Token, ResolveConflictAsync, ValidateBeforeConversion);
+                    result = await new ConversionService(recovery).RunAsync(new(action, FolderPath, runOptions), OverwritePolicy, run.Progress, run.Token,
+                        ResolveConflictAsync, ValidateBeforeConversion, continueBatchAfterRecovery: SaveResumableRun,
+                        checkTiming: CheckTiming, verificationMode: RecoveryVerification);
             }
             finally { run.StopProgress(); }
             retryRequests = result.RetryRequests;
@@ -750,7 +785,6 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
             OnPropertyChanged(nameof(CanViewReport));
             OnPropertyChanged(nameof(CanChooseSource));
             FoundFiles = result.Found;
-            Elapsed = result.Elapsed.ToString(@"hh\:mm\:ss");
             if (!result.Cancelled)
             {
                 Progress = 100;
@@ -759,15 +793,15 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
             Status = $"{(result.Cancelled ? "Cancelled" : "Processing finished")}: {result.Succeeded} succeeded, {result.Skipped} skipped, {result.Failed} failed.";
             StatusOutcome = RunStatusSummary.From(result);
             AppendActivityIssues(result.Files);
-            Activity.Add(new(Elapsed, Status));
+            AddActivity(Status);
         }
-        catch (OperationCanceledException) { Status = "Cancelled. Unpublished changes were discarded."; Activity.Add(new(Elapsed, Status)); }
+        catch (OperationCanceledException) { Status = "Cancelled. Unpublished changes were discarded."; AddActivity(Status); }
         catch (Exception e)
         {
             StatusOutcome = RunStatus.Failure;
             Status = e.Message;
             LastReport = new(RunTitle, DateTimeOffset.Now, false, [new ReportEntry(FolderPath, "Failed", e.Message, [])]);
-            Activity.Add(new(Elapsed, Status));
+            AddActivity(Status);
         }
         finally
         {
@@ -806,7 +840,7 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
                 StatusOutcome = RunStatusSummary.From(resumed.Report.Cancelled, succeeded, failed, skipped);
                 if (!resumed.Report.Cancelled) Progress = TotalProgress = 100;
                 Status = $"{(resumed.Report.Cancelled ? "File move recovery cancelled" : "File move recovery finished")}: {succeeded} completed, {skipped} skipped, {failed} failed.";
-                Activity.Add(new(Elapsed, Status));
+                AddActivity(Status);
             }
             catch (Exception error)
             {
@@ -820,18 +854,17 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
         {
             var result = alphabetical != null
                 ? await new AlphabeticalOrganizer(recovery).ApplyPreviewAsync(CurrentInputs, alphabetical.Scope, alphabetical.Plan,
-                    run.Progress, run.Token, alphabetical.IgnoreLeadingThe, RecoveryVerification, SaveResumableRun)
-                : await new FlattenFolderLayer().RunAsync(CurrentInputs, run.Progress, run.Token, SelectedOperation!.FlattenScope!.Value,
-                    RecoveryVerification, SaveResumableRun);
+                    run.Progress, run.Token, alphabetical.IgnoreLeadingThe, RecoveryVerification, SaveResumableRun, CheckTiming)
+                : await new FlattenFolderLayer(recovery).RunAsync(CurrentInputs, run.Progress, run.Token, SelectedOperation!.FlattenScope!.Value,
+                    RecoveryVerification, SaveResumableRun, CheckTiming);
             run.StopProgress();
             LastReport = CompletionReport.FromConversion(RunTitle, result) with { ReportType = "File Organization Report" };
             FoundFiles = result.Found;
-            Elapsed = result.Elapsed.ToString(@"hh\:mm\:ss");
             if (!result.Cancelled) Progress = TotalProgress = 100;
             Status = $"{(result.Cancelled ? "Cancelled" : "File operation finished")}: {result.Succeeded} completed, {result.Skipped} skipped, {result.Failed} failed.";
             StatusOutcome = RunStatusSummary.From(result);
             AppendActivityIssues(result.Files);
-            Activity.Add(new(Elapsed, Status));
+            AddActivity(Status);
         }
         catch (OperationCanceledException) { Status = "File operation cancelled."; }
         catch (Exception error)
@@ -859,13 +892,12 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
             retryRequests = [];
             LastReport = CompletionReport.FromValidation(result);
             FoundFiles = result.Findings.Count;
-            Elapsed = result.Elapsed.ToString(@"hh\:mm\:ss");
             if (!result.Cancelled)
                 Progress = TotalProgress = 100;
             int issues = result.Findings.Count(f => f.Status != ValidationStatus.Valid);
             StatusOutcome = result.Cancelled ? RunStatus.Neutral : issues > 0 || FoundFiles == 0 ? RunStatus.Warning : RunStatus.Success;
             Status = $"Validation {(result.Cancelled ? "cancelled" : "finished")}: {FoundFiles - issues} valid, {issues} need attention. Use View Last Run Report to review.";
-            Activity.Add(new(Elapsed, Status));
+            AddActivity(Status);
         }
         catch (OperationCanceledException) { Status = "Validation cancelled. No files were changed."; }
         catch (Exception error)
@@ -884,7 +916,6 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
         Progress = report.FilePercent;
         TotalProgress = report.TotalPercent;
         FoundFiles = report.Found;
-        Elapsed = report.Elapsed;
         if (!report.ShowInActivity || IsRoutineSkip(report.ActivityLabel, report.ActivityDetail))
         {
             if (preparationFinished) Status = report.Message;
@@ -894,10 +925,12 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
             ? FormatActivityMessage(label, source, report.ActivityDetail) : report.Message;
         if (lastMessage != Status)
         {
-            Activity.Add(new(Elapsed, Status));
+            AddActivity(Status);
             lastMessage = Status;
         }
     }
+
+    private void AddActivity(string message) => Activity.Add(new(activeRun?.Elapsed ?? Elapsed, message));
 
     private static bool IsRoutineSkip(string? label, string? detail)
         => label == nameof(ConversionStatus.Skipped) && detail == "Names already clean.";
@@ -935,7 +968,7 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
                 continue;
             string message = FormatActivityMessage(prefix + label, file.Source, file.Message);
             if (logged.Add(message))
-                Activity.Add(new(Elapsed, message));
+                AddActivity(message);
         }
     }
     [RelayCommand(CanExecute = nameof(CanCancel))]

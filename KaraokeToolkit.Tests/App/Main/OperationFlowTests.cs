@@ -1,5 +1,6 @@
 using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.App.Features.Main;
+using KaraokeToolkit.App.Features.TrackGrouping;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Recovery;
 using KaraokeToolkit.Core.Settings;
@@ -75,6 +76,109 @@ public class OperationFlowTests
         Assert.Equal("Succeeded", Assert.Single(model.LastReport!.Entries).Status);
         Assert.False(File.Exists(source));
         Assert.Equal("content", File.ReadAllText(Path.Combine(destination, "BKD-33601 to BKD-33650", Path.GetFileName(source))));
+    }
+
+    [Fact]
+    public async Task TrackGroupingStartRequiresExistingInputsAndLetsPreviewReportUnrecognizedNames()
+    {
+        string folder = TestMediaFixture.NewFolder();
+        string unsupported = Path.Combine(folder, "Unrecognized.zip");
+        string supported = Path.Combine(folder, "ABC-123A.zip");
+        File.WriteAllText(unsupported, "other");
+        File.WriteAllText(supported, "track");
+        var model = new MainViewModel(Settings());
+        model.SelectedOperation = model.Operations.Single(operation => operation.IsTrackGrouping);
+        int previews = 0;
+        model.ConfigureTrackGroupingAsync = async dialog =>
+        {
+            previews++;
+            Assert.Equal(folder, dialog.OutputFolder);
+            try
+            {
+                await dialog.PreviewAsync();
+                Assert.Contains(dialog.Issues, issue => issue.Text.Contains("No track ID", StringComparison.Ordinal));
+                Assert.False(dialog.CanApply);
+                return null;
+            }
+            finally { dialog.StopPreview(); }
+        };
+        model.PickTrackGroupingDestinationAsync = () => throw new InvalidOperationException("A single input folder implies the destination.");
+
+        Assert.False(model.StartCommand.CanExecute(null));
+        model.FolderPath = Path.Combine(folder, "Missing.zip");
+        Assert.False(model.StartCommand.CanExecute(null));
+        Assert.Contains("existing file or folder", model.SourceSummary);
+        await model.StartCommand.ExecuteAsync(null);
+        Assert.Equal(0, previews);
+
+        model.FolderPath = unsupported;
+        Assert.True(model.StartCommand.CanExecute(null));
+        await model.StartCommand.ExecuteAsync(null);
+        Assert.Equal(1, previews);
+        model.FolderPath = supported;
+        Assert.True(model.StartCommand.CanExecute(null));
+        model.FolderPath = folder;
+        Assert.True(model.StartCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task TrackGroupingAsksForAnAmbiguousDestinationBeforeOpeningPreview()
+    {
+        string first = TestMediaFixture.NewFolder(), second = TestMediaFixture.NewFolder();
+        string destination = TestMediaFixture.NewFolder();
+        var model = new MainViewModel(Settings());
+        model.SelectedOperation = model.Operations.Single(operation => operation.IsTrackGrouping);
+        model.AddInputs([first, second]);
+        var steps = new List<string>();
+        model.PickTrackGroupingDestinationAsync = () =>
+        {
+            steps.Add("destination");
+            return Task.FromResult<string?>(destination);
+        };
+        model.ConfigureTrackGroupingAsync = dialog =>
+        {
+            steps.Add("preview");
+            Assert.Equal(destination, dialog.OutputFolder);
+            dialog.FolderHandling = 1;
+            Assert.Equal(destination, dialog.OutputFolder);
+            return Task.FromResult<TrackGroupingSubmission?>(null);
+        };
+
+        Assert.True(model.StartCommand.CanExecute(null));
+        await model.StartCommand.ExecuteAsync(null);
+        Assert.Equal(new[] { "destination", "preview" }, steps);
+    }
+
+    [Fact]
+    public async Task GroupingEditsReuseTheScanUntilRefresh()
+    {
+        string source = TestMediaFixture.NewFolder();
+        string first = Path.Combine(source, "ABC-123.zip");
+        string second = Path.Combine(source, "ABC-456.zip");
+        File.WriteAllText(first, "first");
+        var dialog = new TrackGroupingViewModel([source]);
+        try
+        {
+            await dialog.PreviewAsync();
+            Assert.Single(dialog.GetSubmission()!.Plan.Items);
+            File.WriteAllText(second, "second");
+            dialog.MaskStyle = 2;
+            await dialog.PreviewAsync();
+            var item = Assert.Single(dialog.GetSubmission()!.Plan.Items);
+            Assert.Equal(Path.Combine(source, "ABC-1##", "ABC-123.zip"), item.Destination);
+
+            await dialog.PreviewAsync(refresh: true);
+            Assert.Equal(2, dialog.GetSubmission()!.Plan.Items.Count);
+
+            string output = TestMediaFixture.NewFolder();
+            dialog.OutputFolder = output;
+            await dialog.PreviewAsync();
+            Assert.NotEmpty(dialog.Tree);
+            Assert.Null(dialog.GetSubmission());
+            await dialog.PreviewAsync(refresh: true);
+            Assert.Equal(2, dialog.GetSubmission()!.Plan.Items.Count);
+        }
+        finally { dialog.StopPreview(); }
     }
 
     [Fact]

@@ -26,7 +26,7 @@ public sealed record CliArguments(string Command, OperationRequest? Request, str
     private static readonly HashSet<string> Flags = ["json", "quiet", "recurse", "no-recurse", "delete-originals", "keep-originals", "cue-text", "no-cue-text",
         "validate-inputs", "no-validate-inputs", "ignore-leading-the", "no-ignore-leading-the", "fill-empty-only", "preserve-comments", "preserve-other-tags", "video-audio-fallback-only", "dry-run", "batch-resume", "no-batch-resume"];
     private static readonly HashSet<string> Values = ["input", "options", "overwrite", "encoder", "bitrate", "zip-level", "zip-algorithm", "pattern", "report",
-        "video-container", "video-resolution", "video-smoothing", "video-frame-rate", "video-bitrate", "video-audio-bitrate", "output", "recovery-verification"];
+        "video-container", "video-resolution", "video-smoothing", "video-frame-rate", "video-bitrate", "video-audio-bitrate", "output", "recovery-verification", "check-timing"];
     public static CliArguments Parse(string[] args, Func<SharedSettingsSnapshot>? loadProfile = null)
     {
         if (args.Length == 0 || args.TakeWhile(a => a != "--").Any(a => a is "--help" or "-h")) return new("help", null, [], null, false, false, null)
@@ -110,11 +110,23 @@ public sealed record CliArguments(string Command, OperationRequest? Request, str
             "none" => RecoveryVerificationMode.None,
             _ => throw new CliUsageException("--recovery-verification expects sha256, xxhash128, metadata or none.")
         };
-        if ((options.ContainsKey("recovery-verification") || options.ContainsKey("batch-resume") || options.ContainsKey("no-batch-resume")) &&
-            !OperationCapabilities.SupportsFileMoveRecoveryOptions(operation.Value))
-            throw new CliUsageException("Recovery options require grouping, alphabetical organization or flattening.");
+        var checkTiming = options.GetValueOrDefault("check-timing") switch
+        {
+            null => defaults.CheckTiming,
+            "before-batch" => FileCheckTiming.BeforeBatch,
+            "before-item" => FileCheckTiming.BeforeItem,
+            _ => throw new CliUsageException("--check-timing expects before-batch or before-item.")
+        };
+        if (options.ContainsKey("recovery-verification") && !OperationCapabilities.SupportsFileCheckTiming(operation.Value))
+            throw new CliUsageException("Recovery verification overrides require a media conversion or file move operation.");
+        if (options.ContainsKey("check-timing") && !OperationCapabilities.SupportsFileCheckTiming(operation.Value))
+            throw new CliUsageException("File check timing overrides require a media conversion or file move operation.");
+        if ((options.ContainsKey("batch-resume") || options.ContainsKey("no-batch-resume")) &&
+            !OperationCapabilities.SupportsBatchContinuation(operation.Value))
+            throw new CliUsageException("This operation does not support a batch continuation override.");
         if (operation == OperationId.GroupByTrackId)
-            return new(command, ParseGrouping(options, inputs) with { RecoveryVerification = recoveryVerification, SaveResumableRun = saveResumableRun }, inputs.ToArray(), null, json, quiet, report)
+            return new(command, ParseGrouping(options, inputs) with
+            { RecoveryVerification = recoveryVerification, SaveResumableRun = saveResumableRun, CheckTiming = checkTiming }, inputs.ToArray(), null, json, quiet, report)
             { DryRun = options.ContainsKey("dry-run") };
         if (options.Keys.Any(k => GroupingFlags.Contains(k) || GroupingValues.Contains(k)))
             throw new CliUsageException("Track grouping settings require run group-by-track-id.");
@@ -161,7 +173,7 @@ public sealed record CliArguments(string Command, OperationRequest? Request, str
         new ConversionRequest(capability.IsConversion ? capability.Id : OperationId.AudioGToZip, ".", processing) { OutputFolder = outputFolder }.Validate();
         return new(command, new(operation.Value, inputs.ToArray())
         {
-            RecoveryVerification = recoveryVerification, SaveResumableRun = saveResumableRun,
+            RecoveryVerification = recoveryVerification, SaveResumableRun = saveResumableRun, CheckTiming = checkTiming,
             Options = processing, OverwritePolicy = overwrite,
             ValidateBeforeConversion = !options.ContainsKey("no-validate-inputs") && (options.ContainsKey("validate-inputs") || defaults.ValidateBeforeConversion),
             OutputFolder = outputFolder,
@@ -173,7 +185,7 @@ public sealed record CliArguments(string Command, OperationRequest? Request, str
     private static OperationRequest ParseGrouping(Dictionary<string, string?> options, List<string> inputs)
     {
         foreach (string name in options.Keys)
-            if (name is not ("json" or "quiet" or "report" or "dry-run" or "output" or "recurse" or "no-recurse" or "recovery-verification" or "batch-resume" or "no-batch-resume")
+            if (name is not ("json" or "quiet" or "report" or "dry-run" or "output" or "recurse" or "no-recurse" or "recovery-verification" or "check-timing" or "batch-resume" or "no-batch-resume")
                 && !GroupingFlags.Contains(name) && !GroupingValues.Contains(name))
                 throw new CliUsageException($"--{name} is unavailable for group-by-track-id.");
 

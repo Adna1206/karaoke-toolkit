@@ -26,9 +26,13 @@ public class AlphabeticalOrganizerTests
         model.ConfigureAlphabeticalGroupingAsync = async preview =>
         {
             await preview.RefreshAsync();
-            preview.ScopeIndex = (int)AlphabeticalOrganizeScope.Folders;
-            Assert.Null(preview.BuildSubmission());
+            File.WriteAllText(Path.Combine(first, "The Example.txt"), "article");
+            preview.IgnoreLeadingThe = true;
+            Assert.DoesNotContain(preview.Moves, row => row.SourceName == "The Example.txt");
             await preview.RefreshAsync();
+            Assert.Contains(preview.Moves, row => row.SourceName == "The Example.txt" && row.TargetName == Path.Combine("E", "The Example.txt"));
+            preview.ScopeIndex = (int)AlphabeticalOrganizeScope.Folders;
+            Assert.NotNull(preview.BuildSubmission());
             Assert.Equal(3, preview.Moves.Count);
             Assert.True(Directory.Exists(Path.Combine(first, "Bravo")));
             return preview.BuildSubmission();
@@ -111,21 +115,28 @@ public class AlphabeticalOrganizerTests
     }
 
     [Fact]
-    public async Task ApprovalRejectsAChangedDestinationBeforeMovingAnything()
+    public async Task ApprovalSkipsAnOccupiedDestinationAndIgnoresNewFiles()
     {
         string root = TestMediaFixture.NewFolder();
         string audio = Path.Combine(root, "song.mp3");
+        string notes = Path.Combine(root, "notes.txt");
         File.WriteAllText(audio, "audio");
+        File.WriteAllText(notes, "notes");
         var organizer = new AlphabeticalOrganizer();
-        var approved = await organizer.PreviewAsync([audio], AlphabeticalOrganizeScope.Files);
-        string target = Assert.Single(Assert.Single(approved.Files).Outputs);
+        var approved = await organizer.PreviewAsync([root], AlphabeticalOrganizeScope.Files);
+        string target = Assert.Single(Assert.Single(approved.Files, row => row.Source == audio).Outputs);
         Directory.CreateDirectory(Path.GetDirectoryName(target)!);
         File.WriteAllText(target, "new destination");
+        string added = Path.Combine(root, "later.txt");
+        File.WriteAllText(added, "later");
 
-        await Assert.ThrowsAsync<IOException>(() =>
-            organizer.ApplyPreviewAsync([audio], AlphabeticalOrganizeScope.Files, approved));
+        var result = await organizer.ApplyPreviewAsync([root], AlphabeticalOrganizeScope.Files, approved);
+        Assert.Equal(1, result.Skipped);
+        Assert.Equal(1, result.Succeeded);
         Assert.Equal("audio", File.ReadAllText(audio));
         Assert.Equal("new destination", File.ReadAllText(target));
+        Assert.Equal("notes", File.ReadAllText(Path.Combine(root, "N", "notes.txt")));
+        Assert.True(File.Exists(added));
     }
 
     [Fact]

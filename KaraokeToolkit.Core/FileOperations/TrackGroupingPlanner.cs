@@ -60,18 +60,43 @@ public static partial class TrackGroupingPlanner
     private sealed record Interval(string Prefix, long First, long Last, int Width);
     private sealed record Candidate(string Source, bool IsDirectory, Interval Group, string[] Levels);
 
+    public static string? GetInputError(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return "Choose an existing file or folder.";
+        try
+        {
+            string fullPath = FullPath(path);
+            CheckProtectedPath(fullPath);
+            return RunSession.CheckPlainPath(fullPath) == null ? "Choose an existing file or folder." : null;
+        }
+        catch (Exception error) when (error is ArgumentException or IOException or UnauthorizedAccessException or NotSupportedException)
+        {
+            return error.Message;
+        }
+    }
+
     public static TrackGroupingPlan Plan(IReadOnlyList<string> inputs, string outputFolder, TrackGroupingOptions options,
         CancellationToken token = default)
         => Plan(inputs, outputFolder, options, token, null);
 
     public static TrackGroupingPlan Plan(IReadOnlyList<string> inputs, string outputFolder, TrackGroupingOptions options,
-        CancellationToken token, Action<TrackGroupingPreviewStage, int, int>? report)
+        CancellationToken token, Action<TrackGroupingPreviewStage, int, int>? report) =>
+        Plan(inputs, outputFolder, options, token, report, null);
+
+    public static TrackGroupingPlan PlanPreview(InputScan scan, string outputFolder, TrackGroupingOptions options,
+        CancellationToken token, Action<TrackGroupingPreviewStage, int, int>? report) =>
+        Plan(scan.Inputs, outputFolder, options, token, report, scan);
+
+    private static TrackGroupingPlan Plan(IReadOnlyList<string> inputs, string outputFolder, TrackGroupingOptions options,
+        CancellationToken token, Action<TrackGroupingPreviewStage, int, int>? report, InputScan? scan)
     {
         Validate(options);
         ArgumentException.ThrowIfNullOrWhiteSpace(outputFolder);
         string output = FullPath(outputFolder);
-        CheckUsablePath(output);
-        if (File.Exists(output))
+        if (scan == null) CheckUsablePath(output);
+        else CheckProtectedPath(output);
+        bool checkDestination = scan == null || scan.CanCheckDestination(output);
+        if (checkDestination && (scan?.CheckDestinationPath(output) == false || scan == null && File.Exists(output)))
             throw new IOException("The output folder is an existing file: " + output);
 
         var selected = inputs.Select(FullPath).Distinct(Paths).Order(Paths).ToArray();
@@ -84,15 +109,15 @@ public static partial class TrackGroupingPlanner
         foreach (string path in selected)
         {
             token.ThrowIfCancellationRequested();
-            CheckUsablePath(path);
-            if (Directory.Exists(path))
+            if (scan == null) CheckUsablePath(path);
+            if (scan?.IsDirectory(path) ?? Directory.Exists(path))
             {
                 if (options.WholeFolders)
                     sources.Add(path);
                 else
                     Scan(path);
             }
-            else if (File.Exists(path))
+            else if (scan != null || File.Exists(path))
             {
                 AddFile(path);
                 if (IsCompanion(path))
@@ -107,7 +132,7 @@ public static partial class TrackGroupingPlanner
                 throw new FileNotFoundException("Selected input is missing: " + path, path);
         }
         foreach (var (directory, stems) in companionStems)
-            foreach (string mate in Directory.EnumerateFiles(directory))
+            foreach (string mate in Files(directory))
             {
                 token.ThrowIfCancellationRequested();
                 if (IsCompanion(mate) && stems.Contains(Path.GetFileNameWithoutExtension(mate)))
@@ -121,7 +146,7 @@ public static partial class TrackGroupingPlanner
         {
             token.ThrowIfCancellationRequested();
             report?.Invoke(TrackGroupingPreviewStage.Grouping, grouped++, sources.Count);
-            bool directory = Directory.Exists(source);
+            bool directory = scan?.IsDirectory(source) ?? Directory.Exists(source);
             if (Ancestors(source).Any(sources.Contains))
             {
                 issues.Add(new(source, "The item is also inside a selected folder.", true));
@@ -152,7 +177,7 @@ public static partial class TrackGroupingPlanner
                 continue;
             }
             if (directory)
-                CheckFolderContents(source, token);
+                CheckFolderContents(source, token, scan);
             string[] levels = Levels(group, options);
             if (levels.Any(level => level.Length > 255 || ReservedFolderName().IsMatch(level)))
             {
@@ -208,15 +233,15 @@ public static partial class TrackGroupingPlanner
                 continue;
             }
             items.Add(new(candidate.Source, target, candidate.IsDirectory));
-            RunSession.CheckPlainPath(target);
-            if (File.Exists(target) || Directory.Exists(target))
+            if (scan == null) RunSession.CheckPlainPath(target);
+            if (checkDestination && (scan == null ? File.Exists(target) || Directory.Exists(target) : scan.CheckDestinationPath(target) != null))
                 issues.Add(new(candidate.Source, "Destination already exists: " + target, true));
         }
 
         report?.Invoke(TrackGroupingPreviewStage.CheckingConflicts, 0, 0);
         foreach (string folder in groupFolders.Order(Paths))
         {
-            if (File.Exists(folder))
+            if (checkDestination && (scan == null ? File.Exists(folder) : scan.CheckDestinationPath(folder) == false))
                 issues.Add(new(folder, "A required group folder is an existing file.", true));
             if (sources.Contains(folder) || Ancestors(folder).Any(sources.Contains))
                 issues.Add(new(folder, "A required group folder overlaps a selected item.", true));
@@ -236,9 +261,12 @@ public static partial class TrackGroupingPlanner
         {
             if (IsProtected(Path.GetFileName(file)))
                 return;
-            CheckUsablePath(file);
+            if (scan == null) CheckUsablePath(file);
+            else scan.CheckPath(file);
             sources.Add(file);
         }
+
+        IEnumerable<string> Files(string folder) => scan?.Files(folder) ?? Directory.EnumerateFiles(folder);
 
         void Scan(string root)
         {
@@ -247,13 +275,14 @@ public static partial class TrackGroupingPlanner
             while (pending.TryPop(out string? folder))
             {
                 token.ThrowIfCancellationRequested();
-                foreach (string file in Directory.EnumerateFiles(folder))
+                foreach (string file in Files(folder))
                     AddFile(file);
                 if (options.Recurse)
-                    foreach (string child in Directory.EnumerateDirectories(folder))
+                    foreach (string child in scan?.Directories(folder) ?? Directory.EnumerateDirectories(folder))
                         if (!Paths.Equals(child, output) && !IsProtected(Path.GetFileName(child)))
                         {
-                            RunSession.CheckPlainPath(child);
+                            if (scan == null) RunSession.CheckPlainPath(child);
+                            else scan.CheckPath(child);
                             pending.Push(child);
                         }
             }
@@ -291,14 +320,16 @@ public static partial class TrackGroupingPlanner
                 return null;
         }
 
-        if (LeadingTrackId.Parse(name) is not { } track || track.Digits.Length > MaximumDigits)
+        if (LeadingTrackId.Parse(name, allowSuffix: true) is not { } track || track.Digits.Length > MaximumDigits)
+            return null;
+        // A bare start-only folder label can represent several interval sizes.
+        if (directory && track.Suffix.Equals("s", StringComparison.OrdinalIgnoreCase) &&
+            name.Length == track.Prefix.Length + track.Separator.Length + track.Digits.Length + track.Suffix.Length)
             return null;
         long value = ParseDigits(track.Digits);
         return new(track.Prefix.ToUpperInvariant(), value, value, track.Digits.Length);
     }
 
-    // A start-only name such as BKD-33600s could represent several interval sizes.
-    // The leading ID parser requires a boundary after the number so it stays unrecognized.
     private static Regex? CustomFolderRange(TrackGroupingOptions options)
     {
         if (!options.WholeFolders || (options.IdSeparator is "-" or "" && options.RangeSeparator is " - " or " to "))
@@ -376,18 +407,147 @@ public static partial class TrackGroupingPlanner
             throw new ArgumentException("Separators cannot contain characters that are invalid in folder names.");
     }
 
-    private static void CheckFolderContents(string root, CancellationToken token)
+    private static void CheckFolderContents(string root, CancellationToken token, InputScan? scan)
     {
         var pending = new Stack<string>();
         pending.Push(root);
         while (pending.TryPop(out string? folder))
         {
             token.ThrowIfCancellationRequested();
-            foreach (string entry in Directory.EnumerateFileSystemEntries(folder))
+            foreach (string entry in scan?.Entries(folder) ?? Directory.EnumerateFileSystemEntries(folder))
             {
-                CheckUsablePath(entry);
-                if (Directory.Exists(entry))
+                if (scan == null) CheckUsablePath(entry);
+                else scan.CheckPath(entry);
+                if (scan?.IsDirectory(entry) ?? Directory.Exists(entry))
                     pending.Push(entry);
+            }
+        }
+    }
+
+    // Retain errors with their entries so a shallow preview can ignore problems
+    // in descendants that only a recursive or whole-folder plan would need.
+    public sealed class InputScan
+    {
+        private InputScan(string[] inputs) => Inputs = inputs;
+
+        internal IReadOnlyList<string> Inputs { get; }
+        private sealed record Entry(string Path, bool IsDirectory, string? Error);
+        private readonly Dictionary<string, Entry> paths = new(Paths);
+        private readonly Dictionary<string, Entry[]> directories = new(Paths);
+        private readonly Dictionary<string, string> readErrors = new(Paths);
+        private readonly HashSet<string> walked = new(Paths);
+        private string? destination;
+        private string? destinationError;
+
+        public static InputScan Read(IReadOnlyList<string> inputs, string? output, CancellationToken token)
+        {
+            var scan = new InputScan(inputs.Select(FullPath).Distinct(Paths).Order(Paths).ToArray());
+            foreach (string input in scan.Inputs)
+            {
+                token.ThrowIfCancellationRequested();
+                CheckUsablePath(input);
+                bool isDirectory = Directory.Exists(input);
+                if (!isDirectory && !File.Exists(input))
+                    throw new FileNotFoundException("Selected input is missing: " + input, input);
+                scan.paths[input] = new(input, isDirectory, null);
+                if (isDirectory) scan.ReadTree(input, token);
+                else if (IsCompanion(input)) scan.ReadDirectory(Path.GetDirectoryName(input)!, token);
+            }
+            if (output != null)
+            {
+                scan.destination = FullPath(output);
+                try
+                {
+                    CheckUsablePath(scan.destination);
+                    if (Directory.Exists(scan.destination))
+                    {
+                        scan.paths[scan.destination] = new(scan.destination, true, null);
+                        scan.ReadTree(scan.destination, token);
+                    }
+                    else if (File.Exists(scan.destination))
+                        scan.paths[scan.destination] = new(scan.destination, false, null);
+                }
+                catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+                {
+                    scan.destinationError = error.Message;
+                }
+            }
+            return scan;
+        }
+
+        public bool CanCheckDestination(string output)
+        {
+            output = FullPath(output);
+            return Paths.Equals(destination, output) || walked.Contains(output);
+        }
+
+        internal bool? CheckDestinationPath(string path)
+        {
+            foreach (string current in Ancestors(path).Prepend(path))
+            {
+                if (Paths.Equals(current, destination) && destinationError is { } outputError) throw new IOException(outputError);
+                if (paths.TryGetValue(current, out var entry) && entry.Error is { } pathError) throw new IOException(pathError);
+                if (readErrors.TryGetValue(current, out string? readError)) throw new IOException(readError);
+            }
+            return paths.TryGetValue(path, out var found) ? found.IsDirectory : null;
+        }
+
+        internal bool IsDirectory(string path) => paths[path].IsDirectory;
+        internal void CheckPath(string path)
+        {
+            if (paths[path].Error is { } error) throw new IOException(error);
+        }
+
+        internal IEnumerable<string> Entries(string folder) => GetEntries(folder).Select(entry => entry.Path);
+        internal IEnumerable<string> Files(string folder) => GetEntries(folder).Where(entry => !entry.IsDirectory).Select(entry => entry.Path);
+        internal IEnumerable<string> Directories(string folder) => GetEntries(folder).Where(entry => entry.IsDirectory).Select(entry => entry.Path);
+
+        private Entry[] GetEntries(string folder)
+        {
+            if (readErrors.TryGetValue(folder, out string? error)) throw new IOException(error);
+            return directories[folder];
+        }
+
+        private void ReadTree(string root, CancellationToken token)
+        {
+            var pending = new Stack<string>();
+            pending.Push(root);
+            while (pending.TryPop(out string? folder))
+            {
+                token.ThrowIfCancellationRequested();
+                if (!walked.Add(folder)) continue;
+                ReadDirectory(folder, token);
+                if (!directories.TryGetValue(folder, out var children)) continue;
+                foreach (var child in children)
+                    if (child.IsDirectory && child.Error == null)
+                        pending.Push(child.Path);
+            }
+        }
+
+        private void ReadDirectory(string folder, CancellationToken token)
+        {
+            if (directories.ContainsKey(folder) || readErrors.ContainsKey(folder)) return;
+            try
+            {
+                var children = new List<Entry>();
+                foreach (var item in new DirectoryInfo(folder).EnumerateFileSystemInfos())
+                {
+                    token.ThrowIfCancellationRequested();
+                    string? error = null;
+                    if ((item.Attributes & FileAttributes.ReparsePoint) != 0 || IsProtected(item.Name))
+                    {
+                        try { CheckUsablePath(item.FullName); }
+                        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException) { error = failure.Message; }
+                    }
+                    var child = new Entry(item.FullName, item is DirectoryInfo, error);
+                    paths[child.Path] = child;
+                    children.Add(child);
+                }
+                directories.Add(folder, children.ToArray());
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+            {
+                readErrors.Add(folder, error.Message);
             }
         }
     }
@@ -401,6 +561,11 @@ public static partial class TrackGroupingPlanner
     private static void CheckUsablePath(string path)
     {
         RunSession.CheckPlainPath(path);
+        CheckProtectedPath(path);
+    }
+
+    private static void CheckProtectedPath(string path)
+    {
         if (path.Split(Path.DirectorySeparatorChar).Any(IsProtected))
             throw new IOException("A protected path cannot be grouped: " + path);
     }

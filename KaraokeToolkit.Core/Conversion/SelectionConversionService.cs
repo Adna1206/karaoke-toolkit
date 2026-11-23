@@ -9,6 +9,9 @@ public sealed record ConversionRetry(OperationId Action, string[] Inputs, Conver
         get; init;
     }
     public string OutputFolder { get; init; } = "";
+    public bool ContinueBatchAfterRecovery { get; init; } = true;
+    public FileCheckTiming CheckTiming { get; init; } = FileCheckTiming.BeforeItem;
+    public RecoveryVerificationMode RecoveryVerification { get; init; } = OperationCapabilities.DefaultFileMoveRecoveryVerification;
 }
 
 /// <summary>Creates every folder checkpoint before starting a multi-folder selection.</summary>
@@ -25,6 +28,8 @@ public sealed class SelectionConversionService(RecoveryStore? recovery = null)
         return await Task.Run(async () =>
         {
             var workflow = WorkflowSession.Current.Value;
+            if (!Enum.IsDefined(request.CheckTiming)) throw new ArgumentOutOfRangeException(nameof(request.CheckTiming));
+            if (!Enum.IsDefined(request.RecoveryVerification)) throw new ArgumentOutOfRangeException(nameof(request.RecoveryVerification));
             var plans = workflow?.Data.Conversions is { } saved
                 ? saved.Select(p => new SelectionBatch(p.Folder, p.Sources)).ToArray()
                 : InputSelection.Plan(request.Action, request.Inputs, request.Options.RecurseFolders);
@@ -34,6 +39,12 @@ public sealed class SelectionConversionService(RecoveryStore? recovery = null)
                 workflow.Save(); // Freeze all folder/source plans before the first mutation.
             }
             var prepared = new List<RecoveryJob>();
+            bool standaloneMedia = workflow == null && OperationCapabilities.SupportsConversionCheckTiming(request.Action);
+            bool captureBatchInputs = standaloneMedia && request.CheckTiming == FileCheckTiming.BeforeBatch;
+            var verification = standaloneMedia ? request.RecoveryVerification : RecoveryVerificationMode.Sha256;
+            if (captureBatchInputs)
+                progress?.Report(new(0, 0, plans.Sum(plan => plan.Sources.Count), 0, "Checking conversion inputs before the batch…", "00:00:00")
+                    { IsIndeterminate = true });
             try
             {
                 foreach (var plan in plans)
@@ -60,7 +71,12 @@ public sealed class SelectionConversionService(RecoveryStore? recovery = null)
                     operation.Validate();
                     if (OperationCapabilities.Describe(request.Action) != OperationSupport.Supported)
                         throw new NotSupportedException("This operation is unavailable.");
-                    using var run = new RunSession(recovery, operation, request.Policy, plan.Sources.ToArray(), request.ValidateBeforeConversion);
+                    string[] sources = plan.Sources.ToArray();
+                    var batchInputs = captureBatchInputs
+                        ? await ConversionInputSnapshot.CaptureAsync(request.Action, sources, token, verification)
+                        : null;
+                    using var run = new RunSession(recovery, operation, request.Policy, sources, request.ValidateBeforeConversion,
+                        request.ContinueBatchAfterRecovery, batchInputs, verification);
                     prepared.Add(new(run.Journal, plan.Folder, request.Action.ToString(), 0, plan.Sources.Count));
                 }
             }
@@ -115,7 +131,7 @@ public sealed class SelectionConversionService(RecoveryStore? recovery = null)
                 ConversionResult result;
                 try
                 {
-                    result = await new ConversionService(recovery).ResumeAsync(prepared[i], reporter, token, resolveConflict);
+                    result = await new ConversionService(recovery).RunPreparedAsync(prepared[i], reporter, token, resolveConflict);
                 }
                 catch (OperationCanceledException)
                 {

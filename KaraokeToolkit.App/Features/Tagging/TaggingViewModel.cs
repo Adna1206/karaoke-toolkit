@@ -51,6 +51,7 @@ public partial class TaggingViewModel(IReadOnlyList<string> inputs, bool recurse
 {
     private readonly KaraokeTaggingService service = new();
     private readonly string originalPattern = initialPattern;
+    private IReadOnlyList<TaggingPreview>? sources;
     private string? previewPattern;
     private bool changingSelection;
     public IReadOnlyList<string> Patterns { get; } = patterns;
@@ -70,19 +71,42 @@ public partial class TaggingViewModel(IReadOnlyList<string> inputs, bool recurse
     public bool CanApply => !Busy && previewPattern == Pattern && Rows.Any(r => r.CanEdit && r.Included);
     internal bool HasEdits => Pattern != originalPattern || FillEmptyOnly || !ClearComments
         || !ClearOtherDescriptiveTags || Rows.Any(row => row.HasEdits);
+
+    partial void OnPatternChanged(string value) => UpdatePreview();
+
     [RelayCommand(CanExecute = nameof(CanPreview))]
     public async Task PreviewAsync(CancellationToken token = default)
     {
         if (Busy) return;
         Busy = true;
+        sources = null;
+        previewPattern = null;
         StatusSeverity = StatusKind.Info;
         Status = "Scanning inputs for media…";
         var report = PreviewProgress.Begin(status => Status = status);
         try
         {
-            string requested = Pattern;
-            var result = await service.PreviewAsync(inputs, requested, recurse, token,
+            sources = await service.ReadPreviewAsync(inputs, recurse, token,
                 (completed, total) => report("Reading media tags", completed, total));
+            UpdatePreview();
+        }
+        catch (OperationCanceledException) { Status = "Preview cancelled."; }
+        catch (Exception error) { StatusSeverity = StatusKind.Failure; Status = error.Message; }
+        finally
+        {
+            PreviewProgress.Finish();
+            Busy = false;
+            NotifyPreviewChanged();
+        }
+    }
+
+    private void UpdatePreview()
+    {
+        if (sources == null) return;
+        previewPattern = null;
+        try
+        {
+            var result = KaraokeTaggingService.PlanPreview(sources, Pattern).ToArray();
             foreach (var row in Rows)
                 row.PropertyChanged -= OnRowPropertyChanged;
             Rows.Clear();
@@ -92,7 +116,7 @@ public partial class TaggingViewModel(IReadOnlyList<string> inputs, bool recurse
                 row.PropertyChanged += OnRowPropertyChanged;
                 Rows.Add(row);
             }
-            previewPattern = requested;
+            previewPattern = Pattern;
             int ready = Rows.Count(row => row.CanEdit);
             int needsAttention = Rows.Count - ready;
             StatusSeverity = ready == 0 || needsAttention > 0 ? StatusKind.Warning : StatusKind.Success;
@@ -103,14 +127,24 @@ public partial class TaggingViewModel(IReadOnlyList<string> inputs, bool recurse
                 RecoveryNotice = "";
             }
         }
-        catch (OperationCanceledException) { Status = "Preview cancelled."; }
-        catch (Exception error) { previewPattern = null; StatusSeverity = StatusKind.Failure; Status = error.Message; }
+        catch (Exception error) when (error is ArgumentException or FormatException)
+        {
+            foreach (var row in Rows) row.PropertyChanged -= OnRowPropertyChanged;
+            Rows.Clear();
+            StatusSeverity = StatusKind.Failure;
+            Status = error.Message;
+        }
         finally
         {
-            PreviewProgress.Finish();
-            Busy = false;
-            OnPropertyChanged(nameof(CanApply));
+            NotifyPreviewChanged();
         }
+    }
+
+    private void NotifyPreviewChanged()
+    {
+        OnPropertyChanged(nameof(CanApply));
+        SelectAllCommand.NotifyCanExecuteChanged();
+        DeselectAllCommand.NotifyCanExecuteChanged();
     }
     private void OnRowPropertyChanged(object? sender, PropertyChangedEventArgs args)
     {

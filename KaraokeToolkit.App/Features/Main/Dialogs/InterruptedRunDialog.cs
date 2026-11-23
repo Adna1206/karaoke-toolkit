@@ -10,7 +10,8 @@ internal static class InterruptedRunDialog
     public static async Task<MainViewModel.RecoveryChoice> ShowAsync(Window owner, RecoveryJob job)
     {
         var choice = MainViewModel.RecoveryChoice.Later;
-        var recover = new Button { Content = "Recover and resume", Classes = { "accent" }, IsEnabled = job.Problem == null };
+        var recover = new Button { Content = job.ContinueBatchAfterRecovery ? "Recover and resume" : "Recover interrupted item",
+            Classes = { "accent" }, IsEnabled = job.Problem == null };
         var later = new Button { Content = "Later" };
         var abandon = new Button { Content = "Abandon interrupted run…", Classes = { "destructive" } };
         var units = job.Kind switch
@@ -26,7 +27,9 @@ internal static class InterruptedRunDialog
             {
                 PromptDialog.Message($"{job.Action} · {job.Completed} of {job.Total} {units} recorded."),
                 PromptDialog.Message(job.Folder),
-                PromptDialog.Message(job.Problem ?? "Recovery checks the saved file state before resuming. Completed work is kept.")
+                PromptDialog.Message(job.Problem ?? (job.ContinueBatchAfterRecovery
+                    ? "Recovery checks the saved file state before resuming. Completed work is kept."
+                    : "Recovery handles the interrupted item if there is one. You can start a new run for the remaining items."))
             }
         };
         var dialog = PromptDialog.Create("Interrupted run found", body, 610, DialogArtwork.Recovery, false,

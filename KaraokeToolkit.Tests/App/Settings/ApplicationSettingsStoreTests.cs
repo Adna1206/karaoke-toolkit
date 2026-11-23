@@ -15,8 +15,10 @@ public class ApplicationSettingsStoreTests
         var app = new ApplicationSettingsStore(path);
         app.Save(new());
         Assert.Equal((RecoveryVerificationMode.XxHash128, true), app.LoadRecoveryPreferences());
+        Assert.Equal(FileCheckTiming.BeforeItem, app.LoadFileCheckTiming());
 
-        app.Save(new(), recoveryVerification: RecoveryVerificationMode.Sha256, saveResumableRun: false);
+        app.Save(new(), recoveryVerification: RecoveryVerificationMode.Sha256, saveResumableRun: false, checkTiming: FileCheckTiming.BeforeBatch);
+        Assert.Equal(FileCheckTiming.BeforeBatch, new ApplicationSettingsStore(path).LoadFileCheckTiming());
         Assert.Equal((RecoveryVerificationMode.Sha256, false), new ApplicationSettingsStore(path).LoadRecoveryPreferences());
     }
 

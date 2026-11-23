@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 namespace KaraokeToolkit.App.Metadata;
 
-public enum SettingCategory { General, Legacy, Archives, Audio, DiscRipping, Video }
+public enum SettingCategory { General, Legacy, Archives, Audio, DiscRipping, Video, Recovery }
 
 /// <summary>Presentation metadata only. Defaults, saved values and validation remain in their typed models.</summary>
 public record SettingDefinition(string Id, string Label, string ShortDescription, string Description, SettingCategory Category);

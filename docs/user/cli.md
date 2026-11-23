@@ -164,7 +164,7 @@ read-only and does not automatically quarantine files.
 
 Without folders, `recovery-list` uses the app's startup recovery index. With folders,
 it also discovers journals there. `recover` takes an available journal from that
-list, retaining the saved processing/deletion/overwrite settings. Saved `Ask`
+list, retaining the saved processing, deletion, overwrite and batch continuation settings. Saved `Ask`
 conflicts cannot prompt and will fail. Recipe recovery uses its saved definition/settings even if the recipe file was deleted. Damaged journals and changed files remain
 protected. See [crash recovery](crash-recovery.md).
 
@@ -195,12 +195,21 @@ remain in place; unreadable/nonmovable findings are reported as issues. Use
 `--dry-run` first, and `run restore-quarantined-files MANIFEST` to restore a group.
 Quarantine is an explicit step after running `validate-karaoke-files`.
 
-## File move recovery settings
+## Recovery settings for new runs
 
-Grouping, alphabetical organization and flattening default to xxHash128 and accept
-`--recovery-verification sha256|xxhash128|metadata|none` and
-`--batch-resume` or `--no-batch-resume`. See [recovery verification](crash-recovery.md#verification-settings)
-for defaults and how interrupted runs are handled.
+Standalone media conversions, grouping, alphabetical organization and flattening
+default to xxHash128 and accept `--recovery-verification sha256|xxhash128|metadata|none`. Use
+`--check-timing before-batch|before-item` to override the saved
+`recovery.check-timing` setting for a standalone media conversion, file move
+or grouping run. The profile
+values are `BeforeBatch` (more robust) and `BeforeItem` (default, faster to start).
+For those operations,
+standalone conversions and tagging, `--batch-resume` or `--no-batch-resume`
+overrides the shared `recovery.batch-resume` setting. With it off, `recover`
+reconciles the interrupted item and leaves the rest for a new run.
+`settings set recovery.check-on-startup false` turns off the Desktop startup
+check. CLI discovery remains explicit through `recovery-list`.
+See [recovery settings](crash-recovery.md#recovery-settings).
 
 ## Track ID separator
 

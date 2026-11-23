@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+using KaraokeToolkit.Core.Recovery;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -72,8 +72,8 @@ internal static class CdrdaoToc
         if (seconds >= 60 || frames >= 75) throw new InvalidDataException("Invalid cdrdao track time.");
         return checked((minutes * 60 + seconds) * 75 + frames);
     }
-    internal static string Identity(IEnumerable<Track> tracks) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
-        string.Join(';', tracks.Select(t => $"{t.Number}:{t.Offset}:{t.Sectors}:{t.Pregap}")))));
+    internal static string Identity(IEnumerable<Track> tracks) => RecoveryFingerprint.HashBytes(Encoding.UTF8.GetBytes(
+        string.Join(';', tracks.Select(t => $"{t.Number}:{t.Offset}:{t.Sectors}:{t.Pregap}"))));
 
     /// <summary>Normalizes cdrdao's big-endian PCM and raw P-W symbols to the
     /// little-endian PCM + 96 deinterleaved six-bit CDG symbols used by CD+G BIN files.

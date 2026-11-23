@@ -2,7 +2,6 @@ using KaraokeToolkit.App.Features.TrackGrouping;
 using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.Recovery;
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,6 +11,7 @@ namespace KaraokeToolkit.App.Features.Main;
 public partial class MainViewModel
 {
     internal Func<TrackGroupingViewModel, Task<TrackGroupingSubmission?>>? ConfigureTrackGroupingAsync { get; set; }
+    internal Func<Task<string?>>? PickTrackGroupingDestinationAsync { get; set; }
 
     private async Task RunTrackGroupingAsync(RecoveryJob? job = null)
     {
@@ -27,7 +27,16 @@ public partial class MainViewModel
                         return;
                 IsBusy = true;
                 if (ConfigureTrackGroupingAsync == null) throw new InvalidOperationException("The grouping preview is unavailable.");
-                submission = await ConfigureTrackGroupingAsync(new(CurrentInputs));
+                var preview = new TrackGroupingViewModel(CurrentInputs);
+                if (preview.OutputFolder == null)
+                {
+                    if (PickTrackGroupingDestinationAsync == null)
+                        throw new InvalidOperationException("The grouping destination picker is unavailable.");
+                    string? destination = await PickTrackGroupingDestinationAsync();
+                    if (destination == null) return;
+                    preview.SetSelectedDestination(destination);
+                }
+                submission = await ConfigureTrackGroupingAsync(preview);
                 if (submission == null) return;
             }
             else
@@ -37,22 +46,25 @@ public partial class MainViewModel
             }
 
             run = BeginRun(job != null ? "Recovery — " + title : title,
-                job != null ? "Checking interrupted grouping…" : "Checking grouping plan…", isIndeterminate: true);
+                job != null ? "Checking interrupted grouping…" : "Preparing recovery for grouped items…", isIndeterminate: true);
             IsRecoveryMode = job != null;
             if (job != null)
             {
-                RecoveryMessage = "Recovery mode — resuming the approved grouping plan.";
+                RecoveryMessage = job.ContinueBatchAfterRecovery
+                    ? "Recovery mode — resuming the approved grouping plan."
+                    : "Recovery mode — checking the interrupted group only.";
             }
 
-            var timer = Stopwatch.StartNew();
             var service = new OperationExecutionService(recovery);
             var result = job == null
-                ? await service.ExecuteGroupingAsync(submission!.Request with { RecoveryVerification = RecoveryVerification, SaveResumableRun = SaveResumableRun }, submission.Plan, run.Progress, run.Token)
+                ? await service.ExecuteGroupingAsync(submission!.Request with
+                {
+                    RecoveryVerification = RecoveryVerification, SaveResumableRun = SaveResumableRun, CheckTiming = CheckTiming
+                }, submission.Plan, run.Progress, run.Token)
                 : await Task.Run(() => service.ResumeAsync(job.JournalPath, run.Progress, run.Token));
             run.StopProgress();
             LastReport = result.Report with { Operation = title, ReportType = "Track Grouping Report" };
             FoundFiles = result.Found;
-            Elapsed = timer.Elapsed.ToString(@"hh\:mm\:ss");
             int completed = result.Report.Entries.Count(entry => entry.Status == "Succeeded");
             int skipped = result.Report.Entries.Count(entry => entry.Status == "Skipped");
             int failed = result.Report.Entries.Count(entry => entry.Status is "Failed" or "Blocked");
@@ -66,9 +78,9 @@ public partial class MainViewModel
                     ? FormatActivityMessage("Processing", entry.Source, null)
                     : FormatActivityMessage(entry.Status, entry.Source, entry.Message);
                 if (logged.Add(message))
-                    Activity.Add(new(Elapsed, message));
+                    AddActivity(message);
             }
-            Activity.Add(new(Elapsed, Status));
+            AddActivity(Status);
         }
         catch (OperationCanceledException)
         {

@@ -17,12 +17,68 @@ public class ProcessingRunTests
         }
     }
 
-    private static ProcessingRun CreateRun(QueuedContext context, Action<ConversionProgress> report)
+    private static ProcessingRun CreateRun(QueuedContext context, Action<ConversionProgress> report,
+        Action<string>? updateElapsed = null, TimeProvider? clock = null)
     {
         var previous = SynchronizationContext.Current;
         SynchronizationContext.SetSynchronizationContext(context);
-        try { return new ProcessingRun(report); }
+        try { return new ProcessingRun(report, updateElapsed, clock); }
         finally { SynchronizationContext.SetSynchronizationContext(previous); }
+    }
+
+    [Fact]
+    public void ElapsedTicksWithoutProgressAndFreezesWhenRunStops()
+    {
+        var context = new QueuedContext();
+        var clock = new TestClock();
+        var updates = new List<string>();
+        using var run = CreateRun(context, _ => { }, updates.Add, clock);
+        Assert.Equal("00:00:00", run.Elapsed);
+
+        clock.Tick();
+        Assert.Empty(updates);
+        context.Drain();
+        clock.Tick();
+        context.Drain();
+        Assert.Equal(new[] { "00:00:01", "00:00:02" }, updates);
+
+        clock.Tick();
+        run.StopProgress();
+        context.Drain();
+        clock.Tick();
+        context.Drain();
+        Assert.Equal("00:00:03", run.Elapsed);
+        Assert.Equal("00:00:02", updates.Last());
+    }
+
+    private sealed class TestClock : TimeProvider
+    {
+        private long timestamp;
+        private TestTimer? timer;
+        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+        public override long GetTimestamp() => timestamp;
+
+        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+        {
+            Assert.Equal(TimeSpan.FromSeconds(1), dueTime);
+            Assert.Equal(dueTime, period);
+            return timer = new TestTimer(() => callback(state));
+        }
+
+        public void Tick()
+        {
+            timestamp += TimeSpan.TicksPerSecond;
+            timer!.Tick();
+        }
+
+        private sealed class TestTimer(Action callback) : ITimer
+        {
+            private bool disposed;
+            public void Tick() { if (!disposed) callback(); }
+            public bool Change(TimeSpan dueTime, TimeSpan period) => throw new NotSupportedException();
+            public void Dispose() => disposed = true;
+            public ValueTask DisposeAsync() { Dispose(); return ValueTask.CompletedTask; }
+        }
     }
 
     [Theory]
