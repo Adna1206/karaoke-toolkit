@@ -17,6 +17,9 @@ public static class InputSelection
     /// <summary>Returns distinct absolute inputs after rejecting missing, unsupported or protected paths.</summary>
     /// <remarks>Uses platform-specific path comparison; does not expand folders or modify files.</remarks>
     public static string[] Normalize(IEnumerable<string> paths)
+        => Normalize(paths, allowKma: false);
+
+    public static string[] Normalize(IEnumerable<string> paths, bool allowKma)
     {
         var selected = paths.Select(p => Path.TrimEndingDirectorySeparator(Path.GetFullPath(p))).Distinct(Paths).ToArray();
         if (selected.Length == 0)
@@ -26,7 +29,9 @@ public static class InputSelection
             RunSession.CheckPlainPath(path);
             if (!Directory.Exists(path) && !File.Exists(path))
                 throw new FileNotFoundException("Selected input is missing: " + path);
-            if (File.Exists(path) && !Extensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase) && !ArchiveZipConverter.IsInput(path))
+            string extension = Path.GetExtension(path);
+            if (File.Exists(path) && !Extensions.Contains(extension, StringComparer.OrdinalIgnoreCase) && !ArchiveZipConverter.IsInput(path) &&
+                !(allowKma && extension.Equals(".kma", StringComparison.OrdinalIgnoreCase)))
                 throw new ArgumentException("Unsupported input file: " + path);
             if (path.Split(Path.DirectorySeparatorChar).Any(IsExcludedFolder))
                 throw new IOException("Recovery and Damaged folders cannot be used as input: " + path);
@@ -41,6 +46,7 @@ public static class InputSelection
     {
         Action.ZipToBin or Action.ZipToAudioG or Action.RepackZip => [".zip"],
         Action.BinToZip or Action.BinToAudioG => [".bin"],
+        Action.KmaToMp3G => [".kma"],
         Action.AudioGToBin or Action.AudioGToZip or Action.LosslessGToMp3G => [".cdg", .. KaraokeArchive.AudioExtensions],
         Action.KaraokeToVideo => [".bin", ".zip", ".cdg", .. KaraokeArchive.AudioExtensions],
         Action.ArchiveToZip => ArchiveZipConverter.Extensions,
@@ -53,7 +59,7 @@ public static class InputSelection
     /// Folder-only maintenance rejects individual file selections. Planning does not publish outputs.</remarks>
     public static IReadOnlyList<SelectionBatch> Plan(OperationId action, IEnumerable<string> paths, bool recurse)
     {
-        string[] selected = Normalize(paths);
+        string[] selected = Normalize(paths, allowKma: action == Action.KmaToMp3G);
         var fileExtensions = ConversionFileExtensions(action);
         bool maintenance = fileExtensions.Count == 0;
         if (maintenance && selected.Any(File.Exists))
@@ -62,6 +68,7 @@ public static class InputSelection
         {
             Action.AudioGToBin or Action.AudioGToZip or Action.LosslessGToMp3G or Action.KaraokeToVideo => ".cdg",
             Action.RepackZip or Action.ZipToAudioG or Action.ZipToBin => ".zip",
+            Action.KmaToMp3G => ".kma",
             _ => ".bin"
         };
         var sources = new HashSet<string>(Paths);

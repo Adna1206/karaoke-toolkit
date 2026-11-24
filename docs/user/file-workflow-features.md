@@ -21,7 +21,7 @@ is remembered.
 Drop folders or karaoke files onto the main window, select folders with **Add Folders…**,
 or select individual files with **Add Files…**. Picker/drop actions accumulate inputs;
 **Clear** resets them. Multiple selections are supported. Typing
-into the source box replaces the prior selection. Homogeneous ZIP, BIN or audio/CDG
+into the source box replaces the prior selection. Homogeneous ZIP, BIN, KMA or audio/CDG
 file selections choose a matching default conversion action; opening input never
 starts a conversion automatically.
 
@@ -39,6 +39,28 @@ Multi-folder selections create recovery checkpoints for every affected folder be
 starting conversion. Following an interruption, those pending folder runs can be
 recovered individually. Normal cancellation ends the unstarted runs rather than leaving
 them as crash-recovery jobs.
+
+## Convert KMA to MP3+G
+
+Choose **Karaoke Conversion → Convert KMA to MP3+G** and select `.kma` files or
+folders. Each successful conversion writes a same-named `.mp3` and `.cdg` pair and
+keeps the original KMA. The pair uses the selected overwrite policy and shared
+conversion recovery. Automatic CUE/TXT generation is skipped for this operation.
+
+The reader handles interleaved WMA and CDG, separator-based WMA or MP3 with CDG,
+and an embedded ZIP containing one matching audio/CDG pair with MP3, WMA or PCM
+WAV audio. Embedded MP3 is copied without re-encoding. Mono and stereo WMA or WAV
+are encoded as stereo 44.1 kHz MP3 at the saved MP3 bitrate. CDG bytes stay intact.
+For recognized MP3 and ZIP layouts, the reader can skip up to 64 KiB of zero
+padding before the expected payload. Competing audio/CDG separators require a
+verified audio boundary and plausible CDG packets before anything is published.
+
+Tracks with no recognized CDG instructions, unknown graphics instructions, or
+more than one second of difference between decoded audio and CDG duration still
+publish when the pair passes its structural checks. The activity and report show
+a per-track warning. Audio-only, unknown and malformed layouts are reported per
+file. Compatibility was checked with generated fixtures. Real KMA files and
+lyric playback remain unverified.
 
 ## ZIP compression
 

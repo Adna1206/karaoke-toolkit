@@ -53,6 +53,7 @@ Quote paths with spaces. Use `--` before positional paths that begin with a dash
 
 ```powershell
 .\karaoke-toolkit.exe run zip-to-audiog "D:\Incoming" --no-cue-text
+.\karaoke-toolkit.exe run kma-to-mp3g "D:\Incoming\ABC-01.kma" --bitrate 192
 .\karaoke-toolkit.exe run audiog-to-zip --input "D:\Disc One" --input "D:\Disc Two" --zip-level 5
 .\karaoke-toolkit.exe run repack-zip-for-compatibility "D:\Incoming" --zip-algorithm Deflate --delete-originals
 .\karaoke-toolkit.exe run group-by-alphabet-files "D:\Karaoke" --ignore-leading-the
@@ -69,6 +70,10 @@ of delete/overwrite preferences. Tagging pattern/media errors are reported as
 failures; BIN and orphan CDG inputs are skipped because they have no tag fields.
 `preview-tags` is read-only and prints parsed plus existing metadata in JSON output.
 Tagging takes a fresh fingerprinted preview when it runs.
+
+`kma-to-mp3g` writes a matching MP3/CDG pair and always keeps its KMA input.
+`--bitrate` applies when the extracted audio needs MP3 encoding. Use `--dry-run`
+to see both output paths. See [Convert KMA to MP3+G](file-workflow-features.md#convert-kma-to-mp3g).
 
 Commands and named enum choices ignore case. Option names and JSON property names
 are case-sensitive. Named enum settings reject numeric values, except the explicit

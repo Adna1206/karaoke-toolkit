@@ -13,6 +13,7 @@ public enum OperationId
     ZipToAudioG,
     ZipToBin,
     LosslessGToMp3G,
+    KmaToMp3G,
     KaraokeToVideo,
     ArchiveToZip,
     RepackZip,

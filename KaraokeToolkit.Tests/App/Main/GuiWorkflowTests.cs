@@ -42,7 +42,7 @@ public class GuiWorkflowTests
     [Fact] public void OriginalFolderActionOrderIsPreservedAndUnavailableActionsCannotStart()
     {
         var model=new MainViewModel(SettingsPath()){FolderPath="."};
-        Assert.Equal(new[]{Action.ZipToBin,Action.AudioGToBin,Action.BinToZip,Action.AudioGToZip,Action.ZipToAudioG,Action.BinToAudioG,Action.RepackZip,Action.ArchiveToZip,Action.LosslessGToMp3G,Action.KaraokeToVideo,Action.RenameFilesFromInternet,Action.CreateCueAndTextFiles,Action.CleanUpFilenames,Action.AddTrackIdSeparator,Action.RemoveTrackIdSeparator},model.Operations.Where(x=>x.Action.HasValue).Select(x=>x.Action!.Value));
+        Assert.Equal(new[]{Action.ZipToBin,Action.AudioGToBin,Action.BinToZip,Action.AudioGToZip,Action.ZipToAudioG,Action.BinToAudioG,Action.RepackZip,Action.ArchiveToZip,Action.LosslessGToMp3G,Action.KmaToMp3G,Action.KaraokeToVideo,Action.RenameFilesFromInternet,Action.CreateCueAndTextFiles,Action.CleanUpFilenames,Action.AddTrackIdSeparator,Action.RemoveTrackIdSeparator},model.Operations.Where(x=>x.Action.HasValue).Select(x=>x.Action!.Value));
         Assert.True(model.Operations.Last().IsValidation);
         foreach(var choice in model.Operations){model.SelectedOperation=choice;Assert.Equal(choice.Available && !choice.IsRip,model.StartCommand.CanExecute(null));}
         model.IsBusy=true;Assert.False(model.StartCommand.CanExecute(null));

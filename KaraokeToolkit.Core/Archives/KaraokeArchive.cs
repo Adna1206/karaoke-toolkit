@@ -6,11 +6,12 @@ namespace KaraokeToolkit.Core.Archives;
 /// <summary>Reads a single karaoke pair without trusting archive paths or silently choosing among songs.</summary>
 internal static class KaraokeArchive
 {
+    internal const int CdgPacketSize = 24;
     internal static readonly string[] AudioExtensions = [".ogg", ".mp3", ".wav", ".flac", ".ape", ".wma", ".aif", ".aiff", ".m4a", ".wv"];
     internal static void ValidateGraphics(string path)
     {
         long length = new FileInfo(path).Length;
-        if (length == 0 || length % 24 != 0)
+        if (length == 0 || length % CdgPacketSize != 0)
             throw new InvalidDataException("CDG must contain complete 24-byte packets.");
     }
     internal static async Task<(string Audio, string Graphics)> ExtractAsync(string zipPath, CancellationToken token)

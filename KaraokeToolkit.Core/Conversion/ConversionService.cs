@@ -14,6 +14,10 @@ namespace KaraokeToolkit.Core.Conversion;
 /// for that source group have been published and verified. Previously completed groups remain on cancellation.</remarks>
 public sealed partial class ConversionService
 {
+    private static readonly KmaConverter kmaConverter = new(
+        checkGraphicsAndSync: KmaGraphics.CheckGraphicsAndSyncAsync,
+        findSeparator: KmaPayloadChecks.FindSeparatorAsync,
+        findPayloadStart: KmaPayloadChecks.FindPayloadStartAsync);
     private readonly RecoveryStore recovery;
     public ConversionService(RecoveryStore? recovery = null) => this.recovery = recovery ?? new();
 
@@ -84,10 +88,10 @@ public sealed partial class ConversionService
         };
         if (OperationCapabilities.Describe(request.Action) != OperationSupport.Supported)
             throw new NotSupportedException("This action is not supported by the local conversion workflow.");
-        if (request.Action is Action.BinToAudioG or Action.BinToZip or Action.LosslessGToMp3G)
+        if (request.Action is Action.BinToAudioG or Action.BinToZip or Action.LosslessGToMp3G or Action.KmaToMp3G)
         {
             // This local workflow never invokes deferred online providers. Legacy preferences are retained only for compatibility.
-            if (request.Action == Action.LosslessGToMp3G)
+            if (request.Action is Action.LosslessGToMp3G or Action.KmaToMp3G)
             {
                 if (!AudioEncoderService.SupportedBitrates.Contains(request.Options.AudioBitrate))
                     throw new ArgumentOutOfRangeException("AudioBitrate");
@@ -102,6 +106,7 @@ public sealed partial class ConversionService
         {
             Action.AudioGToBin or Action.AudioGToZip or Action.LosslessGToMp3G => ".cdg",
             Action.RepackZip or Action.ZipToBin or Action.ZipToAudioG => ".zip",
+            Action.KmaToMp3G => ".kma",
             _ => ".bin"
         };
         string[] sources = resumed?.Data.Sources ?? (maintenance ? folders : folders.SelectMany(Directory.GetFiles).Where(p =>
@@ -148,7 +153,7 @@ public sealed partial class ConversionService
                 if (snapshot?.Error is { } inputError)
                     throw new IOException(inputError);
                 if (review is not { IsApplying: true } && validateBeforeConversion && !maintenance &&
-                    request.Action is not (Action.ArchiveToZip or Action.RepackZip))
+                    request.Action is not (Action.ArchiveToZip or Action.RepackZip or Action.KmaToMp3G))
                 {
                     Report(0, "Validating input: " + source, show: false);
                     var validation = await new ValidationService().ScanConversionAsync(source, verification, token);
@@ -172,8 +177,10 @@ public sealed partial class ConversionService
                         (percent, message) => Report(percent, message, show: false), resolveConflict, review, snapshot, verification);
                 run.Complete(result);
                 results.Add(result);
-                Report(100, result.Status + ": " + source + " — " + result.Message, source, result.Status.ToString(), result.Message,
-                    show: result.Status != ConversionStatus.Succeeded);
+                string label = result.Warning == null ? result.Status.ToString() : "Warning";
+                string detail = result.Warning ?? result.Message;
+                Report(100, label + ": " + source + " — " + detail, source, label, detail,
+                    show: result.Warning != null || result.Status != ConversionStatus.Succeeded);
             }
             catch (OperationCanceledException)
             {
@@ -192,7 +199,7 @@ public sealed partial class ConversionService
                 Report(100, "Failed: " + source + " — " + error.Message, source, "Failed", error.Message);
             }
         }
-        if (!maintenance && request.Action is not (Action.ArchiveToZip or Action.RepackZip or Action.KaraokeToVideo) && request.Options.AutoCreateCueText && !cancelled)
+        if (!maintenance && request.Action is not (Action.ArchiveToZip or Action.RepackZip or Action.KaraokeToVideo or Action.KmaToMp3G) && request.Options.AutoCreateCueText && !cancelled)
         {
             string listingExtension = request.Action switch
             {
@@ -298,6 +305,7 @@ public sealed partial class ConversionService
         var inputs = new List<string> { source };
         var outputs = new List<string>();
         string audio = "", graphics = "";
+        string? warning = null;
         if (request.Action is Action.AudioGToBin or Action.AudioGToZip)
         {
             graphics = staged;
@@ -318,6 +326,12 @@ public sealed partial class ConversionService
             await LosslessAudioTranscoder.EncodeAsync(stagedAudio, mp3, request.Options.AudioBitrate, token);
             outputs.Add(mp3);
             if (!string.IsNullOrEmpty(request.OutputFolder)) outputs.Add(graphics);
+        }
+        if (request.Action == Action.KmaToMp3G)
+        {
+            report(35, "Converting KMA: " + source);
+            (audio, graphics, warning) = await kmaConverter.ConvertAsync(staged, request.Options.AudioBitrate, token);
+            outputs.AddRange([audio, graphics]);
         }
         if (request.Action is Action.ZipToAudioG or Action.ZipToBin)
         {
@@ -406,7 +420,7 @@ public sealed partial class ConversionService
         token.ThrowIfCancellationRequested();
         transaction.ObserveTargets(outputs);
         // The CDG remains the graphics half of MP3+G; only the old lossless audio may be removed.
-        var retired = request.Options.DeleteOldFiles && request.Action != Action.KaraokeToVideo
+        var retired = request.Options.DeleteOldFiles && request.Action is not (Action.KaraokeToVideo or Action.KmaToMp3G)
             ? request.Action == Action.LosslessGToMp3G ? inputs.Skip(1).ToArray() : inputs.ToArray()
             : [];
         const string message = "Outputs verified and published.";
@@ -415,12 +429,13 @@ public sealed partial class ConversionService
             overwrite = OverwritePolicy.Fail;
         else if (review != null)
         {
-            review.DeferIfConflicting(source, destination, transaction, outputs, retired, message, token);
+            review.DeferIfConflicting(source, destination, transaction, outputs, retired, message, token, warning);
             overwrite = OverwritePolicy.Fail;
         }
         else overwrite = await ResolveOverwriteAsync(destination, outputs, overwrite, resolveConflict, token);
+        if (warning != null) RunSession.Current.Value?.NotePublicationWarning(warning);
         var committed = transaction.Commit(outputs, retired, overwrite, token);
-        return new(source, ConversionStatus.Succeeded, committed, message);
+        return new(source, ConversionStatus.Succeeded, committed, message) { Warning = warning };
     }
     private static async Task<OverwritePolicy> ResolveOverwriteAsync(string folder, IReadOnlyList<string> outputs,
         OverwritePolicy policy, Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolve,

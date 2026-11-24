@@ -45,7 +45,7 @@ public sealed record McpOperationRequest
         if (Options is not { } supplied || !supplied.EnumerateObject()
             .Any(property => property.Name.Equals(nameof(ConversionOptions.AudioBitrate), StringComparison.OrdinalIgnoreCase)))
         {
-            var encoder = OperationId == OperationId.LosslessGToMp3G ? AudioEncoder.MP3 : processing.AudioEncoder;
+            var encoder = OperationId is OperationId.LosslessGToMp3G or OperationId.KmaToMp3G ? AudioEncoder.MP3 : processing.AudioEncoder;
             processing = processing with { AudioBitrate = profile.BitrateFor(encoder, processing.AudioBitrate) };
         }
         return request with

@@ -1,5 +1,29 @@
 # Current handoff
 
+## KMA to MP3+G
+
+2026-11-24, `master` from `bc8e768`, version 2026.11.18. This checkpoint adds
+**Convert KMA to MP3+G** in Desktop, CLI and MCP. Core handles interleaved WMA/CDG,
+separator-based WMA or MP3 with CDG, and embedded karaoke ZIPs. It keeps the KMA
+and publishes the pair together, preserving CDG and embedded MP3 bytes. The reader
+checks competing separators, tolerates bounded zero padding on MP3 and ZIP
+layouts, and retains graphics and sync warnings through overwrite review and
+recovery. See [Convert KMA to MP3+G](user/file-workflow-features.md#convert-kma-to-mp3g).
+
+`dotnet build KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj -c Release
+--no-restore -m:1 -p:UsedAvaloniaProducts= -p:ArtifactBuildName=StandaloneTests`
+passed with zero warnings. With local test-host access, `dotnet test
+KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj -c Release --no-build --no-restore
+-p:UsedAvaloniaProducts= -p:ArtifactBuildName=StandaloneTests --blame-hang-timeout 25s
+--blame-hang-dump-type none --results-directory artifacts/tests/results
+-- xUnit.ParallelizeTestCollections=false` passed 910/910 on Windows. The 22 KMA
+cases use generated fixtures to check the five karaoke type values, legacy
+headers, malformed and ambiguous boundaries, padding, warnings, and the Desktop
+workflow. A CLI dry run listed both output paths. CLI `recover` resumed a
+disposable conversion and preserved a tagged MP3 and its KMA byte-for-byte.
+Real KMA files, lyric playback and non-Windows runs remain unverified. Next,
+verify real samples from each layout when available.
+
 ## Audio tools checkpoint
 
 2026-11-23, `master`, version 2026.11.18. The commit containing this checkpoint

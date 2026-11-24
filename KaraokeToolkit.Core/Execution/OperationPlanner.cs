@@ -58,7 +58,7 @@ public sealed class OperationPlanner
             new ConversionRequest(request.OperationId, ".", request.Options) { OutputFolder = request.OutputFolder }.Validate();
             var plans = InputSelection.Plan(request.OperationId, request.Inputs, request.Options.RecurseFolders);
             if (!string.IsNullOrEmpty(request.OutputFolder) && request.Options.AutoCreateCueText && plans.Count > 1 &&
-                request.OperationId is not (OperationId.ArchiveToZip or OperationId.RepackZip or OperationId.KaraokeToVideo))
+                request.OperationId is not (OperationId.ArchiveToZip or OperationId.RepackZip or OperationId.KaraokeToVideo or OperationId.KmaToMp3G))
                 throw new ArgumentException("Multiple source folders sharing one output folder require --no-cue-text. Generate one listing afterward with create-cue-and-text-files.");
             foreach (var batch in plans)
             foreach (string source in batch.Sources)
@@ -78,14 +78,16 @@ public sealed class OperationPlanner
                     OperationId.RepackZip => [request.Options.DeleteOldFiles ? source : stem + " (repacked).zip"],
                     OperationId.BinToAudioG => [stem + AudioEncoderService.Extension(request.Options.AudioEncoder), stem + ".cdg"],
                     OperationId.LosslessGToMp3G => [stem + ".mp3", string.IsNullOrEmpty(request.OutputFolder) ? source : stem + ".cdg"],
+                    OperationId.KmaToMp3G => [stem + ".mp3", stem + ".cdg"],
                     OperationId.ZipToAudioG => await ZipOutputsAsync(source, stem, token),
                     OperationId.KaraokeToVideo => [stem + VideoOptions.Extension(request.Options.VideoContainer)],
                     OperationId.CreateCueAndTextFiles => MetadataOutputs(source, request.Options),
                     _ => throw new NotSupportedException("No conversion plan is registered.")
                 };
-                string message = request.Options.DeleteOldFiles && request.OperationId != OperationId.KaraokeToVideo
+                string message = request.Options.DeleteOldFiles && request.OperationId is not (OperationId.KaraokeToVideo or OperationId.KmaToMp3G)
                     ? "Publish verified outputs, then remove replaced source media." : "Publish outputs; preserve source media.";
-                if (request.Options.AutoCreateCueText) message += " CUE/TXT may also be generated where applicable.";
+                if (request.Options.AutoCreateCueText && request.OperationId != OperationId.KmaToMp3G)
+                    message += " CUE/TXT may also be generated where applicable.";
                 entries.Add(new(source, "Planned", message + " Encoding/content checks occur during execution.", outputs));
             }
         }

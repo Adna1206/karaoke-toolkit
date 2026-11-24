@@ -12,7 +12,8 @@ public sealed record CompletionReport(string Operation, DateTimeOffset Completed
     [System.Text.Json.Serialization.JsonPropertyOrder(-1)]
     public ReportHeader Header => new(ReportType, CompletedAt);
     public static CompletionReport FromConversion(string operation, ConversionResult result) => new(operation, DateTimeOffset.Now, result.Cancelled,
-        result.Files.Select(f => new ReportEntry(f.Source, f.Status.ToString(), f.Message, f.Outputs)).ToArray()) { ReportType = "Conversion Report" };
+        result.Files.Select(f => new ReportEntry(f.Source, f.Status.ToString(),
+            f.Warning == null ? f.Message : $"{f.Message} Warning — {f.Warning}", f.Outputs)).ToArray()) { ReportType = "Conversion Report" };
     public static CompletionReport FromValidation(ValidationResult result) => new("Validate Karaoke Files", DateTimeOffset.Now, result.Cancelled,
         result.Findings.Select(f => new ReportEntry(f.Source, f.Status.ToString(), f.Message, [])).ToArray()) { ReportType = "Validation Report" };
     public string ToJson() => JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });

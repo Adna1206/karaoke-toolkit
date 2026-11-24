@@ -244,6 +244,8 @@ internal sealed class RunData
     public Dictionary<string, ConversionFileResult> Results { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public HashSet<string> Metadata { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string, ConversionFileResult> MetadataResults { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? PublicationWarning { get; set; }
     internal bool HasCurrentReceipt => Current != null && (IsMetadata ? Metadata.Contains(Current) : Results.ContainsKey(Current));
     public string? Current
     {
@@ -457,6 +459,7 @@ internal sealed class RunSession : IDisposable
         Data.Current = source;
         Data.IsMetadata = metadata;
         Data.Workspace = null;
+        Data.PublicationWarning = null;
         Save();
     }
     internal void Attach(string workspace)
@@ -475,7 +478,14 @@ internal sealed class RunSession : IDisposable
             Data.Results[Data.Current!] = result;
         Save();
     }
-    internal void Committed(IReadOnlyList<string> outputs) => Complete(new(Data.Current!, ConversionStatus.Succeeded, outputs, "Outputs verified and published."));
+    internal void NotePublicationWarning(string warning)
+    {
+        Data.PublicationWarning = warning;
+        Save();
+    }
+
+    internal void Committed(IReadOnlyList<string> outputs) => Complete(new(Data.Current!, ConversionStatus.Succeeded, outputs, "Outputs verified and published.")
+        { Warning = Data.PublicationWarning });
     internal void Finish()
     {
         Data.Finished = true;

@@ -148,7 +148,7 @@ public sealed record CliArguments(string Command, OperationRequest? Request, str
         if (!explicitBitrate && profile != null)
             processing = processing with
             {
-                AudioBitrate = profile.BitrateFor(operation == OperationId.LosslessGToMp3G ? AudioEncoder.MP3 : processing.AudioEncoder, processing.AudioBitrate)
+                AudioBitrate = profile.BitrateFor(operation is OperationId.LosslessGToMp3G or OperationId.KmaToMp3G ? AudioEncoder.MP3 : processing.AudioEncoder, processing.AudioBitrate)
             };
         if (options.TryGetValue("bitrate", out string? bitrate)) processing = processing with { AudioBitrate = Number(bitrate!, "bitrate") };
         if (options.TryGetValue("zip-level", out string? level)) processing = processing with { ZipCompression = ZipCompressionMigration.FromLegacy(Number(level!, "zip-level")) };

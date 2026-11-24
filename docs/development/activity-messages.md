@@ -11,6 +11,7 @@ folder when possible, using forward slashes.
 | Create a CUE or TXT listing | `Writing Cue File: <path>` or `Writing Text File: <path>` |
 | Skip an item | `Skipped: <path> — <reason>` |
 | Fail an item | `Failed: <path> — <reason>` |
+| Publish an item with a warning | `Warning: <path> — <reason>` |
 | Build a grouping plan for an unattended run | `Checking grouping plan…` |
 | Prepare hashes and recovery | `Preparing recovery for grouped items…` or `Preparing recovery for file moves…` |
 | Recipe activity | Prefix the same message with the step number and name |

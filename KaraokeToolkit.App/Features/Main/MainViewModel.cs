@@ -87,7 +87,7 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
             ? KaraokeToolkit.Core.Recipes.RecipeOperations.NormalizeInputs(recipe, paths)
             : SelectedOperation is { IsOrganizer: true } or { IsFlatten: true } or { IsTrackGrouping: true } or { IsAudioAdjustment: true }
             ? paths.Select(p => Path.TrimEndingDirectorySeparator(Path.GetFullPath(p))).Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal).ToArray()
-            : InputSelection.Normalize(paths);
+            : InputSelection.Normalize(paths, allowKma: suggestOperation || SelectedOperation?.Action == Action.KmaToMp3G);
         if (normalized.Length == 0 || normalized.Any(p => !File.Exists(p) && !Directory.Exists(p)))
             throw new ArgumentException("Select existing files or folders.");
         if ((!suggestOperation || SelectedOperation?.Definition.Inputs == OperationInputKind.Folders) &&
@@ -109,6 +109,8 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
                 SelectedOperation = Operations.First(x => x.Action == Action.ZipToAudioG);
             else if (extensions.All(e => e == ".bin"))
                 SelectedOperation = Operations.First(x => x.Action == Action.BinToAudioG);
+            else if (extensions.All(e => e == ".kma"))
+                SelectedOperation = Operations.First(x => x.Action == Action.KmaToMp3G);
             else if (normalized.All(KaraokeToolkit.Core.Archives.ArchiveZipConverter.IsInput))
                 SelectedOperation = Operations.First(x => x.Action == Action.ArchiveToZip);
             else if (extensions.All(e => e is not (".zip" or ".bin")))
@@ -719,9 +721,9 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
             SelectedOperation = Operations.First(x => x.Action == retries[0].Action);
         if (SelectedOperation is not { Available: true, Action: { } action } selected)
             return;
-        // The dedicated lossless-to-MP3 action uses MP3's saved bitrate even when
+        // Dedicated MP3 conversions use MP3's saved bitrate even when
         // another encoder is selected for general BIN/disc output.
-        var runOptions = action == Action.LosslessGToMp3G
+        var runOptions = action is Action.LosslessGToMp3G or Action.KmaToMp3G
             ? Options with { AudioBitrate = AudioBitrates.Mp3 }
             : Options;
         var run = BeginRun((recoveryJob != null ? "Recovery — " : "") + selected.Label,
@@ -801,6 +803,8 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
                 TotalProgress = 100;
             }
             Status = $"{(result.Cancelled ? "Cancelled" : "Processing finished")}: {result.Succeeded} succeeded, {result.Skipped} skipped, {result.Failed} failed.";
+            int warnings = result.Files.Count(file => file.Warning != null);
+            if (warnings > 0) Status += $" {warnings} completed with warnings.";
             StatusOutcome = RunStatusSummary.From(result);
             AppendActivityIssues(result.Files);
             AddActivity(Status);
@@ -973,10 +977,11 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
         var logged = Activity.Select(entry => entry.Message).ToHashSet(StringComparer.Ordinal);
         foreach (var file in files)
         {
-            string label = file.Status.ToString();
-            if (file.Status is not (ConversionStatus.Skipped or ConversionStatus.Failed) || IsRoutineSkip(label, file.Message))
+            string label = file.Warning == null ? file.Status.ToString() : "Warning";
+            string detail = file.Warning ?? file.Message;
+            if ((file.Warning == null && file.Status is not (ConversionStatus.Skipped or ConversionStatus.Failed)) || IsRoutineSkip(label, detail))
                 continue;
-            string message = FormatActivityMessage(prefix + label, file.Source, file.Message);
+            string message = FormatActivityMessage(prefix + label, file.Source, detail);
             if (logged.Add(message))
                 AddActivity(message);
         }

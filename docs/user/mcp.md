@@ -79,6 +79,10 @@ scale. This process serializes processing calls to avoid overlapping mutations.
 
 ## Requests and settings
 
+Use `kma-to-mp3g` with `plan_operation` to preview both output paths or with
+`run_operation` to publish the pair. The operation keeps its KMA input. See
+[Convert KMA to MP3+G](file-workflow-features.md#convert-kma-to-mp3g).
+
 Example arguments for `plan_operation` (and `run_operation` with additional
 `confirmFileChanges: true`):
 

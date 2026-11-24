@@ -6,7 +6,7 @@ using FFMpegCore;
 namespace KaraokeToolkit.Core.Audio;
 
 internal sealed record MediaStreamInfo(string CodecName, int SampleRateHz, int Channels, long BitRate, int Width, int Height);
-internal sealed record MediaInfo(TimeSpan Duration, MediaStreamInfo? PrimaryAudioStream, MediaStreamInfo? PrimaryVideoStream);
+internal sealed record MediaInfo(TimeSpan Duration, MediaStreamInfo? PrimaryAudioStream, MediaStreamInfo? PrimaryVideoStream, string Format);
 
 internal static class MediaProbe
 {
@@ -46,7 +46,7 @@ internal static class MediaProbe
             RedirectStandardError = true
         };
         foreach (string arg in new[] { "-v", "error", "-protocol_whitelist", "file,pipe", "-of", "json",
-            "-show_entries", "format=duration:stream=codec_type,codec_name,sample_rate,channels,bit_rate,width,height",
+            "-show_entries", "format=duration,format_name:stream=codec_type,codec_name,sample_rate,channels,bit_rate,width,height",
             "-i", FFmpegRuntime.LocalPath(path) })
             start.ArgumentList.Add(arg);
         using var process = Process.Start(start) ?? throw new IOException("Could not start bundled FFprobe.");
@@ -85,7 +85,7 @@ internal static class MediaProbe
                 if (type == "audio") audio ??= ReadStream(stream);
                 else if (type == "video") video ??= ReadStream(stream);
             }
-        return new(length, audio, video);
+        return new(length, audio, video, format.ValueKind == JsonValueKind.Object ? Text(format, "format_name") : "");
     }
 
     private static MediaStreamInfo ReadStream(JsonElement stream) => new(

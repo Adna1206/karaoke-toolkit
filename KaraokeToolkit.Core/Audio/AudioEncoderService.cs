@@ -23,11 +23,17 @@ internal static class AudioEncoderService
         if (UsesBitrate(encoder) && !SupportedBitrates.Contains(bitrate))
             throw new ArgumentOutOfRangeException(nameof(bitrate));
     }
-    internal static async Task EncodeAsync(string wav, string output, AudioEncoder encoder, int bitrate, CancellationToken token)
+    internal static Task EncodeAsync(string wav, string output, AudioEncoder encoder, int bitrate, CancellationToken token) =>
+        EncodeAsync(wav, output, encoder, bitrate, token, rawPcm: false);
+
+    internal static Task EncodePcmToMp3Async(string pcm, string output, int bitrate, CancellationToken token) =>
+        EncodeAsync(pcm, output, AudioEncoder.MP3, bitrate, token, rawPcm: true);
+
+    private static async Task EncodeAsync(string input, string output, AudioEncoder encoder, int bitrate, CancellationToken token, bool rawPcm)
     {
         token.ThrowIfCancellationRequested();
         Validate(encoder, bitrate);
-        wav = FFmpegRuntime.LocalPath(wav); output = FFmpegRuntime.LocalPath(output);
+        input = FFmpegRuntime.LocalPath(input); output = FFmpegRuntime.LocalPath(output);
         if (File.Exists(output)) throw new IOException("Encoded output already exists.");
         var options = FFmpegRuntime.Options(Path.GetDirectoryName(output)!);
         (string codec, string format) = encoder switch
@@ -44,11 +50,12 @@ internal static class AudioEncoderService
         // FFmpeg's WMA 2/ASF round-trip trims 544 leading PCM frames. Prepending that
         // silence keeps the first audible sample aligned with the CDG timeline.
         string alignment = encoder == AudioEncoder.WMA ? " -af adelay=544S:all=1" : "";
+        string inputFormat = rawPcm ? " -f s16le -ar 44100 -ac 2" : "";
         using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(30));
         using var stop = CancellationTokenSource.CreateLinkedTokenSource(token, timeout.Token);
         try
         {
-            await FFMpegArguments.FromFileInput(wav, false, o => o.WithCustomArgument("-protocol_whitelist file,pipe -err_detect explode"))
+            await FFMpegArguments.FromFileInput(input, false, o => o.WithCustomArgument("-protocol_whitelist file,pipe -err_detect explode" + inputFormat))
                 .OutputToFile(output, false, o => o.WithCustomArgument($"-map 0:a:0 -vn -sn -dn{alignment} -c:a {codec}{rate} -f {format} -xerror"))
                 .CancellableThrough(stop.Token).ProcessAsynchronously(true, options);
             stop.Token.ThrowIfCancellationRequested();
@@ -58,7 +65,7 @@ internal static class AudioEncoderService
             {
                 await AudioDecoderService.DecodeAsync(output, decoded, stop.Token);
                 // BIN splitting produces a canonical 44-byte PCM WAV header.
-                long expected = new FileInfo(wav).Length - 44;
+                long expected = new FileInfo(input).Length - (rawPcm ? 0 : 44);
                 if (Math.Abs(new FileInfo(decoded).Length - expected) > 16384) throw new InvalidDataException("Encoded audio duration differs from the source.");
             }
             finally { File.Delete(decoded); }

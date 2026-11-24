@@ -11,6 +11,8 @@ public enum ConversionStatus
 /// <summary>One source group (a BIN, ZIP, or matching audio/CDG pair) and its committed outputs.</summary>
 public sealed record ConversionFileResult(string Source, ConversionStatus Status, IReadOnlyList<string> Outputs, string Message)
 {
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? Warning { get; init; }
     public bool IsMetadata
     {
         get; init;

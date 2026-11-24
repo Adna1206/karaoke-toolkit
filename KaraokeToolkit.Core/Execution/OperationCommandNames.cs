@@ -24,6 +24,7 @@ public static class OperationCommandNames
         OperationId.ZipToAudioG => "zip-to-audiog",
         OperationId.ZipToBin => "zip-to-bin",
         OperationId.LosslessGToMp3G => "lossless-audiog-to-mp3g",
+        OperationId.KmaToMp3G => "kma-to-mp3g",
         OperationId.KaraokeToVideo => "karaoke-to-video",
         OperationId.ArchiveToZip => "archives-to-zip",
         OperationId.RepackZip => "repack-zip-for-compatibility",

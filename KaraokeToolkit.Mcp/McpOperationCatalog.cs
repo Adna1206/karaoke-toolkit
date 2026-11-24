@@ -34,6 +34,7 @@ public static class McpOperationCatalog
         OperationId.ZipToAudioG => Include(id),
         OperationId.ZipToBin => Include(id),
         OperationId.LosslessGToMp3G => Include(id),
+        OperationId.KmaToMp3G => Include(id),
         OperationId.KaraokeToVideo => Include(id),
         OperationId.ArchiveToZip => Include(id),
         OperationId.RepackZip => Include(id),

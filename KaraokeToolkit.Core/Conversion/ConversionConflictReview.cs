@@ -7,7 +7,7 @@ internal sealed class ConversionConflictReview(string journal)
 {
     private sealed record StagedOutput(string Path, string Hash);
     private sealed record DeferredOutput(string Destination, TransactionObservation Observation,
-        StagedOutput[] Outputs, string[] Retired, string Message, OutputConflict Conflict, RecoveryVerificationMode Verification);
+        StagedOutput[] Outputs, string[] Retired, string Message, string? Warning, OutputConflict Conflict, RecoveryVerificationMode Verification);
     private sealed record Listing(TransactionObservation Observation, OutputConflict? Conflict);
 
     private readonly Dictionary<string, DeferredOutput> deferred = new(InputSelection.Paths);
@@ -23,7 +23,7 @@ internal sealed class ConversionConflictReview(string journal)
     internal void Decide(OutputConflict conflict, ConflictDecision decision) => decisions.Add(conflict, decision);
 
     internal void DeferIfConflicting(string source, string destination, FileTransaction transaction,
-        IReadOnlyList<string> outputs, string[] retired, string message, CancellationToken token)
+        IReadOnlyList<string> outputs, string[] retired, string message, CancellationToken token, string? warning = null)
     {
         var observation = transaction.Observation;
         string[] existing = observation.Targets.Where(pair => pair.Value != null).Select(pair => pair.Key).ToArray();
@@ -42,7 +42,7 @@ internal sealed class ConversionConflictReview(string journal)
             File.Move(output, target);
             files.Add(new(target, hash));
         }
-        deferred.Add(source, new(destination, observation, files.ToArray(), retired, message, new(source, existing), transaction.VerificationMode));
+        deferred.Add(source, new(destination, observation, files.ToArray(), retired, message, warning, new(source, existing), transaction.VerificationMode));
         throw new ConversionConflictDeferredException();
     }
 
@@ -65,8 +65,9 @@ internal sealed class ConversionConflictReview(string journal)
                 throw new IOException("Staged output changed while waiting for review: " + source);
             outputs.Add(staged);
         }
+        if (item.Warning != null) RunSession.Current.Value?.NotePublicationWarning(item.Warning);
         return new(source, ConversionStatus.Succeeded,
-            transaction.Commit(outputs, item.Retired, OverwritePolicy.Replace, token), item.Message);
+            transaction.Commit(outputs, item.Retired, OverwritePolicy.Replace, token), item.Message) { Warning = item.Warning };
     }
 
     internal void PlanListing(string folder, IReadOnlyList<string> targets, RecoveryVerificationMode verification)

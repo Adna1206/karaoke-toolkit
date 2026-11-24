@@ -37,6 +37,7 @@ public static class OperationCatalog
         OperationId.CreateCueAndTextFiles => Conversion(id, "Create CUE sheets and text listings", folders: true),
         OperationId.ArchiveToZip => Conversion(id, "Convert supported non-ZIP archives to ZIP"),
         OperationId.LosslessGToMp3G => Conversion(id, "Encode lossless audio with graphics to MP3+G"),
+        OperationId.KmaToMp3G => Conversion(id, "Extract KMA karaoke tracks as MP3+G pairs"),
         OperationId.KaraokeToVideo => Conversion(id, "Render karaoke files to video"),
         OperationId.RepackZip => Conversion(id, "Repack ZIP with selected compression settings"),
         OperationId.ValidateKaraoke => Local(id, "Check karaoke structure, pairing and ZIP integrity"),

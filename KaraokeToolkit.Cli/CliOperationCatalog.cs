@@ -51,6 +51,7 @@ public static class CliOperationCatalog
         OperationId.CreateCueAndTextFiles => Include(id),
         OperationId.ArchiveToZip => Include(id),
         OperationId.LosslessGToMp3G => Include(id),
+        OperationId.KmaToMp3G => Include(id),
         OperationId.KaraokeToVideo => Include(id),
         OperationId.RepackZip => Include(id),
         OperationId.ValidateKaraoke => Include(id),

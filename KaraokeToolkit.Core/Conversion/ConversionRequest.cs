@@ -31,7 +31,7 @@ public sealed record ConversionRequest(
         {
             if (OperationCapabilities.RenamesFilenames(Action) || Action == OperationId.CreateCueAndTextFiles)
                 throw new ArgumentException("Folder maintenance does not support a separate output folder.");
-            if (Options.DeleteOldFiles)
+            if (Options.DeleteOldFiles && Action != OperationId.KmaToMp3G)
                 throw new ArgumentException("A separate output folder requires keeping originals.");
             if (!Path.IsPathFullyQualified(OutputFolder) || !Directory.Exists(OutputFolder))
                 throw new ArgumentException("Choose an existing absolute output folder.");
@@ -45,7 +45,7 @@ public sealed record ConversionRequest(
             throw new ArgumentOutOfRangeException(nameof(Options.ZipCompression));
         if (Action == OperationId.KaraokeToVideo)
             VideoOptions.Validate(Options);
-        if ((Action == OperationId.LosslessGToMp3G || AudioEncoderService.UsesBitrate(Options.AudioEncoder)) &&
+        if ((Action is OperationId.LosslessGToMp3G or OperationId.KmaToMp3G || AudioEncoderService.UsesBitrate(Options.AudioEncoder)) &&
             (Options.AudioBitrate is <= 0 or > short.MaxValue))
             throw new ArgumentOutOfRangeException(nameof(Options.AudioBitrate));
     }
