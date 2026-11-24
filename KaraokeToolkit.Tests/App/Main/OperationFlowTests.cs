@@ -162,10 +162,10 @@ public class OperationFlowTests
             await dialog.PreviewAsync();
             Assert.Single(dialog.GetSubmission()!.Plan.Items);
             File.WriteAllText(second, "second");
-            dialog.MaskStyle = 2;
+            dialog.MinimumIdDigits = 5;
             await dialog.PreviewAsync();
             var item = Assert.Single(dialog.GetSubmission()!.Plan.Items);
-            Assert.Equal(Path.Combine(source, "ABC-1##", "ABC-123.zip"), item.Destination);
+            Assert.Equal(Path.Combine(source, "ABC-001xx", "ABC-123.zip"), item.Destination);
 
             await dialog.PreviewAsync(refresh: true);
             Assert.Equal(2, dialog.GetSubmission()!.Plan.Items.Count);

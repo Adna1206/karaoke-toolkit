@@ -60,6 +60,7 @@ public sealed partial class TrackGroupingViewModel(IReadOnlyList<string> inputs)
     public partial int RangeSeparatorStyle { get; set; }
     [ObservableProperty] public partial string? CustomRangeSeparator { get; set; } = " - ";
     [ObservableProperty] public partial int IdSeparatorStyle { get; set; }
+    [ObservableProperty] public partial decimal? MinimumIdDigits { get; set; } = 0;
     [ObservableProperty, NotifyPropertyChangedFor(nameof(ApplyLabel))]
     public partial bool Move { get; set; } = true;
     [ObservableProperty] public partial StatusKind StatusSeverity { get; set; }
@@ -125,7 +126,7 @@ public sealed partial class TrackGroupingViewModel(IReadOnlyList<string> inputs)
         if (e.PropertyName is nameof(OutputFolder) or nameof(FolderHandling) or nameof(Recurse) or
             nameof(GroupingMode) or nameof(TrailingDigits) or nameof(MaskStyle) or nameof(CreateParents) or
             nameof(MaxParentLevels) or nameof(SkipSingleChildParents) or nameof(RangeSize) or nameof(RangeStart) or
-            nameof(RangeSeparatorStyle) or nameof(CustomRangeSeparator) or nameof(IdSeparatorStyle) or nameof(Move))
+            nameof(RangeSeparatorStyle) or nameof(CustomRangeSeparator) or nameof(IdSeparatorStyle) or nameof(MinimumIdDigits) or nameof(Move))
         {
             if (e.PropertyName != nameof(OutputFolder) || previewStarted) HasEdits = true;
             if (previewStarted) _ = PreviewAsync();
@@ -249,6 +250,7 @@ public sealed partial class TrackGroupingViewModel(IReadOnlyList<string> inputs)
         SkipSingleChildParents = SkipSingleChildParents,
         Mask = MaskStyle switch { 1 => "X", 2 => "#", 3 => "s", _ => "x" },
         IdSeparator = IdSeparatorStyle == 1 ? "" : "-",
+        MinimumIdDigits = ReadInteger(MinimumIdDigits, "minimum ID digits"),
         RangeSeparator = UsesRanges ? RangeSeparatorStyle switch { 1 => " to ", 2 => CustomRangeSeparator ?? "", _ => " - " } : " - "
     };
 

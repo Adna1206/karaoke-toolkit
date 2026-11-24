@@ -237,8 +237,10 @@ the run. Use `--dry-run` to inspect the paths and issues first.
 
 The first example uses names such as `ABC-33601 to ABC-33650`. The second groups
 existing batch folders intact under `ABC-3xxxx`. Trailing-digit grouping defaults to
-two digits, with `--mask x|X|#|s` to choose the name style. Use
-`--id-separator=` to omit the dash after the prefix. `--create-parents` builds
+two digits, with `--mask x|X|#|s` to choose the name style. In either mode,
+`--minimum-id-digits N` adds leading zeroes to generated group names (`1`–`9`,
+default `0` to use source width). Use `--id-separator=` to omit the dash after
+the prefix. `--create-parents` builds
 broader trailing-digit groups automatically. `--max-parent-levels N` limits the
 depth (0 means all). `--keep-single-child-parents` preserves levels that would
 otherwise be collapsed.

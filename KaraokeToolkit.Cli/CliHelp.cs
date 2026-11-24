@@ -42,6 +42,7 @@ internal static class CliHelp
                     Grouping: --trailing-digits N (default 2) --mask x|X|#|s (default x)
                       or --range-size N --range-start N (default 1) --range-separator TEXT (default " - ").
                     Both modes accept --id-separator TEXT (default "-"; use --id-separator= for none).
+                    --minimum-id-digits N     Zero-pad group names to at least N digits (0 keeps source width; maximum 9).
                     Trailing digits: --create-parents [--max-parent-levels N (0 means all)] [--keep-single-child-parents].
                     --check-timing before-batch|before-item  More robust waiting-file checks or faster startup (default before-item).
                     Common: --input PATH (repeatable), --dry-run, --json, --quiet, --report NEW.json|NEW.txt.

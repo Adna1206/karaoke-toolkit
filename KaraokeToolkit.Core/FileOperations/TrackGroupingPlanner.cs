@@ -18,6 +18,7 @@ public sealed record TrackGroupingOptions
     public int RangeSize { get; init; }
     public int RangeStart { get; init; } = 1;
     public int MaxParentLevels { get; init; }
+    public int MinimumIdDigits { get; init; }
     public string IdSeparator { get; init; } = "-";
     public string RangeSeparator { get; init; } = " - ";
     public string Mask { get; init; } = "x";
@@ -348,14 +349,21 @@ public static partial class TrackGroupingPlanner
         if (offset % size < 0)
             index--;
         long first = origin + index * size;
-        return source with { First = Math.Max(first, 0), Last = first + size - 1,
-            Width = options.RangeSize > 0 ? source.Width : Math.Max(source.Width, options.TrailingDigits + 1) };
+        long last = first + size - 1;
+        // With an explicit naming width, input zeroes should not split one interval
+        // into different buckets or create extra parents.
+        int width = options.MinimumIdDigits == 0 ? source.Width : last.ToString(CultureInfo.InvariantCulture).Length;
+        if (options.RangeSize == 0) width = Math.Max(width, options.TrailingDigits + 1);
+        return source with { First = Math.Max(first, 0), Last = last, Width = width };
     }
 
     private static string[] Levels(Interval group, TrackGroupingOptions options)
     {
         if (options.RangeSize > 0)
-            return [Id(group, group.First, options) + options.RangeSeparator + Id(group, group.Last, options)];
+        {
+            int width = options.MinimumIdDigits == 0 ? group.Width : options.MinimumIdDigits;
+            return [Id(group, group.First, width, options) + options.RangeSeparator + Id(group, group.Last, width, options)];
+        }
 
         var levels = new List<string>();
         int outer = options.TrailingDigits;
@@ -365,17 +373,18 @@ public static partial class TrackGroupingPlanner
             if (options.MaxParentLevels > 0)
                 outer = Math.Min(outer, options.TrailingDigits + options.MaxParentLevels);
         }
+        int displayWidth = Math.Max(group.Width, options.MinimumIdDigits);
         for (int digits = outer; digits >= options.TrailingDigits; digits--)
         {
             long size = PowerOfTen(digits);
-            string start = Id(group, group.First / size * size, options);
+            string start = Id(group, group.First / size * size, displayWidth, options);
             levels.Add(options.Mask == "s" ? start + "s" : start[..^digits] + new string(options.Mask[0], digits));
         }
         return levels.ToArray();
     }
 
-    private static string Id(Interval interval, long number, TrackGroupingOptions options) =>
-        interval.Prefix + options.IdSeparator + number.ToString("D" + interval.Width, CultureInfo.InvariantCulture);
+    private static string Id(Interval interval, long number, int width, TrackGroupingOptions options) =>
+        interval.Prefix + options.IdSeparator + number.ToString("D" + width, CultureInfo.InvariantCulture);
 
     private static long PowerOfTen(int exponent)
     {
@@ -394,6 +403,8 @@ public static partial class TrackGroupingPlanner
             throw new ArgumentOutOfRangeException(nameof(options), "Trailing digits must be between 1 and 8.");
         if (options.RangeSize < 0 || options.RangeStart < 0 || options.MaxParentLevels is < 0 or >= MaximumDigits)
             throw new ArgumentOutOfRangeException(nameof(options), "Range size, starting number, and parent levels must be non-negative; parent levels may be at most 8.");
+        if (options.MinimumIdDigits is < 0 or > MaximumDigits)
+            throw new ArgumentOutOfRangeException(nameof(options), $"Minimum ID digits must be between 0 and {MaximumDigits}.");
         if (options.Mask is not ("#" or "x" or "X" or "s"))
             throw new ArgumentException("Choose #, x, X, or s for the folder style.", nameof(options));
         CheckSeparator(options.IdSeparator);

@@ -207,14 +207,14 @@ public class McpTests
                 operationId = "group-by-track-id",
                 inputs = new[] { source },
                 outputFolder = destination,
-                grouping = new { rangeSize = 50, rangeSeparator = " to " }
+                grouping = new { rangeSize = 50, rangeSeparator = " to ", minimumIdDigits = 7 }
             }
         };
         await using var readOnly = await Connect();
         var preview = await readOnly.CallToolAsync("plan_operation", arguments);
         Assert.NotEqual(true, preview.IsError);
         using (var json = Json(preview))
-            Assert.Contains("BKD-33601 to BKD-33650", json.RootElement.GetRawText());
+            Assert.Contains("BKD-0033601 to BKD-0033650", json.RootElement.GetRawText());
         arguments["confirmFileChanges"] = true;
         Assert.True((await readOnly.CallToolAsync("run_operation", arguments)).IsError);
         Assert.Empty(Directory.EnumerateFileSystemEntries(destination));
@@ -227,7 +227,7 @@ public class McpTests
         Assert.Empty(Directory.EnumerateFileSystemEntries(destination));
         var result = await writable.RunAsync(request, true, null, default);
         Assert.False(result.HasIssues);
-        Assert.Equal("source", File.ReadAllText(Path.Combine(destination, "BKD-33601 to BKD-33650", "BKD33601.zip")));
+        Assert.Equal("source", File.ReadAllText(Path.Combine(destination, "BKD-0033601 to BKD-0033650", "BKD33601.zip")));
         Assert.True(File.Exists(source));
     }
 

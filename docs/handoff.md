@@ -1,5 +1,21 @@
 # Current handoff
 
+## Track ID grouping width
+
+2026-11-24, `master` from `d3f770b`, version 2026.11.18. This checkpoint adds
+**Minimum ID digits** to the [Group by Track ID preview](user/track-grouping.md),
+`--minimum-id-digits` to CLI, and `minimumIdDigits` to the MCP grouping request.
+The default uses source width. A positive width normalizes leading zeroes in
+generated group and parent names for files and whole folders. Existing recovery
+plans already store concrete destination paths.
+
+The StandaloneTests Release build command below passed with zero warnings. The
+serial Windows `dotnet test` command below, with `--filter
+'FullyQualifiedName~TrackGrouping|FullyQualifiedName~OperationFlowTests|FullyQualifiedName~CliWorkflowTests|FullyQualifiedName~McpTests'`,
+passed 111/111 with local test-host access. The desktop control was checked by
+compiled markup and a preview view-model test. The live window remains unverified.
+Next, try the option on a representative folder batch when available.
+
 ## KMA to MP3+G
 
 2026-11-24, `master` from `bc8e768`, version 2026.11.18. This checkpoint adds

@@ -55,6 +55,61 @@ public class TrackGroupingPlannerTests
                 plan.Items.Single(item => item.Source == source).Destination);
     }
 
+    [Theory]
+    [InlineData(0, "ABC-003xx")]
+    [InlineData(100, "ABC-00300 to ABC-00399")]
+    public void MinimumIdDigitsUnifiesSourceWidthsInBothModes(int rangeSize, string group)
+    {
+        string root = TestMediaFixture.NewFolder(), output = Path.Combine(root, "sorted");
+        string audio = FileAt(root, "ABC-369A.mp3");
+        string graphics = FileAt(root, "ABC-369A.cdg");
+        string variant = FileAt(root, "ABC-000369.zip");
+        var options = new TrackGroupingOptions { RangeSize = rangeSize, RangeStart = 0, RangeSeparator = " to " };
+
+        var sourceWidth = TrackGroupingPlanner.Plan([audio, variant], output, options);
+        Assert.NotEqual(ParentOf(sourceWidth, audio), ParentOf(sourceWidth, variant));
+
+        var padded = TrackGroupingPlanner.Plan([audio, variant], output, options with { MinimumIdDigits = 5 });
+        Assert.Empty(padded.Issues);
+        Assert.Equal(3, padded.Items.Count);
+        foreach (string source in new[] { audio, graphics, variant })
+            Assert.Equal(Path.Combine(output, group, Path.GetFileName(source)),
+                padded.Items.Single(item => item.Source == source).Destination);
+    }
+
+    [Fact]
+    public void MinimumIdDigitsPadsAutomaticParentsWithoutAddingLevels()
+    {
+        string root = TestMediaFixture.NewFolder(), output = Path.Combine(root, "sorted");
+        string shortId = FileAt(root, "ABC-369.zip");
+        string longerId = FileAt(root, "ABC-1369.zip");
+        string zeroPadded = FileAt(root, "ABC-00001369.zip");
+        var options = new TrackGroupingOptions
+        {
+            MinimumIdDigits = 6, CreateParents = true, SkipSingleChildParents = false
+        };
+
+        var plan = TrackGroupingPlanner.Plan([shortId, longerId, zeroPadded], output, options);
+
+        Assert.Empty(plan.Issues);
+        Assert.Equal("ABC-0003xx", RelativeParent(plan, shortId, output));
+        Assert.Equal(Path.Combine("ABC-001xxx", "ABC-0013xx"), RelativeParent(plan, longerId, output));
+        Assert.Equal(RelativeParent(plan, longerId, output), RelativeParent(plan, zeroPadded, output));
+    }
+
+    [Fact]
+    public void MinimumIdDigitsKeepsLongerRangeEndpoints()
+    {
+        string root = TestMediaFixture.NewFolder(), output = Path.Combine(root, "sorted");
+        string source = FileAt(root, "ABC-99999.zip");
+        var options = new TrackGroupingOptions { RangeSize = 100, MinimumIdDigits = 5, RangeSeparator = " to " };
+
+        var plan = TrackGroupingPlanner.Plan([source], output, options);
+
+        Assert.Equal("ABC-99901 to ABC-100000", ParentOf(plan, source));
+        Assert.Throws<ArgumentOutOfRangeException>(() => TrackGroupingPlanner.Plan([source], output, options with { MinimumIdDigits = 10 }));
+    }
+
     [Fact]
     public void WholeIntervalFoldersStayDistinctByPrefixAndMustFitTheirDestination()
     {

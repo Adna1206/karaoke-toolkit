@@ -176,6 +176,8 @@ optionally `rangeStart` (default 1) or `rangeSeparator` (default `" - "`).
 Trailing-digit grouping is the default with two masked digits. Its optional
 `createParents`, `maxParentLevels` and `skipSingleChildParents` settings control
 automatic nesting. `idSeparator` defaults to a dash and accepts an empty string.
+Set `minimumIdDigits` to `1`–`9` to zero-pad generated group names in either mode.
+The default `0` uses the source width.
 Set `move: true` for a same-volume move. Conflicts block execution.
 
 ### Group by Alphabet

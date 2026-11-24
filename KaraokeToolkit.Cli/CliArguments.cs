@@ -21,7 +21,7 @@ public sealed record CliArguments(string Command, OperationRequest? Request, str
     public bool DryRun { get; init; }
     public string? HelpTopic { get; init; }
     internal static readonly string[] GroupingFlags = ["whole-folders", "move", "create-parents", "keep-single-child-parents"];
-    internal static readonly string[] GroupingValues = ["trailing-digits", "range-size", "range-start", "id-separator",
+    internal static readonly string[] GroupingValues = ["trailing-digits", "range-size", "range-start", "id-separator", "minimum-id-digits",
         "range-separator", "mask", "max-parent-levels"];
     private static readonly string[] AudioEditValues = ["mode", "target-lufs", "peak-ceiling", "gain-db", "semitones"];
     private static readonly HashSet<string> Flags = ["json", "quiet", "recurse", "no-recurse", "delete-originals", "keep-originals", "cue-text", "no-cue-text",
@@ -282,6 +282,7 @@ public sealed record CliArguments(string Command, OperationRequest? Request, str
                 RangeSize = rangeSize,
                 RangeStart = Setting("range-start", defaults.RangeStart),
                 MaxParentLevels = Setting("max-parent-levels", defaults.MaxParentLevels),
+                MinimumIdDigits = Setting("minimum-id-digits", defaults.MinimumIdDigits),
                 IdSeparator = options.GetValueOrDefault("id-separator") ?? defaults.IdSeparator,
                 RangeSeparator = options.GetValueOrDefault("range-separator") ?? defaults.RangeSeparator,
                 Mask = options.GetValueOrDefault("mask") ?? defaults.Mask

@@ -20,15 +20,15 @@ public class CliWorkflowTests
         string source = TestMediaFixture.NewFolder(), destination = TestMediaFixture.NewFolder();
         string batch = Directory.CreateDirectory(Path.Combine(source, "BKD-31xxx")).FullName;
         File.WriteAllText(Path.Combine(batch, "BKD-31001.zip"), "original");
-        string[] args = ["run", "group-by-track-id", batch, "--output", destination, "--whole-folders", "--trailing-digits", "4", "--mask", "X"];
+        string[] args = ["run", "group-by-track-id", batch, "--output", destination, "--whole-folders", "--trailing-digits", "4", "--mask", "X", "--minimum-id-digits", "7"];
         var cli = App();
         var preview = new StringWriter();
         Assert.Equal(0, await cli.RunAsync([.. args, "--dry-run"], preview, new StringWriter()));
-        Assert.Contains("BKD-3XXXX", preview.ToString());
+        Assert.Contains("BKD-003XXXX", preview.ToString());
         Assert.Empty(Directory.EnumerateFileSystemEntries(destination));
 
         Assert.Equal(0, await cli.RunAsync(args, new StringWriter(), new StringWriter()));
-        Assert.Equal("original", File.ReadAllText(Path.Combine(destination, "BKD-3XXXX", "BKD-31xxx", "BKD-31001.zip")));
+        Assert.Equal("original", File.ReadAllText(Path.Combine(destination, "BKD-003XXXX", "BKD-31xxx", "BKD-31001.zip")));
         Assert.True(Directory.Exists(batch));
         Assert.Equal(1, await cli.RunAsync(args, new StringWriter(), new StringWriter()));
     }

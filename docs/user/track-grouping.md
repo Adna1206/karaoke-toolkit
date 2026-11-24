@@ -30,6 +30,14 @@ group with `ABC-369` by number and keep their full names.
   group. Range-start labels such as `ABC-31000s` are ambiguous as inputs.
   Distinct prefixes remain independent.
 
+**Minimum ID digits** controls leading zeroes in generated group names. Leave it
+at `0` to use the source width. Choose `1` to `9` to set a minimum width. With
+five digits, the interval 300–399 can appear as `ABC-003xx` or
+`ABC-00300 to ABC-00399`. Larger numbers keep all their digits. The setting
+applies to automatic parents and to groups that contain whole folders.
+It preserves source names and uses the numeric IDs to determine group membership
+and parent depth. Added zeroes do not create extra parent levels.
+
 The desktop fills in the destination when the selection resolves to one folder.
 For files and whole-folder items, it uses their containing folder. For a folder
 being scanned, it uses the selected folder itself. When the selection has no
