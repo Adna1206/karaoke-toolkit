@@ -76,27 +76,51 @@
       </StackPanel>
     </shared:OperationPreviewLayout.PreviewActions>
     <shared:OperationPreviewLayout.PreviewContent>
-      <TreeView ItemsSource="{Binding Tree}" AutomationProperties.Name="Destination preview">
-        <TreeView.Styles>
-          <Style Selector="TreeViewItem">
-            <Setter Property="IsExpanded" Value="{ReflectionBinding IsExpanded, Mode=TwoWay}"/>
-          </Style>
-        </TreeView.Styles>
-        <TreeView.ItemTemplate>
-          <TreeDataTemplate x:DataType="vm:TrackGroupingNode" ItemsSource="{Binding Children}">
-            <TextBlock Text="{Binding Label}" ToolTip.Tip="{Binding Detail}"/>
-          </TreeDataTemplate>
-        </TreeView.ItemTemplate>
-      </TreeView>
+      <shared:TableView>
+        <shared:TableView.Header>
+          <TextBlock Text="Folders and files"/>
+        </shared:TableView.Header>
+        <shared:TableView.Rows>
+          <TreeView Classes="tableItems" ItemsSource="{Binding Tree}" AutomationProperties.Name="Destination preview">
+            <TreeView.Styles>
+              <Style Selector="TreeViewItem">
+                <Setter Property="IsExpanded" Value="{ReflectionBinding IsExpanded, Mode=TwoWay}"/>
+              </Style>
+            </TreeView.Styles>
+            <TreeView.ItemTemplate>
+              <TreeDataTemplate x:DataType="vm:TrackGroupingNode" ItemsSource="{Binding Children}">
+                <Border Classes="tableRow treeRow">
+                  <TextBlock Text="{Binding Label}" ToolTip.Tip="{Binding Detail}" TextTrimming="CharacterEllipsis"/>
+                </Border>
+              </TreeDataTemplate>
+            </TreeView.ItemTemplate>
+          </TreeView>
+        </shared:TableView.Rows>
+      </shared:TableView>
     </shared:OperationPreviewLayout.PreviewContent>
     <shared:OperationPreviewLayout.IssuesContent>
-      <ListBox ItemsSource="{Binding Issues}" AutomationProperties.Name="Skipped items and conflicts">
-        <ListBox.ItemTemplate>
-          <DataTemplate x:DataType="vm:TrackGroupingPreviewIssue">
-            <TextBlock Text="{Binding Text}" ToolTip.Tip="{Binding Text}" TextWrapping="Wrap"/>
-          </DataTemplate>
-        </ListBox.ItemTemplate>
-      </ListBox>
+      <shared:TableView>
+        <shared:TableView.Header>
+          <Grid ColumnDefinitions="*,2*" ColumnSpacing="12">
+            <TextBlock Text="Item"/>
+            <TextBlock Grid.Column="1" Text="Reason"/>
+          </Grid>
+        </shared:TableView.Header>
+        <shared:TableView.Rows>
+          <ListBox Classes="tableItems" ItemsSource="{Binding Issues}" AutomationProperties.Name="Skipped items and conflicts">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:TrackGroupingPreviewIssue">
+                <Border Classes="tableRow">
+                  <Grid ColumnDefinitions="*,2*" ColumnSpacing="12">
+                    <TextBlock Text="{Binding SourceName}" ToolTip.Tip="{Binding Source}" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Grid.Column="1" Text="{Binding Reason}" TextWrapping="Wrap"/>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </shared:TableView.Rows>
+      </shared:TableView>
     </shared:OperationPreviewLayout.IssuesContent>
     <shared:OperationPreviewLayout.FooterActions>
       <StackPanel Orientation="Horizontal" VerticalAlignment="Top" Spacing="{x:Static shared:WindowSpacing.FooterButtonGap}">

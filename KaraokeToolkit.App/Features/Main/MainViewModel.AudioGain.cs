@@ -45,7 +45,7 @@ public partial class MainViewModel
                 : await service.ResumeAsync(job, run.Progress, run.Token);
             run.StopProgress();
             LastReport = CompletionReport.FromConversion(title, result) with { ReportType = reportType };
-            FoundFiles = result.Found;
+            CompleteActivityItemCount(result);
             Status = $"{action} {(result.Cancelled ? "cancelled" : "finished")} · {result.Succeeded} copied · {result.Skipped} skipped · {result.Failed} failed";
             StatusOutcome = RunStatusSummary.From(result);
             if (!result.Cancelled) Progress = TotalProgress = 100;

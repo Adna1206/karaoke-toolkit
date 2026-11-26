@@ -1,10 +1,11 @@
 # Karaoke tagging
 
-Choose **File Tools → Tag Karaoke Files**, select media or folders and
+Choose **Names & Tags → Tag Karaoke Files**, select media or folders and
 click Start. The main workspace previews filename-derived tags, shows current values,
 and lets you correct fields or exclude rows before **Apply Tags**. Changing the
-pattern recalculates the proposed tags from the last scan. Use **Refresh** to
-read the files and their current tags again. Use **Select all** or **Deselect all**
+pattern recalculates the proposed tags from the last scan after you pause typing.
+Use **Refresh** to read the files and their current tags again.
+Use **Select all** or **Deselect all**
 to update which editable rows are included. Folder recursion uses the existing preference.
 The preview animates its progress bar while scanning inputs, then shows how many
 files it has checked once the file count is known. **Back** returns to the

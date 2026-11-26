@@ -64,7 +64,7 @@ public partial class MainViewModel
                 : await Task.Run(() => service.ResumeAsync(job.JournalPath, run.Progress, run.Token));
             run.StopProgress();
             LastReport = result.Report with { Operation = title, ReportType = "Track Grouping Report" };
-            FoundFiles = result.Found;
+            CompleteActivityItemCount(result);
             int completed = result.Report.Entries.Count(entry => entry.Status == "Succeeded");
             int skipped = result.Report.Entries.Count(entry => entry.Status == "Skipped");
             int failed = result.Report.Entries.Count(entry => entry.Status is "Failed" or "Blocked");

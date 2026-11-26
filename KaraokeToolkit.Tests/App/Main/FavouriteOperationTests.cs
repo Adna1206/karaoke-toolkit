@@ -44,17 +44,13 @@ public class FavouriteOperationTests
         last.ToggleFavouriteCommand.Execute(null);
         first.ToggleFavouriteCommand.Execute(null);
         model.SaveOptions(model.Options with { AutoCreateCueText = false });
-        Favourites(model).IsExpanded = false;
         var reopened = new MainViewModel(path);
         Assert.Equal(new[] { first.Id, last.Id }, reopened.FavouriteOperations.Select(operation => operation.Id));
         Assert.True(Favourites(reopened).IsVisible);
-        Assert.False(Favourites(reopened).IsExpanded);
         Assert.False(reopened.Options.AutoCreateCueText);
         var favourite = Favourites(reopened).Operations[0];
         reopened.SelectedOperation = favourite;
         Assert.Same(reopened.Operations[0], reopened.SelectedOperation);
-        Assert.True(Favourites(reopened).IsExpanded);
-        Assert.True(reopened.OperationSections.Single(section => section.Section == favourite.Section).IsExpanded);
         foreach (var operation in reopened.FavouriteOperations) operation.ToggleFavouriteCommand.Execute(null);
         Assert.Empty(new MainViewModel(path).FavouriteOperations);
     }

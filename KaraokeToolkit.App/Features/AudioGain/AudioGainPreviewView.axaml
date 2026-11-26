@@ -48,31 +48,34 @@
       <Button Content="Refresh" Command="{Binding ScanCommand}"/>
     </shared:OperationPreviewLayout.PreviewActions>
     <shared:OperationPreviewLayout.PreviewContent>
-      <Grid RowDefinitions="Auto,*" RowSpacing="6">
-        <Grid Margin="12,0,15,0" ColumnDefinitions="2*,93,93,73,2*" ColumnSpacing="6">
-          <TextBlock Text="File"/>
-          <TextBlock Grid.Column="1" Text="{Binding CurrentLabel}"/>
-          <TextBlock Grid.Column="2" Text="{Binding EstimatedLabel}"/>
-          <TextBlock Grid.Column="3" Text="{Binding ChangeLabel}"/>
-          <TextBlock Grid.Column="4" Text="Status"/>
-        </Grid>
-        <ListBox Grid.Row="1" ItemsSource="{Binding Rows}">
-          <ListBox.Styles>
-            <Style Selector="ListBoxItem"><Setter Property="HorizontalContentAlignment" Value="Stretch"/></Style>
-          </ListBox.Styles>
-          <ListBox.ItemTemplate>
-            <DataTemplate x:DataType="vm:GainPreviewRow">
-              <Grid ColumnDefinitions="2*,93,93,73,2*" ColumnSpacing="6" ToolTip.Tip="{Binding Row.Source}">
-                <TextBlock Text="{Binding FileName}" TextTrimming="CharacterEllipsis"/>
-                <TextBlock Grid.Column="1" Text="{Binding Current}"/>
-                <TextBlock Grid.Column="2" Text="{Binding Estimated}"/>
-                <TextBlock Grid.Column="3" Text="{Binding Change}"/>
-                <TextBlock Grid.Column="4" Text="{Binding Row.Message}" TextWrapping="Wrap"/>
-              </Grid>
-            </DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
-      </Grid>
+      <shared:TableView>
+        <shared:TableView.Header>
+          <Grid ColumnDefinitions="2*,93,93,73,2*" ColumnSpacing="6">
+            <TextBlock Text="File"/>
+            <TextBlock Grid.Column="1" Text="{Binding CurrentLabel}"/>
+            <TextBlock Grid.Column="2" Text="{Binding EstimatedLabel}"/>
+            <TextBlock Grid.Column="3" Text="{Binding ChangeLabel}"/>
+            <TextBlock Grid.Column="4" Text="Status"/>
+          </Grid>
+        </shared:TableView.Header>
+        <shared:TableView.Rows>
+          <ListBox Classes="tableItems" ItemsSource="{Binding Rows}" AutomationProperties.Name="Audio preview">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:GainPreviewRow">
+                <Border Classes="tableRow">
+                  <Grid ColumnDefinitions="2*,93,93,73,2*" ColumnSpacing="6" ToolTip.Tip="{Binding Row.Source}">
+                    <TextBlock Text="{Binding FileName}" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Grid.Column="1" Text="{Binding Current}"/>
+                    <TextBlock Grid.Column="2" Text="{Binding Estimated}"/>
+                    <TextBlock Grid.Column="3" Text="{Binding Change}"/>
+                    <TextBlock Grid.Column="4" Text="{Binding Row.Message}" TextWrapping="Wrap"/>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </shared:TableView.Rows>
+      </shared:TableView>
     </shared:OperationPreviewLayout.PreviewContent>
     <shared:OperationPreviewLayout.FooterActions>
       <StackPanel Orientation="Horizontal" Spacing="{x:Static shared:WindowSpacing.FooterButtonGap}">

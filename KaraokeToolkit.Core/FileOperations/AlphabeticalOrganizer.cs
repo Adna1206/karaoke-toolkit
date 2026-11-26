@@ -1,6 +1,7 @@
 using KaraokeToolkit.Core.Archives;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Execution;
+using KaraokeToolkit.Core.Naming;
 using KaraokeToolkit.Core.Recovery;
 
 namespace KaraokeToolkit.Core.FileOperations;
@@ -16,48 +17,52 @@ public sealed class AlphabeticalOrganizer(RecoveryStore? recovery = null)
     public Task<ConversionResult> RunAsync(IEnumerable<string> inputs, AlphabeticalOrganizeScope scope,
         IProgress<ConversionProgress>? progress = null, CancellationToken token = default, bool ignoreLeadingThe = false,
         RecoveryVerificationMode verificationMode = OperationCapabilities.DefaultFileMoveRecoveryVerification, bool saveResumableRun = true,
-        FileCheckTiming timing = OperationCapabilities.DefaultFileMoveCheckTiming)
+        FileCheckTiming timing = OperationCapabilities.DefaultFileMoveCheckTiming, string? trackIdSeparator = null)
         => Task.Run(() => Run(inputs, scope, progress, token, ignoreLeadingThe, verificationMode: verificationMode,
-            saveResumableRun: saveResumableRun, timing: timing), token);
+            saveResumableRun: saveResumableRun, timing: timing, trackIdSeparator: trackIdSeparator), token);
 
     public Task<ConversionResult> PreviewAsync(IEnumerable<string> inputs, AlphabeticalOrganizeScope scope,
-        CancellationToken token = default, bool ignoreLeadingThe = false)
-        => Task.Run(() => Run(inputs, scope, null, token, ignoreLeadingThe, true), token);
+        CancellationToken token = default, bool ignoreLeadingThe = false, string? trackIdSeparator = null)
+        => Task.Run(() => Run(inputs, scope, null, token, ignoreLeadingThe, preview: true, trackIdSeparator: trackIdSeparator), token);
 
     public sealed class PreviewSnapshot
     {
-        private readonly ConversionResult? files, filesIgnoringArticle, folders;
+        private readonly Dictionary<string, HashSet<string>>? files, folders;
         private readonly string? fileError, folderError;
 
-        internal PreviewSnapshot(ConversionResult? files, ConversionResult? filesIgnoringArticle, ConversionResult? folders,
+        internal PreviewSnapshot(Dictionary<string, HashSet<string>>? files, Dictionary<string, HashSet<string>>? folders,
             string? fileError, string? folderError)
         {
             this.files = files;
-            this.filesIgnoringArticle = filesIgnoringArticle;
             this.folders = folders;
             this.fileError = fileError;
             this.folderError = folderError;
         }
 
-        public ConversionResult Plan(AlphabeticalOrganizeScope scope, bool ignoreLeadingThe) => scope switch
+        public ConversionResult Plan(AlphabeticalOrganizeScope scope, bool ignoreLeadingThe, string? trackIdSeparator = null,
+            CancellationToken token = default)
         {
-            AlphabeticalOrganizeScope.Files => (ignoreLeadingThe ? filesIgnoringArticle : files) ?? throw new IOException(fileError),
-            AlphabeticalOrganizeScope.Folders => folders ?? throw new IOException(folderError),
-            _ => throw new ArgumentOutOfRangeException(nameof(scope))
-        };
+            var sources = scope switch
+            {
+                AlphabeticalOrganizeScope.Files => files ?? throw new IOException(fileError),
+                AlphabeticalOrganizeScope.Folders => folders ?? throw new IOException(folderError),
+                _ => throw new ArgumentOutOfRangeException(nameof(scope))
+            };
+            bool groupFiles = scope == AlphabeticalOrganizeScope.Files;
+            var groups = Groups(sources, groupFiles && ignoreLeadingThe, groupFiles ? trackIdSeparator : null, token);
+            return Preview(groups, token);
+        }
     }
 
     public Task<PreviewSnapshot> ReadPreviewAsync(IReadOnlyList<string> inputs, CancellationToken token) => Task.Run(() =>
     {
         var listings = new Dictionary<string, FileSystemInfo[]>(Paths);
         var checkedRecoveryRoots = new HashSet<string>(Paths);
-        ConversionResult? files = null, filesIgnoringArticle = null, folders = null;
+        Dictionary<string, HashSet<string>>? files = null, folders = null;
         string? fileError = null, folderError = null;
         try
         {
-            var work = Collect(inputs, AlphabeticalOrganizeScope.Files, token, checkAllRecoveryRoots: true, ReadDirectory, out _, checkedRecoveryRoots);
-            files = Preview(Groups(work, ignoreLeadingThe: false));
-            filesIgnoringArticle = Preview(Groups(work, ignoreLeadingThe: true));
+            files = Collect(inputs, AlphabeticalOrganizeScope.Files, token, checkAllRecoveryRoots: true, ReadDirectory, out _, checkedRecoveryRoots);
         }
         catch (Exception error) when (error is ArgumentException or IOException or UnauthorizedAccessException)
         {
@@ -65,14 +70,13 @@ public sealed class AlphabeticalOrganizer(RecoveryStore? recovery = null)
         }
         try
         {
-            var work = Collect(inputs, AlphabeticalOrganizeScope.Folders, token, checkAllRecoveryRoots: true, ReadDirectory, out _, checkedRecoveryRoots);
-            folders = Preview(Groups(work, ignoreLeadingThe: false));
+            folders = Collect(inputs, AlphabeticalOrganizeScope.Folders, token, checkAllRecoveryRoots: true, ReadDirectory, out _, checkedRecoveryRoots);
         }
         catch (Exception error) when (error is ArgumentException or IOException or UnauthorizedAccessException)
         {
             folderError = error.Message;
         }
-        return new PreviewSnapshot(files, filesIgnoringArticle, folders, fileError, folderError);
+        return new PreviewSnapshot(files, folders, fileError, folderError);
 
         FileSystemInfo[] ReadDirectory(string folder)
         {
@@ -85,27 +89,31 @@ public sealed class AlphabeticalOrganizer(RecoveryStore? recovery = null)
     public Task<ConversionResult> ApplyPreviewAsync(IEnumerable<string> inputs, AlphabeticalOrganizeScope scope,
         ConversionResult approved, IProgress<ConversionProgress>? progress = null, CancellationToken token = default,
         bool ignoreLeadingThe = false, RecoveryVerificationMode verificationMode = OperationCapabilities.DefaultFileMoveRecoveryVerification,
-        bool saveResumableRun = true, FileCheckTiming timing = OperationCapabilities.DefaultFileMoveCheckTiming)
+        bool saveResumableRun = true, FileCheckTiming timing = OperationCapabilities.DefaultFileMoveCheckTiming,
+        string? trackIdSeparator = null)
         => Task.Run(() => ApplyApproved(inputs, scope, approved, progress, token, ignoreLeadingThe, verificationMode,
-            saveResumableRun, timing), token);
+            saveResumableRun, timing, trackIdSeparator), token);
 
     private ConversionResult ApplyApproved(IEnumerable<string> inputs, AlphabeticalOrganizeScope scope, ConversionResult approved,
         IProgress<ConversionProgress>? progress, CancellationToken token, bool ignoreLeadingThe,
-        RecoveryVerificationMode mode, bool saveResumableRun, FileCheckTiming timing)
+        RecoveryVerificationMode mode, bool saveResumableRun, FileCheckTiming timing, string? trackIdSeparator)
     {
         if (!Enum.IsDefined(scope)) throw new ArgumentOutOfRangeException(nameof(scope));
         if (!Enum.IsDefined(mode)) throw new ArgumentOutOfRangeException(nameof(mode));
         timing = WorkflowMoves.TimingForStandalone(timing);
         bool files = scope == AlphabeticalOrganizeScope.Files;
+        if (!files) trackIdSeparator = null;
+        ValidateTrackIdSeparator(trackIdSeparator);
         var selected = inputs.Select(path => Path.TrimEndingDirectorySeparator(Path.GetFullPath(path))).ToArray();
         var sources = new HashSet<string>(Paths);
         foreach (var row in approved.Files)
         {
+            token.ThrowIfCancellationRequested();
             string? parent = Path.GetDirectoryName(row.Source);
             if (!WorkflowMoves.IsNormalizedPath(row.Source) || parent == null || !sources.Add(row.Source) ||
                 !(files ? WorkflowMoves.IsApprovedSource(selected, row.Source, includeCompanions: true) : selected.Contains(parent, Paths)) ||
                 row.Status is not (ConversionStatus.Succeeded or ConversionStatus.Failed) || row.Outputs.Count != 1 ||
-                !Paths.Equals(row.Outputs[0], Path.Combine(parent, Bucket(Path.GetFileName(row.Source), files && ignoreLeadingThe), Path.GetFileName(row.Source))))
+                !Paths.Equals(row.Outputs[0], Destination(parent, row.Source, files && ignoreLeadingThe, trackIdSeparator)))
                 throw new ArgumentException("The approved alphabetical grouping plan contains an invalid source or destination.");
         }
         var ready = approved.Files.Where(row => row.Status == ConversionStatus.Succeeded).ToArray();
@@ -128,13 +136,15 @@ public sealed class AlphabeticalOrganizer(RecoveryStore? recovery = null)
     private ConversionResult Run(IEnumerable<string> inputs, AlphabeticalOrganizeScope scope, IProgress<ConversionProgress>? progress,
         CancellationToken token, bool ignoreLeadingThe, bool preview = false,
         RecoveryVerificationMode verificationMode = OperationCapabilities.DefaultFileMoveRecoveryVerification,
-        bool saveResumableRun = true, FileCheckTiming timing = OperationCapabilities.DefaultFileMoveCheckTiming)
+        bool saveResumableRun = true, FileCheckTiming timing = OperationCapabilities.DefaultFileMoveCheckTiming,
+        string? trackIdSeparator = null)
     {
         if (!Enum.IsDefined(scope)) throw new ArgumentOutOfRangeException(nameof(scope));
 
         var work = Collect(inputs, scope, token, preview, folder => ReadEntries(folder, token), out var moveRoots);
-        var groups = Groups(work, scope == AlphabeticalOrganizeScope.Files && ignoreLeadingThe);
-        if (preview) return Preview(groups);
+        bool files = scope == AlphabeticalOrganizeScope.Files;
+        var groups = Groups(work, files && ignoreLeadingThe, files ? trackIdSeparator : null, token);
+        if (preview) return Preview(groups, token);
         if (token.IsCancellationRequested) return new([], true);
         progress?.Report(new(0, 0, 0, 0, "Preparing recovery for file moves…", "00:00:00") { IsIndeterminate = true });
         var mode = WorkflowSession.Current.Value?.Data.VerificationMode ?? verificationMode;
@@ -230,17 +240,28 @@ public sealed class AlphabeticalOrganizer(RecoveryStore? recovery = null)
         return new DirectoryInfo(folder).GetFileSystemInfos();
     }
 
-    private static (string Source, string Target)[][] Groups(Dictionary<string, HashSet<string>> work, bool ignoreLeadingThe) =>
-        work.OrderBy(pair => pair.Key, Paths).SelectMany(pair =>
+    private static (string Source, string Target)[][] Groups(Dictionary<string, HashSet<string>> work, bool ignoreLeadingThe,
+        string? trackIdSeparator, CancellationToken token)
+    {
+        ValidateTrackIdSeparator(trackIdSeparator);
+        return work.OrderBy(pair => pair.Key, Paths).SelectMany(pair =>
             pair.Value.Order(Paths).GroupBy(source => IsKaraokePairMember(source) ? Path.GetFileNameWithoutExtension(source) : source, Paths)
-                .Select(group => group.Select(source => (Source: source, Target: Path.Combine(pair.Key,
-                    Bucket(Path.GetFileName(source), ignoreLeadingThe), Path.GetFileName(source)))).ToArray())).ToArray();
+                .Select(group => group.Select(source =>
+                {
+                    token.ThrowIfCancellationRequested();
+                    return (Source: source, Target: Destination(pair.Key, source, ignoreLeadingThe, trackIdSeparator));
+                }).ToArray())).ToArray();
+    }
 
-    private static ConversionResult Preview((string Source, string Target)[][] groups)
+    private static ConversionResult Preview((string Source, string Target)[][] groups, CancellationToken token)
     {
         var duplicates = groups.SelectMany(group => group).CountBy(move => move.Target, Paths)
             .Where(entry => entry.Value > 1).Select(entry => entry.Key).ToHashSet(Paths);
-        var foundIssues = groups.Select(group => FindIssue(group, duplicates)).ToArray();
+        var foundIssues = groups.Select(group =>
+        {
+            token.ThrowIfCancellationRequested();
+            return FindIssue(group, duplicates);
+        }).ToArray();
         var rows = groups.SelectMany((group, index) => group.Select(move => new ConversionFileResult(move.Source,
             foundIssues[index] == null ? ConversionStatus.Succeeded : ConversionStatus.Failed,
             [move.Target], foundIssues[index] ?? "Planned move."))).ToArray();
@@ -270,6 +291,42 @@ public sealed class AlphabeticalOrganizer(RecoveryStore? recovery = null)
     private static bool IsExcluded(string path) => InputSelection.IsExcludedFolder(Path.GetFileName(path)) ||
         Path.GetFileName(path).Equals(".karaoke-run-lease", StringComparison.OrdinalIgnoreCase);
     private static bool IsBucket(string name) => name == "#" || name.Length == 1 && char.ToUpperInvariant(name[0]) is >= 'A' and <= 'Z';
+    private static string Destination(string parent, string source, bool ignoreLeadingThe, string? trackIdSeparator)
+    {
+        string name = Path.GetFileName(source);
+        string sortName = trackIdSeparator == null ? name : NameAfterTrackId(name, trackIdSeparator);
+        return Path.Combine(parent, Bucket(sortName, ignoreLeadingThe), name);
+    }
+
+    private static void ValidateTrackIdSeparator(string? separator)
+    {
+        if (separator?.Length == 0) throw new ArgumentException("Enter a separator after the Track ID.");
+    }
+
+    private static string NameAfterTrackId(string name, string separator)
+    {
+        string stem = Path.GetFileNameWithoutExtension(name);
+        bool whitespace = separator.All(IsHorizontalSpace);
+        // Match at the end of a complete ID. A hyphen or space inside the ID may also occur in the separator.
+        int start = 0;
+        while (start < stem.Length)
+        {
+            int boundary = whitespace ? stem.IndexOfAny([' ', '\t'], start) : stem.IndexOf(separator, start, StringComparison.Ordinal);
+            if (boundary < 0) break;
+            if (LeadingTrackId.Parse(stem[..boundary]) is { } id &&
+                id.Prefix.Length + id.Separator.Length + id.Digits.Length == boundary)
+            {
+                string remainder = stem[(boundary + (whitespace ? 1 : separator.Length))..].TrimStart();
+                if (remainder.Length > 0) return remainder;
+                break;
+            }
+            start = boundary + 1;
+        }
+        return name;
+    }
+
+    private static bool IsHorizontalSpace(char character) => character is ' ' or '\t';
+
     private static string Bucket(string name, bool ignoreLeadingThe)
     {
         if (ignoreLeadingThe && name.Length > 4 && name.StartsWith("The", StringComparison.OrdinalIgnoreCase) && char.IsWhiteSpace(name[3]))

@@ -12,6 +12,74 @@ namespace KaraokeToolkit.Tests.App.Main;
 public class OperationFlowTests
 {
     private static string Settings() => Path.Combine(TestMediaFixture.NewFolder(), "options.xmls");
+
+    [Theory]
+    [InlineData(613.5, "00:10:14")]
+    [InlineData(86400.1, "24:00:01")]
+    public void RemainingTimeUsesTheElapsedClockFormat(double seconds, string expected)
+    {
+        var model = new MainViewModel(Settings());
+
+        model.UpdateActivityEstimate(new ProcessingEstimate(seconds, 2));
+        Assert.Equal(expected, model.RemainingTime);
+        model.UpdateActivityEstimate(null);
+        Assert.Equal("—", model.RemainingTime);
+    }
+
+    [Fact]
+    public void ActivityCountShowsDiscoveryThenCompletedItemsWithoutAddingRows()
+    {
+        var model = new MainViewModel(Settings());
+        var progress = new ConversionProgress(0, 0, 1234, 0, "Finding items", "00:00:00")
+            { ShowInActivity = false, IsIndeterminate = true };
+
+        model.Report(progress);
+        Assert.Equal($"{1234:N0} items found", model.ActivityItemCount);
+        model.Report(progress with { IsIndeterminate = false });
+        Assert.Equal($"0 of {1234:N0} items", model.ActivityItemCount);
+        model.Report(progress with { IsIndeterminate = false, Completed = 7 });
+        Assert.Equal($"7 of {1234:N0} items", model.ActivityItemCount);
+        Assert.Empty(model.Activity);
+    }
+
+    [Fact]
+    public async Task CancelledConversionKeepsTheCompletedCountAndOriginalTotal()
+    {
+        string folder = TestMediaFixture.NewFolder();
+        TestMediaFixture.Seed(folder, Action.ZipToBin, "keep");
+        string first = Path.Combine(folder, "ABC-01.zip");
+        File.Move(Path.Combine(folder, "song.zip"), first);
+        File.Copy(first, Path.Combine(folder, "ABC-02.zip"));
+        string conflict = Path.Combine(folder, "ABC-02.wav");
+        File.WriteAllText(conflict, "existing");
+        var model = new MainViewModel(Settings());
+        model.SelectedOperation = model.Operations.Single(operation => operation.Action == Action.ZipToAudioG);
+        model.SaveOptions(model.Options with { AutoCreateCueText = false, DeleteOldFiles = false }, OverwritePolicy.Ask, model.Theme);
+        model.ResolveConflictAsync = (_, _) => Task.FromResult(ConflictDecision.Cancel);
+        model.SetInputs([folder]);
+
+        await model.StartCommand.ExecuteAsync(null);
+
+        Assert.True(model.LastReport!.Cancelled);
+        Assert.Equal("1 of 2 items", model.ActivityItemCount);
+        Assert.Equal("existing", File.ReadAllText(conflict));
+    }
+
+    [Theory]
+    [InlineData(false, "2 of 2 items")]
+    [InlineData(true, "1 of 1 item")]
+    public async Task ValidationCountsSelectedFilesOnceEvenWhenTheFindingIsAPair(bool selectAudioOnly, string expected)
+    {
+        string folder = TestMediaFixture.NewFolder();
+        TestMediaFixture.Seed(folder, Action.AudioGToBin, "keep");
+        var model = new MainViewModel(Settings());
+        model.SetInputs([selectAudioOnly ? Path.Combine(folder, "song.wav") : folder]);
+
+        await model.ValidateCommand.ExecuteAsync(null);
+
+        Assert.Single(model.LastReport!.Entries);
+        Assert.Equal(expected, model.ActivityItemCount);
+    }
     [Fact]
     public async Task RestoreOperationOpensPickerWithoutSourceAndDoesNotRunValidation()
     {
@@ -96,7 +164,9 @@ public class OperationFlowTests
             try
             {
                 await dialog.PreviewAsync();
-                Assert.Contains(dialog.Issues, issue => issue.Text.Contains("No track ID", StringComparison.Ordinal));
+                var issue = Assert.Single(dialog.Issues, issue => issue.Source == unsupported);
+                Assert.Equal("Unrecognized.zip", issue.SourceName);
+                Assert.Contains("No track ID", issue.Reason);
                 Assert.False(dialog.CanApply);
                 return null;
             }
@@ -161,8 +231,11 @@ public class OperationFlowTests
         {
             await dialog.PreviewAsync();
             Assert.Single(dialog.GetSubmission()!.Plan.Items);
+            var previousTree = dialog.Tree;
             File.WriteAllText(second, "second");
             dialog.MinimumIdDigits = 5;
+            Assert.Null(dialog.GetSubmission());
+            Assert.Same(previousTree, dialog.Tree);
             await dialog.PreviewAsync();
             var item = Assert.Single(dialog.GetSubmission()!.Plan.Items);
             Assert.Equal(Path.Combine(source, "ABC-001xx", "ABC-123.zip"), item.Destination);

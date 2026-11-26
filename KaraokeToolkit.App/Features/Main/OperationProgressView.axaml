@@ -15,7 +15,17 @@
    <TextBlock Text="Current Progress" FontWeight="SemiBold" />
    <Grid ColumnDefinitions="110,*,45" ColumnSpacing="10"><TextBlock Text="Item Progress:"/><ProgressBar Grid.Column="1" Classes="runProgress" Value="{Binding Progress}" Maximum="100"/><TextBlock Grid.Column="2" Text="{Binding Progress, StringFormat='{}{0}%'}"/></Grid>
    <Grid ColumnDefinitions="110,*,45" ColumnSpacing="10"><TextBlock Text="Total Progress:"/><ProgressBar Grid.Column="1" Classes="runProgress" Value="{Binding TotalProgress}" Maximum="100"/><TextBlock Grid.Column="2" Text="{Binding TotalProgress, StringFormat='{}{0}%'}"/></Grid>
-   <Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Elapsed, StringFormat='Elapsed Time: {0}'}"/><TextBlock Grid.Column="1" Text="{Binding FoundFiles, StringFormat='Files found: {0}'}"/></Grid>
+   <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+    <StackPanel Orientation="Horizontal" Spacing="10">
+     <TextBlock Text="{Binding Elapsed, StringFormat='Elapsed Time: {0}'}"/>
+     <TextBlock Text="·"/>
+     <TextBlock Text="{Binding RemainingTime, StringFormat='Remaining Time: {0}'}"
+                ToolTip.Tip="Estimated from recent item completions."/>
+     <TextBlock Text="·"/>
+     <TextBlock Text="{Binding Throughput, StringFormat='Throughput: {0}'}"/>
+    </StackPanel>
+    <TextBlock Grid.Column="1" Text="{Binding ActivityItemCount}"/>
+   </Grid>
   </StackPanel>
  </Grid>
 </UserControl>

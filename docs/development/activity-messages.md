@@ -23,3 +23,13 @@ prefixes in examples, such as `Processing: Disc 1/ABC-12345.zip`.
 
 The elapsed time below the activity table updates once a second during a run.
 Each activity row keeps the elapsed time when the desktop records the event.
+The count beside elapsed time shows items found during discovery or preparation,
+then shows completed items out of the batch total. It follows the operation's
+progress units, including failures and skips. Remaining Time and Throughput use
+the same recent completion rate. It needs at least three completed items and
+three seconds to start, then samples again at most every three seconds when
+more items finish. Remaining Time uses the same hours, minutes, and seconds
+format as Elapsed Time. Both rate-based values show a dash during discovery,
+preparation, overwrite review, and when the rate is too early or stale.
+Recipes estimate the current step. Footer-only updates stay out of the activity
+table.

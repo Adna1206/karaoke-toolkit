@@ -1,5 +1,4 @@
 using KaraokeToolkit.App.Features.Settings;
-using System.Xml;
 using System.Xml.Linq;
 using KaraokeToolkit.Core.Settings;
 using KaraokeToolkit.Core.Recovery;
@@ -29,7 +28,7 @@ public class ApplicationSettingsStoreTests
         // Include unknown entries written by a later compatible version.
         File.WriteAllText(path, """
             <KaraokeToolkit schemaVersion="1"><Desktop>
-              <Theme>Dark</Theme><OperationSections><FilesAndFolders>false</FilesAndFolders><FutureSection>true</FutureSection></OperationSections>
+              <Theme>Dark</Theme>
               <FavouriteOperations><Operation>ZipToBin</Operation></FavouriteOperations>
               <SettingsWindowWidth>920.5</SettingsWindowWidth><SettingsWindowHeight>730.25</SettingsWindowHeight>
               <FuturePreference>keep</FuturePreference>
@@ -39,7 +38,6 @@ public class ApplicationSettingsStoreTests
         core.Save(core.Load() with { AutoCreateCueText = false });
         var app = new ApplicationSettingsStore(path);
         Assert.Equal(ApplicationTheme.Dark, app.LoadTheme());
-        Assert.False(app.LoadOperationSections()["FilesAndFolders"]);
         Assert.Equal(["ZipToBin"], app.LoadFavouriteOperations());
         Assert.Equal(new SettingsWindowSize(920.5, 730.25), app.LoadSettingsWindowSize());
         Assert.False(app.Load().AutoCreateCueText);
@@ -48,8 +46,6 @@ public class ApplicationSettingsStoreTests
         var root = XDocument.Load(path).Root!;
         Assert.Equal("keep", root.Element("Desktop")!.Element("FuturePreference")!.Value);
         Assert.Contains(root.Element("Processing")!.Elements("Setting"), entry => (string?)entry.Attribute("id") == "future.option");
-        Assert.False(app.LoadOperationSections().ContainsKey("FutureSection"));
-        Assert.False(app.LoadOperationSections()["FilesAndFolders"]);
         Assert.Equal(["ZipToBin"], app.LoadFavouriteOperations());
         Assert.Equal(new SettingsWindowSize(920.5, 730.25), app.LoadSettingsWindowSize());
     }
@@ -61,9 +57,9 @@ public class ApplicationSettingsStoreTests
         var app = new ApplicationSettingsStore(path);
         app.Save(new(), theme: ApplicationTheme.Dark);
         string before = File.ReadAllText(path);
-        // Invalid XML name fails inside the combined write transaction.
-        Assert.Throws<XmlException>(() => app.Save(new() { AutoCreateCueText = false },
-            theme: ApplicationTheme.Light, operationSections: new Dictionary<string, bool> { ["invalid name"] = false }));
+        // An invalid XML character fails inside the combined write transaction.
+        Assert.Throws<ArgumentException>(() => app.Save(new() { AutoCreateCueText = false },
+            theme: ApplicationTheme.Light, favouriteOperations: ["invalid\0id"]));
         Assert.Equal(before, File.ReadAllText(path));
         Assert.Empty(Directory.GetFiles(Path.GetDirectoryName(path)!, "*.tmp"));
     }

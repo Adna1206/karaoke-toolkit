@@ -1,5 +1,4 @@
 using System;
-using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -24,19 +23,14 @@ public sealed partial class TaggingPreviewView : UserControl
 
     internal async Task<TaggingRequest?> ReviewAsync()
     {
-        using var cancellation = new CancellationTokenSource();
-        var preview = Model.PreviewAsync(cancellation.Token);
+        var preview = Model.PreviewAsync();
         try
         {
             if (await Task.WhenAny(preview, decision.Task) == preview)
                 await preview;
             return await decision.Task;
         }
-        finally
-        {
-            cancellation.Cancel();
-            Model.PreviewCommand.Cancel();
-        }
+        finally { Model.StopPreview(); }
     }
 
     private async void Back_Click(object? sender, RoutedEventArgs args)

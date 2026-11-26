@@ -26,10 +26,11 @@ manifest stay at the project root. Code used by one feature belongs inside that
 feature; code used by several features belongs in an appropriate shared folder.
 Core continues to own processing and remains independent of App and Avalonia.
 
-`Shared.OperationPreviewLayout` provides the split workspace for track
-grouping, alphabetical grouping and filename renaming. It owns the scrolling settings column,
-preview header, optional resizable issues pane and footer. Each operation
-supplies its own controls, issue presentation and submission logic.
+`Shared.OperationPreviewLayout` provides the split workspace for track grouping,
+alphabetical grouping, filename renaming, and audio gain and key changes. It owns
+the scrolling settings column, preview header, optional resizable issues pane
+and footer. Each operation supplies its own controls and submission logic.
+See [shared table styling](ui-definitions.md#activity-and-preview-tables) for preview results.
 
 Keep each app-owned dialog in its own named file. Standalone XAML dialogs use
 the feature's `*Window.axaml` and code-behind pair. Put short, code-built
@@ -76,8 +77,7 @@ and inset their content below the Avalonia-drawn title bar.
 Add Folders, Add Files and drop actions accumulate sources without replacing the
 chosen operation. Clear resets the selection. Source-free operations display
 their own instructions. Status, reports and Start/Cancel remain in the footer.
-The category is session state; old expander preferences remain stored for
-compatibility but are no longer used by the home layout.
+The selected category lasts for the current session.
 
 Tools also opens the Recipe Builder. Core's `Recipes` folder owns the portable
 workflow definitions, chaining constraints and execution; App coordinates runs

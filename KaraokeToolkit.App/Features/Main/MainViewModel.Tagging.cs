@@ -48,7 +48,7 @@ public partial class MainViewModel
             }
             finally { run.StopProgress(); }
             LastReport = CompletionReport.FromConversion(RunTitle, result) with { ReportType = "Tagging Report" };
-            FoundFiles = result.Found;
+            CompleteActivityItemCount(result);
             if (!result.Cancelled) Progress = TotalProgress = 100;
             Status = $"Tagging {(result.Cancelled ? "cancelled" : "finished")}: {result.Succeeded} updated, {result.Skipped} skipped, {result.Failed} failed.";
             StatusOutcome = RunStatusSummary.From(result);

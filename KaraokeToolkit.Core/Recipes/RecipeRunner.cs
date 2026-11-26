@@ -165,8 +165,9 @@ public sealed class RecipeRunner(IRecipeStepExecutor? executor = null, RecoveryS
             results.Add(completed);
             cancelled = result.Cancelled;
             reason = StepStopReason(completed);
-            progress?.Report(new(100, (index + 1) * 100 / recipe.Steps.Count, result.Found, result.Found,
-                $"Completed step {index + 1}/{recipe.Steps.Count}.", watch.Elapsed.ToString(@"hh\:mm\:ss")));
+            if (!cancelled)
+                progress?.Report(new(100, (index + 1) * 100 / recipe.Steps.Count, result.Found, result.Found,
+                    $"Completed step {index + 1}/{recipe.Steps.Count}.", watch.Elapsed.ToString(@"hh\:mm\:ss")));
         }
         session.Finish(); // An explicit stop/cancel is not a crash; unresolved publications keep their checkpoints.
         return new(results, current, cancelled, reason, watch.Elapsed);

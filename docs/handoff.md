@@ -1,5 +1,29 @@
 # Current handoff
 
+## Desktop workflow checkpoint
+
+2026-11-26, `master` based on `9dfdd1d`, version 2026.11.18.
+
+- Activity reports completed items out of the total and shows elapsed time,
+  remaining time and throughput. See [Activity table messages](development/activity-messages.md).
+- The home sidebar uses **Names & Tags**, **Audio Tools**, and **Organization**.
+  Each category has one display definition and favourites are saved by operation ID.
+- Track ID grouping, alphabetical grouping, filename renaming and tagging rebuild
+  previews in the background after a 225 ms pause. New edits cancel older work.
+- **Group by Alphabet → Files** can skip a leading Track ID using a preset or
+  custom separator. The approved move uses the same destination as the preview.
+  See [Group files and folders](user/file-workflow-features.md#group-files-and-folders).
+- The activity log and shared operation previews use the same table styling.
+  Track ID grouping retains its expandable tree.
+
+Live Windows checks covered the alphabetical results and conflict table, the
+activity log, Track ID tree expansion, and the dash, period and whitespace
+separator behavior. Small-window rename and audio visuals and large-library
+preview responsiveness remain unmeasured.
+
+The StandaloneTests Release build and serial Windows test commands under
+[KMA to MP3+G](#kma-to-mp3g) passed with zero build warnings and 935/935 tests.
+
 ## Track ID grouping width
 
 2026-11-24, `master` from `d3f770b`, version 2026.11.18. This checkpoint adds

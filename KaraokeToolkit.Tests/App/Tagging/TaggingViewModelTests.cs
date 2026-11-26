@@ -86,6 +86,9 @@ public class TaggingViewModelTests
         File.Move(path, newPath);
         File.Move(Path.ChangeExtension(path, ".cdg"), Path.ChangeExtension(newPath, ".cdg"));
         model.Pattern = "%TITLE%";
+        Assert.False(model.CanApply);
+        Assert.Same(row, Assert.Single(model.Rows));
+        await model.PendingPreview;
         Assert.True(model.CanApply);
         Assert.Equal(path, Assert.Single(model.Rows).Path);
         Assert.Equal(row.Preview.SourceHash, model.BuildRequest()!.Files[0].SourceHash);

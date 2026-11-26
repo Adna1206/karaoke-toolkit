@@ -30,7 +30,7 @@ public sealed partial class FilenameRenameViewModel(IReadOnlyList<string> inputs
     private const string DefaultPattern = KaraokeFilenamePattern.DiscIdTrackArtistTitle;
     private const string DiscTrackTitleArtist = "%DISC%-%TRACK% %TITLE% - %ARTIST%";
     private readonly bool initialRecurse = recurse;
-    private FilenameRenameService.PreviewSnapshot? snapshot;
+    private readonly PreviewWork<FilenameRenameService.PreviewSnapshot> work = new();
     private FilenameRenameSubmission? preview;
 
     public IReadOnlyList<string> SourcePatterns { get; } = patterns.Append(DiscTrackTitleArtist).Distinct(StringComparer.Ordinal).ToArray();
@@ -65,6 +65,7 @@ public sealed partial class FilenameRenameViewModel(IReadOnlyList<string> inputs
         RemoveDiscWhitespace != FilenameRenameRequest.DefaultRemoveDiscWhitespace || !UppercaseDisc || IncludeSubfolders != initialRecurse;
     private FilenameRenameRequest Request => new(inputs, SourcePattern, DestinationPattern,
         RemoveDiscWhitespace, IncludeSubfolders, UppercaseDisc);
+    internal Task PendingPreview { get; private set; } = Task.CompletedTask;
 
     partial void OnSourcePatternChanged(string value) => UpdatePreview();
     partial void OnDestinationPatternChanged(string value) => UpdatePreview();
@@ -72,70 +73,85 @@ public sealed partial class FilenameRenameViewModel(IReadOnlyList<string> inputs
     partial void OnUppercaseDiscChanged(bool value) => UpdatePreview();
     partial void OnIncludeSubfoldersChanged(bool value) => UpdatePreview();
 
-    private void InvalidatePreview()
+    private void UpdatePreview()
     {
-        preview = null;
-        Changes = [];
-        Issues = [];
-        OnPropertyChanged(nameof(CanApply));
+        if (work.CanUpdate) PendingPreview = UpdatePreviewAsync(refresh: false, CancellationToken.None);
     }
 
     [RelayCommand]
-    internal async Task RefreshAsync(CancellationToken token = default)
+    internal Task RefreshAsync(CancellationToken token = default) => UpdatePreviewAsync(refresh: true, token);
+
+    internal void StopPreview()
     {
-        if (IsBusy) return;
+        work.Stop();
+        PreviewProgress.Finish();
+    }
+
+    private async Task UpdatePreviewAsync(bool refresh, CancellationToken token)
+    {
+        using var requestWork = work.Begin(refresh, token);
+        if (requestWork == null) return;
+        var cancellation = requestWork.Token;
+        var request = Request;
+        preview = null;
         IsBusy = true;
-        snapshot = null;
-        InvalidatePreview();
-        Status = "Scanning inputs…";
+        Status = "Updating preview…";
         StatusSeverity = StatusKind.Info;
         PreviewProgress.Begin(status => Status = status);
         try
         {
-            snapshot = await Task.Run(() => FilenameRenameService.ReadPreview(inputs, token), token);
-            UpdatePreview(token);
+            if (!refresh) await Task.Delay(PreviewWork<FilenameRenameService.PreviewSnapshot>.EditDelay, cancellation);
+            var scan = work.ReadAsync(scanToken => Task.Run(() => FilenameRenameService.ReadPreview(inputs, scanToken), scanToken), cancellation);
+            if (!scan.IsCompleted) Status = "Scanning inputs…";
+            var snapshot = await scan;
+            Status = "Planning filenames…";
+            var result = await Task.Run(() =>
+            {
+                var plan = FilenameRenameService.PlanPreview(request, snapshot, cancellation);
+                var changes = new List<FilenameRenamePreviewRow>();
+                var conflicts = new List<FilenameRenamePreviewRow>();
+                var skipped = new List<FilenameRenamePreviewRow>();
+                foreach (var item in plan.Items)
+                {
+                    cancellation.ThrowIfCancellationRequested();
+                    var row = new FilenameRenamePreviewRow(item);
+                    if (item.IsConflict) conflicts.Add(row);
+                    else if (item.Destination == null) skipped.Add(row);
+                    else changes.Add(row);
+                }
+                int conflictCount = conflicts.Count;
+                conflicts.AddRange(skipped);
+                return (plan, changes, issues: conflicts, conflicts: conflictCount);
+            }, cancellation);
+            cancellation.ThrowIfCancellationRequested();
+            preview = new(request, result.plan);
+            Changes = result.changes;
+            Issues = result.issues;
+            int ready = Changes.Count;
+            int skipped = Issues.Count - result.conflicts;
+            Status = $"{ready} ready · {skipped} skipped · {result.conflicts} {(result.conflicts == 1 ? "conflict" : "conflicts")}";
+            StatusSeverity = result.conflicts > 0 ? StatusKind.Failure : ready == 0 || skipped > 0 ? StatusKind.Warning : StatusKind.Success;
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
+        catch (Exception error) when (error is ArgumentException or IOException or UnauthorizedAccessException or FormatException)
         {
-            Status = "Preview cancelled.";
-        }
-        catch (Exception error) when (error is ArgumentException or IOException or UnauthorizedAccessException)
-        {
-            Status = error.Message;
-            StatusSeverity = StatusKind.Failure;
+            if (!cancellation.IsCancellationRequested)
+            {
+                Changes = [];
+                Issues = [];
+                Status = error.Message;
+                StatusSeverity = StatusKind.Failure;
+            }
         }
         finally
         {
-            PreviewProgress.Finish();
-            IsBusy = false;
+            if (work.Finish(requestWork))
+            {
+                if (cancellation.IsCancellationRequested) Status = "Preview cancelled.";
+                PreviewProgress.Finish();
+                IsBusy = false;
+            }
         }
-    }
-
-    private void UpdatePreview(CancellationToken token = default)
-    {
-        if (snapshot == null) return;
-        InvalidatePreview();
-        try
-        {
-            var request = Request;
-            var plan = FilenameRenameService.PlanPreview(request, snapshot, token);
-            preview = new(request, plan);
-            Changes = plan.Items.Where(item => item.Destination != null && !item.IsConflict)
-                .Select(item => new FilenameRenamePreviewRow(item)).ToArray();
-            Issues = plan.Items.Where(item => item.Destination == null || item.IsConflict)
-                .OrderByDescending(item => item.IsConflict).Select(item => new FilenameRenamePreviewRow(item)).ToArray();
-            int ready = Changes.Count;
-            int conflicts = Issues.Count(row => row.Item.IsConflict);
-            int skipped = Issues.Count - conflicts;
-            Status = $"{ready} ready · {skipped} skipped · {conflicts} {(conflicts == 1 ? "conflict" : "conflicts")}";
-            StatusSeverity = conflicts > 0 ? StatusKind.Failure : ready == 0 || skipped > 0 ? StatusKind.Warning : StatusKind.Success;
-        }
-        catch (Exception error) when (error is ArgumentException or IOException or FormatException)
-        {
-            Status = error.Message;
-            StatusSeverity = StatusKind.Failure;
-        }
-        OnPropertyChanged(nameof(CanApply));
     }
 
     internal FilenameRenameSubmission? BuildSubmission() => CanApply ? preview : null;

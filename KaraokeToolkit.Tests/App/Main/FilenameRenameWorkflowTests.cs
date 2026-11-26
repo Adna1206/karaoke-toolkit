@@ -33,11 +33,15 @@ public class FilenameRenameWorkflowTests
 
         File.Delete(occupied);
         preview.RemoveDiscWhitespace = false;
+        Assert.False(preview.CanApply);
+        Assert.Same(change, Assert.Single(preview.Changes));
+        await preview.PendingPreview;
         Assert.Contains(preview.Changes, row => row.DestinationName == "ABC 20-02 - Artist - Song.zip");
         Assert.Single(preview.Issues);
         Assert.True(preview.CanApply);
 
         preview.RemoveDiscWhitespace = true;
+        await preview.PendingPreview;
         Assert.Contains(preview.Issues, row => row.Item.IsConflict);
         Assert.False(preview.CanApply);
         await preview.RefreshAsync();
@@ -71,8 +75,14 @@ public class FilenameRenameWorkflowTests
             preview.SourcePattern = "%DISC%-%TRACK% %TITLE% - %ARTIST%";
             await preview.RefreshAsync();
             preview.RemoveDiscWhitespace = false;
+            await preview.PendingPreview;
             updatedPreview = Assert.Single(preview.Changes).DestinationName == "ABC 20-02 - Artist - Song.zip";
+            preview.DestinationPattern = "%INVALID%";
+            var superseded = preview.PendingPreview;
+            preview.DestinationPattern = KaraokeFilenamePattern.DiscIdTrackArtistTitle;
             preview.RemoveDiscWhitespace = true;
+            Assert.Null(preview.BuildSubmission());
+            await Task.WhenAll(superseded, preview.PendingPreview);
             return preview.BuildSubmission();
         };
         await model.StartCommand.ExecuteAsync(null);

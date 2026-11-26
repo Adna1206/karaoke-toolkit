@@ -1,20 +1,18 @@
 # File workflow features
 
-The home screen has a category sidebar and an operation list for Karaoke Conversion,
-Archive Tools, File Tools, Folder Tools, and Validation & Reports. Disc Ripping appears
-when its experimental setting is enabled, and Recipes appears when saved recipes
-exist. Selecting an operation keeps its category synchronized. Unavailable online
-renaming is hidden. Category selection is session state, not an expander preference.
+The home sidebar lists Karaoke Conversion, Archive Tools, Names & Tags,
+Audio Tools, Organization, and Validation & Reports. Recipes appears when
+saved recipes exist. Category selection lasts for the current session.
 
-**File Tools** includes filename cleanup, renaming, tagging, audio gain and key changes.
-**Folder Tools** includes Track ID grouping, alphabetical grouping and flattening.
+- **Names & Tags** includes filename cleanup, pattern renaming, Track ID separators and tagging.
+- **Audio Tools** includes gain normalization and key changes.
+- **Organization** includes Track ID grouping, alphabetical grouping and flattening.
 
 Each operation has a star button to add or remove it from Favourites. This section
 appears at the top only when it has visible operations. Favourites use the same
 operation instances and execution flow as their original sections, in the usual
 operation order. Choices are saved immediately using stable operation identifiers.
-A favourited disc-ripping action is hidden while ripping is disabled, but its star
-is remembered.
+Open [experimental disc ripping](disc-ripping.md) from the **Tools** menu.
 
 ## Input
 
@@ -97,12 +95,13 @@ algorithms, source retention, overwrite, cancellation, retry and checkpoint resu
 ## Review existing conversion outputs
 
 Set **Existing output files (including CUE/TXT)** to **Ask each time** in Settings.
-Standalone desktop conversions publish outputs that have no conflict as they
-finish. At the end, one review lists
-the conflicting groups across the selected folders, including existing
+Standalone desktop conversions publish outputs without conflicts as they finish.
+They keep new outputs with conflicts in temporary staging. At the end, one review
+lists the conflicting groups across the selected folders, including existing
 automatic CUE or TXT outputs where applicable. Select individual groups to
 replace, or use **Skip all** and **Replace all** to set the choices together.
-Anything left unchecked is skipped. Select **Apply choices** to continue.
+Select **Apply choices** to publish the staged replacements and discard the
+staged outputs for unchecked groups. Unchecked groups keep their existing files.
 
 Matching outputs for one track are kept together. **Cancel operation**
 discards unpublished work and keeps completed changes. If a source or an
@@ -134,15 +133,24 @@ Cancellation, failed-item retry and crash recovery use the standard conversion w
 
 ## Group files and folders
 
-Choose **Folder Tools → Group by Alphabet** and select a mode in the
+Choose **Organization → Group by Alphabet** and select a mode in the
 preview. **Files** groups selected files and files inside selected folders and
 their subfolders into A–Z and `#` folders. **Folders** moves the immediate
 subfolders of each selected folder into those groups with their contents.
 
 In **Files** mode, **Ignore leading ‘The’** groups `The Example.mp3` under E.
-Changing the mode or this setting updates the preview. Use **Refresh** to
-detect changes on disk. Review
-the destination paths and skipped items before choosing **Move items**.
+**Skip leading Track ID** starts sorting after a recognized leading ID and the
+selected separator. For example, `ABC-0000 - Freddie Hart - Song.zip` goes to F
+with ` - ` selected. Choose ` - `, `. `, ` – `, `_`, or **Whitespace**, or type
+a custom separator. Spaces in custom punctuation separators count. **Whitespace**
+matches one or more spaces or tabs. Filenames without a complete ID followed by
+the separator are grouped using the full name. **Ignore leading ‘The’** also works
+on the text following the ID. The move keeps the original filename.
+
+Changing a grouping option updates the preview after a short pause.
+You can keep editing while the previous results are visible. **Move items**
+becomes available when the latest preview is ready. Use **Refresh** to rescan
+the inputs. Review the destination and issue tables before choosing **Move items**.
 Drag the divider above the skipped items to resize or hide that pane.
 The run uses the approved list. A source that disappeared or a destination
 that became occupied keeps the affected group in place, including a matching
@@ -151,15 +159,14 @@ range and trailing-digit grouping.
 
 ## Rename by Filename Pattern
 
-Select karaoke files or folders and choose **File Tools → Rename by
+Select karaoke files or folders and choose **Names & Tags → Rename by
 Filename Pattern**. Pick a **Source pattern** that describes the current names
 and a **Destination pattern** that describes the new names. Both fields accept
-built-in patterns and custom text. The preview updates as you change the
-patterns and **Include subfolders** on the left. Use **Refresh** to detect
-changes on disk. Hover over a name to see its full path. Drag the divider
-above **Skipped items and conflicts** to resize the pane. Drag it all the way
-down to hide the pane, and back up to see it again. Select **Rename Files**
-when the preview is ready.
+built-in patterns and custom text. The preview updates after you pause editing
+the settings on the left, including **Include subfolders**. Use **Refresh** to
+rescan the inputs. Hover over a name in the preview table to see its full path.
+Drag the divider above **Skipped items and conflicts** down to shrink or hide it,
+and back up to see it again. Select **Rename Files** when the preview is ready.
 
 For example, to rename `ABC 20-02 Song Title - Song Artist.mp3`:
 
@@ -180,7 +187,7 @@ renames use [file move recovery](crash-recovery.md). Start a new rename in Deskt
 
 ## Flatten One Folder Level
 
-Select one or more folders and choose **Folder Tools → Flatten One Folder Level**. For each
+Select one or more folders and choose **Organization → Flatten One Folder Level**. For each
 selected folder, the operation moves the immediate contents of its child folders into
 the selected folder, then removes child folders that became empty. A deeper folder is
 moved intact, so one run removes only one layer. Files already in the selected folder

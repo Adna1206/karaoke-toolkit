@@ -32,6 +32,8 @@ public class AlphabeticalOrganizerTests
             await preview.RefreshAsync();
             Assert.Contains(preview.Moves, row => row.SourceName == "The Example.txt" && row.TargetName == Path.Combine("E", "The Example.txt"));
             preview.ScopeIndex = (int)AlphabeticalOrganizeScope.Folders;
+            Assert.Null(preview.BuildSubmission());
+            await preview.PendingPreview;
             Assert.NotNull(preview.BuildSubmission());
             Assert.Equal(3, preview.Moves.Count);
             Assert.True(Directory.Exists(Path.Combine(first, "Bravo")));
@@ -197,5 +199,72 @@ public class AlphabeticalOrganizerTests
             ignoreLeadingThe: true);
         Assert.Equal(1, result.Succeeded);
         Assert.True(Directory.Exists(Path.Combine(root, "T", "The Beatles")));
+    }
+
+    [Theory]
+    [InlineData("ABC-0000 - Freddie Hart - Song.zip", " - ", false, "F")]
+    [InlineData("ABC123 - Freddie Hart - Song.zip", " - ", false, "F")]
+    [InlineData("ABC-1234. Freddie Hart.zip", ". ", false, "F")]
+    [InlineData("ABC-1234 – Freddie Hart.zip", " – ", false, "F")]
+    [InlineData("ABC-1234_Freddie Hart.zip", "_", false, "F")]
+    [InlineData("ABC_1234 _ Freddie Hart.zip", " _ ", false, "F")]
+    [InlineData("ABC 1234   Freddie Hart.zip", " ", false, "F")]
+    [InlineData("ABC-1234-Freddie Hart.zip", "-", false, "F")]
+    [InlineData("The Beatles - Song.zip", " - ", false, "T")]
+    [InlineData("ABC-1234 Bonus - Freddie Hart.zip", " - ", false, "A")]
+    [InlineData("ABC-1234. Freddie Hart.zip", " - ", false, "A")]
+    [InlineData("ABC-1234 - .zip", " - ", false, "A")]
+    [InlineData("ABC-1234 - The Beatles.zip", " - ", true, "B")]
+    public async Task OnlyCompleteLeadingTrackIdsAreSkipped(string name, string separator, bool ignoreThe, string bucket)
+    {
+        string root = TestMediaFixture.NewFolder();
+        string source = Path.Combine(root, name);
+        File.WriteAllText(source, "media");
+        var organizer = new AlphabeticalOrganizer();
+        var snapshot = await organizer.ReadPreviewAsync([source], CancellationToken.None);
+        var plan = snapshot.Plan(AlphabeticalOrganizeScope.Files, ignoreThe, separator);
+        Assert.Equal(Path.Combine(root, bucket, name), Assert.Single(Assert.Single(plan.Files).Outputs));
+    }
+
+    [Fact]
+    public async Task DesktopTrackIdOptionUpdatesThePreviewAndMovesBothPartsOfAKaraokePair()
+    {
+        string root = TestMediaFixture.NewFolder();
+        string stem = "ABC-0000. Freddie Hart - Song";
+        string audio = Path.Combine(root, stem + ".mp3");
+        string graphics = Path.Combine(root, stem + ".cdg");
+        File.WriteAllText(audio, "audio");
+        File.WriteAllText(graphics, "graphics");
+        var model = new MainViewModel(Path.Combine(TestMediaFixture.NewFolder(), "settings.xml"));
+        model.SelectedOperation = model.Operations.Single(operation => operation.IsOrganizer);
+        model.SetInputs([audio]);
+        model.ConfigureAlphabeticalGroupingAsync = async preview =>
+        {
+            await preview.RefreshAsync();
+            Assert.All(preview.Moves, row => Assert.StartsWith($"A{Path.DirectorySeparatorChar}", row.TargetName));
+            preview.SkipLeadingTrackId = true;
+            preview.TrackIdSeparator = "";
+            await preview.PendingPreview;
+            Assert.Null(preview.BuildSubmission());
+            Assert.Contains("Enter a separator", preview.Status);
+
+            preview.TrackIdSeparator = ". ";
+            await preview.PendingPreview;
+            Assert.All(preview.Moves, row => Assert.StartsWith($"F{Path.DirectorySeparatorChar}", row.TargetName));
+            preview.SkipLeadingTrackId = false;
+            await preview.PendingPreview;
+            Assert.All(preview.Moves, row => Assert.StartsWith($"A{Path.DirectorySeparatorChar}", row.TargetName));
+            preview.SkipLeadingTrackId = true;
+            await preview.PendingPreview;
+            Assert.Equal(". ", preview.TrackIdSeparator);
+            Assert.Equal(2, preview.Moves.Count);
+            return preview.BuildSubmission();
+        };
+        await model.StartCommand.ExecuteAsync(null);
+
+        Assert.Equal("audio", File.ReadAllText(Path.Combine(root, "F", Path.GetFileName(audio))));
+        Assert.Equal("graphics", File.ReadAllText(Path.Combine(root, "F", Path.GetFileName(graphics))));
+        Assert.False(File.Exists(audio));
+        Assert.False(File.Exists(graphics));
     }
 }

@@ -5,7 +5,6 @@ using Action = KaraokeToolkit.Core.Execution.OperationId;
 
 namespace KaraokeToolkit.App.Metadata;
 
-public enum OperationSection { KaraokeConversion, Archives, FileTools, FolderTools, ValidationAndReports, DiscRipping, Favourites, Recipes }
 public enum OperationInputKind { None, FilesAndFolders, Folders, SingleManifest, SingleDisc }
 
 /// <summary>Immutable UI metadata and routing for one operation. Core remains responsible for format validation.</summary>
@@ -34,4 +33,19 @@ public sealed record OperationDefinition(string Id, Action? Action, string Label
         !IsTrackGrouping && !IsAudioGain && !IsAudioKey && !IsFilenameRename && OrganizeMode == null && FlattenScope == null;
 }
 
-public sealed record OperationSectionDefinition(OperationSection Section, string Header);
+public sealed class OperationSection
+{
+    private OperationSection(string header) => Header = header;
+
+    public string Header { get; }
+
+    public static OperationSection Favourites { get; } = new("Favourites");
+    public static OperationSection KaraokeConversion { get; } = new("Karaoke Conversion");
+    public static OperationSection Archives { get; } = new("Archive Tools");
+    public static OperationSection NamesAndTags { get; } = new("Names & Tags");
+    public static OperationSection AudioTools { get; } = new("Audio Tools");
+    public static OperationSection Organization { get; } = new("Organization");
+    public static OperationSection ValidationAndReports { get; } = new("Validation & Reports");
+    public static OperationSection Recipes { get; } = new("Recipes (Experimental)");
+    public static OperationSection DiscRipping { get; } = new("Disc Ripping");
+}

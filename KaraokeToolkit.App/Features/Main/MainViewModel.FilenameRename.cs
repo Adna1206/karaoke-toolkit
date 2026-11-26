@@ -32,7 +32,7 @@ public partial class MainViewModel
                 RecoveryVerification, SaveResumableRun, run.Progress, run.Token, CheckTiming);
             run.StopProgress();
             LastReport = CompletionReport.FromConversion(title, result) with { ReportType = "Filename Rename Report" };
-            FoundFiles = result.Found;
+            CompleteActivityItemCount(result);
             Status = $"{(result.Cancelled ? "Rename cancelled" : "Rename finished")} · {result.Succeeded} renamed · {result.Skipped} skipped · {result.Failed} failed";
             StatusOutcome = RunStatusSummary.From(result);
             if (!result.Cancelled) Progress = TotalProgress = 100;

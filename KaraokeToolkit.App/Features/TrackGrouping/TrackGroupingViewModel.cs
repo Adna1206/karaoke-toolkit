@@ -14,7 +14,10 @@ using System.Threading.Tasks;
 namespace KaraokeToolkit.App.Features.TrackGrouping;
 
 internal sealed record TrackGroupingSubmission(OperationRequest Request, TrackGroupingPlan Plan);
-public sealed record TrackGroupingPreviewIssue(string Text);
+public sealed record TrackGroupingPreviewIssue(string Source, string Reason)
+{
+    public string SourceName => Path.GetFileName(Path.TrimEndingDirectorySeparator(Source));
+}
 public sealed partial class TrackGroupingNode(string label, string detail, IReadOnlyList<TrackGroupingNode> children) : ObservableObject
 {
     public string Label { get; } = label;
@@ -32,13 +35,9 @@ public sealed partial class TrackGroupingNode(string label, string detail, IRead
 
 public sealed partial class TrackGroupingViewModel(IReadOnlyList<string> inputs) : ViewModelBase
 {
-    private CancellationTokenSource? previewCancellation;
-    private CancellationTokenSource? scanCancellation;
-    private Task<TrackGroupingPlanner.InputScan>? inputScan;
+    private readonly PreviewWork<TrackGroupingPlanner.InputScan> work = new();
     private TrackGroupingSubmission? submission;
-    private bool closed;
     private bool expandedAll;
-    private bool previewStarted;
     private bool destinationSelected;
 
     [ObservableProperty] public partial string? OutputFolder { get; set; } = DefaultOutput(inputs, wholeFolders: false);
@@ -128,8 +127,8 @@ public sealed partial class TrackGroupingViewModel(IReadOnlyList<string> inputs)
             nameof(MaxParentLevels) or nameof(SkipSingleChildParents) or nameof(RangeSize) or nameof(RangeStart) or
             nameof(RangeSeparatorStyle) or nameof(CustomRangeSeparator) or nameof(IdSeparatorStyle) or nameof(MinimumIdDigits) or nameof(Move))
         {
-            if (e.PropertyName != nameof(OutputFolder) || previewStarted) HasEdits = true;
-            if (previewStarted) _ = PreviewAsync();
+            if (e.PropertyName != nameof(OutputFolder) || work.HasStarted) HasEdits = true;
+            if (work.CanUpdate) _ = PreviewAsync(debounce: true);
         }
     }
 
@@ -137,38 +136,23 @@ public sealed partial class TrackGroupingViewModel(IReadOnlyList<string> inputs)
 
     internal void StopPreview()
     {
-        closed = true;
-        previewCancellation?.Cancel();
-        ResetInputScan();
+        work.Stop();
         PreviewProgress.Finish();
     }
 
-    private void ResetInputScan()
+    internal async Task PreviewAsync(bool refresh = false, bool debounce = false)
     {
-        scanCancellation?.Cancel();
-        scanCancellation?.Dispose();
-        scanCancellation = null;
-        inputScan = null;
-    }
-
-    internal async Task PreviewAsync(bool refresh = false)
-    {
-        if (closed) return;
-        previewStarted = true;
-        previewCancellation?.Cancel();
-        if (refresh) ResetInputScan();
-        using var cancellation = new CancellationTokenSource();
-        previewCancellation = cancellation;
+        using var requestWork = work.Begin(refresh, CancellationToken.None);
+        if (requestWork == null) return;
+        var token = requestWork.Token;
         submission = null;
         OnPropertyChanged(nameof(CanApply));
-        Tree = [];
-        Issues = [];
         StatusSeverity = StatusKind.Info;
-        Status = "Preparing preview…";
+        Status = "Updating preview…";
         var report = PreviewProgress.Begin(status => Status = status);
         try
         {
-            await Task.Delay(225, cancellation.Token);
+            if (debounce) await Task.Delay(PreviewWork<TrackGroupingPlanner.InputScan>.EditDelay, token);
             bool hasDestination = !string.IsNullOrWhiteSpace(OutputFolder);
             if (hasDestination && !Path.IsPathFullyQualified(OutputFolder!))
                 throw new ArgumentException("Enter a full destination folder path.");
@@ -176,19 +160,15 @@ public sealed partial class TrackGroupingViewModel(IReadOnlyList<string> inputs)
             string destination = hasDestination ? OutputFolder! : Path.Combine(Path.GetTempPath(), "Karaoke Toolkit Preview " + Guid.NewGuid());
             var options = BuildOptions();
             var request = new OperationRequest(OperationId.GroupByTrackId, inputs) { OutputFolder = destination, Grouping = options };
-            if (inputScan == null)
-            {
-                scanCancellation = new();
-                var scanToken = scanCancellation.Token;
-                inputScan = Task.Run(() => TrackGroupingPlanner.InputScan.Read(inputs, hasDestination ? destination : null, scanToken), scanToken);
-            }
-            if (!inputScan.IsCompleted) report("Scanning inputs", 0, 0);
-            var sources = await inputScan.WaitAsync(cancellation.Token);
+            var scan = work.ReadAsync(scanToken => Task.Run(() => TrackGroupingPlanner.InputScan.Read(inputs,
+                hasDestination ? destination : null, scanToken), scanToken), token);
+            if (!scan.IsCompleted) report("Scanning inputs", 0, 0);
+            var sources = await scan;
             bool checkedDestination = hasDestination && sources.CanCheckDestination(destination);
             var preview = await Task.Run(() =>
             {
                 var plan = TrackGroupingPlanner.PlanPreview(sources, destination, hasDestination ? options : options with { Move = false },
-                    cancellation.Token, (stage, completed, total) => report(stage switch
+                    token, (stage, completed, total) => report(stage switch
                     {
                         TrackGroupingPreviewStage.Grouping => "Grouping items",
                         TrackGroupingPreviewStage.BuildingGroups => "Building group folders",
@@ -198,15 +178,16 @@ public sealed partial class TrackGroupingViewModel(IReadOnlyList<string> inputs)
                     }, completed, total));
                 report("Preparing preview", 0, 0);
                 var rows = plan.Items.Select(item => (item, relativePath: Path.GetRelativePath(destination, item.Destination))).ToArray();
-                var tree = BuildTree(rows, cancellation.Token);
-                return (plan, tree);
-            }, cancellation.Token);
-            cancellation.Token.ThrowIfCancellationRequested();
+                var tree = BuildTree(rows, token);
+                var issues = plan.Issues.Select(issue => new TrackGroupingPreviewIssue(issue.Source,
+                    $"{(issue.IsConflict ? "Conflict" : "Skipped")} · {issue.Message}")).ToArray();
+                return (plan, tree, issues, conflict: plan.Issues.Any(issue => issue.IsConflict));
+            }, token);
+            token.ThrowIfCancellationRequested();
 
             Tree = preview.tree;
-            Issues = preview.plan.Issues.Select(issue => new TrackGroupingPreviewIssue(
-                $"{(issue.IsConflict ? "Conflict" : "Skipped")} · {issue.Source} · {issue.Message}")).ToArray();
-            bool conflict = preview.plan.Issues.Any(issue => issue.IsConflict);
+            Issues = preview.issues;
+            bool conflict = preview.conflict;
             if (checkedDestination && preview.plan.Items.Count > 0 && !conflict)
                 submission = new(request, preview.plan);
             OnPropertyChanged(nameof(CanApply));
@@ -218,22 +199,20 @@ public sealed partial class TrackGroupingViewModel(IReadOnlyList<string> inputs)
                 : !checkedDestination ? "Refresh to check the new destination for conflicts."
                 : $"{preview.plan.Items.Count} ready · {Issues.Count} skipped";
         }
-        catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception error) when (error is ArgumentException or IOException or UnauthorizedAccessException or NotSupportedException)
         {
-            if (!cancellation.IsCancellationRequested)
+            if (!token.IsCancellationRequested)
             {
+                Tree = [];
+                Issues = [];
                 StatusSeverity = StatusKind.Failure;
                 Status = error.Message;
             }
         }
         finally
         {
-            if (ReferenceEquals(previewCancellation, cancellation))
-            {
-                previewCancellation = null;
-                PreviewProgress.Finish();
-            }
+            if (work.Finish(requestWork)) PreviewProgress.Finish();
         }
     }
 
@@ -272,6 +251,7 @@ public sealed partial class TrackGroupingViewModel(IReadOnlyList<string> inputs)
             var nodes = new List<TrackGroupingNode>();
             foreach (var group in groups)
             {
+                token.ThrowIfCancellationRequested();
                 var descendants = group.Where(row => row.Parts.Length > index + 1).ToArray();
                 if (descendants.Length > 0)
                     nodes.Add(new($"{group.Key} ({descendants.Length})", group.Key, BuildLevel(descendants, index + 1)));

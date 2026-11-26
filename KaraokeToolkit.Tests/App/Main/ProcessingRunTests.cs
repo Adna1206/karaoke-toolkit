@@ -18,11 +18,11 @@ public class ProcessingRunTests
     }
 
     private static ProcessingRun CreateRun(QueuedContext context, Action<ConversionProgress> report,
-        Action<string>? updateElapsed = null, TimeProvider? clock = null)
+        Action<string>? updateElapsed = null, TimeProvider? clock = null, Action<ProcessingEstimate?>? updateEstimate = null)
     {
         var previous = SynchronizationContext.Current;
         SynchronizationContext.SetSynchronizationContext(context);
-        try { return new ProcessingRun(report, updateElapsed, clock); }
+        try { return new ProcessingRun(report, updateElapsed, clock, updateEstimate); }
         finally { SynchronizationContext.SetSynchronizationContext(previous); }
     }
 
@@ -49,6 +49,116 @@ public class ProcessingRunTests
         context.Drain();
         Assert.Equal("00:00:03", run.Elapsed);
         Assert.Equal("00:00:02", updates.Last());
+    }
+
+    [Fact]
+    public void TimingEstimateUsesNewCompletionsAndRefreshesOnTheExistingTimer()
+    {
+        var context = new QueuedContext();
+        var clock = new TestClock();
+        var estimates = new List<ProcessingEstimate?>();
+        using var run = CreateRun(context, _ => { }, clock: clock, updateEstimate: estimates.Add);
+
+        Report(20);
+        Tick();
+        Report(21);
+        Tick();
+        Report(23);
+        Assert.Empty(estimates);
+
+        Tick();
+        Assert.Equal(new ProcessingEstimate(77, 1), Assert.Single(estimates));
+        Report(27);
+        Tick();
+        Tick();
+        Assert.Single(estimates);
+        Tick();
+        Assert.Equal(7.0 / 6, estimates.Last()!.Value.ItemsPerSecond, 6);
+        Assert.Equal(73 / (7.0 / 6), estimates.Last()!.Value.RemainingSeconds, 6);
+
+        run.StopProgress();
+        Assert.Null(estimates.Last());
+        Tick();
+        Assert.Equal(3, estimates.Count);
+
+        void Report(int completed)
+        {
+            run.Progress.Report(new(0, 0, 100, completed, "Processing", ""));
+            context.Drain();
+        }
+
+        void Tick() { clock.Tick(); context.Drain(); }
+    }
+
+    [Fact]
+    public async Task PreparationAndOverwriteReviewClearTheEstimateAndRestartSampling()
+    {
+        var context = new QueuedContext();
+        var clock = new TestClock();
+        ProcessingEstimate? estimate = null;
+        using var run = CreateRun(context, _ => { }, clock: clock, updateEstimate: value => estimate = value);
+
+        Report(0, preparing: true);
+        Tick(12);
+        Report(3);
+        Report(6);
+        Tick(3);
+        Assert.Equal(new ProcessingEstimate(94, 1), estimate);
+
+        var decision = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var review = run.WithEstimatePausedAsync(() => decision.Task);
+        Tick(20);
+        Assert.Null(estimate);
+        decision.SetResult(true);
+        Assert.True(await review);
+
+        Report(6);
+        Report(9);
+        Tick(3);
+        Assert.Equal(new ProcessingEstimate(91, 1), estimate);
+
+        Report(0, preparing: true);
+        Assert.Null(estimate);
+        Report(0);
+        Report(3);
+        Tick(3);
+        Assert.Equal(new ProcessingEstimate(97, 1), estimate);
+        Tick(9);
+        Assert.Null(estimate);
+
+        void Report(int completed, bool preparing = false)
+        {
+            run.Progress.Report(new(0, 0, 100, completed, "Processing", "") { IsIndeterminate = preparing });
+            context.Drain();
+        }
+
+        void Tick(int seconds)
+        {
+            for (int i = 0; i < seconds; i++) { clock.Tick(); context.Drain(); }
+        }
+    }
+
+    [Fact]
+    public void SlowBatchesCanStillWarmUpAnEstimate()
+    {
+        var context = new QueuedContext();
+        var clock = new TestClock();
+        ProcessingEstimate? estimate = null;
+        using var run = CreateRun(context, _ => { }, clock: clock, updateEstimate: value => estimate = value);
+        run.Progress.Report(new(0, 0, 10, 0, "Processing", ""));
+        context.Drain();
+
+        for (int completed = 1; completed <= 3; completed++)
+        {
+            for (int second = 0; second < 11; second++) { clock.Tick(); context.Drain(); }
+            run.Progress.Report(new(0, 0, 10, completed, "Processing", ""));
+            context.Drain();
+            clock.Tick();
+            context.Drain();
+        }
+
+        Assert.Equal(1.0 / 12, estimate!.Value.ItemsPerSecond, 6);
+        Assert.Equal(84, estimate.Value.RemainingSeconds, 6);
     }
 
     private sealed class TestClock : TimeProvider

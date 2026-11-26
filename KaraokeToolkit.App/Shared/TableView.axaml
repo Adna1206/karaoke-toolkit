@@ -1,0 +1,41 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:shared="using:KaraokeToolkit.App.Shared" x:Class="KaraokeToolkit.App.Shared.TableView"
+             x:Name="Table" x:DataType="shared:TableView">
+  <UserControl.Styles>
+    <Style Selector="ListBox.tableItems, TreeView.tableItems">
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+    </Style>
+    <Style Selector="ListBox.tableItems ListBoxItem">
+      <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="Margin" Value="0"/>
+    </Style>
+    <Style Selector="Border.tableHeader TextBlock">
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+    </Style>
+    <Style Selector="Border.tableHeader, Border.tableRow">
+      <Setter Property="Padding" Value="12,6"/>
+      <Setter Property="BorderThickness" Value="0,0,0,1"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}"/>
+    </Style>
+    <Style Selector="Border.tableHeader">
+      <Setter Property="Background" Value="{DynamicResource SystemControlForegroundBaseLowBrush}"/>
+    </Style>
+    <Style Selector="Border.tableRow.treeRow">
+      <Setter Property="Padding" Value="0,4,12,4"/>
+    </Style>
+  </UserControl.Styles>
+  <Border CornerRadius="8" ClipToBounds="True" BorderThickness="1"
+          BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+    <Grid RowDefinitions="Auto,*">
+      <Border Classes="tableHeader">
+        <ContentPresenter Content="{Binding #Table.Header}"/>
+      </Border>
+      <ContentPresenter Grid.Row="1" Content="{Binding #Table.Rows}"/>
+    </Grid>
+  </Border>
+</UserControl>

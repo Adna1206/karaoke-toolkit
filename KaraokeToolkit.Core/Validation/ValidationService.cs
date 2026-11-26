@@ -14,7 +14,11 @@ public sealed record ValidationFinding(string Source, string Root, ValidationSta
 {
     public bool CanMove => Files.Count > 0 && Status is ValidationStatus.Incomplete or ValidationStatus.Ambiguous or ValidationStatus.Damaged or ValidationStatus.Unsupported;
 }
-public sealed record ValidationResult(IReadOnlyList<ValidationFinding> Findings, bool Cancelled, TimeSpan Elapsed);
+public sealed record ValidationResult(IReadOnlyList<ValidationFinding> Findings, bool Cancelled, TimeSpan Elapsed)
+{
+    public int FoundItems { get; init; }
+    public int CompletedItems { get; init; }
+}
 
 /// <summary>Read-only structural validation. A valid result does not certify decoded audio or visual CDG content.</summary>
 public sealed class ValidationService
@@ -33,7 +37,7 @@ public sealed class ValidationService
             var media = InputSelection.Media(inputs, recurse).ToArray();
             progress?.Report(new(0, 0, media.Length, 0, "Validating karaoke files…", watch.Elapsed.ToString(@"hh\:mm\:ss"))
                 { ShowInActivity = false });
-            var visited = new HashSet<string>(InputSelection.Paths);
+            var remaining = media.Select(item => item.File).ToHashSet(InputSelection.Paths);
             var findings = new List<ValidationFinding>();
             bool cancelled = false;
             foreach (var (file, root) in media)
@@ -43,7 +47,7 @@ public sealed class ValidationService
                     cancelled = true;
                     break;
                 }
-                if (!visited.Add(file))
+                if (!remaining.Contains(file))
                     continue;
                 string[] group = [file];
                 (string Path, string Fingerprint)[]? hashes = null;
@@ -55,8 +59,6 @@ public sealed class ValidationService
                         group = Directory.GetFiles(Path.GetDirectoryName(file)!).Where(p =>
                             Path.GetFileNameWithoutExtension(p).Equals(Path.GetFileNameWithoutExtension(file), StringComparison.OrdinalIgnoreCase) &&
                             (Path.GetExtension(p).Equals(".cdg", StringComparison.OrdinalIgnoreCase) || KaraokeArchive.AudioExtensions.Contains(Path.GetExtension(p), StringComparer.OrdinalIgnoreCase))).Order(InputSelection.Paths).ToArray();
-                        foreach (string member in group)
-                            visited.Add(member);
                     }
                     hashes = await FingerprintAsync(group, verification, token);
                     ValidationStatus status = ValidationStatus.Valid;
@@ -124,10 +126,15 @@ public sealed class ValidationService
                 {
                     findings.Add(new(file, root, ValidationStatus.Unsupported, error.Message, []));
                 }
-                progress?.Report(new(100, media.Length == 0 ? 100 : Math.Min(100, visited.Count * 100 / media.Length), media.Length, findings.Count,
+                foreach (string member in group)
+                    remaining.Remove(member);
+                remaining.Remove(file);
+                int completed = media.Length - remaining.Count;
+                progress?.Report(new(100, completed * 100 / media.Length, media.Length, completed,
                     "Processing: " + file, watch.Elapsed.ToString(@"hh\:mm\:ss")) { ActivitySource = file, ActivityLabel = "Processing" });
             }
-            return new ValidationResult(findings, cancelled, watch.Elapsed);
+            return new ValidationResult(findings, cancelled, watch.Elapsed)
+                { FoundItems = media.Length, CompletedItems = media.Length - remaining.Count };
 
             ValidatedFile[] QuarantineFingerprints((string Path, string Fingerprint)[] files) =>
                 saveQuarantineFingerprints ? files.Select(file => new ValidatedFile(file.Path, file.Fingerprint)).ToArray() : [];

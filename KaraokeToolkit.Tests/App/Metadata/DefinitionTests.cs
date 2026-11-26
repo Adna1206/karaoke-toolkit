@@ -22,9 +22,9 @@ public class DefinitionTests
             Assert.False(string.IsNullOrWhiteSpace(definition.ShortDescription));
             Assert.False(string.IsNullOrWhiteSpace(definition.Description));
             if (definition.IsRip)
-                Assert.DoesNotContain(OperationDefinitions.Sections, section => section.Section == definition.Section);
+                Assert.DoesNotContain(definition.Section, OperationDefinitions.Sections);
             else
-                Assert.Contains(OperationDefinitions.Sections, section => section.Section == definition.Section);
+                Assert.Contains(definition.Section, OperationDefinitions.Sections);
             if (definition.Action.HasValue) Assert.Equal(definition.Action.ToString(), definition.Id);
         });
         var settings = SettingsDefinitions.Instance.All;

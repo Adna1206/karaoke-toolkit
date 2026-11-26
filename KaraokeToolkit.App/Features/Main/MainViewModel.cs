@@ -32,7 +32,6 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
     private ProcessingRun? activeRun;
     private readonly ApplicationSettingsStore store;
     private readonly SharedSettingsStore? sharedProfile;
-    private bool sectionsReady;
     public IReadOnlyList<OperationSectionViewModel> OperationSections { get; }
     public IReadOnlyList<OperationSectionViewModel> VisibleSections => OperationSections.Where(section => section.IsVisible).ToArray();
     [ObservableProperty, NotifyPropertyChangedFor(nameof(VisibleOperations)), NotifyPropertyChangedFor(nameof(SelectedSectionTitle))]
@@ -312,12 +311,14 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
     {
         get; set;
     }
-    [ObservableProperty]
-    public partial int FoundFiles
-    {
-        get; set;
-    }
+    private int foundItems;
+    private int? completedItems;
+    public string ActivityItemCount => completedItems is int completed
+        ? $"{completed:N0} of {foundItems:N0} {(foundItems == 1 ? "item" : "items")}"
+        : $"{foundItems:N0} {(foundItems == 1 ? "item" : "items")} found";
     [ObservableProperty] public partial string Elapsed { get; set; } = "00:00:00";
+    [ObservableProperty] public partial string RemainingTime { get; set; } = "—";
+    [ObservableProperty] public partial string Throughput { get; set; } = "—";
     [ObservableProperty, NotifyPropertyChangedFor(nameof(FooterStatusMessage))]
     public partial string Status { get; set; } = "Choose an operation and its inputs, then click Start.";
     [ObservableProperty, NotifyPropertyChangedFor(nameof(FooterStatusKind))]
@@ -362,8 +363,8 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
         bool isSharedProfile = recoveryStore != null;
         sharedProfile = isSharedProfile ? new SharedSettingsStore(settingsPath) : null;
         store = new(settingsPath, persistRenameBins: true, applyReleaseMigrations: isSharedProfile);
-        OperationSections = OperationDefinitions.Sections.Select(group => new OperationSectionViewModel(this, group.Section, group.Header,
-            Operations.Where(operation => operation.Available && operation.Section == group.Section).ToArray())).ToArray();
+        OperationSections = OperationDefinitions.Sections.Select(section => new OperationSectionViewModel(this, section,
+            Operations.Where(operation => operation.Available && operation.Section == section).ToArray())).ToArray();
         recovery = recoveryStore ?? new(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(settingsPath))!, "Recovery"));
         SelectedOperation = Operations.Single(operation => operation.Action == Action.AudioGToZip);
         try
@@ -384,14 +385,6 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
             IgnoreLeadingTheForFileOrganization = store.LoadIgnoreLeadingTheForFileOrganization();
             var favouriteIds = store.LoadFavouriteOperations().ToHashSet(StringComparer.Ordinal);
             foreach (var operation in Operations) operation.IsFavourite = operation.Available && favouriteIds.Contains(operation.Id);
-            var sections = store.LoadOperationSections();
-            foreach (var group in OperationSections)
-            {
-                bool defaultExpanded = group.Section is not (OperationSection.FileTools or OperationSection.FolderTools) ||
-                    sections.GetValueOrDefault(ApplicationSettingsStore.LegacyFileAndFolderSectionKey, true);
-                group.IsExpanded = group.Section == SelectedOperation?.Section ||
-                    sections.GetValueOrDefault(group.Section.ToString(), defaultExpanded);
-            }
         }
         catch (Exception e) { Status = "Could not load options: " + e.Message; }
         foreach (var operation in Operations)
@@ -400,20 +393,17 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
                 if (change.PropertyName != nameof(ActionChoice.IsFavourite)) return;
                 OnPropertyChanged(nameof(FavouriteOperations));
                 RefreshNavigation();
-                SaveOperationSections();
+                SaveFavouriteOperations();
             };
-        sectionsReady = true;
         ReloadRecipes();
     }
-    internal void SaveOperationSections()
+    private void SaveFavouriteOperations()
     {
-        if (!sectionsReady) return;
         try
         {
-            store.Save(operationSections: OperationSections.ToDictionary(group => group.Section.ToString(), group => group.IsExpanded),
-                favouriteOperations: Operations.Concat(RecipeChoices).Where(operation => operation.Available && operation.IsFavourite).Select(operation => operation.Id).ToArray());
+            store.Save(favouriteOperations: Operations.Concat(RecipeChoices).Where(operation => operation.Available && operation.IsFavourite).Select(operation => operation.Id).ToArray());
         }
-        catch (Exception error) { Status = "Could not save operation sections: " + error.Message; }
+        catch (Exception error) { Status = "Could not save favourites: " + error.Message; }
     }
     public void RememberOptionsWindow(SettingsWindowSize size, int tabIndex)
     {
@@ -670,7 +660,7 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
     private ProcessingRun BeginRun(string title, string status, bool isIndeterminate = false)
     {
         if (activeRun != null) throw new InvalidOperationException("A processing run is already active.");
-        var run = new ProcessingRun(Report, elapsed => Elapsed = elapsed);
+        var run = new ProcessingRun(Report, elapsed => Elapsed = elapsed, updateEstimate: UpdateActivityEstimate);
         activeRun = run;
         try
         {
@@ -686,7 +676,8 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
             LastReport = null;
             ValidationFindings = [];
             retryRequests = [];
-            Progress = TotalProgress = FoundFiles = 0;
+            Progress = TotalProgress = 0;
+            UpdateActivityItemCount(0, completed: null);
             IsRunProgressIndeterminate = isIndeterminate;
             Elapsed = "00:00:00";
             Status = status;
@@ -728,6 +719,10 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
             : Options;
         var run = BeginRun((recoveryJob != null ? "Recovery — " : "") + selected.Label,
             recoveryJob != null ? "Checking interrupted conversion…" : "Finding source files…", isIndeterminate: true);
+        Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolveConflict = ResolveConflictAsync is { } resolveOne
+            ? (conflict, token) => run.WithEstimatePausedAsync(() => resolveOne(conflict, token)) : null;
+        ResolveOutputConflicts? resolveConflicts = ResolveConflictsAsync is { } resolveMany
+            ? (conflicts, token) => run.WithEstimatePausedAsync(() => resolveMany(conflicts, token)) : null;
         IsRecoveryMode = recoveryJob != null;
         RecoveryAvailable = IsRecoveryMode;
         RecoveryMessage = recoveryJob == null ? "" : recoveryJob.ContinueBatchAfterRecovery
@@ -753,7 +748,7 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
                             break;
                         }
                         var attempt = await new SelectionConversionService(recovery).RunAsync(retry, run.Progress, run.Token,
-                            ResolveConflictAsync, ResolveConflictsAsync);
+                            resolveConflict, resolveConflicts);
                         all.AddRange(attempt.Files);
                         nextRetry.AddRange(attempt.RetryRequests);
                         total += attempt.Found;
@@ -772,21 +767,21 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
                     };
                 }
                 else if (recoveryJob != null)
-                    result = ResolveConflictsAsync is { } review
+                    result = resolveConflicts is { } review
                         ? await new ConversionService(recovery).ResumeWithConflictReviewAsync(recoveryJob, review, run.Progress, run.Token)
-                        : await new ConversionService(recovery).ResumeAsync(recoveryJob, run.Progress, run.Token, ResolveConflictAsync);
+                        : await new ConversionService(recovery).ResumeAsync(recoveryJob, run.Progress, run.Token, resolveConflict);
                 else if (selectedInputs.Length > 0 || File.Exists(FolderPath) ||
-                         OverwritePolicy == OverwritePolicy.Ask && ResolveConflictsAsync != null)
+                         OverwritePolicy == OverwritePolicy.Ask && resolveConflicts != null)
                     result = await new SelectionConversionService(recovery).RunAsync(new(action, CurrentInputs, runOptions, OverwritePolicy)
                     {
                         ValidateBeforeConversion = ValidateBeforeConversion,
                         ContinueBatchAfterRecovery = SaveResumableRun,
                         CheckTiming = CheckTiming,
                         RecoveryVerification = RecoveryVerification
-                    }, run.Progress, run.Token, ResolveConflictAsync, ResolveConflictsAsync);
+                    }, run.Progress, run.Token, resolveConflict, resolveConflicts);
                 else
                     result = await new ConversionService(recovery).RunAsync(new(action, FolderPath, runOptions), OverwritePolicy, run.Progress, run.Token,
-                        ResolveConflictAsync, ValidateBeforeConversion, continueBatchAfterRecovery: SaveResumableRun,
+                        resolveConflict, ValidateBeforeConversion, continueBatchAfterRecovery: SaveResumableRun,
                         checkTiming: CheckTiming, verificationMode: RecoveryVerification);
             }
             finally { run.StopProgress(); }
@@ -796,7 +791,7 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
             OnPropertyChanged(nameof(CanRetry));
             OnPropertyChanged(nameof(CanViewReport));
             OnPropertyChanged(nameof(CanChooseSource));
-            FoundFiles = result.Found;
+            CompleteActivityItemCount(result);
             if (!result.Cancelled)
             {
                 Progress = 100;
@@ -847,7 +842,7 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
                 var resumed = await Task.Run(() => service.ResumeAsync(job.JournalPath, run.Progress, run.Token));
                 run.StopProgress();
                 LastReport = resumed.Report;
-                FoundFiles = resumed.Found;
+                CompleteActivityItemCount(resumed);
                 int succeeded = resumed.Report.Entries.Count(entry => entry.Status == "Succeeded");
                 int failed = resumed.Report.Entries.Count(entry => entry.Status is "Failed" or "Blocked");
                 int skipped = resumed.Report.Entries.Count(entry => entry.Status == "Skipped");
@@ -868,12 +863,13 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
         {
             var result = alphabetical != null
                 ? await new AlphabeticalOrganizer(recovery).ApplyPreviewAsync(CurrentInputs, alphabetical.Scope, alphabetical.Plan,
-                    run.Progress, run.Token, alphabetical.IgnoreLeadingThe, RecoveryVerification, SaveResumableRun, CheckTiming)
+                    run.Progress, run.Token, alphabetical.IgnoreLeadingThe, RecoveryVerification, SaveResumableRun, CheckTiming,
+                    alphabetical.TrackIdSeparator)
                 : await new FlattenFolderLayer(recovery).RunAsync(CurrentInputs, run.Progress, run.Token, SelectedOperation!.FlattenScope!.Value,
                     RecoveryVerification, SaveResumableRun, CheckTiming);
             run.StopProgress();
             LastReport = CompletionReport.FromConversion(RunTitle, result) with { ReportType = "File Organization Report" };
-            FoundFiles = result.Found;
+            CompleteActivityItemCount(result);
             if (!result.Cancelled) Progress = TotalProgress = 100;
             Status = $"{(result.Cancelled ? "Cancelled" : "File operation finished")}: {result.Succeeded} completed, {result.Skipped} skipped, {result.Failed} failed.";
             StatusOutcome = RunStatusSummary.From(result);
@@ -905,12 +901,12 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
             ValidationFindings = result.Findings;
             retryRequests = [];
             LastReport = CompletionReport.FromValidation(result);
-            FoundFiles = result.Findings.Count;
+            UpdateActivityItemCount(result.FoundItems, result.CompletedItems);
             if (!result.Cancelled)
                 Progress = TotalProgress = 100;
             int issues = result.Findings.Count(f => f.Status != ValidationStatus.Valid);
-            StatusOutcome = result.Cancelled ? RunStatus.Neutral : issues > 0 || FoundFiles == 0 ? RunStatus.Warning : RunStatus.Success;
-            Status = $"Validation {(result.Cancelled ? "cancelled" : "finished")}: {FoundFiles - issues} valid, {issues} need attention. Use View Last Run Report to review.";
+            StatusOutcome = result.Cancelled ? RunStatus.Neutral : issues > 0 || result.Findings.Count == 0 ? RunStatus.Warning : RunStatus.Success;
+            Status = $"Validation {(result.Cancelled ? "cancelled" : "finished")}: {result.Findings.Count - issues} valid, {issues} need attention. Use View Last Run Report to review.";
             AddActivity(Status);
         }
         catch (OperationCanceledException) { Status = "Validation cancelled. No files were changed."; }
@@ -923,13 +919,42 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
         finally { EndRun(run); }
     }
 
-    private void Report(ConversionProgress report)
+    internal void UpdateActivityEstimate(ProcessingEstimate? estimate)
+    {
+        long maxWholeSeconds = TimeSpan.MaxValue.Ticks / TimeSpan.TicksPerSecond;
+        RemainingTime = estimate is { } value
+            ? ProcessingRun.FormatDuration(TimeSpan.FromSeconds(Math.Min(Math.Ceiling(value.RemainingSeconds), maxWholeSeconds)))
+            : "—";
+        Throughput = estimate?.ItemsPerSecond switch
+        {
+            null => "—",
+            < 0.1 => "<0.1 items/s",
+            double rate => $"{rate:N1} items/s"
+        };
+    }
+
+    private void UpdateActivityItemCount(int found, int? completed)
+    {
+        if (completed is int count) completed = Math.Clamp(count, 0, found);
+        if (found == foundItems && completed == completedItems) return;
+        foundItems = found;
+        completedItems = completed;
+        OnPropertyChanged(nameof(ActivityItemCount));
+    }
+
+    private void CompleteActivityItemCount(ConversionResult result) => UpdateActivityItemCount(result.Found,
+        result.Cancelled ? result.Files.Count(file => !file.IsMetadata && file.Status != ConversionStatus.Cancelled) : result.Found);
+
+    private void CompleteActivityItemCount(ExecutionResult result) => UpdateActivityItemCount(result.Found,
+        result.Report.Cancelled ? result.Report.Entries.Count(entry => entry.Status is "Succeeded" or "Failed" or "Skipped" or "Blocked") : result.Found);
+
+    internal void Report(ConversionProgress report)
     {
         bool preparationFinished = IsRunProgressIndeterminate && !report.IsIndeterminate;
         IsRunProgressIndeterminate = report.IsIndeterminate;
         Progress = report.FilePercent;
         TotalProgress = report.TotalPercent;
-        FoundFiles = report.Found;
+        UpdateActivityItemCount(report.Found, report.IsIndeterminate ? null : report.Completed);
         if (!report.ShowInActivity || IsRoutineSkip(report.ActivityLabel, report.ActivityDetail))
         {
             if (preparationFinished) Status = report.Message;

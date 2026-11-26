@@ -77,8 +77,9 @@ dynamic saved recipes keep `Recipe:<GUID>` IDs. See [operation contracts](operat
 for capabilities, general/conversion requests and explicit CLI exposure decisions.
 
 `ActionChoice` adds per-user favourite state to a shared operation definition.
-Favourites are saved separately by stable ID. The home category sidebar uses
-session selection; old section expansion preferences are retained for compatibility.
+Favourites are saved separately by stable ID. The home category sidebar keeps
+its selection for the current session. Each category has a shared definition
+that supplies its display label. Operations and navigation use that same definition.
 Renaming a label does not change a saved favourite. Keep IDs stable when editing
 definitions, and do not add user state to the catalogues.
 
@@ -109,16 +110,23 @@ Core validators remain authoritative; tests verify that displayed choices includ
 the defaults and are accepted by those validators. Input metadata controls the
 source picker scope, not the detailed format validation performed by Core.
 
-Follow the [activity table message standard](activity-messages.md).
-Activity rows use structured `ConversionProgress` source and label fields.
+## Activity and preview tables
+
+Use `Shared.TableView` for the activity log and operation preview tables. It
+provides the frame, header styling and row dividers. Each view defines the
+column layout and keeps its own list or tree behavior.
+
+Follow the [activity table message standard](activity-messages.md). Activity
+rows use structured `ConversionProgress` source and label fields.
 Use `Processing` for per-item progress. The desktop formats paths relative
 to the displayed source root where possible. Mark progress-only updates
 with `ShowInActivity = false` to update the bars without filling the table
 with repeated counts. Use `Skipped` and `Failed` with a reason for issues.
 
-The Group by Track ID dialog inherits shared Windows window decorations.
-It binds both the apply button's enabled state and accent class to
-`CanApply`, so Move and Copy use the same readiness cue.
+The Group by Track ID preview binds the apply button's enabled state and accent
+class to `CanApply`, so Move and Copy use the same readiness cue.
+
+## Adding operations and settings
 
 To add an operation, define its metadata and implement its execution route, then
 extend the relevant workflow tests. To change setting wording, edit its catalogue

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Recipes;
@@ -37,7 +38,7 @@ public partial class MainViewModel
                 choice.PropertyChanged += (_, change) =>
                 {
                     if (change.PropertyName != nameof(ActionChoice.IsFavourite)) return;
-                    OnPropertyChanged(nameof(FavouriteOperations)); RefreshNavigation(); SaveOperationSections();
+                    OnPropertyChanged(nameof(FavouriteOperations)); RefreshNavigation(); SaveFavouriteOperations();
                 };
                 return choice;
             }).ToArray();
@@ -76,12 +77,20 @@ public partial class MainViewModel
         try
         {
             string Label(string operationId) => OperationDefinitions.All.Single(operation => operation.Id == operationId).Label;
-            var runner = new RecipeRunner(new RecipeStepExecutor(recovery, ResolveConflictAsync), recovery);
+            Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolveConflict = ResolveConflictAsync is { } resolve
+                ? (conflict, token) => run.WithEstimatePausedAsync(() => resolve(conflict, token)) : null;
+            var runner = new RecipeRunner(new RecipeStepExecutor(recovery, resolveConflict), recovery);
             var result = job == null ? await runner.RunAsync(recipe, launchInputs, run.Progress, run.Token, Label)
                 : await runner.ResumeAsync(job, run.Progress, run.Token, Label);
             run.StopProgress();
             LastReport = result.ToReport(recipe.Name, Label);
-            FoundFiles = result.Steps.Sum(step => step.Result.Found);
+            if (result.Cancelled && result.Steps.LastOrDefault()?.Result is { Cancelled: true } interrupted)
+                CompleteActivityItemCount(interrupted);
+            else if (!result.Cancelled)
+            {
+                int found = result.Steps.Sum(step => step.Result.Found);
+                UpdateActivityItemCount(found, found);
+            }
             int failed = result.Steps.Sum(step => step.Result.Failed);
             StatusOutcome = RunStatusSummary.From(result.Cancelled,
                 result.Steps.Sum(step => step.Result.Succeeded), failed, result.Steps.Sum(step => step.Result.Skipped));

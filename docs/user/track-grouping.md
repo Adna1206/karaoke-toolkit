@@ -1,15 +1,17 @@
 # Group by Track ID
 
-In **Folder Tools**, select files or folders and open **Group by Track
+In **Organization**, select files or folders and open **Group by Track
 ID**. Choose whether to scan folders for files, with optional recursion, or
 group each selected folder as a whole. Whole folders keep their contents and
 names. Files keep their names and matching audio and graphics are grouped together.
 The preview lists files without a recognizable track ID under skipped items.
 The preview scans on open and when you select **Refresh**. Grouping options
-update the tree from the scanned files and folders. If whole-folder mode uses a
-different destination, **Refresh** checks it for conflicts before you can apply
-the plan. The status bar shows counts and
-percentages when a stage has a known total.
+update the tree from the scanned files and folders after a short pause. You can
+keep editing while the previous tree is visible. The selected **Move items** or
+**Copy items** action becomes available when the latest plan is ready. If
+whole-folder mode uses a different destination, **Refresh** checks it for conflicts
+before you can apply the plan. The status bar shows counts and percentages when a
+stage has a known total.
 The preview opens in the main workspace. **Back** returns to the selected
 operation and inputs, with confirmation if you changed the grouping settings.
 After you select **Move** or **Copy**, the footer shows an animated bar while

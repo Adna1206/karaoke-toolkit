@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Globalization;
 using System.Xml.Linq;
-using KaraokeToolkit.App.Metadata;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Naming;
 using KaraokeToolkit.Core.Settings;
@@ -16,9 +15,6 @@ namespace KaraokeToolkit.App.Features.Settings;
 public sealed class ApplicationSettingsStore(string path, bool persistRenameBins = false, bool applyReleaseMigrations = false)
 {
     private readonly SettingsStore processing = new(path, persistRenameBins, applyReleaseMigrations);
-    internal const string LegacyFileAndFolderSectionKey = "FilesAndFolders";
-    private static readonly HashSet<XName> SectionKeys = Enum.GetNames<OperationSection>()
-        .Append(LegacyFileAndFolderSectionKey).Select(name => XName.Get(name)).ToHashSet();
 
     public ConversionOptions Load() => processing.Load();
     public OverwritePolicy LoadOverwritePolicy() => processing.LoadOverwritePolicy();
@@ -42,7 +38,7 @@ public sealed class ApplicationSettingsStore(string path, bool persistRenameBins
 
     public void Save(ConversionOptions? options = null, OverwritePolicy? overwritePolicy = null, ApplicationTheme? theme = null,
         bool? validateBeforeConversion = null, bool? ignoreLeadingTheForFileOrganization = null,
-        AudioBitratePreferences? audioBitrates = null, IReadOnlyDictionary<string, bool>? operationSections = null,
+        AudioBitratePreferences? audioBitrates = null,
         IReadOnlyList<string>? favouriteOperations = null, SettingsWindowSize? settingsWindowSize = null,
         ApplicationBackdrop? backdrop = null, IReadOnlyList<string>? taggingPatterns = null, string? lastTaggingPattern = null,
         bool? rememberInputFolder = null, string? lastInputFolder = null, RecoveryVerificationMode? recoveryVerification = null, bool? saveResumableRun = null,
@@ -66,12 +62,6 @@ public sealed class ApplicationSettingsStore(string path, bool persistRenameBins
             {
                 desktop.Element("TaggingPatterns")?.Remove();
                 desktop.Add(new XElement("TaggingPatterns", taggingPatterns.Distinct(StringComparer.Ordinal).Select(p => new XElement("Pattern", p))));
-            }
-            if (operationSections != null)
-            {
-                var sections = desktop.Element("OperationSections");
-                if (sections == null) { sections = new XElement("OperationSections"); desktop.Add(sections); }
-                foreach (var sectionState in operationSections) sections.SetElementValue(sectionState.Key, sectionState.Value);
             }
             if (favouriteOperations != null)
             {
@@ -113,19 +103,6 @@ public sealed class ApplicationSettingsStore(string path, bool persistRenameBins
         string? value = processing.ReadDesktopPreferences()?.Element("Theme")?.Value;
         return Enum.TryParse<ApplicationTheme>(value, out var theme) && Enum.IsDefined(theme)
             ? theme : ApplicationTheme.System;
-    }
-
-    public IReadOnlyDictionary<string, bool> LoadOperationSections()
-    {
-        var result = new Dictionary<string, bool>();
-        var sections = processing.ReadDesktopPreferences()?.Element("OperationSections");
-        if (sections == null) return result;
-        foreach (var section in sections.Elements())
-        {
-            if (SectionKeys.Contains(section.Name) && bool.TryParse(section.Value, out bool expanded))
-                result[section.Name.LocalName] = expanded;
-        }
-        return result;
     }
 
     public IReadOnlyList<string> LoadFavouriteOperations() =>

@@ -11,7 +11,7 @@
     <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="12">
       <ComboBox Classes="filenamePattern" ItemsSource="{Binding Patterns}" Text="{Binding Pattern, Mode=TwoWay}" IsEditable="True"
                 Padding="11,5"
-                IsEnabled="{Binding CanPreview}" HorizontalAlignment="Stretch" PlaceholderText="Filename pattern"
+                HorizontalAlignment="Stretch" PlaceholderText="Filename pattern"
                 AutomationProperties.Name="Filename pattern" ToolTip.Tip="Choose a built-in or previously accepted pattern, or type your own."/>
       <Button Grid.Column="1" Content="Refresh" Command="{Binding PreviewCommand}" MinWidth="100"/>
     </Grid>
@@ -22,7 +22,7 @@
         <Button Content="Select all" Command="{Binding SelectAllCommand}"/>
         <Button Content="Deselect all" Command="{Binding DeselectAllCommand}"/>
       </StackPanel>
-      <ListBox Grid.Row="1" ItemsSource="{Binding Rows}" SelectionMode="Single">
+      <ListBox Grid.Row="1" ItemsSource="{Binding Rows}" SelectionMode="Single" IsEnabled="{Binding CanPreview}">
         <ListBox.Styles><Style Selector="ListBoxItem"><Setter Property="HorizontalContentAlignment" Value="Stretch"/></Style></ListBox.Styles>
         <ListBox.ItemTemplate><DataTemplate x:DataType="vm:TaggingRow">
           <StackPanel Spacing="6" Margin="4,8">

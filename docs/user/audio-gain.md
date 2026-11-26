@@ -1,6 +1,6 @@
 # Normalize Audio Gain
 
-Select audio files, karaoke ZIPs or folders in **File Tools → Normalize Audio Gain** and
+Select audio files, karaoke ZIPs or folders in **Audio Tools → Normalize Audio Gain** and
 choose an existing output folder outside the selected source folders. The preview
 shows each file's measured level, estimated output level and gain change. Changing
 the settings reuses the measurements. **Refresh** reads the files again.
@@ -44,7 +44,7 @@ for interrupted runs.
 
 ## Change Audio Key
 
-Open **File Tools → Change Audio Key**, choose an output folder, and enter a
+Open **Audio Tools → Change Audio Key**, choose an output folder, and enter a
 whole-number shift from −12 to +12 semitones. A negative value lowers the key.
 At zero, Apply is disabled. The preview shows the planned shift and a tempo of
 100%.

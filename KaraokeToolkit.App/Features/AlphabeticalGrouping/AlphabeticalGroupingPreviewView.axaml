@@ -6,7 +6,7 @@
                                  Status="{Binding Status}" StatusSeverity="{Binding StatusSeverity}"
                                  Progress="{Binding PreviewProgress}" HasIssues="{Binding HasIssues}">
     <shared:OperationPreviewLayout.SettingsContent>
-      <StackPanel Spacing="8" IsEnabled="{Binding CanPreview}">
+      <StackPanel Spacing="8">
         <TextBlock Text="Group"/>
         <ComboBox SelectedIndex="{Binding ScopeIndex}" HorizontalAlignment="Stretch" AutomationProperties.Name="Group files or folders">
           <ComboBoxItem Content="Files"/>
@@ -17,43 +17,73 @@
         <TextBlock IsVisible="{Binding !OrganizeFiles}" Text="Moves immediate subfolders as whole folders."
                    TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.8"/>
         <CheckBox Content="Ignore leading ‘The’" IsChecked="{Binding IgnoreLeadingThe}" IsVisible="{Binding OrganizeFiles}"/>
+        <CheckBox Content="Skip leading Track ID" IsChecked="{Binding SkipLeadingTrackId}" IsVisible="{Binding OrganizeFiles}"/>
+        <StackPanel Spacing="6" IsVisible="{Binding ShowTrackIdSeparator}">
+          <TextBlock Text="Separator after Track ID"/>
+          <ComboBox ItemsSource="{Binding TrackIdSeparators}" Text="{Binding TrackIdSeparator, Mode=TwoWay}"
+                    IsEditable="True" IsTextSearchEnabled="False" HorizontalAlignment="Stretch"
+                    AutomationProperties.Name="Separator after Track ID">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="x:String">
+                <TextBlock Text="{Binding Converter={x:Static vm:AlphabeticalGroupingViewModel.TrackIdSeparatorLabel}}"/>
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <TextBlock Text="Choose or type a separator. Spaces count. Whitespace matches spaces or tabs."
+                     TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.8"/>
+        </StackPanel>
       </StackPanel>
     </shared:OperationPreviewLayout.SettingsContent>
     <shared:OperationPreviewLayout.PreviewActions>
       <Button Content="Refresh" Command="{Binding RefreshCommand}" IsEnabled="{Binding CanPreview}"/>
     </shared:OperationPreviewLayout.PreviewActions>
     <shared:OperationPreviewLayout.PreviewContent>
-      <ListBox ItemsSource="{Binding Moves}" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-               AutomationProperties.Name="Current and proposed paths">
-        <ListBox.Styles>
-          <Style Selector="ListBoxItem">
-            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-          </Style>
-        </ListBox.Styles>
-        <ListBox.ItemTemplate>
-          <DataTemplate x:DataType="vm:AlphabeticalPreviewRow">
-            <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="8">
-              <TextBlock Text="{Binding SourceName}" ToolTip.Tip="{Binding File.Source}" TextTrimming="CharacterEllipsis"/>
-              <TextBlock Grid.Column="1" Text="→"/>
-              <TextBlock Grid.Column="2" Text="{Binding TargetName}" ToolTip.Tip="{Binding Target}"
-                         TextTrimming="CharacterEllipsis" FontWeight="SemiBold"/>
-            </Grid>
-          </DataTemplate>
-        </ListBox.ItemTemplate>
-      </ListBox>
+      <shared:TableView>
+        <shared:TableView.Header>
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+            <TextBlock Text="Current name"/>
+            <TextBlock Grid.Column="1" Text="Destination"/>
+          </Grid>
+        </shared:TableView.Header>
+        <shared:TableView.Rows>
+          <ListBox Classes="tableItems" ItemsSource="{Binding Moves}" AutomationProperties.Name="Current and proposed paths">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:AlphabeticalPreviewRow">
+                <Border Classes="tableRow">
+                  <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                    <TextBlock Text="{Binding SourceName}" ToolTip.Tip="{Binding File.Source}" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Grid.Column="1" Text="{Binding TargetName}" ToolTip.Tip="{Binding Target}" TextTrimming="CharacterEllipsis"/>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </shared:TableView.Rows>
+      </shared:TableView>
     </shared:OperationPreviewLayout.PreviewContent>
     <shared:OperationPreviewLayout.IssuesContent>
-      <ListBox ItemsSource="{Binding Issues}" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-               AutomationProperties.Name="Skipped items and conflicts">
-        <ListBox.ItemTemplate>
-          <DataTemplate x:DataType="vm:AlphabeticalPreviewRow">
-            <StackPanel Spacing="2">
-              <TextBlock Text="{Binding SourceName}" ToolTip.Tip="{Binding File.Source}" TextTrimming="CharacterEllipsis" FontWeight="SemiBold"/>
-              <TextBlock Text="{Binding File.Message}" ToolTip.Tip="{Binding Target}" TextWrapping="Wrap"/>
-            </StackPanel>
-          </DataTemplate>
-        </ListBox.ItemTemplate>
-      </ListBox>
+      <shared:TableView>
+        <shared:TableView.Header>
+          <Grid ColumnDefinitions="*,2*" ColumnSpacing="12">
+            <TextBlock Text="Item"/>
+            <TextBlock Grid.Column="1" Text="Reason"/>
+          </Grid>
+        </shared:TableView.Header>
+        <shared:TableView.Rows>
+          <ListBox Classes="tableItems" ItemsSource="{Binding Issues}" AutomationProperties.Name="Skipped items and conflicts">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:AlphabeticalPreviewRow">
+                <Border Classes="tableRow">
+                  <Grid ColumnDefinitions="*,2*" ColumnSpacing="12">
+                    <TextBlock Text="{Binding SourceName}" ToolTip.Tip="{Binding File.Source}" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Grid.Column="1" Text="{Binding File.Message}" ToolTip.Tip="{Binding Target}" TextWrapping="Wrap"/>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </shared:TableView.Rows>
+      </shared:TableView>
     </shared:OperationPreviewLayout.IssuesContent>
     <shared:OperationPreviewLayout.FooterActions>
       <StackPanel Orientation="Horizontal" Spacing="{x:Static shared:WindowSpacing.FooterButtonGap}">
