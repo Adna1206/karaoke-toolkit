@@ -56,8 +56,11 @@ public class AudioGainTests
             Assert.Empty(ReadEntry(zip, "extras/empty.txt"));
         }
         var audio = await AudioGainArchive.ExtractAudioAsync(output, TestMediaFixture.NewFolder(), default);
+        string dashFile = Path.Combine(Path.GetDirectoryName(audio.Path)!, "-");
+        File.WriteAllText(dashFile, "existing");
         var actual = await AudioGainMedia.MeasureAsync(audio.Path, default);
         Assert.InRange(actual.Lufs!.Value - row.CurrentLufs!.Value, -6.05, -5.95);
+        Assert.Equal("existing", File.ReadAllText(dashFile));
     }
 
     [Theory]

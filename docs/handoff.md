@@ -1,5 +1,22 @@
 # Current handoff
 
+## FFMpegCore 6.0.0
+
+2026-11-27, `master`, base `448c8e8`, version 2026.11.18. This commit
+upgrades the managed FFMpegCore package from 5.5.0 to 6.0.0. Audio gain uses the
+new process result for stderr and success, the stdout callback for progress,
+and null output for loudness measurement. Audio conversions explicitly set a
+zero cancellation grace period for disposable staged outputs. See the
+[upstream migration guide](https://github.com/rosenbjerg/FFMpegCore/blob/v6.0.0/MIGRATION.md).
+The bundled native runtime reports FFmpeg 9.0.2. Updated and checked the MIT
+licence in the test output against the source revision recorded by NuGet.
+
+With SDK 10.0.404, `dotnet build KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj
+-c Release -m:1 -p:UsedAvaloniaProducts= -p:ArtifactBuildName=StandaloneTestsFFMpegCore6`
+passed with zero warnings. The same test DLL passed all 944 Windows tests with
+`-parallelMode none -longRunning 20 -noColor`, including loudness measurement
+with a file named `-` present in the working directory.
+
 ## SharpCompress 0.50.12
 
 2026-11-27, `master`, base `63defa9`, version 2026.11.18. This dependency

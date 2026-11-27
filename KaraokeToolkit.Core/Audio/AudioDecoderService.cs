@@ -24,7 +24,7 @@ internal static class AudioDecoderService
             await FFMpegArguments.FromFileInput(input, false, o => o.WithCustomArgument("-protocol_whitelist file,pipe -err_detect explode"))
                 .OutputToFile(pcm, false, o => o.WithCustomArgument("-map 0:a:0 -vn -sn -dn -c:a pcm_s16le " +
                     (resampleForMp3G ? "-ar 44100 -ac 2 " : "") + "-f s16le -xerror"))
-                .CancellableThrough(stop.Token).ProcessAsynchronously(true, options);
+                .CancellableThrough(stop.Token, TimeSpan.Zero).ProcessAsynchronously(ffOptions: options);
             stop.Token.ThrowIfCancellationRequested();
             long length = new FileInfo(pcm).Length;
             if (length <= 0 || length % 4 != 0 || length > uint.MaxValue)

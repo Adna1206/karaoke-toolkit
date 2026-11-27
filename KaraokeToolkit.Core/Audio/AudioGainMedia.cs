@@ -11,8 +11,8 @@ internal static class AudioGainMedia
 {
     internal static async Task<AudioGainMeasurement> MeasureAsync(string path, CancellationToken token)
     {
-        var (output, log) = await RunAsync(path, "-",
-            "-af asetpts=N/SR/TB,astats=measure_perchannel=none:measure_overall=Number_of_samples,loudnorm=print_format=json -progress pipe:1 -f null", token);
+        var (output, log) = await RunAsync(path, null,
+            "-af asetpts=N/SR/TB,astats=measure_perchannel=none:measure_overall=Number_of_samples,loudnorm=print_format=json -progress pipe:1", token);
         int start = log.LastIndexOf('{'), end = log.LastIndexOf('}');
         if (start < 0 || end < start) throw new InvalidDataException("FFmpeg returned no loudness measurement.");
         try
@@ -111,28 +111,29 @@ internal static class AudioGainMedia
         }
     }
 
-    private static async Task<(string Output, string Log)> RunAsync(string path, string output, string arguments, CancellationToken token)
+    private static async Task<(string Output, string Log)> RunAsync(string path, string? output, string arguments, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
         path = FFmpegRuntime.LocalPath(path);
-        if (output != "-") output = FFmpegRuntime.LocalPath(output);
+        if (output != null) output = FFmpegRuntime.LocalPath(output);
         var options = FFmpegRuntime.Options(Path.GetDirectoryName(path)!);
         var stdout = new StringBuilder();
-        var stderr = new StringBuilder();
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
         timeout.CancelAfter(TimeSpan.FromMinutes(30));
         try
         {
-            bool success = await FFMpegArguments.FromFileInput(path, false, o => o.WithCustomArgument(
-                    "-hide_banner -nostdin -nostats -xerror -protocol_whitelist file,pipe -err_detect explode"))
-                .OutputToFile(output, false, o => o.WithCustomArgument("-map 0:a:0 " + arguments))
-                .NotifyOnOutput(line => stdout.AppendLine(line))
-                .NotifyOnError(line => stderr.AppendLine(line))
-                .CancellableThrough(timeout.Token)
-                .ProcessAsynchronously(false, options);
+            var input = FFMpegArguments.FromFileInput(path, false, o => o.WithCustomArgument(
+                "-hide_banner -nostdin -nostats -xerror -protocol_whitelist file,pipe -err_detect explode"));
+            string outputArguments = "-map 0:a:0 " + arguments;
+            var processor = output == null
+                ? input.OutputToNull(o => o.WithCustomArgument(outputArguments))
+                : input.OutputToFile(output, false, o => o.WithCustomArgument(outputArguments));
+            var result = await processor.NotifyOnStandardOutput(line => stdout.AppendLine(line))
+                .CancellableThrough(timeout.Token, TimeSpan.Zero)
+                .ProcessAsynchronously(throwOnError: false, ffOptions: options);
             timeout.Token.ThrowIfCancellationRequested();
-            string log = stderr.ToString().Trim();
-            if (!success)
+            string log = string.Join('\n', result.StandardError).Trim();
+            if (!result.Success)
                 throw new InvalidDataException($"FFmpeg failed for '{Path.GetFileName(path)}': {log[Math.Max(0, log.Length - 1200)..]}");
             return (stdout.ToString(), log);
         }

@@ -20,7 +20,7 @@ runtime source matches, source assembly and remaining FFmpeg work.
 | Avalonia UI packages | 12.2.0 | `Avalonia.txt` (MIT) | Common |
 | Inter font bundled by Avalonia.Fonts.Inter | 12.2.0 package | `Inter.OFL.txt` (SIL OFL 1.1) | Common |
 | CommunityToolkit.Mvvm | 8.4.2 | `CommunityToolkit.Mvvm.txt` (MIT), `CommunityToolkit.Mvvm.ThirdPartyNotices.txt` | Common |
-| FFMpegCore | 5.5.0 | `FFMpegCore.txt` (MIT) | Common |
+| FFMpegCore | 6.0.0 | `FFMpegCore.txt` (MIT) | Common |
 | SharpCompress | 0.50.12 | `SharpCompress.txt` (MIT) | Common |
 | System.IO.Hashing | 11.0.0 | `System.IO.Hashing.txt` (MIT), `System.IO.Hashing.ThirdPartyNotices.txt` | Core recovery fingerprints |
 | TagLibSharp | 2.3.0 | `TagLibSharp.txt` (LGPL-2.1-only) | Common, separate managed DLL |

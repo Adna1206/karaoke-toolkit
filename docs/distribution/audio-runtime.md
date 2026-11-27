@@ -1,6 +1,6 @@
 # Audio runtime and benchmarks
 
-Audio decoding and MP3/OGG/WMA/WAV/FLAC/AAC encoding use FFMpegCore 5.5.0 (MIT),
+Audio decoding and MP3/OGG/WMA/WAV/FLAC/AAC encoding use FFMpegCore 6.0.0 (MIT),
 restored by NuGet.
 FFMpegCore invokes bundled FFmpeg/ffprobe processes; NuGet does not supply those
 executables. Experimental CD reading uses cdrdao.

@@ -41,7 +41,7 @@ internal static class LosslessAudioTranscoder
                 await AudioDecoderService.DecodeAsync(input, sourcePcm, stop.Token, resampleForMp3G: true);
                 await FFMpegArguments.FromFileInput(input, false, o => o.WithCustomArgument("-protocol_whitelist file,pipe -err_detect explode"))
                     .OutputToFile(output, false, o => o.WithCustomArgument($"-map 0:a:0 -vn -sn -dn -c:a libmp3lame -ar 44100 -ac 2 -b:a {bitrate.ToString(CultureInfo.InvariantCulture)}k -f mp3 -xerror"))
-                    .CancellableThrough(stop.Token).ProcessAsynchronously(true, options);
+                    .CancellableThrough(stop.Token, TimeSpan.Zero).ProcessAsynchronously(ffOptions: options);
                 if (!File.Exists(output) || new FileInfo(output).Length == 0)
                     throw new InvalidDataException("Encoder produced no MP3 audio.");
                 await AudioDecoderService.DecodeAsync(output, encodedPcm, stop.Token);

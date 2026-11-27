@@ -57,7 +57,7 @@ internal static class AudioEncoderService
         {
             await FFMpegArguments.FromFileInput(input, false, o => o.WithCustomArgument("-protocol_whitelist file,pipe -err_detect explode" + inputFormat))
                 .OutputToFile(output, false, o => o.WithCustomArgument($"-map 0:a:0 -vn -sn -dn{alignment} -c:a {codec}{rate} -f {format} -xerror"))
-                .CancellableThrough(stop.Token).ProcessAsynchronously(true, options);
+                .CancellableThrough(stop.Token, TimeSpan.Zero).ProcessAsynchronously(ffOptions: options);
             stop.Token.ThrowIfCancellationRequested();
             if (!File.Exists(output) || new FileInfo(output).Length == 0) throw new InvalidDataException("Encoder produced no audio.");
             string decoded = Path.Combine(Path.GetDirectoryName(output)!, Guid.NewGuid().ToString("N") + ".pcm");
