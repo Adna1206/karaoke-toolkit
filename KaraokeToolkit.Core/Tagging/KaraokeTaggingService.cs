@@ -353,7 +353,8 @@ public sealed class KaraokeTaggingService(RecoveryStore? recovery = null)
         string folder = Path.GetDirectoryName(path)!;
         // Keep names and paths from the original archive; the external ZIP basename supplies the tags.
         string[] names;
-        await using (var archive = await ZipArchive.OpenAsyncArchive(path, cancellationToken: token))
+        await using (var input = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 65536, useAsync: true))
+        await using (var archive = await ZipArchive.OpenAsyncArchive(input, cancellationToken: token))
             names = await archive.EntriesAsync.Where(e => !e.IsDirectory).Select(e => e.Key!).ToArrayAsync(token);
         var pair = await KaraokeArchive.ExtractAsync(path, token);
         string graphicsHash = await RecoveryFingerprint.HashFileAsync(pair.Graphics, RecoveryVerificationMode.Sha256, token);
@@ -371,7 +372,8 @@ public sealed class KaraokeTaggingService(RecoveryStore? recovery = null)
             }
         }
         string audioHash = await RecoveryFingerprint.HashFileAsync(pair.Audio, RecoveryVerificationMode.Sha256, token);
-        await using (var archive = await ZipArchive.OpenAsyncArchive(rebuilt, cancellationToken: token))
+        await using (var input = new FileStream(rebuilt, FileMode.Open, FileAccess.Read, FileShare.Read, 65536, useAsync: true))
+        await using (var archive = await ZipArchive.OpenAsyncArchive(input, cancellationToken: token))
         await foreach (var entry in archive.EntriesAsync.Where(e => !e.IsDirectory).WithCancellation(token))
         {
             await using var contents = await entry.OpenEntryStreamAsync(token);

@@ -4,4 +4,14 @@
     <!-- Relative to this file at the repository root. -->
     <ResultsDirectory>artifacts/tests/results</ResultsDirectory>
   </RunConfiguration>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage" enabled="false">
+        <Configuration>
+          <!-- Avalonia's generated markup symbols can contain control characters that Cobertura cannot encode. -->
+          <ExcludeByFile>**/*.axaml</ExcludeByFile>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
 </RunSettings>

@@ -28,6 +28,9 @@ Conversion transactions and track grouping copies share `FileStaging` for
 copying and fingerprinting the same stream. Each workflow owns its publication
 checks and recovery checkpoints.
 
+Archive conversion, tagging, and audio gain use SharpCompress's async readers
+and writers with async file streams for staged ZIPs and member files.
+
 Standalone same-volume moves and Track ID grouping copies share
 `MoveCheckpointLog`. The workflow JSON holds the initial plan and the final sealed
 result. The checksummed log records group starts and receipts between those

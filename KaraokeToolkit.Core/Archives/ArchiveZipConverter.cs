@@ -78,8 +78,9 @@ public static class ArchiveZipConverter
                 bool replaceMember = replacement != null && name.Equals(replacement.Name, StringComparison.Ordinal);
                 long advertisedSize = entry.Size;
                 long advertisedCrc = entry.Crc;
-                await using var member = replaceMember ? File.OpenRead(replacement!.Path) :
-                    repackZip ? await zipEntries!.Current.OpenEntryStreamAsync(token) : await reader!.OpenEntryStreamAsync(token);
+                await using var member = replaceMember
+                    ? new FileStream(replacement!.Path, FileMode.Open, FileAccess.Read, FileShare.Read, 65536, useAsync: true)
+                    : repackZip ? await zipEntries!.Current.OpenEntryStreamAsync(token) : await reader!.OpenEntryStreamAsync(token);
                 if (replaceMember) advertisedSize = member.Length;
                 if (advertisedSize >= uint.MaxValue) throw new NotSupportedException("Archive members must be smaller than 4 GiB.");
                 using var hash = RecoveryFingerprint.IsContentVerified(verification) ? RecoveryFingerprint.CreateContentHash(verification) : null;
@@ -96,7 +97,8 @@ public static class ArchiveZipConverter
         }
         if (replacement != null && !replaced) throw new InvalidDataException("The audio member was missing when rebuilding the ZIP.");
         if (expected.Count == 0) throw new InvalidDataException("Archive contains no entries.");
-        await using var zip = await ZipArchive.OpenAsyncArchive(destination, cancellationToken: token);
+        await using var created = new FileStream(destination, FileMode.Open, FileAccess.Read, FileShare.Read, 65536, useAsync: true);
+        await using var zip = await ZipArchive.OpenAsyncArchive(created, cancellationToken: token);
         var entries = await zip.EntriesAsync.ToArrayAsync(token);
         if (entries.Length != expected.Count) throw new InvalidDataException("ZIP entry count differs from the source.");
         foreach (var entry in entries)

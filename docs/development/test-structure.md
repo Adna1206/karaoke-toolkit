@@ -62,6 +62,9 @@ dotnet test KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj --filter FullyQuali
 Use .NET 10 tooling and the appropriate bundled FFmpeg runtime for integration tests.
 Windows-specific Explorer tests still exercise the registry. Disc tests use a controlled
 child of this test executable and synthetic media, without requiring an optical drive.
+Add `--collect "XPlat Code Coverage"` to `dotnet test` to generate a Cobertura
+report. The collector excludes compiled Avalonia markup (`*.axaml`) because
+its generated symbol names can contain characters that XML cannot encode.
 The test project uses xUnit v3 with the VSTest adapter. Its custom entry point
 handles worker and benchmark switches before passing test invocations to xUnit.
 The xUnit1051 analyzer suggests using the runner's cancellation token in tests.

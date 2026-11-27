@@ -14,9 +14,9 @@
     <None Include="..\licenses\SharpCompress.txt" Link="licenses\SharpCompress.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="..\licenses\FFMpegCore.txt" Link="licenses\FFMpegCore.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <PackageReference Include="FFMpegCore" Version="5.5.0" />
-    <PackageReference Include="SharpCompress" Version="0.50.8" />
+    <PackageReference Include="SharpCompress" Version="0.50.12" />
     <None Include="..\licenses\System.IO.Hashing.txt;..\licenses\System.IO.Hashing.ThirdPartyNotices.txt" Link="licenses\system-io-hashing\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-    <PackageReference Include="System.IO.Hashing" Version="10.0.15" />
+    <PackageReference Include="System.IO.Hashing" Version="11.0.0" />
     <PackageReference Include="TagLibSharp" Version="2.3.0" />
     <!-- Keep shared abstractions aligned across the combined App/CLI/MCP payload. -->
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="11.0.0" />

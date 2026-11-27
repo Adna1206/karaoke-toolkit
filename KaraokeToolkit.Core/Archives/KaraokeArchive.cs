@@ -16,7 +16,9 @@ internal static class KaraokeArchive
     }
     internal static async Task<(string Audio, string Graphics)> ExtractAsync(string zipPath, CancellationToken token)
     {
-        await using var zip = await ZipArchive.OpenAsyncArchive(zipPath, cancellationToken: token);
+        token.ThrowIfCancellationRequested();
+        await using var source = new FileStream(zipPath, FileMode.Open, FileAccess.Read, FileShare.Read, 65536, useAsync: true);
+        await using var zip = await ZipArchive.OpenAsyncArchive(source, cancellationToken: token);
         var entries = await zip.EntriesAsync.ToArrayAsync(token);
         foreach (var entry in entries)
         {
@@ -77,7 +79,9 @@ internal static class KaraokeArchive
     internal static async Task VerifyCreatedAsync(string zipPath, string audio, string graphics, CancellationToken token,
         RecoveryVerificationMode verification = RecoveryVerificationMode.Sha256)
     {
-        await using var zip = await ZipArchive.OpenAsyncArchive(zipPath, cancellationToken: token);
+        token.ThrowIfCancellationRequested();
+        await using var source = new FileStream(zipPath, FileMode.Open, FileAccess.Read, FileShare.Read, 65536, useAsync: true);
+        await using var zip = await ZipArchive.OpenAsyncArchive(source, cancellationToken: token);
         var entries = await zip.EntriesAsync.ToArrayAsync(token);
         if (entries.Length != 2)
             throw new InvalidDataException("Output ZIP does not contain exactly two files.");

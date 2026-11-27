@@ -21,8 +21,8 @@ runtime source matches, source assembly and remaining FFmpeg work.
 | Inter font bundled by Avalonia.Fonts.Inter | 12.2.0 package | `Inter.OFL.txt` (SIL OFL 1.1) | Common |
 | CommunityToolkit.Mvvm | 8.4.2 | `CommunityToolkit.Mvvm.txt` (MIT), `CommunityToolkit.Mvvm.ThirdPartyNotices.txt` | Common |
 | FFMpegCore | 5.5.0 | `FFMpegCore.txt` (MIT) | Common |
-| SharpCompress | 0.50.8 | `SharpCompress.txt` (MIT) | Common |
-| System.IO.Hashing | 10.0.15 | `System.IO.Hashing.txt` (MIT), `System.IO.Hashing.ThirdPartyNotices.txt` | Core recovery fingerprints |
+| SharpCompress | 0.50.12 | `SharpCompress.txt` (MIT) | Common |
+| System.IO.Hashing | 11.0.0 | `System.IO.Hashing.txt` (MIT), `System.IO.Hashing.ThirdPartyNotices.txt` | Core recovery fingerprints |
 | TagLibSharp | 2.3.0 | `TagLibSharp.txt` (LGPL-2.1-only) | Common, separate managed DLL |
 | Velopack | 1.2.161 | `Velopack.txt` (MIT) | Common, App installation/update lifecycle; checks disabled |
 | ModelContextProtocol / ModelContextProtocol.Core | 2.4.0 | `ModelContextProtocol.txt` (Apache-2.0 plus retained MIT notices) | MCP executable, dormant until client-launched |

@@ -1,5 +1,37 @@
 # Current handoff
 
+## SharpCompress 0.50.12
+
+2026-11-27, `master`, base `63defa9`, version 2026.11.18. This dependency
+commit upgrades SharpCompress from 0.50.8 to 0.50.12. Staged ZIP extraction
+and verification, ZIP tagging,
+and audio gain replacement reads now pass async file streams to those APIs.
+The [licence inventory](../licenses/README.md) records the package version.
+The MIT text matches the source revision identified by the package.
+
+With SDK 10.0.404, `dotnet build KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj
+-c Release -m:1 -p:UsedAvaloniaProducts= -p:ArtifactBuildName=StandaloneTestsSharpCompress`
+passed with zero warnings. Verified the licence in build output. The test DLL
+passed all 944 Windows tests with `-parallelMode none -longRunning 20 -noColor`.
+
+## Hashing and Coverlet updates
+
+The dependency commit also updates System.IO.Hashing to 11.0.0 and Coverlet Collector to
+10.1.1. Updated the bundled hashing licence and notices and verified both files
+in build output. The .NET 10 versions of the old and new hashing libraries gave
+identical xxHash128 fingerprints for 17 synthetic input sizes.
+
+Coverage is opt-in. The shared runsettings excludes `*.axaml` from collection
+because generated markup symbol names can contain characters that Cobertura
+cannot encode. See [Test structure](development/test-structure.md).
+
+With SDK 10.0.404, `dotnet build KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj
+-c Release -m:1 -p:UsedAvaloniaProducts= -p:ArtifactBuildName=StandaloneTestsHashingCoverlet`
+passed with zero warnings. `dotnet test` with `--collect "XPlat Code Coverage"`
+and the `FileTransactionTests` filter passed six tests and produced a Cobertura
+report with 203 covered lines. Running the same test DLL with
+`-parallelMode none -longRunning 20 -noColor` passed all 944 Windows tests.
+
 ## Batch recovery and dependency checkpoint
 
 2026-11-27, `master`, base `5ad749e`, version 2026.11.18. This commit
