@@ -92,7 +92,18 @@ members must be smaller than 4 GiB. Failed items can be retried. Cancellation ke
 the current source. Tests include TAR, TGZ, GZip, solid/encrypted 7z, output
 algorithms, source retention, overwrite, cancellation, retry and checkpoint resume.
 
+## Conversion progress
+
+The footer animates beside **Scanning for source files…** while a fresh
+conversion builds its source list. You can cancel during the scan. If storage
+is slow, the scan can stop once the current directory read returns. The activity
+view shows completed items out of the batch total once processing starts.
+
 ## Review existing conversion outputs
+
+With **Skip existing outputs**, a conversion skips the whole track when a
+known output is already present. Output names determined during conversion are
+checked before publication.
 
 Set **Existing output files (including CUE/TXT)** to **Ask each time** in Settings.
 Standalone desktop conversions publish outputs without conflicts as they finish.

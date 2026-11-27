@@ -5,3 +5,7 @@ indent_size = 4
 csharp_new_line_before_open_brace = all
 csharp_preserve_single_line_blocks = false
 csharp_preserve_single_line_statements = false
+
+[KaraokeToolkit.Tests/**/*.cs]
+# Keep runner cancellation guidance visible without rewriting existing test fixtures.
+dotnet_diagnostic.xUnit1051.severity = suggestion

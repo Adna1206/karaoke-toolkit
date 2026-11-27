@@ -103,12 +103,20 @@ internal sealed class FileTransaction : IDisposable
         foreach (string path in removeSources)
             if (!string.Equals(Path.GetDirectoryName(Path.GetFullPath(path)), folder, StringComparison.OrdinalIgnoreCase))
                 throw new IOException("A source selected for removal is outside the transaction folder.");
+        // Reuse only fingerprints read at this commit boundary, never the observations from an earlier review.
+        var checkedFiles = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        string? CheckFingerprint(string path)
+        {
+            if (!checkedFiles.TryGetValue(path, out string? current))
+                checkedFiles[path] = current = File.Exists(path) ? Fingerprint(path) : null;
+            return current;
+        }
         foreach (var pair in fingerprints)
-            if (!File.Exists(pair.Key) || Fingerprint(pair.Key) != pair.Value)
+            if (CheckFingerprint(pair.Key) != pair.Value)
                 throw new IOException("Source changed during conversion: " + pair.Key);
         foreach (var pair in observedTargets)
         {
-            string? current = File.Exists(pair.Key) ? Fingerprint(pair.Key) : null;
+            string? current = CheckFingerprint(pair.Key);
             if (current != pair.Value)
                 throw new IOException("Output changed while waiting for publication: " + pair.Key);
         }
@@ -128,7 +136,8 @@ internal sealed class FileTransaction : IDisposable
         {
             VerificationMode = VerificationMode.ToString(),
             Outputs = outputs.Select(p => new RecoveryOutput(Path.GetFileName(p), Fingerprint(p))).ToArray(),
-            Backups = oldFiles.Select((p, i) => new RecoveryBackup(Path.GetFileName(p), i.ToString(), Fingerprint(p))).ToArray()
+            Backups = oldFiles.Select((p, i) => new RecoveryBackup(Path.GetFileName(p), i.ToString(),
+                CheckFingerprint(p) ?? throw new IOException("A replacement target changed before backup: " + p))).ToArray()
         };
         foreach (string output in outputs)
             using (var file = new FileStream(output, FileMode.Open, FileAccess.ReadWrite, FileShare.Read))

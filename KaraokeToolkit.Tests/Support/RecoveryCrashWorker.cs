@@ -62,8 +62,9 @@ internal static class RecoveryCrashWorker
         }
         if (args.Length > 0 && args[0] == "--benchmark-audio")
             return await Benchmarks.AudioBenchmarks.RunAsync(args.Skip(1).ToArray());
-        if (args.Length != 3 || args[0] != "--recovery-crash-worker")
-            return 2;
+        if (args.Length == 0 || args[0] != "--recovery-crash-worker")
+            return await RunTestsAsync(args);
+        if (args.Length != 3) return 2;
         string folder = args[1];
         await new ConversionService(new RecoveryStore(args[2])).RunAsync(
             new(OperationId.ZipToAudioG, folder,
@@ -75,6 +76,12 @@ internal static class RecoveryCrashWorker
             progress: new PauseBeforePublication(folder));
         return 0;
     }
+
+    // Match xUnit's standard entry point after handling the project's worker commands.
+    private static Task<int> RunTestsAsync(string[] args) =>
+        args.Any(arg => arg is "--server" or "--internal-msbuild-node")
+            ? Xunit.MicrosoftTestingPlatform.TestPlatformTestFramework.RunAsync(args, SelfRegisteredExtensions.AddSelfRegisteredExtensions)
+            : Xunit.Runner.InProc.SystemConsole.ConsoleRunner.Run(args);
 
     private sealed class PauseBeforePublication(string folder) : IProgress<ConversionProgress>
     {

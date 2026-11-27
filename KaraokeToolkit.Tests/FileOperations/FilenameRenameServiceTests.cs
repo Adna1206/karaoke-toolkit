@@ -169,6 +169,7 @@ public class FilenameRenameServiceTests
         }))
         {
             journal = session.Journal;
+            session.BeginMoveGroup(0);
             GroupingRename.Move(audio, newAudio);
         }
 

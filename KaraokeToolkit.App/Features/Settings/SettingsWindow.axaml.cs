@@ -13,7 +13,7 @@ namespace KaraokeToolkit.App.Features.Settings;
 
 public partial class SettingsWindow : Window
 {
-    private readonly Action<ConversionOptions, OverwritePolicy, ApplicationTheme, bool, bool, AudioBitratePreferences, ApplicationBackdrop, bool, RecoveryVerificationMode?, bool?, bool?, bool?, FileCheckTiming?>? save;
+    private readonly Action<ConversionOptions, OverwritePolicy, ApplicationTheme, bool, bool, AudioBitratePreferences, ApplicationBackdrop, bool, RecoveryVerificationMode?, bool?, bool?, bool?, FileCheckTiming?, RecoveryVerificationMode?>? save;
     public SettingsWindowSize LastNormalSize { get; private set; } = new();
     public int CurrentTabIndex => OptionsTabs.SelectedIndex;
     public SettingsWindow()
@@ -58,15 +58,16 @@ public partial class SettingsWindow : Window
     }
     public SettingsWindow(ConversionOptions options, OverwritePolicy policy, ApplicationTheme theme, bool validateBeforeConversion,
         bool ignoreLeadingTheForFileOrganization, AudioBitratePreferences audioBitrates,
-        Action<ConversionOptions, OverwritePolicy, ApplicationTheme, bool, bool, AudioBitratePreferences, ApplicationBackdrop, bool, RecoveryVerificationMode?, bool?, bool?, bool?, FileCheckTiming?> save,
+        Action<ConversionOptions, OverwritePolicy, ApplicationTheme, bool, bool, AudioBitratePreferences, ApplicationBackdrop, bool, RecoveryVerificationMode?, bool?, bool?, bool?, FileCheckTiming?, RecoveryVerificationMode?> save,
         ApplicationBackdrop backdrop, bool rememberInputFolder, RecoveryVerificationMode recoveryVerification, bool saveResumableRun,
-        bool checkForUpdatesOnStartup, bool checkForInterruptedRunsOnStartup, FileCheckTiming checkTiming) : this()
+        bool checkForUpdatesOnStartup, bool checkForInterruptedRunsOnStartup, FileCheckTiming checkTiming,
+        RecoveryVerificationMode moveRecoveryVerification) : this()
     {
         var model = new SettingsViewModel(options, audioBitrates) { Overwrite = (int)policy, Theme = (int)theme, Backdrop = (int)backdrop,
             ValidateBeforeConversion = validateBeforeConversion, IgnoreLeadingTheForFileOrganization = ignoreLeadingTheForFileOrganization,
             RememberInputFolder = rememberInputFolder, RecoveryVerification = (int)recoveryVerification, SaveResumableRun = saveResumableRun,
             CheckForUpdatesOnStartup = checkForUpdatesOnStartup, CheckForInterruptedRunsOnStartup = checkForInterruptedRunsOnStartup,
-            CheckTiming = (int)checkTiming };
+            CheckTiming = (int)checkTiming, MoveRecoveryVerification = (int)moveRecoveryVerification };
         model.MarkApplied();
         DataContext = model;
         this.save = save;
@@ -86,7 +87,8 @@ public partial class SettingsWindow : Window
     private bool ApplyChanges() => DataContext is SettingsViewModel model &&
         (!model.HasChanges || (save != null && model.Apply((options, policy, theme, validate, ignoreThe, bitrates, backdrop) =>
             save(options, policy, theme, validate, ignoreThe, bitrates, backdrop, model.RememberInputFolder, (RecoveryVerificationMode)model.RecoveryVerification,
-                model.SaveResumableRun, model.CheckForUpdatesOnStartup, model.CheckForInterruptedRunsOnStartup, (FileCheckTiming)model.CheckTiming))));
+                model.SaveResumableRun, model.CheckForUpdatesOnStartup, model.CheckForInterruptedRunsOnStartup,
+                (FileCheckTiming)model.CheckTiming, (RecoveryVerificationMode)model.MoveRecoveryVerification))));
     private async void ResetDefaults_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not SettingsViewModel model) return;

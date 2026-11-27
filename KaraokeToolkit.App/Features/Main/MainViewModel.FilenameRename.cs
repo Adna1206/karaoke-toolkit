@@ -29,7 +29,7 @@ public partial class MainViewModel
 
             run = BeginRun(title, "Preparing recovery for renames…", isIndeterminate: true);
             var result = await new FilenameRenameService(recovery).ApplyAsync(submission.Request, submission.Plan,
-                RecoveryVerification, SaveResumableRun, run.Progress, run.Token, CheckTiming);
+                MoveRecoveryVerification, SaveResumableRun, run.Progress, run.Token, CheckTiming);
             run.StopProgress();
             LastReport = CompletionReport.FromConversion(title, result) with { ReportType = "Filename Rename Report" };
             CompleteActivityItemCount(result);

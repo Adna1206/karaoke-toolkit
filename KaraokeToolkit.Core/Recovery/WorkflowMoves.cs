@@ -45,27 +45,47 @@ internal static class WorkflowMoves
         group.Items.Select(move => new ConversionFileResult(move.Source, ConversionStatus.Skipped, [], reason)).ToList();
 
     internal static void CheckApprovedGroup(WorkflowMoveGroup group, bool filenameRename, RecoveryVerificationMode mode,
-        bool verifyFingerprints)
+        bool verifyFingerprints, bool captureFingerprints = false)
     {
+        // Share ancestor checks only within this group. A later group checks current paths again.
+        var paths = new MovePathChecks();
         foreach (var move in group.Items)
         {
-            VerifySourceKind(move);
-            if (filenameRename && !MovePathExists(move, move.Source, filenameRename))
+            var source = paths.Check(move.Source, out bool sourceBlocked);
+            if (sourceBlocked) source = null;
+            VerifySourceKind(move, source);
+            string target = move.Target!;
+            bool caseOnly = filenameRename && StringComparer.OrdinalIgnoreCase.Equals(move.Source, target);
+            if (caseOnly && !MovePathExists(move, move.Source, filenameRename))
                 throw new IOException("The original filename has changed: " + move.Source);
-            RunSession.CheckPlainPath(move.Target!);
-            if (MovePathExists(move, move.Target!, filenameRename) ||
-                Ancestors(move.Target!).Any(File.Exists))
-                throw new IOException("Destination is occupied: " + move.Target);
+            var targetAttributes = paths.Check(target, out bool blockedParent);
+            if (blockedParent || (caseOnly ? MovePathExists(move, target, filenameRename) : targetAttributes != null))
+                throw new IOException("Destination is occupied: " + target);
             if (verifyFingerprints && move.Hash.Length != 0 && ApprovedFingerprint(move, mode) != move.Hash)
                 throw new IOException("Move source changed: " + move.Source);
         }
         if (filenameRename && HasUnexpectedRenameCompanion(group))
             throw new IOException("A destination companion already exists; source left in place.");
+        if (captureFingerprints && NeedsFingerprints(group))
+            group.Items = group.Items.Select(move => move with { Hash = ApprovedFingerprint(move, mode) }).ToArray();
 
-        static IEnumerable<string> Ancestors(string path)
+    }
+
+    internal sealed class MovePathChecks
+    {
+        private readonly Dictionary<string, FileAttributes?> ancestors = new(InputSelection.Paths);
+
+        internal FileAttributes? Check(string path, out bool blocked)
         {
+            var entry = RunSession.CheckPlainEntry(path);
+            blocked = false;
             for (string? parent = Path.GetDirectoryName(path); parent != null; parent = Path.GetDirectoryName(parent))
-                yield return parent;
+            {
+                if (!ancestors.TryGetValue(parent, out var attributes))
+                    ancestors[parent] = attributes = RunSession.CheckPlainEntry(parent);
+                blocked |= attributes is { } value && (value & FileAttributes.Directory) == 0;
+            }
+            return entry;
         }
     }
 
@@ -190,9 +210,7 @@ internal static class WorkflowMoves
             {
                 try
                 {
-                    CheckApprovedGroup(group, filenameRename, session.Data.VerificationMode, verifyFingerprints: true);
-                    if (NeedsFingerprints(group))
-                        group.Items = CaptureApprovedSources(group, session.Data.VerificationMode);
+                    CheckApprovedGroup(group, filenameRename, session.Data.VerificationMode, verifyFingerprints: true, captureFingerprints: true);
                 }
                 catch (Exception error) when (error is IOException or UnauthorizedAccessException) { skipReason = error.Message; }
             }
@@ -205,11 +223,15 @@ internal static class WorkflowMoves
                 bool collision = false;
                 if (!freshApproval)
                 {
+                    var paths = new MovePathChecks();
                     foreach (var move in group.Items.Where(m => m.Target != null))
                     {
-                        RunSession.CheckPlainPath(move.Source); RunSession.CheckPlainPath(move.Target!);
-                        bool source = MovePathExists(move, move.Source, filenameRename);
-                        bool target = MovePathExists(move, move.Target!, filenameRename);
+                        var sourceAttributes = paths.Check(move.Source, out _);
+                        var targetAttributes = paths.Check(move.Target!, out bool blockedParent);
+                        if (blockedParent) throw new IOException("A file blocks the move destination: " + move.Target);
+                        bool caseOnly = filenameRename && StringComparer.OrdinalIgnoreCase.Equals(move.Source, move.Target);
+                        bool source = caseOnly ? MovePathExists(move, move.Source, filenameRename) : sourceAttributes != null;
+                        bool target = caseOnly ? MovePathExists(move, move.Target!, filenameRename) : targetAttributes != null;
                         if (source && move.Hash.Length != 0 && Hash(move.Source, move.Directory, session.Data.VerificationMode) != move.Hash)
                             throw new IOException("Move source changed: " + move.Source);
                         if (!source && (!target || Hash(move.Target!, move.Directory, session.Data.VerificationMode) != move.Hash)) throw new IOException("Interrupted move changed or disappeared: " + move.Source);
@@ -267,7 +289,7 @@ internal static class WorkflowMoves
                                 results.Add(new(move.Source, ConversionStatus.Failed, [], "Could not remove child folder: " + error.Message));
                                 continue;
                             }
-                            session.Data.Expected.Remove(move.Source);
+                            UpdateExpected(session.Data, move);
                             results.Add(new(move.Source, ConversionStatus.Succeeded, [], "Removed empty child folder."));
                         }
                         else
@@ -294,22 +316,13 @@ internal static class WorkflowMoves
                             if (!MovePathExists(move, move.Target, filenameRename) ||
                                 Hash(move.Target, move.Directory, session.Data.VerificationMode) != move.Hash)
                                 throw new IOException("Moved item verification failed: " + move.Target);
-                            foreach (string source in session.Data.Expected.Keys.Where(p => WorkflowSession.IsWithin(move.Source, p)).ToArray())
-                            {
-                                string destination = InputSelection.Paths.Equals(source, move.Source) ? move.Target : Path.Combine(move.Target, Path.GetRelativePath(move.Source, source));
-                                string expected = session.Data.Expected[source];
-                                session.Data.Expected.Remove(source);
-                                session.Data.Expected[destination] = expected;
-                            }
-                            session.Data.Expected[Path.GetDirectoryName(move.Target)!] = "directory";
+                            UpdateExpected(session.Data, move);
                             results.Add(new(move.Source, ConversionStatus.Succeeded, [move.Target], "Moved and verified."));
                         }
                     }
                 }
             }
-            group.Results = results;
-            session.Data.ActiveMoveGroup = null;
-            session.Save(); // Receipt precedes the next group and progress notification.
+            session.CompleteMoveGroup(index, results); // Receipt precedes the next group and progress notification.
             completed += group.Items.Length;
             progress?.Report(new(100, found == 0 ? 100 : completed * 100 / found, found, completed,
                 $"Processed {completed} of {found} planned items.", clock.Elapsed.ToString(@"hh\:mm\:ss")) { ShowInActivity = false });
@@ -318,19 +331,41 @@ internal static class WorkflowMoves
     }
     internal static bool Exists(string path) => File.Exists(path) || Directory.Exists(path);
 
+    internal static void UpdateExpected(WorkflowData data, WorkflowMove move)
+    {
+        if (move.Target == null)
+        {
+            data.Expected.Remove(move.Source);
+            return;
+        }
+        if (!move.Directory)
+        {
+            if (data.Expected.Remove(move.Source, out string? expected)) data.Expected[move.Target] = expected;
+        }
+        else foreach (string source in data.Expected.Keys.Where(p => WorkflowSession.IsWithin(move.Source, p)).ToArray())
+        {
+            string destination = InputSelection.Paths.Equals(source, move.Source) ? move.Target : Path.Combine(move.Target, Path.GetRelativePath(move.Source, source));
+            string expected = data.Expected[source];
+            data.Expected.Remove(source);
+            data.Expected[destination] = expected;
+        }
+        data.Expected[Path.GetDirectoryName(move.Target)!] = "directory";
+    }
+
     internal static bool NeedsFingerprints(WorkflowMoveGroup group) =>
         group.Items.Any(move => move.Target != null && move.Hash.Length == 0);
 
-    internal static void VerifySourceKind(WorkflowMove move)
+    internal static void VerifySourceKind(WorkflowMove move) => VerifySourceKind(move, RunSession.CheckPlainPath(move.Source));
+
+    private static void VerifySourceKind(WorkflowMove move, FileAttributes? attributes)
     {
-        if (RunSession.CheckPlainPath(move.Source) is not { } attributes ||
-            attributes.HasFlag(FileAttributes.Directory) != move.Directory)
+        if (attributes is not { } found || ((found & FileAttributes.Directory) != 0) != move.Directory)
             throw new IOException("Source is missing or changed type: " + move.Source);
     }
 
     private static string CaptureSource(WorkflowMove move, RecoveryVerificationMode mode)
     {
-        VerifySourceKind(move);
+        VerifySourceKind(move, RunSession.CheckPlainEntry(move.Source));
         return Hash(move.Source, move.Directory, mode);
     }
 

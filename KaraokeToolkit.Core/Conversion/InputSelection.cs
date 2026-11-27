@@ -20,12 +20,17 @@ public static class InputSelection
         => Normalize(paths, allowKma: false);
 
     public static string[] Normalize(IEnumerable<string> paths, bool allowKma)
+        => Normalize(paths, allowKma, CancellationToken.None);
+
+    private static string[] Normalize(IEnumerable<string> paths, bool allowKma, CancellationToken token)
     {
-        var selected = paths.Select(p => Path.TrimEndingDirectorySeparator(Path.GetFullPath(p))).Distinct(Paths).ToArray();
+        ArgumentNullException.ThrowIfNull(paths);
+        var selected = ScanEntries(paths, token).Select(p => Path.TrimEndingDirectorySeparator(Path.GetFullPath(p))).Distinct(Paths).ToArray();
         if (selected.Length == 0)
             throw new ArgumentException("Select at least one file or folder.");
         foreach (string path in selected)
         {
+            token.ThrowIfCancellationRequested();
             RunSession.CheckPlainPath(path);
             if (!Directory.Exists(path) && !File.Exists(path))
                 throw new FileNotFoundException("Selected input is missing: " + path);
@@ -58,46 +63,81 @@ public static class InputSelection
     /// <remarks>Explicit audio/CDG selections map to their source group rather than selecting every sibling.
     /// Folder-only maintenance rejects individual file selections. Planning does not publish outputs.</remarks>
     public static IReadOnlyList<SelectionBatch> Plan(OperationId action, IEnumerable<string> paths, bool recurse)
+        => Plan(action, paths, recurse, CancellationToken.None);
+
+    internal static IReadOnlyList<SelectionBatch> Plan(OperationId action, IEnumerable<string> paths, bool recurse, CancellationToken token)
     {
-        string[] selected = Normalize(paths, allowKma: action == Action.KmaToMp3G);
+        string[] selected = Normalize(paths, allowKma: action == Action.KmaToMp3G, token);
         var fileExtensions = ConversionFileExtensions(action);
         bool maintenance = fileExtensions.Count == 0;
         if (maintenance && selected.Any(File.Exists))
             throw new ArgumentException("Filename cleanup and CUE/TXT creation work on whole folders. Select folders for this action.");
-        string extension = action switch
-        {
-            Action.AudioGToBin or Action.AudioGToZip or Action.LosslessGToMp3G or Action.KaraokeToVideo => ".cdg",
-            Action.RepackZip or Action.ZipToAudioG or Action.ZipToBin => ".zip",
-            Action.KmaToMp3G => ".kma",
-            _ => ".bin"
-        };
+        bool usesGraphicsSource = SourceExtension(action) == ".cdg";
         var sources = new HashSet<string>(Paths);
         foreach (string path in selected)
         {
+            token.ThrowIfCancellationRequested();
             if (Directory.Exists(path))
             {
-                foreach (string folder in ConversionService.EnumerateFolders(path, recurse))
+                foreach (string folder in ConversionService.EnumerateFolders(path, recurse, token))
+                {
                     if (maintenance)
                         sources.Add(folder);
                     else
-                    foreach (string file in Directory.GetFiles(folder).Where(p =>
-                        action == Action.KaraokeToVideo ? ConversionService.IsVideoSource(p) :
-                        action == Action.ArchiveToZip ? ArchiveZipConverter.IsInput(p) :
-                        Path.GetExtension(p).Equals(extension, StringComparison.OrdinalIgnoreCase)))
-                        sources.Add(file);
+                        foreach (string file in EnumerateSourceFiles(folder, action, token))
+                            sources.Add(file);
+                }
             }
             else
             {
                 if (!fileExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase))
                     throw new ArgumentException($"This action requires {string.Join(", ", fileExtensions)} inputs: {path}");
                 string source = path;
-                if (extension == ".cdg" && (KaraokeArchive.AudioExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase) || LosslessAudioTranscoder.IsCandidate(path)))
-                    source = Directory.GetFiles(Path.GetDirectoryName(path)!).FirstOrDefault(p => Path.GetExtension(p).Equals(".cdg", StringComparison.OrdinalIgnoreCase) && Path.GetFileNameWithoutExtension(p).Equals(Path.GetFileNameWithoutExtension(path), StringComparison.OrdinalIgnoreCase)) ?? Path.ChangeExtension(path, ".cdg");
+                if (usesGraphicsSource && (KaraokeArchive.AudioExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase) || LosslessAudioTranscoder.IsCandidate(path)))
+                    source = ScanEntries(Directory.EnumerateFiles(Path.GetDirectoryName(path)!), token)
+                        .FirstOrDefault(p => Path.GetExtension(p).Equals(".cdg", StringComparison.OrdinalIgnoreCase) &&
+                            Path.GetFileNameWithoutExtension(p).Equals(Path.GetFileNameWithoutExtension(path), StringComparison.OrdinalIgnoreCase))
+                        ?? Path.ChangeExtension(path, ".cdg");
                 sources.Add(source);
             }
         }
-        return sources.Order(Paths).GroupBy(p => maintenance ? p : Path.GetDirectoryName(p)!, Paths)
+        var plans = sources.Order(Paths).GroupBy(p => maintenance ? p : Path.GetDirectoryName(p)!, Paths)
             .Select(group => new SelectionBatch(group.Key, group.ToArray())).ToArray();
+        token.ThrowIfCancellationRequested();
+        return plans;
+    }
+
+    internal static IEnumerable<string> EnumerateSourceFiles(string folder, OperationId action, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        string extension = SourceExtension(action);
+        return ScanEntries(Directory.EnumerateFiles(folder), token).Where(path => action switch
+        {
+            Action.KaraokeToVideo => ConversionService.IsVideoSource(path),
+            Action.ArchiveToZip => ArchiveZipConverter.IsInput(path),
+            _ => Path.GetExtension(path).Equals(extension, StringComparison.OrdinalIgnoreCase)
+        });
+    }
+
+    private static string SourceExtension(OperationId action) => action switch
+    {
+        Action.AudioGToBin or Action.AudioGToZip or Action.LosslessGToMp3G or Action.KaraokeToVideo => ".cdg",
+        Action.RepackZip or Action.ZipToAudioG or Action.ZipToBin => ".zip",
+        Action.KmaToMp3G => ".kma",
+        _ => ".bin"
+    };
+
+    internal static IEnumerable<string> ScanEntries(IEnumerable<string> entries, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        using var iterator = entries.GetEnumerator();
+        while (iterator.MoveNext())
+        {
+            token.ThrowIfCancellationRequested();
+            yield return iterator.Current;
+            token.ThrowIfCancellationRequested();
+        }
+        token.ThrowIfCancellationRequested();
     }
 
     internal static IEnumerable<(string File, string Root)> Media(IEnumerable<string> paths, bool recurse)

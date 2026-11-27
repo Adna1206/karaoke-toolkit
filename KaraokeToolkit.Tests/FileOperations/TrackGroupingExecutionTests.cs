@@ -1,4 +1,3 @@
-using System.Text.Json.Nodes;
 using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.FileOperations;
@@ -21,6 +20,7 @@ public class TrackGroupingExecutionTests
         string audio = Write("ABC-12345.mp3");
         string graphics = Write("ABC-12345.cdg");
         string blocked = Write("ABC-12346.zip");
+        string blockedParent = Write("ABC-12400.zip");
         string ready = Write("ABC-12347.zip");
         var request = new OperationRequest(OperationId.GroupByTrackId, [root])
         {
@@ -30,17 +30,20 @@ public class TrackGroupingExecutionTests
         string Target(string source) => plan.Items.Single(item => item.Source == source).Destination;
         Directory.CreateDirectory(Path.GetDirectoryName(Target(blocked))!);
         File.WriteAllText(Target(blocked), "occupied");
+        File.WriteAllText(Path.GetDirectoryName(Target(blockedParent))!, "file occupies destination folder");
         File.Delete(graphics);
         string added = Write("ABC-12348.zip");
         var recovery = new RecoveryStore(Path.Combine(root, "index"));
 
         var result = await new OperationExecutionService(recovery).ExecuteGroupingAsync(request, plan);
 
-        Assert.Equal(3, result.Report.Entries.Count(entry => entry.Status == "Skipped"));
+        Assert.Equal(4, result.Report.Entries.Count(entry => entry.Status == "Skipped"));
         Assert.Equal(ready, Assert.Single(result.Report.Entries, entry => entry.Status == "Succeeded").Source);
         Assert.True(File.Exists(added));
         Assert.True(File.Exists(audio));
         Assert.True(File.Exists(blocked));
+        Assert.True(File.Exists(blockedParent));
+        Assert.Equal("file occupies destination folder", File.ReadAllText(Path.GetDirectoryName(Target(blockedParent))!));
         Assert.False(File.Exists(Target(audio)));
         Assert.Equal("occupied", File.ReadAllText(Target(blocked)));
         Assert.True(File.Exists(Target(ready)));
@@ -84,7 +87,18 @@ public class TrackGroupingExecutionTests
         Assert.False(File.Exists(graphics));
         Assert.Equal("audio", File.ReadAllText(audio));
         var job = Assert.Single(recovery.Find());
+        Assert.Null(job.Problem);
+        var checkpoint = WorkflowSession.Read(job.JournalPath);
+        Assert.Equal(MoveCheckpointLog.WorkflowVersion, checkpoint.Version);
+        Assert.Equal(RecoveryVerificationMode.MetadataOnly, checkpoint.VerificationMode);
+        Assert.Equal(0, checkpoint.ActiveMoveGroup);
+        string log = Path.Combine(Path.GetDirectoryName(job.JournalPath)!, "moves.jsonl");
+        long committedLength = new FileInfo(log).Length;
+        File.AppendAllText(log, "torn record without a newline");
         Assert.Equal(0, WorkflowSession.Read(job.JournalPath).ActiveMoveGroup);
+        await Assert.ThrowsAsync<IOException>(() => service.ResumeAsync(job.JournalPath));
+        Assert.Equal(committedLength, new FileInfo(log).Length);
+        Assert.Equal("late collision", File.ReadAllText(target));
         File.Delete(target);
         var result = await service.ResumeAsync(job.JournalPath);
         Assert.False(result.HasIssues);
@@ -118,7 +132,8 @@ public class TrackGroupingExecutionTests
             string journal = Path.Combine(Assert.Single(Directory.GetDirectories(output, ".karaoke-job-workflow-*")), "workflow.json");
             var checkpoint = WorkflowSession.Read(journal);
             Assert.Equal(timing, checkpoint.CheckTiming);
-            Assert.Equal(timing == FileCheckTiming.BeforeItem, checkpoint.Moves![1].Items[0].Hash.Length == 0);
+            Assert.Equal(ConversionStatus.Succeeded, Assert.Single(checkpoint.Moves![0].Results!).Status);
+            Assert.Equal(timing == FileCheckTiming.BeforeItem, checkpoint.Moves[1].Items[0].Hash.Length == 0);
             File.WriteAllText(waiting, "edited");
         });
 
@@ -139,9 +154,8 @@ public class TrackGroupingExecutionTests
 
     [Theory]
     [InlineData(RecoveryVerificationMode.MetadataOnly, true)]
-    [InlineData(RecoveryVerificationMode.None, true)]
-    [InlineData(RecoveryVerificationMode.Sha256, false)]
-    public async Task InterruptedRunRequiringManualReviewCannotResume(RecoveryVerificationMode mode, bool saveResumableRun)
+    [InlineData(RecoveryVerificationMode.None, false)]
+    public async Task InterruptedRunRequiringManualReviewCannotResume(RecoveryVerificationMode mode, bool copyGrouping)
     {
         string root = TestMediaFixture.NewFolder();
         string output = Directory.CreateDirectory(Path.Combine(root, "output")).FullName;
@@ -155,23 +169,46 @@ public class TrackGroupingExecutionTests
             Kind = RecoveryKind.TrackGrouping,
             OperationId = OperationId.GroupByTrackId,
             VerificationMode = mode,
-            SaveResumableRun = saveResumableRun,
+            CopyGrouping = copyGrouping,
             Roots = [output, root],
             Moves = [new() { Items = [WorkflowMoves.Move(source, destination, mode)] }]
         }))
             journal = session.Journal;
 
-        if (!saveResumableRun)
-        {
-            var legacy = JsonNode.Parse(File.ReadAllText(journal))!.AsObject();
-            Assert.True(legacy.Remove("SupportsItemRecovery"));
-            File.WriteAllText(journal, legacy.ToJsonString());
-        }
         Assert.Contains("manual review", Assert.Single(store.Find()).Problem);
         await Assert.ThrowsAsync<IOException>(() => new OperationExecutionService(store).ResumeAsync(journal));
         Assert.True(File.Exists(journal));
         Assert.True(File.Exists(source));
         Assert.False(File.Exists(destination));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task OlderGroupingJournalIsReportedButCannotBeResumed(bool copyGrouping)
+    {
+        string root = TestMediaFixture.NewFolder();
+        string output = Directory.CreateDirectory(Path.Combine(root, "output")).FullName;
+        string source = Path.Combine(root, "ABC-12345.zip");
+        string target = Path.Combine(output, Path.GetFileName(source));
+        File.WriteAllText(source, "track");
+        var store = new RecoveryStore(Path.Combine(root, "index"));
+        string journal;
+        using (var session = new WorkflowSession(store, new WorkflowData
+        {
+            Kind = RecoveryKind.TrackGrouping, OperationId = OperationId.GroupByTrackId, CopyGrouping = copyGrouping,
+            Roots = [output, root], Moves = [new() { Items = [WorkflowMoves.Move(source, target)] }]
+        }))
+        {
+            journal = session.Journal;
+            DurableJson.Write(journal, session.Data with { Version = 2 });
+        }
+
+        Assert.Contains("unsupported journal format", Assert.Single(store.Find()).Problem);
+        await Assert.ThrowsAsync<IOException>(() => new OperationExecutionService(store).ResumeAsync(journal));
+        Assert.True(File.Exists(journal));
+        Assert.True(File.Exists(source));
+        Assert.False(File.Exists(target));
     }
 
     [Theory]
@@ -199,6 +236,10 @@ public class TrackGroupingExecutionTests
             File.WriteAllText(Path.Combine(staging, "0"), "partial");
         }
 
+        File.AppendAllText(Path.Combine(Path.GetDirectoryName(journal)!, "moves.jsonl"), "torn preparation record");
+        var checkpoint = WorkflowSession.Read(journal);
+        Assert.Equal(0, checkpoint.ActiveMoveGroup);
+        Assert.False(checkpoint.Moves![0].CopyPrepared);
         var result = await new OperationExecutionService(store).ResumeAsync(journal);
         Assert.False(result.HasIssues);
         Assert.Equal("complete source", File.ReadAllText(target));
@@ -232,7 +273,7 @@ public class TrackGroupingExecutionTests
             {
                 string workspace = Assert.Single(Directory.GetDirectories(output, ".karaoke-job-workflow-*"));
                 var checkpoint = WorkflowSession.Read(Path.Combine(workspace, "workflow.json"));
-                Assert.Equal(RecoveryVerificationMode.XxHash128, checkpoint.VerificationMode);
+                Assert.Equal(RecoveryVerificationMode.MetadataOnly, checkpoint.VerificationMode);
                 Assert.Equal(FileCheckTiming.BeforeItem, checkpoint.CheckTiming);
                 Assert.Equal(0, checkpoint.ActiveMoveGroup);
             }
@@ -322,7 +363,8 @@ public class TrackGroupingExecutionTests
             CheckTiming = timing,
             CopyGrouping = !move,
             Moves = [
-                new() { Items = [WorkflowMoves.Move(audio, audioTarget), WorkflowMoves.Move(graphics, graphicsTarget)] },
+                new() { Items = [WorkflowMoves.Move(audio, audioTarget, timing: move ? FileCheckTiming.BeforeBatch : timing),
+                    WorkflowMoves.Move(graphics, graphicsTarget, timing: move ? FileCheckTiming.BeforeBatch : timing)] },
                 new() { Items = [WorkflowMoves.Move(waiting, waitingTarget, timing: timing)] }
             ]
         }))
@@ -332,23 +374,20 @@ public class TrackGroupingExecutionTests
             if (move) File.Move(audio, audioTarget);
             else
             {
-                File.Copy(audio, audioTarget);
                 string staging = Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(journal)!, "copy-0")).FullName;
-                File.Copy(graphics, Path.Combine(staging, "1"));
-                session.Data.Moves![0].CopyPrepared = true;
-                session.Save();
+                var items = session.Data.Moves![0].Items.Select((item, index) =>
+                {
+                    string staged = Path.Combine(staging, index.ToString());
+                    File.Copy(item.Source, staged);
+                    return item with { Hash = RecoveryFingerprint.Hash(staged) };
+                }).ToArray();
+                session.PrepareCopyGroup(0, items);
+                File.Move(Path.Combine(staging, "0"), audioTarget);
             }
         }
 
-        if (move && continueBatch && timing == FileCheckTiming.BeforeBatch)
-        {
-            var legacy = JsonNode.Parse(File.ReadAllText(journal))!.AsObject();
-            Assert.True(legacy.Remove("VerificationMode"));
-            Assert.True(legacy.Remove("CheckTiming"));
-            File.WriteAllText(journal, legacy.ToJsonString());
-            Assert.Equal(FileCheckTiming.BeforeBatch, WorkflowSession.Read(journal).CheckTiming);
-        }
         var job = Assert.Single(store.Find());
+        Assert.Equal(!move, WorkflowSession.Read(journal).Moves![0].CopyPrepared);
         Assert.Equal(RecoveryKind.TrackGrouping, job.Kind);
         Assert.Equal(continueBatch, job.ContinueBatchAfterRecovery);
         var result = await new OperationExecutionService(store).ResumeAsync(journal);

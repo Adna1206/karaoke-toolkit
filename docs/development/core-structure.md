@@ -28,6 +28,18 @@ Conversion transactions and track grouping copies share `FileStaging` for
 copying and fingerprinting the same stream. Each workflow owns its publication
 checks and recovery checkpoints.
 
+Standalone same-volume moves and Track ID grouping copies share
+`MoveCheckpointLog`. The workflow JSON holds the initial plan and the final sealed
+result. The checksummed log records group starts and receipts between those
+snapshots. Copies also flush the verified staging fingerprints before publication.
+Standalone move and grouping copy recovery require this journal format.
+Standalone conversions use the same `CheckpointLog<T>` framing to record batch
+progress. File transactions keep their own publication journal and can reuse
+fingerprints within the final commit checks.
+Approved and resumed moves share ancestor checks within a group and recheck
+paths for each new group. Publication still uses a rename that refuses to
+overwrite an occupied destination.
+
 ApplicationInfo and AssemblyInfo remain at the root. Related small result and enum
 types stay with their feature. OutputConflict and ConflictDecision belong to
 Conversion rather than sharing a settings namespace.

@@ -36,6 +36,8 @@ public class RecoveryTests
         if (legacy)
         {
             var json = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(journal))!.AsObject();
+            json["Version"] = 2;
+            json["Current"] = source;
             Assert.True(json.Remove("VerificationMode"));
             foreach (var item in json["BatchInputs"]![source]!["Files"]!.AsArray())
             {
@@ -44,6 +46,11 @@ public class RecoveryTests
                 Assert.True(file.Remove("Hash"));
             }
             File.WriteAllText(journal, json.ToJsonString());
+        }
+        else
+        {
+            File.AppendAllText(Path.Combine(Path.GetDirectoryName(journal)!, "progress.jsonl"), "torn conversion record");
+            Assert.Equal(source, RunSession.Read(journal).Current);
         }
         byte[] edited = File.ReadAllBytes(companion);
         edited[^1] ^= 1;

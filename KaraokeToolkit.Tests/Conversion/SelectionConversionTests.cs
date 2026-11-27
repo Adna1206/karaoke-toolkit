@@ -16,6 +16,72 @@ namespace KaraokeToolkit.Tests.Conversion;
 public class SelectionConversionTests
 {
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CancelledScanLeavesNoRecoveryAndFreshRunReportsTheBatchTotal(bool selection)
+    {
+        string folder = ZipFolder();
+        var recovery = new RecoveryStore(TestMediaFixture.NewFolder());
+        using var cancellation = new CancellationTokenSource();
+        var updates = new List<ConversionProgress>();
+        var reporter = new SynchronousProgress<ConversionProgress>(updates.Add);
+
+        Task<ConversionResult> Run(IProgress<ConversionProgress> progress, CancellationToken token) => selection
+            ? new SelectionConversionService(recovery).RunAsync(new(Action.ZipToAudioG, [folder], Options, OverwritePolicy.Fail), progress, token)
+            : new ConversionService(recovery).RunAsync(new(Action.ZipToAudioG, folder, Options), progress: progress, cancellationToken: token);
+
+        cancellation.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => Run(reporter, cancellation.Token));
+        Assert.Empty(updates);
+        Assert.False(File.Exists(Path.Combine(folder, "song.cdg")));
+        Assert.Empty(recovery.Find());
+
+        var result = await Run(reporter, default);
+        Assert.Equal(1, result.Succeeded);
+        var ready = updates[0];
+        Assert.False(ready.IsIndeterminate);
+        Assert.Equal(1, ready.Found);
+        Assert.Equal(0, ready.Completed);
+    }
+
+    [Fact]
+    public void CancellationBetweenEntriesStopsBeforeTheNextRead()
+    {
+        using var cancellation = new CancellationTokenSource();
+        using var scan = InputSelection.ScanEntries(Entries(), cancellation.Token).GetEnumerator();
+        Assert.True(scan.MoveNext());
+        cancellation.Cancel();
+        Assert.ThrowsAny<OperationCanceledException>(() => scan.MoveNext());
+
+        static IEnumerable<string> Entries()
+        {
+            yield return "first";
+            throw new InvalidOperationException("The next entry should not be read.");
+        }
+    }
+
+    [Fact]
+    public async Task ResumeUsesTheSavedSourcesWithoutFreshDiscovery()
+    {
+        string folder = ZipFolder();
+        string source = Path.Combine(folder, "song.zip");
+        var recovery = new RecoveryStore(TestMediaFixture.NewFolder());
+        using (new RunSession(recovery, new(Action.ZipToAudioG, folder, Options with { RecurseFolders = true }),
+                   OverwritePolicy.Fail, [source])) { }
+        string laterFolder = Directory.CreateDirectory(Path.Combine(folder, "Later")).FullName;
+        File.Copy(source, Path.Combine(laterFolder, "extra.zip"));
+        var updates = new List<ConversionProgress>();
+
+        var result = await new ConversionService(recovery).ResumeAsync(Assert.Single(recovery.Find()),
+            new SynchronousProgress<ConversionProgress>(updates.Add));
+
+        Assert.Equal(1, result.Succeeded);
+        Assert.Equal(source, Assert.Single(result.Files).Source);
+        Assert.DoesNotContain(updates, update => update.IsIndeterminate);
+        Assert.False(File.Exists(Path.Combine(laterFolder, "extra.cdg")));
+    }
+
+    [Theory]
     [InlineData(false, FileCheckTiming.BeforeBatch, null)]
     [InlineData(false, FileCheckTiming.BeforeItem, null)]
     [InlineData(true, FileCheckTiming.BeforeBatch, null)]

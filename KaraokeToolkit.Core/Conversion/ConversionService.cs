@@ -64,7 +64,7 @@ public sealed partial class ConversionService
         CancellationToken cancellationToken = default,
         Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolveConflict = null, bool validateBeforeConversion = false,
         bool continueBatchAfterRecovery = true, FileCheckTiming checkTiming = FileCheckTiming.BeforeItem,
-        RecoveryVerificationMode verificationMode = OperationCapabilities.DefaultFileMoveRecoveryVerification)
+        RecoveryVerificationMode verificationMode = OperationCapabilities.DefaultFileWriteRecoveryVerification)
         => Task.Run(() => RunCoreAsync(request, overwrite, progress, cancellationToken, resolveConflict,
             validateBeforeConversion: validateBeforeConversion, continueBatchAfterRecovery: continueBatchAfterRecovery,
             checkTiming: checkTiming, verificationMode: verificationMode), CancellationToken.None);
@@ -73,7 +73,7 @@ public sealed partial class ConversionService
         IProgress<ConversionProgress>? progress, CancellationToken token,
         Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolveConflict, RunSession? resumed = null, bool validateBeforeConversion = false,
         ConversionConflictReview? review = null, bool continueBatchAfterRecovery = true, FileCheckTiming checkTiming = FileCheckTiming.BeforeItem,
-        RecoveryVerificationMode verificationMode = OperationCapabilities.DefaultFileMoveRecoveryVerification)
+        RecoveryVerificationMode verificationMode = OperationCapabilities.DefaultFileWriteRecoveryVerification)
     {
         request.Validate();
         if (!Enum.IsDefined(checkTiming)) throw new ArgumentOutOfRangeException(nameof(checkTiming));
@@ -99,20 +99,19 @@ public sealed partial class ConversionService
             else AudioEncoderService.Validate(request.Options.AudioEncoder, request.Options.AudioBitrate);
         }
         token.ThrowIfCancellationRequested();
-        string[] folders = EnumerateFolders(Path.GetFullPath(request.Folder), request.Options.RecurseFolders).ToArray();
         bool maintenance = OperationCapabilities.RenamesFilenames(request.Action) || request.Action == Action.CreateCueAndTextFiles;
         bool standaloneMedia = !maintenance && WorkflowSession.Current.Value == null;
-        string extension = request.Action switch
+        string[] sources;
+        if (resumed != null)
+            sources = resumed.Data.Sources;
+        else
         {
-            Action.AudioGToBin or Action.AudioGToZip or Action.LosslessGToMp3G => ".cdg",
-            Action.RepackZip or Action.ZipToBin or Action.ZipToAudioG => ".zip",
-            Action.KmaToMp3G => ".kma",
-            _ => ".bin"
-        };
-        string[] sources = resumed?.Data.Sources ?? (maintenance ? folders : folders.SelectMany(Directory.GetFiles).Where(p =>
-            request.Action == Action.KaraokeToVideo ? IsVideoSource(p) :
-            request.Action == Action.ArchiveToZip ? ArchiveZipConverter.IsInput(p) :
-            Path.GetExtension(p).Equals(extension, StringComparison.OrdinalIgnoreCase)).Order(StringComparer.OrdinalIgnoreCase).ToArray());
+            var folders = EnumerateFolders(request.Folder, request.Options.RecurseFolders, token);
+            sources = maintenance ? folders.ToArray() : folders
+                .SelectMany(folder => InputSelection.EnumerateSourceFiles(folder, request.Action, token))
+                .Order(StringComparer.OrdinalIgnoreCase).ToArray();
+            token.ThrowIfCancellationRequested();
+        }
         Dictionary<string, ConversionInputSnapshot>? batchInputs = null;
         var verification = resumed?.Data.VerificationMode ??
             (standaloneMedia ? verificationMode : RecoveryVerificationMode.Sha256);
@@ -164,6 +163,9 @@ public sealed partial class ConversionService
                     if (validation.Findings.Count == 0)
                         throw new InvalidDataException("Input validation found no source group.");
                 }
+                if (overwrite == OverwritePolicy.Skip && !maintenance &&
+                    ConversionOutputNames.Known(source, request).Any(path => !InputSelection.Paths.Equals(path, source) && File.Exists(path)))
+                    throw new OutputSkippedException();
                 ConversionFileResult result;
                 if (review is { IsApplying: true })
                     result = review.Publish(source, token);
@@ -257,18 +259,20 @@ public sealed partial class ConversionService
         };
     }
 
-    internal static IEnumerable<string> EnumerateFolders(string root, bool recurse)
+    internal static IEnumerable<string> EnumerateFolders(string root, bool recurse, CancellationToken token = default)
     {
+        token.ThrowIfCancellationRequested();
         if ((File.GetAttributes(root) & FileAttributes.ReparsePoint) != 0)
             throw new IOException("Linked source folders are not supported.");
         yield return root;
         if (!recurse)
             yield break;
-        foreach (string child in Directory.GetDirectories(root).Order(StringComparer.OrdinalIgnoreCase))
+        foreach (string child in InputSelection.ScanEntries(Directory.EnumerateDirectories(root), token).Order(StringComparer.OrdinalIgnoreCase))
         {
+            token.ThrowIfCancellationRequested();
             if (InputSelection.IsExcludedFolder(Path.GetFileName(child)) || (File.GetAttributes(child) & FileAttributes.ReparsePoint) != 0)
                 continue;
-            foreach (string nested in EnumerateFolders(child, true))
+            foreach (string nested in EnumerateFolders(child, true, token))
                 yield return nested;
         }
     }

@@ -202,8 +202,11 @@ Quarantine is an explicit step after running `validate-karaoke-files`.
 
 ## Recovery settings for new runs
 
-Standalone media conversions, grouping, alphabetical organization and flattening
-default to xxHash128 and accept `--recovery-verification sha256|xxhash128|metadata|none`. Use
+Same-drive moves, including `group-by-track-id --move`, use
+`recovery.move-verification` (MetadataOnly by default). Grouping copies, media
+conversions, ZIP repacking, and tagging use `recovery.verification` (XxHash128 by
+default). Override either setting for one run with
+`--recovery-verification sha256|xxhash128|metadata|none`. Use
 `--check-timing before-batch|before-item` to override the saved
 `recovery.check-timing` setting for a standalone media conversion, file move
 or grouping run. The profile

@@ -153,13 +153,21 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="16" Spacing="10">
                     <TextBlock Text="Recovery verification" Classes="heading3"/>
-                    <ComboBox SelectedIndex="{Binding RecoveryVerification}" AutomationProperties.Name="Recovery verification">
-                        <ComboBoxItem Content="SHA-256"/>
-                        <ComboBoxItem Content="xxHash128 (default)"/>
-                        <ComboBoxItem Content="Metadata only"/>
-                        <ComboBoxItem Content="No verification"/>
-                    </ComboBox>
-                    <TextBlock Text="Applies to standalone media conversions and file moves. xxHash128 and SHA-256 check file contents. Metadata only checks size and last modified time. Interrupted publication without content fingerprints requires manual review."
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding Definitions.MoveRecoveryVerification.Label}" ToolTip.Tip="{Binding Definitions.MoveRecoveryVerification.Description}"/>
+                        <ComboBox ItemsSource="{Binding Definitions.MoveRecoveryVerification.Choices}" SelectedIndex="{Binding MoveRecoveryVerification}"
+                                  AutomationProperties.Name="{Binding Definitions.MoveRecoveryVerification.Label}"/>
+                        <TextBlock Text="{Binding Definitions.MoveRecoveryVerification.ShortDescription}"
+                                   TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
+                    </StackPanel>
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding Definitions.WriteRecoveryVerification.Label}" ToolTip.Tip="{Binding Definitions.WriteRecoveryVerification.Description}"/>
+                        <ComboBox ItemsSource="{Binding Definitions.WriteRecoveryVerification.Choices}" SelectedIndex="{Binding RecoveryVerification}"
+                                  AutomationProperties.Name="{Binding Definitions.WriteRecoveryVerification.Label}"/>
+                        <TextBlock Text="{Binding Definitions.WriteRecoveryVerification.ShortDescription}"
+                                   TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
+                    </StackPanel>
+                    <TextBlock Text="Content checks read file bytes. Metadata only checks file size and last modified time."
                                TextWrapping="Wrap" FontSize="{DynamicResource SmallTextSize}" Opacity="0.7"/>
                     <TextBlock Text="{Binding Definitions.FileCheckTiming.Label}" ToolTip.Tip="{Binding Definitions.FileCheckTiming.Description}"/>
                     <ComboBox ItemsSource="{Binding Definitions.FileCheckTiming.Choices}" SelectedIndex="{Binding CheckTiming}"

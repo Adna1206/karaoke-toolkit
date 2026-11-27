@@ -4,7 +4,6 @@ using KaraokeToolkit.Core.Conversion;
 using KaraokeToolkit.Core.FileOperations;
 using KaraokeToolkit.Core.Reporting;
 using KaraokeToolkit.Core.Recovery;
-using KaraokeToolkit.Core.Video;
 using SharpCompress.Archives.Zip;
 
 namespace KaraokeToolkit.Core.Execution;
@@ -55,8 +54,9 @@ public sealed class OperationPlanner
                 entries.Add(new(path, "Planned", "Restore quarantined group", new QuarantineService().PreviewRestore(path)));
         else
         {
-            new ConversionRequest(request.OperationId, ".", request.Options) { OutputFolder = request.OutputFolder }.Validate();
-            var plans = InputSelection.Plan(request.OperationId, request.Inputs, request.Options.RecurseFolders);
+            var conversion = new ConversionRequest(request.OperationId, ".", request.Options) { OutputFolder = request.OutputFolder };
+            conversion.Validate();
+            var plans = InputSelection.Plan(request.OperationId, request.Inputs, request.Options.RecurseFolders, token);
             if (!string.IsNullOrEmpty(request.OutputFolder) && request.Options.AutoCreateCueText && plans.Count > 1 &&
                 request.OperationId is not (OperationId.ArchiveToZip or OperationId.RepackZip or OperationId.KaraokeToVideo or OperationId.KmaToMp3G))
                 throw new ArgumentException("Multiple source folders sharing one output folder require --no-cue-text. Generate one listing afterward with create-cue-and-text-files.");
@@ -73,16 +73,9 @@ public sealed class OperationPlanner
                 string stem = Path.Combine(destination, Path.GetFileNameWithoutExtension(source));
                 string[] outputs = request.OperationId switch
                 {
-                    OperationId.AudioGToBin or OperationId.ZipToBin => [stem + ".bin"],
-                    OperationId.AudioGToZip or OperationId.BinToZip or OperationId.ArchiveToZip => [stem + ".zip"],
-                    OperationId.RepackZip => [request.Options.DeleteOldFiles ? source : stem + " (repacked).zip"],
-                    OperationId.BinToAudioG => [stem + AudioEncoderService.Extension(request.Options.AudioEncoder), stem + ".cdg"],
-                    OperationId.LosslessGToMp3G => [stem + ".mp3", string.IsNullOrEmpty(request.OutputFolder) ? source : stem + ".cdg"],
-                    OperationId.KmaToMp3G => [stem + ".mp3", stem + ".cdg"],
                     OperationId.ZipToAudioG => await ZipOutputsAsync(source, stem, token),
-                    OperationId.KaraokeToVideo => [stem + VideoOptions.Extension(request.Options.VideoContainer)],
                     OperationId.CreateCueAndTextFiles => MetadataOutputs(source, request.Options),
-                    _ => throw new NotSupportedException("No conversion plan is registered.")
+                    _ => ConversionOutputNames.Known(source, conversion)
                 };
                 string message = request.Options.DeleteOldFiles && request.OperationId is not (OperationId.KaraokeToVideo or OperationId.KmaToMp3G)
                     ? "Publish verified outputs, then remove replaced source media." : "Publish outputs; preserve source media.";

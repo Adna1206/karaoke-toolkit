@@ -97,6 +97,7 @@ public class McpTests
         Assert.Equal(original, File.ReadAllText(path));
         Assert.Throws<McpException>(() => tools.SetSetting("files.recurse", JsonSerializer.SerializeToElement("false"), true));
         tools.SetSetting("recovery.verification", sha, true);
+        tools.SetSetting("recovery.move-verification", JsonSerializer.SerializeToElement("None"), true);
         tools.SetSetting("files.recurse", JsonSerializer.SerializeToElement(false), true);
         tools.SetSetting("recovery.check-on-startup", JsonSerializer.SerializeToElement(false), true);
         tools.SetSetting("recovery.batch-resume", JsonSerializer.SerializeToElement(false), true);
@@ -110,7 +111,7 @@ public class McpTests
         await tools.RunOperation(JsonSerializer.Deserialize<McpOperationRequest>(
             """{"operationId":"group-by-alphabet-files","inputs":["input"],"recoveryVerification":"XxHash128","checkTiming":"BeforeBatch","options":{"RecurseFolders":true}}""", Program.JsonOptions)!, sink, default, true);
         var overridden = executor.LastRequest!;
-        Assert.Equal(RecoveryVerificationMode.Sha256, inherited.RecoveryVerification);
+        Assert.Equal(RecoveryVerificationMode.None, inherited.RecoveryVerification);
         Assert.Equal(FileCheckTiming.BeforeItem, inherited.CheckTiming);
         Assert.Equal(FileCheckTiming.BeforeBatch, overridden.CheckTiming);
         Assert.False(inherited.SaveResumableRun);
@@ -123,6 +124,10 @@ public class McpTests
             """{"operationId":"zip-to-bin","inputs":["input"]}""", Program.JsonOptions)!, sink, default, true);
         Assert.Equal(FileCheckTiming.BeforeBatch, executor.LastRequest!.CheckTiming);
         Assert.Equal(RecoveryVerificationMode.Sha256, executor.LastRequest.RecoveryVerification);
+        await tools.RunOperation(new() { OperationId = OperationId.GroupByTrackId, Inputs = ["input"], OutputFolder = "destination", Grouping = new() { Move = true } }, sink, default, true);
+        Assert.Equal(RecoveryVerificationMode.None, executor.LastRequest!.RecoveryVerification);
+        await tools.RunOperation(new() { OperationId = OperationId.GroupByTrackId, Inputs = ["input"], OutputFolder = "destination" }, sink, default, true);
+        Assert.Equal(RecoveryVerificationMode.Sha256, executor.LastRequest!.RecoveryVerification);
     }
 
     private sealed class FakeExecutor : IOperationExecutor
@@ -250,7 +255,8 @@ public class McpTests
         Assert.Equal("group-by-alphabet-files", alphabetical.GetProperty("name").GetString());
         using var settings = Json(await client.CallToolAsync("get_settings"));
         Assert.Equal(320, settings.RootElement.GetProperty("defaults").GetProperty("options").GetProperty("audioBitrate").GetInt32());
-        Assert.Equal("XxHash128", settings.RootElement.GetProperty("defaultFileMoveRecoveryVerification").GetString());
+        Assert.Equal("MetadataOnly", settings.RootElement.GetProperty("defaultFileMoveRecoveryVerification").GetString());
+        Assert.Equal("XxHash128", settings.RootElement.GetProperty("defaultFileWriteRecoveryVerification").GetString());
         string root = TestMediaFixture.NewFolder(); TestMediaFixture.Seed(root, OperationId.ZipToBin, "keep");
         var alphabeticalPlan = await client.CallToolAsync("plan_operation", new Dictionary<string, object?>
         {

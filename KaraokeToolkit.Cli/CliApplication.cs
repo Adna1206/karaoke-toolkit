@@ -170,7 +170,7 @@ public sealed class CliApplication(IOperationExecutor? executor = null, IDiscRea
           Shared processing settings apply where supported by the chosen operation.
           Group by Alphabet (Files) always recurses. Folders groups immediate children.
           Flatten depth is chosen by the operation, independently of --no-recurse.
-          --recovery-verification sha256|xxhash128|metadata|none (default xxhash128 for standalone media conversions and file moves)
+          --recovery-verification sha256|xxhash128|metadata|none (default metadata for same-drive moves, xxhash128 for grouping copies, media conversions and tagging)
           --check-timing before-batch|before-item  More robust waiting-file checks or faster startup (default before-item)
                                                   Applies to standalone media conversions, file moves and grouping.
           --batch-resume | --no-batch-resume  Continue the batch or recover only the interrupted item

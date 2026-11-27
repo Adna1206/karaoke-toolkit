@@ -34,7 +34,7 @@ public sealed record McpOperationRequest
 
     internal OperationRequest Resolve(SharedSettingsSnapshot profile)
     {
-        var request = profile.ForUnattendedOperation(OperationId, Inputs);
+        var request = profile.ForUnattendedOperation(OperationId, Inputs, Grouping?.Move ?? false);
         if (AudioGain != null && OperationId != OperationId.NormalizeAudioGain)
             throw new ArgumentException("AudioGain settings require normalize-audio-gain.");
         if (AudioKey != null && OperationId != OperationId.ChangeAudioKey)

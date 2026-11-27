@@ -15,7 +15,8 @@ policy and source list are used, even if current settings have since changed.
 Completed, failed and skipped source groups are not attempted again. With batch
 continuation enabled, the interrupted group and remaining groups continue.
 Automatic CUE/TXT generation also has checkpoints.
-New files added after the original scan are left for a subsequent run.
+Conversion recovery uses the saved source list directly. New files added after
+the original scan are left for a subsequent run.
 The footer bar animates while the app checks saved files and interrupted
 publication before item processing resumes.
 
@@ -50,7 +51,7 @@ the interrupted run. A normal Cancel still discards unpublished work and ends th
 this feature recovers unexpected termination and retained publication failures, rather
 than introducing pause/resume for ordinary cancellation.
 
-Track grouping saves the source and destination paths and content hashes for
+Track grouping saves the source and destination paths and verification fingerprints for
 each planned group in a workflow journal under the destination root. Copy
 stages and verifies a full group on the destination volume before publishing.
 Move uses a same-volume rename without replacement. Resume verifies a partial
@@ -61,6 +62,20 @@ fingerprints as each group begins. Standalone flattening and alphabetical
 organization also save their move plans for recovery. Rename by Filename Pattern saves its approved
 same-folder paths and can finish a partially renamed audio/CDG pair. Recipe
 steps save their plan in the recipe journal.
+
+Standalone moves, renames, and Track ID grouping copies write the full plan
+once before processing. They flush a small record when a group starts and when
+it finishes. Copies also record the verified staged group before publishing any
+member. Recovery replays complete records. If a copy was interrupted before
+its preparation record was complete, recovery rebuilds the staging from the
+originals. Earlier standalone move and grouping copy journals require the
+version that created them. Complete interrupted runs before upgrading.
+
+Standalone conversions save the batch plan before processing and append
+checksummed progress records as items start, stage outputs, and finish. Recovery
+replays complete records and ignores a partial final record. Each file
+transaction keeps its own publication and backup journal. Recipe conversions
+record progress in the recipe-owned run snapshot.
 
 The desktop footer shows an animated bar during “Preparing recovery.” With
 content verification and **Before the batch starts**, preparing the move plan reads
@@ -87,14 +102,25 @@ file move or grouping copy can finish using the saved group checkpoint. If the
 app cannot verify the interrupted state safely, it keeps the journal for manual
 review. The setting is saved with the run. Recipes still resume as a workflow.
 
-**Recovery verification** applies to new standalone media conversions, Group by
-Track ID, Group by Alphabet, Flatten and Rename by Filename Pattern runs. Choose
-**xxHash128** (default), **SHA-256**,
-**Metadata only**, or **No verification**. A saved verification choice takes
-precedence over the default. Metadata checks compare file size
-and last-write time. Directory metadata checks also compare the paths in
-the tree. No verification keeps path and transaction checks. Change the shared
-settings in Desktop, [CLI](cli.md#commands-and-settings), or [MCP](mcp.md#requests-and-settings).
+**Settings → Recovery** has two verification defaults for new standalone runs.
+
+| Setting | Default | Covers |
+| --- | --- | --- |
+| **Same-drive moves and renames** | **Metadata only** | Group by Alphabet, Group by Track ID in Move mode, flattening, and Rename by Filename Pattern. |
+| **Copies and file writes** | **xxHash128** | Group by Track ID in Copy mode, media conversions, ZIP repacking, and tagging publication. |
+
+Each setting offers **xxHash128**, **SHA-256**, **Metadata only**, and
+**No verification**. Metadata checks compare file size and last-write time.
+Directory metadata checks also compare the paths in the tree. Same-drive
+moves and renames can resume with matching metadata. Interrupted copy or file
+publication may require manual recovery when it lacks content fingerprints.
+No verification keeps path and transaction checks. Existing recovery jobs use
+their saved verification. Audio gain and key changes retain their measured
+preview verification, and recipes use their workflow checkpoint.
+
+The shared IDs are `recovery.move-verification` for moves and `recovery.verification`
+for writes. Change them in Desktop, [CLI](cli.md#recovery-settings-for-new-runs),
+or [MCP](mcp.md#requests-and-settings).
 The shared IDs are `recovery.batch-resume` and `recovery.check-on-startup`.
 CLI and MCP can set the Desktop startup preference through the shared profile.
 Headless recovery discovery remains an explicit command or tool call.
@@ -119,21 +145,20 @@ format checks still apply where required.
 Conversion verifies the staged file, then checks the original again before
 publishing any output or removing any source.
 
-Recovery uses the timing saved with the run. Older move journals without a timing
-field use **Before the batch starts**. Older conversion journals without a
+Recovery uses the timing saved with the run. Older conversion journals without a
 baseline use **When each item starts**. The shared setting ID is
 `recovery.check-timing` with values `BeforeBatch` and `BeforeItem`.
 
-Metadata-only and unverified interrupted moves require manual review. Older
-move journals created with batch resume disabled also require manual review
-because they lack an interrupted group checkpoint. Successful runs clean up their
-records. An interrupted conversion publication without content fingerprints
-also requires manual review. A conversion interrupted between publications can
+Unverified moves and interrupted grouping copies without content fingerprints
+require manual review. Successful runs clean up their records. An interrupted
+conversion publication without content fingerprints also requires manual review.
+A conversion interrupted between publications can
 resume according to its saved batch continuation setting. An older journal
 without a verification mode uses SHA-256.
 
-Tagging, recipe-owned conversions and quarantine use their existing SHA-256
-checks. Standalone validation records SHA-256 fingerprints for quarantine.
+Tagging verifies the previewed source and media payload with SHA-256. Recipe-owned
+conversions and quarantine use SHA-256. Standalone validation records SHA-256
+fingerprints for quarantine.
 
 ## Batch failure handling
 

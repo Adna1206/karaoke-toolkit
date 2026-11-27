@@ -1,5 +1,152 @@
 # Current handoff
 
+## Batch recovery and dependency checkpoint
+
+2026-11-27, `master`, base `5ad749e`, version 2026.11.18. This commit
+collects the recovery defaults and checkpoint optimizations, cancellable
+conversion scans, and xUnit and Avalonia upgrades described below. The Windows
+Release test run passed all 944 tests across two VSTest filters. Debug and
+Release desktop builds passed with zero warnings. Older standalone move and
+grouping-copy journals require the version that created them. Complete any
+such interrupted runs before upgrading. See [Crash recovery](user/crash-recovery.md).
+
+## Avalonia 12.2.0
+
+The App project pins Avalonia, Desktop, Fluent and Inter to 12.2.0.
+DiagnosticsSupport is at 2.2.3 for Debug. Updated the
+[licence inventory](../licenses/README.md) for Avalonia and MicroCom.Runtime
+0.11.7 and checked the licence text and bundled Inter font files upstream.
+
+With SDK 10.0.404, `dotnet build KaraokeToolkit.App/KaraokeToolkit.App.csproj`
+passed in Debug and Release with `-m:1 -p:UsedAvaloniaProducts=` and artifact
+names `Avalonia122Debug` and `Avalonia122Release`. Both builds reported zero
+warnings. Verified the licence files in Release output and the diagnostics
+assembly in Debug output. The preceding 944-test run used the same Avalonia
+versions.
+
+## xUnit v3 migration
+
+`KaraokeToolkit.Tests` uses `xunit.v3` 4.0.3 with the
+existing VSTest adapter 4.0.1. The test executable handles its recovery, disc
+process and benchmark switches before handing other arguments to xUnit.
+Cancellation-token guidance from xUnit1051 appears as an IDE suggestion.
+See [Test structure](development/test-structure.md).
+
+Using SDK 10.0.404, `dotnet build KaraokeToolkit.Tests/KaraokeToolkit.Tests.csproj
+-c Release -m:1 -p:UsedAvaloniaProducts= -p:ArtifactBuildName=StandaloneTestsXunitV3`
+passed with zero warnings. `dotnet test` used the same Release output with
+`--no-build --no-restore`, serial execution, and a 60-second inactivity limit.
+Separate VSTest filters passed all 48 Core tagging tests and all 896 remaining
+tests. The direct xUnit runner previously passed 944/944. Earlier single-invocation
+VSTest runs encountered tagging timeouts and one settings-file replacement error.
+The two orphaned tagging test runners and their FFprobe children have exited.
+
+## Conversion source scans
+
+Prepared and resumed conversions use the saved source list. Fresh conversion
+scans check for cancellation between directory entries and animate the desktop
+footer progress bar until the run is ready to show normal progress. The source
+list is saved before processing. A blocked directory read must return before
+the scan can stop. See [Conversion progress](user/file-workflow-features.md#conversion-progress).
+
+The StandaloneTests Release build and serial Windows test commands under
+[KMA to MP3+G](#kma-to-mp3g) passed with zero build warnings and 944/944 tests.
+Coverage includes scan cancellation, initial batch totals, and saved-source resume.
+
+## Conversion performance and recovery
+
+Conversions skip known output collisions under **Skip existing outputs**,
+append checksummed standalone batch progress, and reuse final commit fingerprints
+when building backup records. Deferred overwrite review and published output
+verification still recheck the files. See [Recovery](user/crash-recovery.md).
+
+Synthetic ZIP to Audio+G benchmarks on Windows used xxHash128 and three measured
+runs after warm-up. Median times for each isolated change were 5.00 to 0.47 s for
+90 known conflicts, 11.00 to 9.48 s for 240 small conversions, and 3.89 to 3.81 s
+for 80 replacements. The replacement timings overlapped and the change removed
+640 MiB of duplicate audio reads per batch. With all changes, the same workloads
+took 0.11, 9.10 and 3.81 s. Raw timings are in
+`artifacts/benchmarks/conversion-recovery-b8a494ef`.
+
+The StandaloneTests Release build and serial Windows test commands under
+[KMA to MP3+G](#kma-to-mp3g) passed with zero build warnings and 940/940 tests.
+Coverage includes early conflict skips, replay after a torn checkpoint, and
+rejection of changes made after a file was observed for publication.
+
+## Grouping copy recovery
+
+Track ID grouping copies use the shared checksummed group log. They save verified staged
+fingerprints before publishing and replay prepared and completed records on
+recovery. Pre-publication checks share ancestor probes within the group. Older
+grouping copy journals require their original version. See
+[Recovery](user/crash-recovery.md).
+
+The same-drive Windows benchmark used three warm-cache runs per build with
+xxHash128 and BeforeItem timing. The median for 120 pairs totaling 965.6 MiB
+fell from 7.04 s to 4.90 s. For 240 pairs totaling 26.25 MiB it fell from
+11.02 s to 6.80 s. Raw timings are in
+`artifacts/benchmarks/grouping-copy-recovery-5d20dd58`.
+
+The StandaloneTests Release build and serial Windows test commands under
+[KMA to MP3+G](#kma-to-mp3g) passed with zero build warnings and 938/938 tests.
+Coverage includes interrupted staging, partially published copies, and legacy
+journal rejection.
+
+## Same-volume move performance
+
+Standalone moves and renames save the plan and append checksummed group
+checkpoints. Recovery
+replays the log and discards a torn final record. Older standalone move
+journals require their original version. Per-group preflight reuses ancestor
+checks and avoids a redundant source path check. See [Recovery](user/crash-recovery.md).
+
+Warm-cache Windows medians for the same synthetic MP3/CDG move workload and
+Metadata only verification, with three runs per phase:
+
+| Pairs | Full journal rewrites | Per-group journal | Shared path checks |
+| --- | ---: | ---: | ---: |
+| 120 | 1.82 s | 1.16 s | 0.62 s |
+| 480 | 8.12 s | 4.25 s | 2.52 s |
+
+The baseline used the earlier instrumented Core build. The two phases used the
+same benchmark runner under `artifacts/benchmarks/move-optimization-20261126`.
+Production library timing remains unmeasured.
+
+With both optimizations active, three warm-cache runs per mode measured
+xxHash128 versus Metadata only at 2.93 s versus 2.89 s for 480 pairs totaling
+52.5 MiB and 4.33 s versus 2.94 s for 480 pairs totaling 3.77 GiB. Raw timings
+are under `artifacts/benchmarks/optimized-verification-65f34221`.
+
+The StandaloneTests Release build and serial Windows test commands under
+[KMA to MP3+G](#kma-to-mp3g) passed with zero build warnings and 937/937 tests.
+Tests covered torn journal tails, partial moves, and occupied destinations.
+After removing older standalone move journal support, the same Release build
+and the test command with
+`--filter 'FullyQualifiedName~Recovery|FullyQualifiedName~TrackGrouping|FullyQualifiedName~FilenameRename|FullyQualifiedName~FlattenFolderLayer|FullyQualifiedName~AlphabeticalOrganizer'`
+passed with zero build warnings and 212/212 tests.
+
+## Recovery verification defaults
+
+Recovery settings have separate verification controls for same-drive moves and renames
+(Metadata only) and copies and file writes (xxHash128). Desktop, CLI, and
+MCP share both preferences. Group by Track ID selects the preference for its
+Move or Copy mode. Metadata-only same-volume moves can recover with matching
+fingerprints. See [Recovery settings](user/crash-recovery.md#recovery-settings).
+
+The StandaloneTests Release build and serial Windows test commands under
+[KMA to MP3+G](#kma-to-mp3g) passed with zero build warnings and 937/937 tests.
+The live Recovery tab showed both defaults and their muted coverage text.
+A warm-cache Windows benchmark applied the same Track ID move plan for 120
+synthetic MP3/CDG pairs three times per mode with BeforeItem timing. Median
+xxHash128 versus Metadata only was 1.75 s versus 1.77 s for 13.1 MiB and
+1.99 s versus 1.72 s for 965.6 MiB. A production library remains unmeasured.
+
+An instrumented copy of Core measured a 480-track metadata-only move at
+8.04 s across two warm runs. Journal writes took 3.28 s, per-group preflight
+took 2.85 s, and the 960 native renames took 0.91 s. The run wrote 530 MiB
+of journal JSON across 963 saves. The diagnostic build lives under ignored
+`artifacts/benchmarks/move-checkpoints-9aff2d1a`.
+
 ## Desktop workflow checkpoint
 
 2026-11-26, `master` based on `9dfdd1d`, version 2026.11.18.

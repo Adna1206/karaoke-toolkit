@@ -12,6 +12,16 @@ public sealed class SettingsDefinitions
 {
     public static SettingsDefinitions Instance { get; } = new();
     private SettingsDefinitions() { }
+    public ChoiceSettingDefinition<string> MoveRecoveryVerification { get; } = new(
+        "recovery.move-verification", "Same-drive moves and renames",
+        "Covers Group by Alphabet, Group by Track ID in Move mode, flattening, and filename renaming.",
+        "Metadata only checks file size and last modified time. SHA-256 and xxHash128 check file contents.",
+        SettingCategory.Recovery, Array.AsReadOnly<string>(["SHA-256", "xxHash128", "Metadata only (default)", "No verification"]));
+    public ChoiceSettingDefinition<string> WriteRecoveryVerification { get; } = new(
+        "recovery.verification", "Copies and file writes",
+        "Covers Group by Track ID in Copy mode, media conversions, ZIP repacking, and tagging.",
+        "Interrupted publication with metadata only or no verification may require manual recovery.",
+        SettingCategory.Recovery, Array.AsReadOnly<string>(["SHA-256", "xxHash128 (default)", "Metadata only", "No verification"]));
     public ChoiceSettingDefinition<string> FileCheckTiming { get; } = new(
         "recovery.check-timing", "When to start checking for file changes",
         "With content verification, checking before the batch is more robust and catches edits while files wait. Checking each item is faster to start.",
@@ -123,6 +133,7 @@ public sealed class SettingsDefinitions
     public HelpDefinition Cancel { get; } = new("Cancel", "Close without saving pending changes. Settings already saved with Apply remain in effect.");
     public HelpDefinition Apply { get; } = new("Apply", "Save pending settings and keep this window open.");
     public IReadOnlyList<SettingDefinition> All => Array.AsReadOnly<SettingDefinition>([
+        MoveRecoveryVerification, WriteRecoveryVerification,
         Theme, RecurseFolders, IgnoreLeadingTheForFileOrganization, DeleteOriginals, ValidateBeforeConversion, AutoCreateCueText, Overwrite, NamingFormat, Algorithm, CompressionLevel, Encoder, Bitrate, ExperimentalDiscRipping, CdrdaoExecutablePath, VideoContainer, VideoResolution, VideoGraphicsSmoothing, VideoFrameRate, VideoBitrateKbps, VideoAudioMatchSourceBitrate, VideoAudioBitrateKbps
     ]);
 }

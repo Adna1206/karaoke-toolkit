@@ -65,7 +65,8 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
     public bool CanRetry => !IsBusy && retryRequests.Count > 0;
     public IReadOnlyList<string> SelectedInputs => selectedInputs;
     public string[] CurrentInputs => selectedInputs.Length > 0 ? selectedInputs : [FolderPath];
-    internal RecoveryVerificationMode RecoveryVerification { get; private set; } = OperationCapabilities.DefaultFileMoveRecoveryVerification;
+    internal RecoveryVerificationMode RecoveryVerification { get; private set; } = OperationCapabilities.DefaultFileWriteRecoveryVerification;
+    internal RecoveryVerificationMode MoveRecoveryVerification { get; private set; } = OperationCapabilities.DefaultFileMoveRecoveryVerification;
     internal bool SaveResumableRun { get; private set; } = true;
     internal FileCheckTiming CheckTiming { get; private set; } = OperationCapabilities.DefaultFileMoveCheckTiming;
     [ObservableProperty, NotifyPropertyChangedFor(nameof(ShowRecoverButton))]
@@ -372,6 +373,7 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
             sharedProfile?.ApplyMigrations();
             Options = store.Load();
             (RecoveryVerification, SaveResumableRun) = store.LoadRecoveryPreferences();
+            MoveRecoveryVerification = store.LoadMoveRecoveryVerification();
             CheckTiming = store.LoadFileCheckTiming();
             CheckForInterruptedRunsOnStartup = store.LoadCheckForInterruptedRunsOnStartup();
             CheckForUpdatesOnStartup = store.LoadCheckForUpdatesOnStartup();
@@ -434,14 +436,16 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
     internal void SaveOptions(ConversionOptions options, OverwritePolicy policy, ApplicationTheme theme, bool validateBeforeConversion,
         bool ignoreLeadingTheForFileOrganization, AudioBitratePreferences audioBitrates, ApplicationBackdrop backdrop, bool rememberInputFolder,
         RecoveryVerificationMode? recoveryVerification = null, bool? saveResumableRun = null, bool? checkForUpdatesOnStartup = null,
-        bool? checkForInterruptedRunsOnStartup = null, FileCheckTiming? checkTiming = null)
+        bool? checkForInterruptedRunsOnStartup = null, FileCheckTiming? checkTiming = null,
+        RecoveryVerificationMode? moveRecoveryVerification = null)
     {
         store.Save(options, policy, theme, validateBeforeConversion, ignoreLeadingTheForFileOrganization, audioBitrates,
             backdrop: backdrop, rememberInputFolder: rememberInputFolder, recoveryVerification: recoveryVerification, saveResumableRun: saveResumableRun,
             checkForUpdatesOnStartup: checkForUpdatesOnStartup, checkForInterruptedRunsOnStartup: checkForInterruptedRunsOnStartup,
-            checkTiming: checkTiming);
+            checkTiming: checkTiming, moveRecoveryVerification: moveRecoveryVerification);
         CheckTiming = checkTiming ?? CheckTiming;
         RecoveryVerification = recoveryVerification ?? RecoveryVerification;
+        MoveRecoveryVerification = moveRecoveryVerification ?? MoveRecoveryVerification;
         SaveResumableRun = saveResumableRun ?? SaveResumableRun;
         CheckForInterruptedRunsOnStartup = checkForInterruptedRunsOnStartup ?? CheckForInterruptedRunsOnStartup;
         CheckForUpdatesOnStartup = checkForUpdatesOnStartup ?? CheckForUpdatesOnStartup;
@@ -477,6 +481,7 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
             ValidateBeforeConversion = settings.ValidateBeforeConversion;
             IgnoreLeadingTheForFileOrganization = settings.IgnoreLeadingThe;
             RecoveryVerification = settings.RecoveryVerification;
+            MoveRecoveryVerification = settings.MoveRecoveryVerification;
             CheckTiming = settings.CheckTiming;
             SaveResumableRun = settings.SaveResumableRun;
             CheckForInterruptedRunsOnStartup = settings.CheckForInterruptedRunsOnStartup;
@@ -703,6 +708,7 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
 
     private async Task ExecuteAsync(RecoveryJob? recoveryJob, IReadOnlyList<ConversionRetry>? retries = null)
     {
+        const string scanningSources = "Scanning for source files…";
         if (recoveryJob != null)
         {
             FolderPath = recoveryJob.Folder;
@@ -718,7 +724,7 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
             ? Options with { AudioBitrate = AudioBitrates.Mp3 }
             : Options;
         var run = BeginRun((recoveryJob != null ? "Recovery — " : "") + selected.Label,
-            recoveryJob != null ? "Checking interrupted conversion…" : "Finding source files…", isIndeterminate: true);
+            recoveryJob != null ? "Checking interrupted conversion…" : scanningSources, isIndeterminate: true);
         Func<OutputConflict, CancellationToken, Task<ConflictDecision>>? resolveConflict = ResolveConflictAsync is { } resolveOne
             ? (conflict, token) => run.WithEstimatePausedAsync(() => resolveOne(conflict, token)) : null;
         ResolveOutputConflicts? resolveConflicts = ResolveConflictsAsync is { } resolveMany
@@ -747,6 +753,9 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
                             cancelled = true;
                             break;
                         }
+                        Status = scanningSources;
+                        IsRunProgressIndeterminate = true;
+                        UpdateActivityItemCount(0, completed: null);
                         var attempt = await new SelectionConversionService(recovery).RunAsync(retry, run.Progress, run.Token,
                             resolveConflict, resolveConflicts);
                         all.AddRange(attempt.Files);
@@ -863,10 +872,10 @@ public partial class MainViewModel : ViewModelBase, IBusyViewModel
         {
             var result = alphabetical != null
                 ? await new AlphabeticalOrganizer(recovery).ApplyPreviewAsync(CurrentInputs, alphabetical.Scope, alphabetical.Plan,
-                    run.Progress, run.Token, alphabetical.IgnoreLeadingThe, RecoveryVerification, SaveResumableRun, CheckTiming,
+                    run.Progress, run.Token, alphabetical.IgnoreLeadingThe, MoveRecoveryVerification, SaveResumableRun, CheckTiming,
                     alphabetical.TrackIdSeparator)
                 : await new FlattenFolderLayer(recovery).RunAsync(CurrentInputs, run.Progress, run.Token, SelectedOperation!.FlattenScope!.Value,
-                    RecoveryVerification, SaveResumableRun, CheckTiming);
+                    MoveRecoveryVerification, SaveResumableRun, CheckTiming);
             run.StopProgress();
             LastReport = CompletionReport.FromConversion(RunTitle, result) with { ReportType = "File Organization Report" };
             CompleteActivityItemCount(result);

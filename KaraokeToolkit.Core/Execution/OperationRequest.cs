@@ -28,7 +28,7 @@ public sealed record OperationRequest(OperationId OperationId, IReadOnlyList<str
     }
     public RecoveryVerificationMode RecoveryVerification
     {
-        get => recoveryVerification ?? OperationCapabilities.DefaultRecoveryVerification(OperationId);
+        get => recoveryVerification ?? OperationCapabilities.DefaultRecoveryVerification(OperationId, Grouping.Move);
         init => recoveryVerification = value;
     }
     public TrackGroupingOptions Grouping { get; init; } = new();

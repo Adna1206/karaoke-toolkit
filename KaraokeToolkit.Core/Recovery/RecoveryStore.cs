@@ -171,10 +171,9 @@ public sealed class RecoveryStore
 
     private static string? MoveRecoveryProblem(WorkflowData workflow)
     {
-        if (!workflow.SaveResumableRun && !workflow.SupportsItemRecovery)
-            return "This older run disabled batch resume and has no interrupted group checkpoint. Keep the journal for manual review.";
-        if (!RecoveryFingerprint.IsContentVerified(workflow.VerificationMode))
-            return "This run has no content fingerprints for automatic recovery. Keep the journal for manual review.";
+        if (workflow.VerificationMode == RecoveryVerificationMode.None ||
+            workflow.CopyGrouping && !RecoveryFingerprint.IsContentVerified(workflow.VerificationMode))
+            return "This run has insufficient fingerprints for automatic recovery. Keep the journal for manual review.";
         return null;
     }
 
@@ -268,6 +267,8 @@ internal sealed class RunData
 /// <summary>A durable batch checkpoint. A transaction records success before its backups are removed.</summary>
 internal sealed class RunSession : IDisposable
 {
+    private const int LogVersion = 3;
+    private sealed record Checkpoint(string? Current, bool IsMetadata, string? Workspace, string? Warning, ConversionFileResult? Result);
     internal static readonly AsyncLocal<RunSession?> Current = new();
     internal RunData Data
     {
@@ -280,6 +281,7 @@ internal sealed class RunSession : IDisposable
     private readonly FileStream lease;
     private readonly FileStream rootLease;
     private readonly RecoveryStore store;
+    private readonly CheckpointLog<Checkpoint>? progressLog;
     internal static FileStream Lease(string directory) => new(Path.Combine(directory, "run.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
 
     internal RunSession(RecoveryStore store, ConversionRequest request, OverwritePolicy policy, string[] sources, bool validateBeforeConversion = false,
@@ -319,10 +321,16 @@ internal sealed class RunSession : IDisposable
         };
         try
         {
-            Save();
+            if (Data.OwnerWorkflow == null)
+            {
+                Data.Version = LogVersion;
+                progressLog = CheckpointLog<Checkpoint>.Create(LogPath(Journal));
+                DurableJson.Write(Journal, Data);
+            }
+            else Save();
             store.Register(Journal);
         }
-        catch { lease.Dispose(); rootLease.Dispose(); throw; }
+        catch { progressLog?.Dispose(); lease.Dispose(); rootLease.Dispose(); throw; }
     }
 
     internal RunSession(RecoveryStore store, string journal)
@@ -338,10 +346,12 @@ internal sealed class RunSession : IDisposable
         catch { rootLease.Dispose(); throw; }
         try
         {
-            Data = Read(Journal);
+            Data = Read(Journal, out int committedLength);
             if (RecoveryStore.IsAbandoned(Journal) ||
                 (Data.OwnerWorkflow is { } owner && RecoveryStore.IsAbandoned(owner)))
                 throw new IOException("This interrupted run was abandoned.");
+            if (Data.Version == LogVersion && !Data.Finished)
+                progressLog = CheckpointLog<Checkpoint>.Open(LogPath(Journal), committedLength);
         }
         catch { lease.Dispose(); rootLease.Dispose(); throw; }
     }
@@ -353,7 +363,11 @@ internal sealed class RunSession : IDisposable
         return data.Finished || (data.OwnerWorkflow is { } owner && RecoveryStore.IsAbandoned(owner));
     }
 
-    internal static RunData Read(string journal)
+    internal static RunData Read(string journal) => Read(journal, out _);
+
+    private static string LogPath(string journal) => Path.Combine(Path.GetDirectoryName(journal)!, "progress.jsonl");
+
+    private static RunData Read(string journal, out int committedLength)
     {
         string directory = Path.GetDirectoryName(Path.GetFullPath(journal))!;
         if (Path.GetFileName(journal) != "run.json" || !Path.GetFileName(directory).StartsWith(".karaoke-job-run-", StringComparison.Ordinal))
@@ -362,10 +376,25 @@ internal sealed class RunSession : IDisposable
         CheckPlainPath(journal);
         var data = JsonSerializer.Deserialize<RunData>(File.ReadAllText(journal), DurableJson.Settings) ?? throw new IOException("Empty recovery journal.");
         string root = Path.GetDirectoryName(directory)!;
-        if (data.Version != 2 || data.Request == null || data.Sources == null || data.Results == null || data.Metadata == null || data.MetadataResults == null ||
+        if (data.Version is not (2 or LogVersion) || data.Version == LogVersion && data.OwnerWorkflow != null ||
+            data.Request == null || data.Sources == null || data.Results == null || data.Metadata == null || data.MetadataResults == null ||
             !Enum.IsDefined(data.Policy) || !Enum.IsDefined(data.VerificationMode) ||
             !string.Equals(root, Path.GetFullPath(data.Request.Folder), StringComparison.OrdinalIgnoreCase))
             throw new IOException("Unsupported or misplaced recovery journal.");
+        var sourceSet = data.Sources.ToHashSet(StringComparer.Ordinal);
+        committedLength = data.Version == LogVersion && !data.Finished
+            ? CheckpointLog<Checkpoint>.Replay(LogPath(journal), checkpoint =>
+            {
+                data.Current = checkpoint.Current;
+                data.IsMetadata = checkpoint.IsMetadata;
+                data.Workspace = checkpoint.Workspace;
+                data.PublicationWarning = checkpoint.Warning;
+                if (checkpoint.Result is not { } receipt) return;
+                if (checkpoint.Current == null || !InputSelection.Paths.Equals(receipt.Source, checkpoint.Current) ||
+                    !checkpoint.IsMetadata && !sourceSet.Contains(checkpoint.Current) || receipt.Outputs == null)
+                    throw new IOException("Invalid conversion completion record.");
+                RecordResult(data, receipt);
+            }) : 0;
         foreach (string source in data.Sources.Concat(data.Results.Keys).Concat(data.Metadata).Concat(data.Current == null ? [] : new[] { data.Current }))
             if (!Within(root, source) && !(data.IsMetadata && source == data.Current && source == data.Request.OutputFolder) &&
                 !(data.Metadata.Contains(source) && source == data.Request.OutputFolder))
@@ -382,7 +411,8 @@ internal sealed class RunSession : IDisposable
                 !string.Equals(Path.GetDirectoryName(data.Workspace), expectedFolder, StringComparison.OrdinalIgnoreCase))
                 throw new IOException("Invalid recovery workspace.");
         }
-        if (data.Results.Any(pair => pair.Value == null || !data.Sources.Contains(pair.Key, StringComparer.OrdinalIgnoreCase)))
+        var savedSources = data.Sources.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (data.Results.Any(pair => pair.Value == null || !savedSources.Contains(pair.Key)))
             throw new IOException("Invalid completed source in recovery journal.");
         if (data.BatchInputs is { } snapshots &&
             (!OperationCapabilities.SupportsConversionCheckTiming(data.Request.Action) || data.OwnerWorkflow != null ||
@@ -414,20 +444,31 @@ internal sealed class RunSession : IDisposable
         bool isLeaf = true;
         for (string? current = Path.GetFullPath(path); current != null; current = Path.GetDirectoryName(current))
         {
-            FileAttributes? attributes;
-            try { attributes = File.GetAttributes(current); }
-            catch (FileNotFoundException) { attributes = null; }
-            catch (DirectoryNotFoundException) { attributes = null; }
-            if (attributes is { } found && (found & FileAttributes.ReparsePoint) != 0)
-                throw new IOException("Recovery cannot follow linked files or folders: " + current);
+            var attributes = CheckPlainEntry(current);
             if (isLeaf) leaf = attributes;
             isLeaf = false;
         }
         return leaf;
     }
 
-    internal void Save()
+    internal static FileAttributes? CheckPlainEntry(string path)
     {
+        FileAttributes attributes;
+        try { attributes = File.GetAttributes(path); }
+        catch (FileNotFoundException) { return null; }
+        catch (DirectoryNotFoundException) { return null; }
+        if ((attributes & FileAttributes.ReparsePoint) != 0)
+            throw new IOException("Recovery cannot follow linked files or folders: " + path);
+        return attributes;
+    }
+
+    private void Save(ConversionFileResult? result = null)
+    {
+        if (progressLog != null)
+        {
+            progressLog.Append(new(Data.Current, Data.IsMetadata, Data.Workspace, Data.PublicationWarning, result));
+            return;
+        }
         DurableJson.Write(Journal, Data);
         WorkflowSession.Current.Value?.RecordChild(Journal, Data);
     }
@@ -469,14 +510,19 @@ internal sealed class RunSession : IDisposable
     }
     internal void Complete(ConversionFileResult result)
     {
-        if (Data.IsMetadata)
+        RecordResult(Data, result);
+        Save(result);
+    }
+
+    private static void RecordResult(RunData data, ConversionFileResult result)
+    {
+        if (data.IsMetadata)
         {
-            Data.Metadata.Add(Data.Current!);
-            Data.MetadataResults[Data.Current!] = result;
+            data.Metadata.Add(data.Current!);
+            data.MetadataResults[data.Current!] = result;
         }
         else
-            Data.Results[Data.Current!] = result;
-        Save();
+            data.Results[data.Current!] = result;
     }
     internal void NotePublicationWarning(string warning)
     {
@@ -488,12 +534,19 @@ internal sealed class RunSession : IDisposable
         { Warning = Data.PublicationWarning });
     internal void Finish()
     {
+        progressLog?.ThrowIfFaulted();
         Data.Finished = true;
-        Save();
+        try
+        {
+            if (progressLog != null) DurableJson.Write(Journal, Data);
+            else Save();
+        }
+        catch { Data.Finished = false; throw; }
         DurableJson.Delete(store.IndexPath(Journal));
     }
     public void Dispose()
     {
+        progressLog?.Dispose();
         lease.Dispose();
         rootLease.Dispose();
         if (Data.Finished) RecoveryWorkspaceCleanup.Delete(Path.GetDirectoryName(Journal)!, "run.json");

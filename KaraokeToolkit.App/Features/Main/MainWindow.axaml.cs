@@ -284,7 +284,8 @@ public partial class MainWindow : Window
         {
             var dialog = new SettingsWindow(model.Options, model.OverwritePolicy, model.Theme, model.ValidateBeforeConversion,
                 model.IgnoreLeadingTheForFileOrganization, model.AudioBitrates, model.SaveOptions, model.Backdrop, model.RememberInputFolder,
-                model.RecoveryVerification, model.SaveResumableRun, model.CheckForUpdatesOnStartup, model.CheckForInterruptedRunsOnStartup, model.CheckTiming);
+                model.RecoveryVerification, model.SaveResumableRun, model.CheckForUpdatesOnStartup, model.CheckForInterruptedRunsOnStartup,
+                model.CheckTiming, model.MoveRecoveryVerification);
             dialog.RestorePresentation(this, model.OptionsWindowSize, model.OptionsTabIndex);
             await ModalDialog.ShowAsync(dialog, this);
             model.RememberOptionsWindow(dialog.LastNormalSize, dialog.CurrentTabIndex);

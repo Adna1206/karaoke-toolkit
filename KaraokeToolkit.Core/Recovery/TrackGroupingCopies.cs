@@ -61,27 +61,28 @@ internal static class TrackGroupingCopies
                 {
                     // No copy can reach a destination before CopyPrepared is persisted.
                     if (Directory.Exists(staging)) RecoveryWorkspaceCleanup.DeleteGroupingCopy(workspace, index);
-                    group.Results = WorkflowMoves.Skipped(group, error.Message);
-                    CompleteGroup();
+                    CompleteGroup(WorkflowMoves.Skipped(group, error.Message));
                     continue;
                 }
-                group.Items = verified;
-                group.CopyPrepared = true;
-                session.Save();
+                session.PrepareCopyGroup(index, verified);
             }
             // Verify both states before publishing any remaining member of the group.
+            var paths = new WorkflowMoves.MovePathChecks();
             for (int i = 0; i < group.Items.Length; i++)
             {
                 var move = group.Items[i];
                 string staged = Path.Combine(staging, i.ToString());
-                RunSession.CheckPlainPath(move.Target!);
-                if (WorkflowMoves.Exists(staged))
+                var target = paths.Check(move.Target!, out bool blockedTarget);
+                if (blockedTarget) throw new IOException("A file blocks the grouping destination: " + move.Target);
+                var stagedAttributes = paths.Check(staged, out bool blockedStaging);
+                if (blockedStaging) throw new IOException("A file blocks the grouping workspace: " + staged);
+                if (stagedAttributes != null)
                 {
-                    Verify(staged, move, session.Data.VerificationMode);
-                    if (WorkflowMoves.Exists(move.Target!))
+                    Verify(staged, move, session.Data.VerificationMode, stagedAttributes);
+                    if (target != null)
                         throw new IOException("A destination blocks copy recovery: " + move.Target);
                 }
-                else Verify(move.Target!, move, session.Data.VerificationMode);
+                else Verify(move.Target!, move, session.Data.VerificationMode, target);
             }
             for (int i = 0; i < group.Items.Length; i++)
             {
@@ -94,14 +95,12 @@ internal static class TrackGroupingCopies
                 }
                 Verify(move.Target!, move, session.Data.VerificationMode);
             }
-            group.Results = group.Items.Select(m => new ConversionFileResult(m.Source, ConversionStatus.Succeeded,
-                [m.Target!], "Copied and verified.")).ToList();
-            CompleteGroup();
+            CompleteGroup(group.Items.Select(m => new ConversionFileResult(m.Source, ConversionStatus.Succeeded,
+                [m.Target!], "Copied and verified.")).ToList());
 
-            void CompleteGroup()
+            void CompleteGroup(List<ConversionFileResult> results)
             {
-                session.Data.ActiveMoveGroup = null;
-                session.Save();
+                session.CompleteMoveGroup(index, results);
                 completed += group.Items.Length;
                 progress?.Report(new(100, completed * 100 / found, found, completed,
                     $"Processed {completed} of {found} planned items.", clock.Elapsed.ToString(@"hh\:mm\:ss")) { ShowInActivity = false });
@@ -111,10 +110,13 @@ internal static class TrackGroupingCopies
             { Found = found, Elapsed = clock.Elapsed };
     }
 
-    private static void Verify(string path, WorkflowMove move, RecoveryVerificationMode mode)
+    private static void Verify(string path, WorkflowMove move, RecoveryVerificationMode mode) =>
+        Verify(path, move, mode, RunSession.CheckPlainPath(path));
+
+    private static void Verify(string path, WorkflowMove move, RecoveryVerificationMode mode, FileAttributes? attributes)
     {
-        RunSession.CheckPlainPath(path);
-        if (!WorkflowMoves.Exists(path) || WorkflowMoves.Hash(path, move.Directory, mode) != move.Hash)
+        if (attributes is not { } found || ((found & FileAttributes.Directory) != 0) != move.Directory ||
+            WorkflowMoves.Hash(path, move.Directory, mode) != move.Hash)
             throw new IOException("Grouping copy changed or disappeared: " + path);
     }
 

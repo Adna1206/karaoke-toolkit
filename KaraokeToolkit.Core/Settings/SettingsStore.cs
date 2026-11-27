@@ -25,6 +25,7 @@ public sealed class SettingsStore(string path, bool persistRenameBins = false, b
         var snapshot = ReadSnapshot();
         return (snapshot.RecoveryVerification, snapshot.SaveResumableRun);
     }
+    public RecoveryVerificationMode LoadMoveRecoveryVerification() => ReadSnapshot().MoveRecoveryVerification;
 
     public AudioBitratePreferences LoadAudioBitrates(ConversionOptions options)
     {
@@ -69,7 +70,8 @@ public sealed class SettingsStore(string path, bool persistRenameBins = false, b
         bool? validateBeforeConversion = null, bool? ignoreLeadingTheForFileOrganization = null,
         AudioBitratePreferences? audioBitrates = null, Action<XElement>? updateAdditionalPreferences = null,
         RecoveryVerificationMode? recoveryVerification = null, bool? saveResumableRun = null, string? taggingPattern = null,
-        bool? checkForInterruptedRunsOnStartup = null, FileCheckTiming? checkTiming = null)
+        bool? checkForInterruptedRunsOnStartup = null, FileCheckTiming? checkTiming = null,
+        RecoveryVerificationMode? moveRecoveryVerification = null)
     {
         if (options != null)
         {
@@ -83,6 +85,8 @@ public sealed class SettingsStore(string path, bool persistRenameBins = false, b
             throw new ArgumentOutOfRangeException(nameof(overwritePolicy));
         if (recoveryVerification.HasValue && !Enum.IsDefined(recoveryVerification.Value))
             throw new ArgumentOutOfRangeException(nameof(recoveryVerification));
+        if (moveRecoveryVerification.HasValue && !Enum.IsDefined(moveRecoveryVerification.Value))
+            throw new ArgumentOutOfRangeException(nameof(moveRecoveryVerification));
         if (checkTiming.HasValue && !Enum.IsDefined(checkTiming.Value))
             throw new ArgumentOutOfRangeException(nameof(checkTiming));
         audioBitrates?.Validate();
@@ -95,6 +99,7 @@ public sealed class SettingsStore(string path, bool persistRenameBins = false, b
             if (validateBeforeConversion.HasValue) SettingsXml.Write(root, "files.validate-before-conversion", validateBeforeConversion.Value);
             if (ignoreLeadingTheForFileOrganization.HasValue) SettingsXml.Write(root, "files.ignore-leading-the", ignoreLeadingTheForFileOrganization.Value);
             if (recoveryVerification.HasValue) SettingsXml.Write(root, "recovery.verification", recoveryVerification.Value);
+            if (moveRecoveryVerification.HasValue) SettingsXml.Write(root, "recovery.move-verification", moveRecoveryVerification.Value);
             if (checkTiming.HasValue) SettingsXml.Write(root, "recovery.check-timing", checkTiming.Value);
             if (saveResumableRun.HasValue) SettingsXml.Write(root, "recovery.batch-resume", saveResumableRun.Value);
             if (checkForInterruptedRunsOnStartup.HasValue) SettingsXml.Write(root, "recovery.check-on-startup", checkForInterruptedRunsOnStartup.Value);

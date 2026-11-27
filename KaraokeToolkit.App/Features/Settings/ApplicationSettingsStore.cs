@@ -33,6 +33,7 @@ public sealed class ApplicationSettingsStore(string path, bool persistRenameBins
         processing.ReadDesktopPreferences()?.Element("CheckForUpdatesOnStartup")?.Value, out bool enabled) && enabled;
 
     internal (RecoveryVerificationMode Mode, bool Resume) LoadRecoveryPreferences() => processing.LoadRecoveryPreferences();
+    internal RecoveryVerificationMode LoadMoveRecoveryVerification() => processing.LoadMoveRecoveryVerification();
     internal bool LoadCheckForInterruptedRunsOnStartup() => processing.LoadCheckForInterruptedRunsOnStartup();
     internal FileCheckTiming LoadFileCheckTiming() => processing.LoadFileCheckTiming();
 
@@ -42,13 +43,15 @@ public sealed class ApplicationSettingsStore(string path, bool persistRenameBins
         IReadOnlyList<string>? favouriteOperations = null, SettingsWindowSize? settingsWindowSize = null,
         ApplicationBackdrop? backdrop = null, IReadOnlyList<string>? taggingPatterns = null, string? lastTaggingPattern = null,
         bool? rememberInputFolder = null, string? lastInputFolder = null, RecoveryVerificationMode? recoveryVerification = null, bool? saveResumableRun = null,
-        bool? checkForUpdatesOnStartup = null, bool? checkForInterruptedRunsOnStartup = null, FileCheckTiming? checkTiming = null)
+        bool? checkForUpdatesOnStartup = null, bool? checkForInterruptedRunsOnStartup = null, FileCheckTiming? checkTiming = null,
+        RecoveryVerificationMode? moveRecoveryVerification = null)
     {
         if (settingsWindowSize is { IsValid: false }) throw new ArgumentOutOfRangeException(nameof(settingsWindowSize));
         if (theme.HasValue && !Enum.IsDefined(theme.Value)) throw new ArgumentOutOfRangeException(nameof(theme));
         if (backdrop.HasValue && !Enum.IsDefined(backdrop.Value)) throw new ArgumentOutOfRangeException(nameof(backdrop));
         processing.Save(options, overwritePolicy, validateBeforeConversion, ignoreLeadingTheForFileOrganization,
-            audioBitrates, Update, recoveryVerification, saveResumableRun, lastTaggingPattern, checkForInterruptedRunsOnStartup, checkTiming);
+            audioBitrates, Update, recoveryVerification, saveResumableRun, lastTaggingPattern, checkForInterruptedRunsOnStartup, checkTiming,
+            moveRecoveryVerification);
 
         void Update(XElement desktop)
         {

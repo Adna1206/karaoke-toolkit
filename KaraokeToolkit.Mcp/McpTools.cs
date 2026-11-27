@@ -37,6 +37,7 @@ public sealed class McpTools(McpOperationsService service, McpAccessPolicy polic
         FileCheckTimings = Enum.GetNames<KaraokeToolkit.Core.Recovery.FileCheckTiming>(),
         OperationCapabilities.DefaultFileMoveCheckTiming,
         OperationCapabilities.DefaultFileMoveRecoveryVerification,
+        OperationCapabilities.DefaultFileWriteRecoveryVerification,
         TrackGroupingMasks = new[] { "x", "X", "#", "s" },
         AudioGainModes = Enum.GetNames<KaraokeToolkit.Core.Audio.AudioGainMode>(),
         AudioGainExtensions = KaraokeToolkit.Core.Audio.AudioGainService.Extensions,

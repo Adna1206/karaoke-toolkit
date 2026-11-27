@@ -59,7 +59,8 @@ public partial class MainViewModel
             var result = job == null
                 ? await service.ExecuteGroupingAsync(submission!.Request with
                 {
-                    RecoveryVerification = RecoveryVerification, SaveResumableRun = SaveResumableRun, CheckTiming = CheckTiming
+                    RecoveryVerification = submission.Request.Grouping.Move ? MoveRecoveryVerification : RecoveryVerification,
+                    SaveResumableRun = SaveResumableRun, CheckTiming = CheckTiming
                 }, submission.Plan, run.Progress, run.Token)
                 : await Task.Run(() => service.ResumeAsync(job.JournalPath, run.Progress, run.Token));
             run.StopProgress();

@@ -23,10 +23,11 @@ public partial class SettingsViewModel : ViewModelBase
     private bool initializing;
     private sealed record Snapshot(ConversionOptions Options, int Overwrite, int Theme, bool Validate, bool IgnoreLeadingThe,
         AudioBitratePreferences AudioBitrates, int Backdrop, bool RememberInputFolder, int RecoveryVerification, bool SaveResumableRun,
-        bool CheckForUpdatesOnStartup, bool CheckForInterruptedRunsOnStartup, int CheckTiming);
+        bool CheckForUpdatesOnStartup, bool CheckForInterruptedRunsOnStartup, int CheckTiming, int MoveRecoveryVerification);
     private Snapshot? applied;
     private Snapshot Current => new(ToOptions(), Overwrite, Theme, ValidateBeforeConversion, IgnoreLeadingTheForFileOrganization,
-        audioBitrates, Backdrop, RememberInputFolder, RecoveryVerification, SaveResumableRun, CheckForUpdatesOnStartup, CheckForInterruptedRunsOnStartup, CheckTiming);
+        audioBitrates, Backdrop, RememberInputFolder, RecoveryVerification, SaveResumableRun, CheckForUpdatesOnStartup, CheckForInterruptedRunsOnStartup,
+        CheckTiming, MoveRecoveryVerification);
     public bool HasChanges => applied != null && Current != applied;
 
     public void MarkApplied()
@@ -81,7 +82,8 @@ public partial class SettingsViewModel : ViewModelBase
         get; set;
     }
     [ObservableProperty] public partial bool IgnoreLeadingTheForFileOrganization { get; set; }
-    [ObservableProperty] public partial int RecoveryVerification { get; set; } = (int)OperationCapabilities.DefaultFileMoveRecoveryVerification;
+    [ObservableProperty] public partial int RecoveryVerification { get; set; } = (int)OperationCapabilities.DefaultFileWriteRecoveryVerification;
+    [ObservableProperty] public partial int MoveRecoveryVerification { get; set; } = (int)OperationCapabilities.DefaultFileMoveRecoveryVerification;
     [ObservableProperty] public partial bool SaveResumableRun { get; set; } = true;
     [ObservableProperty] public partial bool CheckForUpdatesOnStartup { get; set; }
     [ObservableProperty] public partial bool CheckForInterruptedRunsOnStartup { get; set; } = true;
@@ -230,7 +232,8 @@ public partial class SettingsViewModel : ViewModelBase
         Overwrite = (int)OverwritePolicy.Ask;
         ValidateBeforeConversion = false;
         IgnoreLeadingTheForFileOrganization = false;
-        RecoveryVerification = (int)OperationCapabilities.DefaultFileMoveRecoveryVerification;
+        RecoveryVerification = (int)OperationCapabilities.DefaultFileWriteRecoveryVerification;
+        MoveRecoveryVerification = (int)OperationCapabilities.DefaultFileMoveRecoveryVerification;
         SaveResumableRun = true;
         CheckForInterruptedRunsOnStartup = true;
         CheckTiming = (int)OperationCapabilities.DefaultFileMoveCheckTiming;

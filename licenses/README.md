@@ -17,8 +17,8 @@ runtime source matches, source assembly and remaining FFmpeg work.
 
 | Component | Version / scope | License text | App package |
 |---|---|---|---|
-| Avalonia UI packages | 12.1.6 | `Avalonia.txt` (MIT) | Common |
-| Inter font bundled by Avalonia.Fonts.Inter | 12.1.6 package | `Inter.OFL.txt` (SIL OFL 1.1) | Common |
+| Avalonia UI packages | 12.2.0 | `Avalonia.txt` (MIT) | Common |
+| Inter font bundled by Avalonia.Fonts.Inter | 12.2.0 package | `Inter.OFL.txt` (SIL OFL 1.1) | Common |
 | CommunityToolkit.Mvvm | 8.4.2 | `CommunityToolkit.Mvvm.txt` (MIT), `CommunityToolkit.Mvvm.ThirdPartyNotices.txt` | Common |
 | FFMpegCore | 5.5.0 | `FFMpegCore.txt` (MIT) | Common |
 | SharpCompress | 0.50.8 | `SharpCompress.txt` (MIT) | Common |
@@ -31,7 +31,7 @@ runtime source matches, source assembly and remaining FFmpeg work.
 | HarfBuzzSharp and native assets | 8.3.1.3 | `HarfBuzzSharp.txt` (MIT) | Common |
 | ANGLE Windows native assets | 2.1.27548.20260419 | `ANGLE.txt` (BSD-style) | Windows |
 | Instances (FFMpegCore dependency) | 3.1.0 | `Instances.txt` (MIT) | Common |
-| MicroCom.Runtime (Avalonia dependency) | 0.11.6 | `MicroCom.Runtime.txt` (MIT) | Common |
+| MicroCom.Runtime (Avalonia dependency) | 0.11.7 | `MicroCom.Runtime.txt` (MIT) | Common |
 | Microsoft.Extensions components | 11.0.0 | `Microsoft.Extensions.txt` (MIT), `Microsoft.Extensions.ThirdPartyNotices.txt` | Shared logging/DI abstractions aligned at 11.0.0; MCP hosting components |
 | Microsoft.IO.RecyclableMemoryStream (Avalonia diagnostics dependency) | 3.0.1 | `Microsoft.IO.RecyclableMemoryStream.txt` (MIT) | App output |
 | Tmds.DBus.Protocol (Avalonia Linux integration) | 0.94.1 | `Tmds.DBus.Protocol.txt` (MIT) | Included with app notices |
@@ -43,11 +43,12 @@ runtime source matches, source assembly and remaining FFmpeg work.
 | GCC runtime DLLs | gcc-libs 15.2.0-1 | GPL v3 or later with GCC Runtime Library Exception 3.1, under `licenses/cdrdao/` | Windows `licenses/cdrdao/` |
 | GNU libiconv | 1.18-1 | LGPL v2.1 or later and copyright attribution, under `licenses/cdrdao/` | Windows `licenses/cdrdao/` |
 
-The versions above describe the current dependency references. The Avalonia text
-was collected from the source revision pinned by the earlier 12.1.3 package.
-The Community Toolkit,
-SkiaSharp, HarfBuzzSharp and ANGLE files come from the exact restored NuGet
-packages. Inter's OFL text comes from the font project's upstream repository.
+The Avalonia text matches the source revision recorded by the restored 12.2.0
+packages. [Avalonia licence](https://github.com/AvaloniaUI/Avalonia/blob/5d9e6d1b0e87337f74f233bead580db186412357/licence.md)
+
+The Community Toolkit, SkiaSharp, HarfBuzzSharp and ANGLE files come from the
+restored NuGet packages. The Inter fonts bundled with Avalonia.Fonts.Inter 12.2.0
+match the 12.1.6 font files. [Inter OFL](https://github.com/rsms/inter/blob/master/LICENSE.txt)
 The FFmpeg GPL texts came from pinned FFmpeg source revisions, the LGPL text
 from the BtbN archive, and CDRDAO's GPL text from its pinned source archive.
 The additional runtime notices come from the exact upstream revisions recorded
@@ -66,14 +67,14 @@ identify the library used. Retain the licence, allow users to replace/relink the
 library, and provide corresponding library source as required when distributing.
 
 - [Instances licence](https://github.com/rosenbjerg/Instances/blob/9322a21ebe4d9d438190cd543850315edc1a5fe1/LICENSE)
-- [MicroCom licence](https://github.com/kekekeks/MicroCom/blob/76785efcafd91b5902fd19dd11145f6dd655b7b4/LICENSE)
+- [MicroCom licence](https://github.com/kekekeks/MicroCom/blob/cd2fa3c89525fbe7b46bd13f9ec8c77bd829e815/LICENSE)
 - [RecyclableMemoryStream licence](https://github.com/microsoft/Microsoft.IO.RecyclableMemoryStream/blob/e29a28387da9018fa9605a1dcb3f7a0435aa9974/LICENSE)
 - [Tmds.DBus licence](https://github.com/tmds/Tmds.DBus/blob/b4a7fed0b878f74cb54f7cca84d2889af4e596ba/COPYING)
 
 The checked-in Microsoft.Extensions licence and legacy third-party notices came
 from the restored 8.0.0 package. `Microsoft.Extensions.11.ThirdPartyNotices.txt`
 matches the notice file shipped by the restored 11.0.0 packages that contain it.
-Verify the retained Avalonia, MCP SDK and Microsoft.Extensions.AI notices
+Verify the retained MCP SDK and Microsoft.Extensions.AI notices
 against the upgraded packages before distribution.
 The app includes these files in build and publish output. **About → Third-party
 notices** reads only `licenses/`: common texts at its root and native notice texts

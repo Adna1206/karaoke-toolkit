@@ -15,7 +15,6 @@ internal sealed record WorkflowData
 {
     public int Version { get; set; } = 2;
     public bool SaveResumableRun { get; set; } = true;
-    public bool SupportsItemRecovery { get; set; }
     public bool SkipUnavailableMoveGroups { get; set; }
     public int? ActiveMoveGroup { get; set; }
     // Journals written before this field was added contain SHA-256 fingerprints.
@@ -85,20 +84,28 @@ internal sealed class WorkflowSession : IDisposable
     internal RecoveryStore Store { get; }
     private readonly FileStream lease;
     private readonly WorkflowSession? previous;
+    private readonly MoveCheckpointLog? moveLog;
 
     internal WorkflowSession(RecoveryStore store, WorkflowData data)
     {
         Store = store;
         Data = data;
-        if (!data.SaveResumableRun && data.Kind is RecoveryKind.FileMoves or RecoveryKind.TrackGrouping)
-            data.SupportsItemRecovery = true;
         string directory = Path.Combine(data.Roots[0], ".karaoke-job-workflow-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         Journal = Path.Combine(directory, "workflow.json");
         lease = RunSession.Lease(directory);
         previous = Current.Value;
-        try { Save(); store.Register(Journal); }
-        catch { lease.Dispose(); throw; }
+        try
+        {
+            if (UsesMoveLog(data))
+            {
+                data.Version = MoveCheckpointLog.WorkflowVersion;
+                moveLog = MoveCheckpointLog.Create(Journal);
+            }
+            DurableJson.Write(Journal, Data);
+            store.Register(Journal);
+        }
+        catch { moveLog?.Dispose(); lease.Dispose(); throw; }
     }
 
     internal WorkflowSession(RecoveryStore store, RecoveryJob job)
@@ -111,8 +118,10 @@ internal sealed class WorkflowSession : IDisposable
         try
         {
             if (RecoveryStore.IsAbandoned(Journal)) throw new IOException("This interrupted workflow was abandoned.");
-            Data = Read(Journal);
+            Data = Read(Journal, out int committedLength);
             if (Data.Finished) throw new IOException("This workflow has already finished.");
+            if (UsesMoveLog(Data))
+                moveLog = MoveCheckpointLog.Open(Journal, committedLength);
         }
         catch { lease.Dispose(); throw; }
     }
@@ -120,17 +129,26 @@ internal sealed class WorkflowSession : IDisposable
     internal static string[] RootsFor(IEnumerable<string> inputs) => inputs.Select(p => Directory.Exists(p) ? Path.GetFullPath(p) : Path.GetDirectoryName(Path.GetFullPath(p))!)
         .Distinct(InputSelection.Paths).ToArray();
 
-    internal static WorkflowData Read(string journal)
+    internal static WorkflowData Read(string journal) => Read(journal, out _);
+
+    private static bool UsesMoveLog(WorkflowData data) => data.Kind is RecoveryKind.TrackGrouping or RecoveryKind.FileMoves;
+
+    private static WorkflowData Read(string journal, out int committedLength)
     {
         string directory = Path.GetDirectoryName(Path.GetFullPath(journal))!;
         if (Path.GetFileName(journal) != "workflow.json" || !Path.GetFileName(directory).StartsWith(".karaoke-job-workflow-", StringComparison.Ordinal))
             throw new IOException("Invalid workflow journal location.");
         RunSession.CheckPlainPath(journal);
         var data = JsonSerializer.Deserialize<WorkflowData>(File.ReadAllText(journal), DurableJson.Settings) ?? throw new IOException("Empty workflow journal.");
-        if (data.Version != 2 || !Enum.IsDefined(data.VerificationMode) || !Enum.IsDefined(data.CheckTiming) ||
+        bool standaloneGroups = UsesMoveLog(data);
+        if (standaloneGroups && data.Version != MoveCheckpointLog.WorkflowVersion)
+            throw new IOException("This file grouping or move uses an unsupported journal format. Resume it with the version that created it.");
+        if ((!standaloneGroups && data.Version != 2) || !Enum.IsDefined(data.VerificationMode) || !Enum.IsDefined(data.CheckTiming) ||
             data.Kind is not (RecoveryKind.Recipe or RecoveryKind.Tagging or RecoveryKind.TrackGrouping or RecoveryKind.FileMoves or RecoveryKind.AudioGain) || data.Roots is not { Length: > 0 } ||
             data.Inputs == null || data.CurrentInputs == null || data.Steps == null || data.Expected == null || data.TagFiles == null || data.TagResults == null ||
             !InputSelection.Paths.Equals(Path.GetDirectoryName(directory), data.Roots[0])) throw new IOException("Invalid workflow checkpoint.");
+        data.Expected = new(data.Expected, InputSelection.Paths);
+        committedLength = standaloneGroups && !data.Finished ? MoveCheckpointLog.Replay(journal, data) : 0;
         if (data.SkipUnavailableMoveGroups && !(data.Kind == RecoveryKind.TrackGrouping || data.Kind == RecoveryKind.FileMoves &&
             data.OperationId is OperationIdValue.OrganizeFiles or OperationIdValue.OrganizeFolders or OperationIdValue.RenameByPattern))
             throw new IOException("Only approved file plans can skip unavailable move groups.");
@@ -196,11 +214,11 @@ internal sealed class WorkflowSession : IDisposable
                 !ValidFingerprint(g, m)))))
             throw new IOException("Invalid track grouping checkpoint.");
         if (data.ActiveMoveGroup is int active &&
-            (!(perItem || data.SkipUnavailableMoveGroups || data.SupportsItemRecovery && !data.SaveResumableRun) || data.Kind is not (RecoveryKind.FileMoves or RecoveryKind.TrackGrouping) ||
+            (!standaloneGroups ||
              data.Moves == null || active < 0 || active >= data.Moves.Count || data.Moves[active].Results != null ||
              data.Moves.Take(active).Any(group => group.Results == null)))
             throw new IOException("Invalid interrupted move group checkpoint.");
-        if ((perItem || data.SupportsItemRecovery || data.SkipUnavailableMoveGroups) && data.CopyGrouping &&
+        if (data.CopyGrouping && data.Moves != null &&
             data.Moves!.Where((group, index) => index != data.ActiveMoveGroup).Any(group => group.CopyPrepared && group.Results == null))
             throw new IOException("A prepared copy has no matching interrupted group checkpoint.");
         if (data.Kind == RecoveryKind.FileMoves && (data.OperationId is not (OperationIdValue.OrganizeFiles or
@@ -224,7 +242,6 @@ internal sealed class WorkflowSession : IDisposable
         }
         if (data.Kind == RecoveryKind.AudioGain)
             AudioGainRecovery.Validate(data);
-        data.Expected = new(data.Expected, InputSelection.Paths);
         data.TagResults = new(data.TagResults, InputSelection.Paths);
         return data;
     }
@@ -233,7 +250,11 @@ internal sealed class WorkflowSession : IDisposable
         Path.GetFullPath(path).StartsWith(root.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar,
             OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
 
-    internal void Save() => DurableJson.Write(Journal, Data);
+    internal void Save()
+    {
+        if (moveLog != null) throw new InvalidOperationException("Save move progress through the group checkpoint.");
+        DurableJson.Write(Journal, Data);
+    }
     internal void Enter() => Current.Value = this;
     internal void StartStep()
     {
@@ -340,10 +361,27 @@ internal sealed class WorkflowSession : IDisposable
     internal bool HasPendingPublication => Data.Workspace != null && Directory.Exists(Data.Workspace);
     internal void BeginMoveGroup(int index)
     {
-        if ((!Data.SupportsItemRecovery && !Data.SkipUnavailableMoveGroups && Data.CheckTiming != FileCheckTiming.BeforeItem) ||
-            Data.ActiveMoveGroup == index) return;
+        if (moveLog == null || Data.ActiveMoveGroup == index) return;
+        moveLog.Begin(index, Data.Moves![index]);
         Data.ActiveMoveGroup = index;
-        Save();
+    }
+
+    internal void PrepareCopyGroup(int index, WorkflowMove[] verified)
+    {
+        var group = Data.Moves![index];
+        if (moveLog == null || !Data.CopyGrouping || Data.ActiveMoveGroup != index || group.CopyPrepared)
+            throw new InvalidOperationException("Only the active copy group can be prepared.");
+        moveLog.PrepareCopy(index, verified);
+        group.Items = verified;
+        group.CopyPrepared = true;
+    }
+
+    internal void CompleteMoveGroup(int index, List<ConversionFileResult> results)
+    {
+        Data.Moves![index].Results = results;
+        Data.ActiveMoveGroup = null;
+        if (moveLog != null) moveLog.Complete(index, results);
+        else Save();
     }
 
     internal void Finish(bool interruptedMoveOnly = false)
@@ -356,11 +394,16 @@ internal sealed class WorkflowSession : IDisposable
         if (HasPendingPublication || Data.ActiveMoveGroup != null || partialMove ||
             Data.Conversions?.Any(p => p.Journal != null && File.Exists(p.Journal) && !RunSession.Read(p.Journal).Finished) == true)
             throw new IOException("An interrupted publication remains. Use Recover to resume this workflow.");
-        Data.Finished = true; Save(); DurableJson.Delete(Store.IndexPath(Journal));
+        Data.Finished = true;
+        // Seal the final state before deleting the log and index during workspace cleanup.
+        try { DurableJson.Write(Journal, Data); }
+        catch { Data.Finished = false; throw; }
+        DurableJson.Delete(Store.IndexPath(Journal));
     }
     public void Dispose()
     {
         if (Current.Value == this) Current.Value = previous;
+        moveLog?.Dispose();
         lease.Dispose();
         if (Data.Finished) RecoveryWorkspaceCleanup.Delete(Path.GetDirectoryName(Journal)!, "workflow.json");
     }

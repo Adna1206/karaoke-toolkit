@@ -77,12 +77,13 @@ public class CliTests
 
         Assert.Equal(0, await cli.RunAsync(["settings", "set", "recovery.verification", "Sha256"], output, error));
         Assert.Equal("Sha256", profile.Get("recovery.verification", SettingsClient.Mcp).Value.ToString());
+        Assert.Equal(0, await cli.RunAsync(["settings", "set", "recovery.move-verification", "XxHash128"], output, error));
         Assert.Equal(0, await cli.RunAsync(["settings", "set", "recovery.check-on-startup", "false"], output, error));
         Assert.Equal(0, await cli.RunAsync(["settings", "set", "recovery.batch-resume", "false"], output, error));
         Assert.Equal(0, await cli.RunAsync(["settings", "set", "recovery.check-timing", "BeforeItem"], output, error));
         Assert.False(profile.Load().CheckForInterruptedRunsOnStartup);
         Assert.Equal(0, await cli.RunAsync(["run", "group-by-alphabet-files", root], output, error));
-        Assert.Equal(RecoveryVerificationMode.Sha256, executor.Request!.RecoveryVerification);
+        Assert.Equal(RecoveryVerificationMode.XxHash128, executor.Request!.RecoveryVerification);
         Assert.Equal(FileCheckTiming.BeforeItem, executor.Request.CheckTiming);
         Assert.False(executor.Request.SaveResumableRun);
         Assert.Equal(0, await cli.RunAsync(["run", "group-by-alphabet-files", root, "--recovery-verification", "metadata",
@@ -127,7 +128,7 @@ public class CliTests
     }
 
     [Theory]
-    [InlineData(null, RecoveryVerificationMode.XxHash128)]
+    [InlineData(null, RecoveryVerificationMode.MetadataOnly)]
     [InlineData("sha256", RecoveryVerificationMode.Sha256)]
     public async Task FileMoveUsesDefaultOrExplicitVerification(string? option, RecoveryVerificationMode expected)
     {
@@ -135,6 +136,18 @@ public class CliTests
         string[] args = option is null ? ["run", "group-by-alphabet-files", "folder"]
             : ["run", "group-by-alphabet-files", "folder", "--recovery-verification", option];
 
+        Assert.Equal(0, await new CliApplication(executor).RunAsync(args, new StringWriter(), new StringWriter()));
+        Assert.Equal(expected, executor.Request!.RecoveryVerification);
+    }
+
+    [Theory]
+    [InlineData(false, RecoveryVerificationMode.XxHash128)]
+    [InlineData(true, RecoveryVerificationMode.MetadataOnly)]
+    public async Task TrackGroupingUsesTheVerificationDefaultForItsMode(bool move, RecoveryVerificationMode expected)
+    {
+        var executor = new FakeExecutor();
+        string[] args = ["run", "group-by-track-id", "folder", "--output", "destination"];
+        if (move) args = [.. args, "--move"];
         Assert.Equal(0, await new CliApplication(executor).RunAsync(args, new StringWriter(), new StringWriter()));
         Assert.Equal(expected, executor.Request!.RecoveryVerification);
     }

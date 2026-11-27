@@ -29,6 +29,24 @@ public class FileTransactionTests
     }
 
     [Fact]
+    public async Task ReplacingAnInputRechecksTheFileAfterTheObservation()
+    {
+        string folder = TestMediaFixture.NewFolder();
+        string original = Path.Combine(folder, "song.zip");
+        File.WriteAllText(original, "original");
+        using var transaction = new FileTransaction(folder, RecoveryVerificationMode.XxHash128);
+        string staged = await transaction.CopyInputAsync(original, default);
+        File.WriteAllText(staged, "updated copy");
+        transaction.ObserveTargets([staged]);
+
+        var timestamp = File.GetLastWriteTimeUtc(original);
+        File.WriteAllText(original, "modified");
+        File.SetLastWriteTimeUtc(original, timestamp);
+        Assert.Throws<IOException>(() => transaction.Commit([staged], [original], OverwritePolicy.Replace, default));
+        Assert.Equal("modified", File.ReadAllText(original));
+    }
+
+    [Fact]
     public async Task FailedCommitRollsBackOldOutputsAndSource()
     {
         string folder = TestMediaFixture.NewFolder();

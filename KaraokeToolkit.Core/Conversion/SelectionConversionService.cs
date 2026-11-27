@@ -11,7 +11,7 @@ public sealed record ConversionRetry(OperationId Action, string[] Inputs, Conver
     public string OutputFolder { get; init; } = "";
     public bool ContinueBatchAfterRecovery { get; init; } = true;
     public FileCheckTiming CheckTiming { get; init; } = FileCheckTiming.BeforeItem;
-    public RecoveryVerificationMode RecoveryVerification { get; init; } = OperationCapabilities.DefaultFileMoveRecoveryVerification;
+    public RecoveryVerificationMode RecoveryVerification { get; init; } = OperationCapabilities.DefaultFileWriteRecoveryVerification;
 }
 
 /// <summary>Creates every folder checkpoint before starting a multi-folder selection.</summary>
@@ -32,7 +32,7 @@ public sealed class SelectionConversionService(RecoveryStore? recovery = null)
             if (!Enum.IsDefined(request.RecoveryVerification)) throw new ArgumentOutOfRangeException(nameof(request.RecoveryVerification));
             var plans = workflow?.Data.Conversions is { } saved
                 ? saved.Select(p => new SelectionBatch(p.Folder, p.Sources)).ToArray()
-                : InputSelection.Plan(request.Action, request.Inputs, request.Options.RecurseFolders);
+                : InputSelection.Plan(request.Action, request.Inputs, request.Options.RecurseFolders, token);
             if (workflow != null && workflow.Data.Conversions == null)
             {
                 workflow.Data.Conversions = plans.Select(p => new WorkflowConversion { Folder = p.Folder, Sources = p.Sources.ToArray() }).ToList();

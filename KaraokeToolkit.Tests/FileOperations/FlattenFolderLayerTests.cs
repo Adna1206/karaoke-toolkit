@@ -267,6 +267,7 @@ public class FlattenFolderLayerTests
             }))
         {
             journal = session.Journal;
+            session.BeginMoveGroup(0);
             File.Move(source, target);
         }
 

@@ -100,7 +100,8 @@ public sealed record CliArguments(string Command, OperationRequest? Request, str
         }
         if (inputs.Count == 0) throw new CliUsageException("At least one input path is required. Use --input PATH or positional paths.");
         var profile = loadProfile?.Invoke();
-        var defaults = profile?.ForUnattendedOperation(operation.Value, inputs) ?? new OperationRequest(operation.Value, inputs);
+        bool move = options.ContainsKey("move");
+        var defaults = profile?.ForUnattendedOperation(operation.Value, inputs, move) ?? new OperationRequest(operation.Value, inputs);
         if (operation is OperationId.NormalizeAudioGain or OperationId.ChangeAudioKey)
             return new(command, ParseAudioEdit(options, defaults), inputs.ToArray(), null, json, quiet, report)
             { DryRun = options.ContainsKey("dry-run") };
@@ -109,7 +110,7 @@ public sealed record CliArguments(string Command, OperationRequest? Request, str
         bool saveResumableRun = options.ContainsKey("batch-resume") || defaults.SaveResumableRun && !options.ContainsKey("no-batch-resume");
         var recoveryVerification = options.GetValueOrDefault("recovery-verification") switch
         {
-            null => defaults.RecoveryVerification,
+            null => profile == null ? OperationCapabilities.DefaultRecoveryVerification(operation.Value, move) : defaults.RecoveryVerification,
             "sha256" => RecoveryVerificationMode.Sha256,
             "xxhash128" => RecoveryVerificationMode.XxHash128,
             "metadata" => RecoveryVerificationMode.MetadataOnly,
@@ -123,8 +124,8 @@ public sealed record CliArguments(string Command, OperationRequest? Request, str
             "before-item" => FileCheckTiming.BeforeItem,
             _ => throw new CliUsageException("--check-timing expects before-batch or before-item.")
         };
-        if (options.ContainsKey("recovery-verification") && !OperationCapabilities.SupportsFileCheckTiming(operation.Value))
-            throw new CliUsageException("Recovery verification overrides require a media conversion or file move operation.");
+        if (options.ContainsKey("recovery-verification") && !OperationCapabilities.SupportsRecoveryVerification(operation.Value))
+            throw new CliUsageException("Recovery verification overrides require a media conversion, file move, grouping copy or tagging operation.");
         if (options.ContainsKey("check-timing") && !OperationCapabilities.SupportsFileCheckTiming(operation.Value))
             throw new CliUsageException("File check timing overrides require a media conversion or file move operation.");
         if ((options.ContainsKey("batch-resume") || options.ContainsKey("no-batch-resume")) &&

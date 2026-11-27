@@ -16,9 +16,10 @@ public sealed record SharedSettingsSnapshot(
     RecoveryVerificationMode RecoveryVerification,
     bool SaveResumableRun,
     bool CheckForInterruptedRunsOnStartup = true,
-    FileCheckTiming CheckTiming = OperationCapabilities.DefaultFileMoveCheckTiming)
+    FileCheckTiming CheckTiming = OperationCapabilities.DefaultFileMoveCheckTiming,
+    RecoveryVerificationMode MoveRecoveryVerification = OperationCapabilities.DefaultFileMoveRecoveryVerification)
 {
-    public OperationRequest ForUnattendedOperation(OperationId id, IReadOnlyList<string> inputs)
+    public OperationRequest ForUnattendedOperation(OperationId id, IReadOnlyList<string> inputs, bool move = false)
     {
         bool supportsRecoveryOptions = OperationCapabilities.SupportsFileCheckTiming(id);
         return new(id, inputs)
@@ -29,7 +30,7 @@ public sealed record SharedSettingsSnapshot(
             ValidateBeforeConversion = id is not (OperationId.NormalizeAudioGain or OperationId.ChangeAudioKey) && ValidateBeforeConversion,
             IgnoreLeadingThe = id == OperationId.OrganizeFiles && IgnoreLeadingThe,
             TaggingPattern = TaggingPattern,
-            RecoveryVerification = supportsRecoveryOptions ? RecoveryVerification : RecoveryVerificationMode.Sha256,
+            RecoveryVerification = OperationCapabilities.ResolveRecoveryVerification(id, move, MoveRecoveryVerification, RecoveryVerification),
             CheckTiming = supportsRecoveryOptions ? CheckTiming : FileCheckTiming.BeforeBatch,
             SaveResumableRun = !OperationCapabilities.SupportsBatchContinuation(id) || SaveResumableRun
         };

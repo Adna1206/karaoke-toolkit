@@ -43,7 +43,7 @@ public partial class MainViewModel
             {
                 var service = new KaraokeTaggingService(recovery);
                 result = job == null ? await service.ApplyAsync(request!.Files, request.Options, Options, run.Progress, run.Token,
-                        continueBatchAfterRecovery: SaveResumableRun)
+                        continueBatchAfterRecovery: SaveResumableRun, verificationMode: RecoveryVerification)
                     : await service.ResumeAsync(job, run.Progress, run.Token);
             }
             finally { run.StopProgress(); }

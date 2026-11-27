@@ -58,7 +58,7 @@ public sealed partial class OperationExecutionService(RecoveryStore? recovery = 
         if (!Enum.IsDefined(request.CheckTiming))
             throw new ArgumentException("Unknown file check timing.");
         if (request.RecoveryVerification != RecoveryVerificationMode.Sha256 &&
-            !OperationCapabilities.SupportsFileCheckTiming(request.OperationId))
+            !OperationCapabilities.SupportsRecoveryVerification(request.OperationId))
             throw new ArgumentException("This operation does not support a recovery verification override.");
         if (request.CheckTiming != FileCheckTiming.BeforeBatch && !OperationCapabilities.SupportsFileCheckTiming(request.OperationId))
             throw new ArgumentException("This operation does not support a file check timing override.");
@@ -118,7 +118,7 @@ public sealed partial class OperationExecutionService(RecoveryStore? recovery = 
             var service = new KaraokeTaggingService(recovery);
             var preview = await service.PreviewAsync(inputs, request.TaggingPattern, request.Options.RecurseFolders, token);
             var applied = await service.ApplyAsync(preview.Where(p => p.CanApply).ToArray(), request.Tagging, request.Options, progress, token,
-                continueBatchAfterRecovery: request.SaveResumableRun);
+                continueBatchAfterRecovery: request.SaveResumableRun, verificationMode: request.RecoveryVerification);
             var rejected = preview.Where(p => !p.CanApply).Select(p => new ConversionFileResult(p.Path,
                 Path.GetExtension(p.Path).ToLowerInvariant() is ".bin" or ".cdg" ? ConversionStatus.Skipped : ConversionStatus.Failed, [], p.Error ?? "Cannot tag this input."));
             result = applied with { Files = applied.Files.Concat(rejected).ToArray(), Found = preview.Count };

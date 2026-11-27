@@ -5,6 +5,7 @@ using System.Globalization;
 using KaraokeToolkit.Core.Archives;
 using KaraokeToolkit.Core.Audio;
 using KaraokeToolkit.Core.Conversion;
+using KaraokeToolkit.Core.Execution;
 using KaraokeToolkit.Core.Recovery;
 using SharpCompress.Archives.Zip;
 using SharpCompress.Writers.Zip;
@@ -151,9 +152,11 @@ public sealed class KaraokeTaggingService(RecoveryStore? recovery = null)
     /// Completed files remain published if a later file fails or the run is cancelled.</remarks>
     public Task<ConversionResult> ApplyAsync(IReadOnlyList<TaggingPreview> preview, TaggingOptions options,
         ConversionOptions processing, IProgress<ConversionProgress>? progress = null, CancellationToken token = default,
-        bool continueBatchAfterRecovery = true)
+        bool continueBatchAfterRecovery = true,
+        RecoveryVerificationMode verificationMode = OperationCapabilities.DefaultFileWriteRecoveryVerification)
         => Task.Run(async () =>
         {
+            if (!Enum.IsDefined(verificationMode)) throw new ArgumentOutOfRangeException(nameof(verificationMode));
             if (preview.Count == 0 || token.IsCancellationRequested) return new ConversionResult([], token.IsCancellationRequested);
             var roots = preview.Select(p => Path.GetDirectoryName(Path.GetFullPath(p.Path))!).Distinct(InputSelection.Paths).ToArray();
             string? workspaceRoot = roots.FirstOrDefault(WorkflowMoves.IsAvailableFolder);
@@ -166,7 +169,7 @@ public sealed class KaraokeTaggingService(RecoveryStore? recovery = null)
             {
                 Kind = RecoveryKind.Tagging, Roots = roots.Where(root => !InputSelection.Paths.Equals(root, workspaceRoot)).Prepend(workspaceRoot).ToArray(),
                 Inputs = preview.Select(p => p.Path).ToArray(),
-                SaveResumableRun = continueBatchAfterRecovery,
+                SaveResumableRun = continueBatchAfterRecovery, VerificationMode = verificationMode,
                 TagFiles = preview.ToArray(), TagOptions = options, Processing = processing
             });
             return await ApplyCoreAsync(session, progress, token);
@@ -237,7 +240,7 @@ public sealed class KaraokeTaggingService(RecoveryStore? recovery = null)
                     if (RunSession.CheckPlainPath(item.Path) is not { } attributes || (attributes & FileAttributes.Directory) != 0)
                         throw new IOException("Tag source is missing or no longer a file: " + item.Path);
                     if (recovery.Find(folder, false).Count > 0) throw new IOException("Recover the interrupted run before tagging this folder.");
-                    using var transaction = new FileTransaction(folder);
+                    using var transaction = new FileTransaction(folder, session.Data.VerificationMode);
                     DurableJson.Write(Path.Combine(transaction.Workspace, "tagging.json"), new { Version = 1 });
                     if (RecoveryFingerprint.Hash(item.Path) != item.SourceHash) throw new IOException("Source changed after preview. Refresh the preview before tagging.");
                     string staged = await transaction.CopyInputAsync(item.Path, token);

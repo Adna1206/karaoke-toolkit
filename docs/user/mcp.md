@@ -114,7 +114,11 @@ even when an options object is supplied. Flags/options files from CLI are not us
 Omitted processing values inherit the shared per-user profile. A saved **Ask**
 overwrite preference uses **Fail** for unattended runs. `set_setting` takes an
 ID and scalar value, for example `recovery.verification` and `XxHash128`. It
-requires `--allow-writes` and `confirmFileChanges: true`. For media conversions,
+requires `--allow-writes` and `confirmFileChanges: true`. Same-drive moves use
+`recovery.move-verification` (MetadataOnly by default). Grouping copies, media
+conversions, ZIP repacking, and tagging use `recovery.verification` (XxHash128 by
+default). A request can override its category with `recoveryVerification`.
+For media conversions,
 `outputFolder` follows Core's
 separate-destination constraints: keep originals, destination outside selected
 input folders, collision protection, and `--no-cue-text`'s equivalent

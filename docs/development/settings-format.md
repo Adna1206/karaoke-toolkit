@@ -29,6 +29,7 @@ already expressed by the catalogue IDs.
 <KaraokeToolkit schemaVersion="1">
   <Processing>
     <Setting id="audio.mp3-bitrate">192</Setting>
+    <Setting id="recovery.move-verification">MetadataOnly</Setting>
     <Setting id="recovery.verification">XxHash128</Setting>
   </Processing>
   <Desktop>

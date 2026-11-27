@@ -14,11 +14,14 @@ public class ApplicationSettingsStoreTests
         var app = new ApplicationSettingsStore(path);
         app.Save(new());
         Assert.Equal((RecoveryVerificationMode.XxHash128, true), app.LoadRecoveryPreferences());
+        Assert.Equal(RecoveryVerificationMode.MetadataOnly, app.LoadMoveRecoveryVerification());
         Assert.Equal(FileCheckTiming.BeforeItem, app.LoadFileCheckTiming());
 
-        app.Save(new(), recoveryVerification: RecoveryVerificationMode.Sha256, saveResumableRun: false, checkTiming: FileCheckTiming.BeforeBatch);
+        app.Save(new(), recoveryVerification: RecoveryVerificationMode.Sha256, saveResumableRun: false,
+            checkTiming: FileCheckTiming.BeforeBatch, moveRecoveryVerification: RecoveryVerificationMode.None);
         Assert.Equal(FileCheckTiming.BeforeBatch, new ApplicationSettingsStore(path).LoadFileCheckTiming());
         Assert.Equal((RecoveryVerificationMode.Sha256, false), new ApplicationSettingsStore(path).LoadRecoveryPreferences());
+        Assert.Equal(RecoveryVerificationMode.None, new ApplicationSettingsStore(path).LoadMoveRecoveryVerification());
     }
 
     [Fact]

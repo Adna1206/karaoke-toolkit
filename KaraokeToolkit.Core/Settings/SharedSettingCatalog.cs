@@ -19,7 +19,8 @@ internal static class SharedSettingCatalog
 
     internal static readonly IReadOnlyDictionary<string, SettingDefinition> All = new SettingDefinition[]
     {
-        Define("recovery.verification", OperationCapabilities.DefaultFileMoveRecoveryVerification, Shared, Shared, s => s.RecoveryVerification),
+        Define("recovery.verification", OperationCapabilities.DefaultFileWriteRecoveryVerification, Shared, Shared, s => s.RecoveryVerification),
+        Define("recovery.move-verification", OperationCapabilities.DefaultFileMoveRecoveryVerification, Shared, Shared, s => s.MoveRecoveryVerification),
         Define("recovery.check-timing", OperationCapabilities.DefaultFileMoveCheckTiming, Shared, Shared, s => s.CheckTiming),
         Define("recovery.batch-resume", true, Shared, Shared, s => s.SaveResumableRun),
         Define("recovery.check-on-startup", true, Shared, Shared, s => s.CheckForInterruptedRunsOnStartup),

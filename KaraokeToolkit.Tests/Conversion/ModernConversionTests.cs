@@ -47,6 +47,22 @@ public class ModernConversionTests
         if(policy==OverwritePolicy.Replace){Assert.NotEqual(before,FileTransaction.Hash(bin));Assert.Equal(150*2448,new FileInfo(bin).Length);}
         else {Assert.Equal(before,FileTransaction.Hash(bin));Assert.True(File.Exists(Path.Combine(folder,"song.wav")));}
     }
+    [Fact]
+    public async Task KnownPairCollisionSkipsBeforeDecodingAndKeepsBothSides()
+    {
+        string folder = TestMediaFixture.NewFolder();
+        string source = Path.Combine(folder, "song.bin");
+        string existingGraphics = Path.Combine(folder, "song.cdg");
+        File.WriteAllText(source, "This BIN cannot be decoded.");
+        File.WriteAllText(existingGraphics, "Existing graphics.");
+
+        var result = await Run(folder, Action.BinToAudioG, OverwritePolicy.Skip, delete: true);
+
+        Assert.Equal(ConversionStatus.Skipped, Assert.Single(result.Files).Status);
+        Assert.Equal("This BIN cannot be decoded.", File.ReadAllText(source));
+        Assert.Equal("Existing graphics.", File.ReadAllText(existingGraphics));
+        Assert.Equal(2, Directory.GetFiles(folder).Length);
+    }
     [Theory]
     [InlineData("invalid-audio")]
     [InlineData("missing-audio")]
